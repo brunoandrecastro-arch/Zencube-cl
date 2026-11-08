@@ -241,17 +241,17 @@ func refresh(animate: int = -1) -> void:
     if tutorial == null: persist()
     if net_active: update_net()
 func persist() -> void:
-	if tutorial != null:
-		data.game = saved_training.board.duplicate(true)
-		data.game["history"] = saved_training.history.duplicate(true)
-	else:
-		data.game = board.snapshot()
-		data.game["history"] = board.history.duplicate(true)
-	if not SaveManager.save_data(data): notify_user("Speichern fehlgeschlagen: Speicherplatz prüfen.")
+    if tutorial != null:
+        data.game = saved_training.board.duplicate(true)
+        data.game["history"] = saved_training.history.duplicate(true)
+    else:
+        data.game = board.snapshot()
+        data.game["history"] = board.history.duplicate(true)
+    if not SaveManager.save_data(data): notify_user("Speichern fehlgeschlagen: Speicherplatz prüfen.")
 func notify_user(message: String) -> void:
-	toast = message
-	toast_until = Time.get_ticks_msec()+4000
-	if help_text != null: help_text.text = message
+    toast = message
+    toast_until = Time.get_ticks_msec()+4000
+    if help_text != null: help_text.text = message
 func on_cell(cell: int) -> void:
     if cell < 0 or (popup != null and not net_active): return
     if ai_running or (tutorial == null and int(data.settings.mode) == 1 and board.current_owner() == 1): return
@@ -262,35 +262,35 @@ func on_cell(cell: int) -> void:
             return
     place(cell)
 func place(cell: int) -> void:
-	if not rules.play(board,cell):
-		if board.swap_pending: notify_user("Zuerst X übernehmen oder O behalten wählen.")
-		return
-	renderer.selected = cell
-	generation += 1
-	play_sound(board.winner != 0)
-	if board.winner != 0:
-		if tutorial == null and int(data.settings.mode) != 2: record_result()
-		if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
-	refresh(cell)
+    if not rules.play(board,cell):
+        if board.swap_pending: notify_user("Zuerst X übernehmen oder O behalten wählen.")
+        return
+    renderer.selected = cell
+    generation += 1
+    play_sound(board.winner != 0)
+    if board.winner != 0:
+        if tutorial == null and int(data.settings.mode) != 2: record_result()
+        if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
+    refresh(cell)
 func record_result() -> void:
-	if board.result_recorded: return
-	board.result_recorded = true
-	data.stats.played += 1
-	if bool(data.settings.alternate): data.settings.next_start = 1-board.starter_owner
-	if board.winner == 3:
-		data.stats.draw += 1
-		data.stats.starter_draws += 1
-	else:
-		var owner = int(board.owners[board.winner-1])
-		if owner == board.starter_owner: data.stats.starter_wins += 1
-		else: data.stats.second_wins += 1
-		data.stats["p1" if owner == 0 else "p2"] += 1
-		if int(data.settings.mode) == 1:
-			data.stats["ai_wins" if owner == 0 else "ai_losses"][int(data.settings.level)] += 1
+    if board.result_recorded: return
+    board.result_recorded = true
+    data.stats.played += 1
+    if bool(data.settings.alternate): data.settings.next_start = 1-board.starter_owner
+    if board.winner == 3:
+        data.stats.draw += 1
+        data.stats.starter_draws += 1
+    else:
+        var owner = int(board.owners[board.winner-1])
+        if owner == board.starter_owner: data.stats.starter_wins += 1
+        else: data.stats.second_wins += 1
+        data.stats["p1" if owner == 0 else "p2"] += 1
+        if int(data.settings.mode) == 1:
+            data.stats["ai_wins" if owner == 0 else "ai_losses"][int(data.settings.level)] += 1
 func resolve_swap(accept: bool) -> void:
-	if rules.swap(board,accept):
-		generation += 1
-		refresh()
+    if rules.swap(board,accept):
+        generation += 1
+        refresh()
 func new_game() -> void:
     generation += 1
     board = BoardModel.new()
@@ -302,56 +302,56 @@ func new_game() -> void:
     renderer.reset_view()
     refresh()
 func confirm_new() -> void:
-	if tutorial != null:
-		load_tutorial()
-		return
-	if board.move_count() == 0 or board.winner != 0:
-		new_game()
-		return
-	var box = modal("Neue Partie?")
-	label("Die laufende Partie wird verworfen. Abgeschlossene Ergebnisse bleiben erhalten.",box)
-	button("Neu starten",box,func():
-		close_modal()
-		new_game()
-	)
+    if tutorial != null:
+        load_tutorial()
+        return
+    if board.move_count() == 0 or board.winner != 0:
+        new_game()
+        return
+    var box = modal("Neue Partie?")
+    label("Die laufende Partie wird verworfen. Abgeschlossene Ergebnisse bleiben erhalten.",box)
+    button("Neu starten",box,func():
+        close_modal()
+        new_game()
+    )
 func undo() -> void:
-	if tutorial != null:
-		load_tutorial()
-		return
-	if board.result_recorded:
-		notify_user("Abgeschlossene Ergebnisse bleiben erhalten. Starte eine neue Partie.")
-		return
-	generation += 1
-	if rules.undo(board):
-		if int(data.settings.mode) == 1:
-			while not board.history.is_empty() and (board.current_owner() == 1 or board.swap_pending): rules.undo(board)
-		preview = []
-		renderer.selected = -1
-		refresh()
+    if tutorial != null:
+        load_tutorial()
+        return
+    if board.result_recorded:
+        notify_user("Abgeschlossene Ergebnisse bleiben erhalten. Starte eine neue Partie.")
+        return
+    generation += 1
+    if rules.undo(board):
+        if int(data.settings.mode) == 1:
+            while not board.history.is_empty() and (board.current_owner() == 1 or board.swap_pending): rules.undo(board)
+        preview = []
+        renderer.selected = -1
+        refresh()
 func _process(_delta: float) -> void:
-	if data == null: return
-	if worker != null and not worker.is_alive():
-		var move = worker.wait_to_finish()
-		worker = null
-		ai_running = false
-		if worker_generation == generation and tutorial == null and board.winner == 0 and not board.swap_pending: place(int(move))
-		else: refresh()
-	if tutorial != null or int(data.settings.mode) != 1 or board.winner != 0: return
-	if board.swap_pending:
-		if board.current_owner() == 1: resolve_swap(true)
-		else: return
-	if worker == null and board.current_owner() == 1:
-		worker = Thread.new()
-		worker_generation = generation
-		ai_running = true
-		var cells = board.cells.duplicate()
-		var player = board.turn
-		var level = int(data.settings.level)
-		var seed_value = int(Time.get_ticks_usec())
-		worker.start(func(): return AIEngine.new(seed_value).choose(cells,player,level,220))
-		refresh()
+    if data == null: return
+    if worker != null and not worker.is_alive():
+        var move = worker.wait_to_finish()
+        worker = null
+        ai_running = false
+        if worker_generation == generation and tutorial == null and board.winner == 0 and not board.swap_pending: place(int(move))
+        else: refresh()
+    if tutorial != null or int(data.settings.mode) != 1 or board.winner != 0: return
+    if board.swap_pending:
+        if board.current_owner() == 1: resolve_swap(true)
+        else: return
+    if worker == null and board.current_owner() == 1:
+        worker = Thread.new()
+        worker_generation = generation
+        ai_running = true
+        var cells = board.cells.duplicate()
+        var player = board.turn
+        var level = int(data.settings.level)
+        var seed_value = int(Time.get_ticks_usec())
+        worker.start(func(): return AIEngine.new(seed_value).choose(cells,player,level,220))
+        refresh()
 func _exit_tree() -> void:
-	if worker != null: worker.wait_to_finish()
+    if worker != null: worker.wait_to_finish()
 func modal(title: String) -> VBoxContainer:
     close_modal()
     popup = PanelContainer.new()
@@ -377,11 +377,11 @@ func modal(title: String) -> VBoxContainer:
     button("Zurück zum Spiel",box,close_modal,true)
     return box
 func close_modal() -> void:
-	net_active = false
-	net_buttons.clear()
-	if popup != null:
-		popup.queue_free()
-		popup = null
+    net_active = false
+    net_buttons.clear()
+    if popup != null:
+        popup.queue_free()
+        popup = null
 func open_menu() -> void:
     var box = modal("Deine Zen-Pause")
     label("Wähle, wie du spielen möchtest. Kein Zeitdruck – nur Ruhe und Strategie.",box,15,Color("74614c"))
@@ -403,13 +403,13 @@ func open_balance() -> void:
     label("Die Linie muss beim Aufklappen senkrecht zur gemeinsamen Kante verlaufen. Vier auf einer einzelnen Fläche oder über drei Seiten zählen nicht.",box,14)
     label("108 mögliche Gewinnlinien. Die Viererregel soll kurze Siege erschweren, mathematische Fairness ist noch nicht nachgewiesen. Wir wechseln das Startrecht zwischen Partien.",box,14)
 func open_stats() -> void:
-	var box = modal("Deine Partien")
-	label("%d gespielt\n%d Siege für Spieler 1\n%d Siege für Spieler 2 / Computer\n%d Unentschieden" % [data.stats.played,data.stats.p1,data.stats.p2,data.stats.draw],box,20)
-	label("STARTSPIELER / ZWEITSPIELER · SIEGE",box,12)
-	label("%d / %d  ·  Unentschieden: %d" % [data.stats.starter_wins,data.stats.second_wins,data.stats.starter_draws],box,16)
-	label("GEGEN DIE KI · SIEGE / NIEDERLAGEN",box,12)
-	for i in range(3): label("%s: %d / %d" % [["Einfach","Mittel","Schwer"][i],data.stats.ai_wins[i],data.stats.ai_losses[i]],box)
-	label("Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.",box,14)
+    var box = modal("Deine Partien")
+    label("%d gespielt\n%d Siege für Spieler 1\n%d Siege für Spieler 2 / Computer\n%d Unentschieden" % [data.stats.played,data.stats.p1,data.stats.p2,data.stats.draw],box,20)
+    label("STARTSPIELER / ZWEITSPIELER · SIEGE",box,12)
+    label("%d / %d  ·  Unentschieden: %d" % [data.stats.starter_wins,data.stats.second_wins,data.stats.starter_draws],box,16)
+    label("GEGEN DIE KI · SIEGE / NIEDERLAGEN",box,12)
+    for i in range(3): label("%s: %d / %d" % [["Einfach","Mittel","Schwer"][i],data.stats.ai_wins[i],data.stats.ai_losses[i]],box)
+    label("Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.",box,14)
 func open_help() -> void:
     var box = modal("Ein wenig Orientierung")
     var hints = CheckButton.new()
@@ -450,54 +450,54 @@ func open_help() -> void:
         )
     label("Tipp: 3+1 und 2+2 funktionieren nur auf zwei benachbarten Seiten und ohne übersprungene Felder.",box,14)
 func focus_line(line: Array) -> void:
-	var faces = []
-	for c in line:
-		var f = CubeGeometry.face(int(c))
-		if not faces.has(f): faces.append(f)
-	renderer.focus_faces(faces)
+    var faces = []
+    for c in line:
+        var f = CubeGeometry.face(int(c))
+        if not faces.has(f): faces.append(f)
+    renderer.focus_faces(faces)
 func focus_and_close(face: int) -> void:
-	renderer.focus_faces([face])
-	close_modal()
+    renderer.focus_faces([face])
+    close_modal()
 func open_faces() -> void:
-	var box = modal("Seite wählen")
-	for f in range(6):
-		button(CubeGeometry.NAMES[f],box,focus_and_close.bind(f))
+    var box = modal("Seite wählen")
+    for f in range(6):
+        button(CubeGeometry.NAMES[f],box,focus_and_close.bind(f))
 func open_net() -> void:
-	var box = modal("Alle sechs Seiten")
-	label("Alle Würfelseiten auf einen Blick. Tippe ein freies Feld, um zu setzen; der 3D-Würfel bleibt das Hauptspielfeld.",box,14)
-	var grid = GridContainer.new()
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation",4)
-	grid.add_theme_constant_override("v_separation",12)
-	box.add_child(grid)
-	for f in [-1,4,-1,-1,2,0,3,1,-1,5,-1,-1]:
-		var group = VBoxContainer.new()
-		group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(group)
-		if f < 0: continue
-		label(CubeGeometry.NAMES[f],group,11)
-		var cells = GridContainer.new()
-		cells.columns = 3
-		cells.add_theme_constant_override("h_separation",1)
-		cells.add_theme_constant_override("v_separation",1)
-		group.add_child(cells)
-		for c in range(f*9,f*9+9):
-			var b = Button.new()
-			b.custom_minimum_size = Vector2(28,34)
-			b.add_theme_font_size_override("font_size",14)
-			var cell_style = theme_style(Color("e0cfb7"),4)
-			cell_style.content_margin_left = 2
-			cell_style.content_margin_right = 2
-			b.add_theme_stylebox_override("normal",cell_style)
-			b.pressed.connect(func(): on_cell(c))
-			cells.add_child(b)
-			net_buttons.append([b,c])
-	net_active = true
-	update_net()
+    var box = modal("Alle sechs Seiten")
+    label("Alle Würfelseiten auf einen Blick. Tippe ein freies Feld, um zu setzen; der 3D-Würfel bleibt das Hauptspielfeld.",box,14)
+    var grid = GridContainer.new()
+    grid.columns = 4
+    grid.add_theme_constant_override("h_separation",4)
+    grid.add_theme_constant_override("v_separation",12)
+    box.add_child(grid)
+    for f in [-1,4,-1,-1,2,0,3,1,-1,5,-1,-1]:
+        var group = VBoxContainer.new()
+        group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        grid.add_child(group)
+        if f < 0: continue
+        label(CubeGeometry.NAMES[f],group,11)
+        var cells = GridContainer.new()
+        cells.columns = 3
+        cells.add_theme_constant_override("h_separation",1)
+        cells.add_theme_constant_override("v_separation",1)
+        group.add_child(cells)
+        for c in range(f*9,f*9+9):
+            var b = Button.new()
+            b.custom_minimum_size = Vector2(28,34)
+            b.add_theme_font_size_override("font_size",14)
+            var cell_style = theme_style(Color("e0cfb7"),4)
+            cell_style.content_margin_left = 2
+            cell_style.content_margin_right = 2
+            b.add_theme_stylebox_override("normal",cell_style)
+            b.pressed.connect(func(): on_cell(c))
+            cells.add_child(b)
+            net_buttons.append([b,c])
+    net_active = true
+    update_net()
 func update_net() -> void:
-	for pair in net_buttons:
-		pair[0].text = ["·","X","O"][int(board.cells[pair[1]])]
-		pair[0].add_theme_color_override("font_color", Color("453329") if board.cells[pair[1]] == 1 else Color("a75f43") if board.cells[pair[1]] == 2 else Color("74614c"))
+    for pair in net_buttons:
+        pair[0].text = ["·","X","O"][int(board.cells[pair[1]])]
+        pair[0].add_theme_color_override("font_color", Color("453329") if board.cells[pair[1]] == 1 else Color("a75f43") if board.cells[pair[1]] == 2 else Color("74614c"))
 func start_tutorial(onboarding: bool = false) -> void:
     close_modal()
     tutorial_from_welcome = onboarding
@@ -507,10 +507,10 @@ func start_tutorial(onboarding: bool = false) -> void:
     board = BoardModel.new()
     load_tutorial()
 func load_tutorial() -> void:
-	preview = tutorial.setup(board,rules.lines)
-	if preview.is_empty(): renderer.reset_view()
-	else: focus_line(preview)
-	refresh()
+    preview = tutorial.setup(board,rules.lines)
+    if preview.is_empty(): renderer.reset_view()
+    else: focus_line(preview)
+    refresh()
 func tutorial_step(delta: int) -> void:
     if tutorial == null: return
     if tutorial.step + delta >= TutorialController.TEXTS.size():
@@ -655,35 +655,35 @@ func open_settings() -> void:
     button("Fertig",box,close_modal,false,true)
 
 func build_sound() -> void:
-	sound_player = AudioStreamPlayer.new()
-	add_child(sound_player)
-	var wave = AudioStreamWAV.new()
-	wave.format = AudioStreamWAV.FORMAT_16_BITS
-	wave.mix_rate = 22050
-	var samples = PackedByteArray()
-	samples.resize(4410*2)
-	for i in range(4410):
-		var t = float(i)/22050.0
-		var value = int(sin(t*TAU*520)*exp(-t*26)*minf(t*100,1)*7000)
-		samples.encode_s16(i*2,value)
-	wave.data = samples
-	sound_player.stream = wave
-	sound_player.volume_db = -9
-	music_player = AudioStreamPlayer.new()
-	add_child(music_player)
-	var ambient = load("res://assets/zen_ambient.wav") as AudioStreamWAV
-	if ambient != null:
-		ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		music_player.stream = ambient
-	music_player.volume_db = -28
-	sync_music()
+    sound_player = AudioStreamPlayer.new()
+    add_child(sound_player)
+    var wave = AudioStreamWAV.new()
+    wave.format = AudioStreamWAV.FORMAT_16_BITS
+    wave.mix_rate = 22050
+    var samples = PackedByteArray()
+    samples.resize(4410*2)
+    for i in range(4410):
+        var t = float(i)/22050.0
+        var value = int(sin(t*TAU*520)*exp(-t*26)*minf(t*100,1)*7000)
+        samples.encode_s16(i*2,value)
+    wave.data = samples
+    sound_player.stream = wave
+    sound_player.volume_db = -9
+    music_player = AudioStreamPlayer.new()
+    add_child(music_player)
+    var ambient = load("res://assets/zen_ambient.wav") as AudioStreamWAV
+    if ambient != null:
+        ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
+        music_player.stream = ambient
+    music_player.volume_db = -28
+    sync_music()
 func sync_music() -> void:
-	if music_player == null or music_player.stream == null: return
-	if bool(data.settings.get("music",false)):
-		if not music_player.playing: music_player.play()
-	elif music_player.playing:
-		music_player.stop()
+    if music_player == null or music_player.stream == null: return
+    if bool(data.settings.get("music",false)):
+        if not music_player.playing: music_player.play()
+    elif music_player.playing:
+        music_player.stop()
 func play_sound(win: bool) -> void:
-	if not bool(data.settings.sound): return
-	sound_player.pitch_scale = 1.5 if win else 1.0
-	sound_player.play()
+    if not bool(data.settings.sound): return
+    sound_player.pitch_scale = 1.5 if win else 1.0
+    sound_player.play()
