@@ -44,6 +44,9 @@ jobs:
       - name: Verify main scene and GameController script
         run: |
           timeout 35 "$GODOT" --headless --path . --script tests/test_scene_load.gd
+      - name: Verify PCM music stream and playback controls
+        run: |
+          timeout 35 "$GODOT" --headless --path . --script tests/test_music_stream.gd
       - name: Godot UI and menu tests (headless)
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_ui.gd
@@ -56,6 +59,11 @@ jobs:
           /tmp/zencube-sim reports/lines.json > reports/simulation.json
       - name: Build signed debug APK
         run: bash scripts/build_android.sh
+      - name: Verify music PCM included in APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -Z1 build/ZenCube-3D.apk | grep -F 'zen_ambient_music.pcm'
       - uses: actions/upload-artifact@v4
         with:
           name: ZenCube-3D-debug

@@ -15,9 +15,19 @@ assert 'if not str(data.settings.get("language", "")) in ["de", "en"]' in contro
 assert 'func open_language_choice() -> void:' in controller
 assert 'language_picker.item_selected.connect' in controller
 assert 'translate_ui_tree(ui)' in controller
-assert 'music_player.volume_db = -12' in controller
+assert 'music_player.volume_db = -2.0' in controller
 assert 'func music_preview() -> void:' in controller
+assert 'include_filter="assets/*.pcm"' in (BASE/'export_presets.cfg').read_text()
+pcm=(BASE/'assets/zen_ambient_music.pcm').read_bytes()
+assert len(pcm)==16000*24*2
+raw=struct.unpack('<'+str(len(pcm)//2)+'h',pcm)
+new_rms=math.sqrt(sum(v*v for v in raw)/len(raw))
+assert -19<20*math.log10(new_rms/32768)<-8
+assert max(abs(min(raw)),max(raw))<31500
 assert 'ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD' in controller
+assert 'music_player.stream = make_zen_music_stream()' in controller
+assert 'ambient.data = pcm' in controller
+assert 'ambient.loop_end = int(pcm.size() / 2)' in controller
 save=(BASE/'core/SaveManager.gd').read_text()
 assert '"music":true,"language":""' in save, 'Default language/audio missing'
 assert 'const VERSION = 3' in save, 'Existing saved games must not be wiped'

@@ -1,0 +1,21 @@
+ZenCube 3D – v7 Musik-Fix
+
+1. ZIP auf dem Handy in Download speichern.
+2. Termux: 
+
+cd ~/ZenCube-3D
+
+git pull --ff-only
+unzip -o "/storage/emulated/0/Download/ZenCube_v7_Musik_Fix.zip"
+python tests/test_language_audio.py
+python tests/test_108_rules.py
+git add -A
+git commit -m "Fix ZenCube music on Android v7"
+git push
+
+3. GitHub Actions Build kontrollieren und Android APK installieren.
+4. In der App Musik in den Einstellungen einschalten und Musikprobe abspielen.
+
+WICHTIG: Alle Python-Tests und ein grüner CI-Lauf koennen reale Audio-Ausgabe auf dem Telefon nicht beweisen.
+Falls Android das APK-Update wegen einer anderen Debug-Signatur verweigert, nicht voreilig deinstallieren: Spielstaende koennten verloren gehen.
+Play Console: Debug APK ist NICHT das richtige finale Release-Artefakt; fuer Play Store braucht es das bestehende Package ID, Versioncode und Signatur sowie AAB.

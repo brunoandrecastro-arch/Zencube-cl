@@ -718,13 +718,34 @@ func build_sound() -> void:
     sound_player.stream = wave
     sound_player.volume_db = -9
     music_player = AudioStreamPlayer.new()
+    music_player.name = "ZenGardenMusic"
     add_child(music_player)
-    var ambient = load("res://assets/zen_ambient.wav") as AudioStreamWAV
-    if ambient != null:
-        ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
-        music_player.stream = ambient
-    music_player.volume_db = -12
+    # Use explicit signed PCM16 instead of Godot's WAV import/remap path.
+    # This makes Android music decoding use the same engine format as working SFX.
+    music_player.stream = make_zen_music_stream()
+    music_player.volume_db = -2.0
     sync_music()
+func make_zen_music_stream() -> AudioStreamWAV:
+    var pcm: PackedByteArray = FileAccess.get_file_as_bytes("res://assets/zen_ambient_music.pcm")
+    if pcm.size() < 32000 or pcm.size() % 2 != 0:
+        # Fallback audible tones if a distribution omits the PCM resource.
+        push_warning("ZenCube music resource missing; using generated fallback audio")
+        pcm = PackedByteArray()
+        pcm.resize(16000 * 8 * 2)
+        for i in range(16000 * 8):
+            var t: float = float(i) / 16000.0
+            var fade: float = minf(1.0, minf(t / 0.5, (8.0 - t) / 0.5))
+            var y: float = (0.22 * sin(TAU * 440.0 * t) + 0.14 * sin(TAU * 659.26 * t)) * maxf(0.0, fade)
+            pcm.encode_s16(i * 2, clampi(roundi(y * 32767.0), -32767, 32767))
+    var ambient := AudioStreamWAV.new()
+    ambient.format = AudioStreamWAV.FORMAT_16_BITS
+    ambient.stereo = false
+    ambient.mix_rate = 16000
+    ambient.data = pcm
+    ambient.loop_begin = 0
+    ambient.loop_end = int(pcm.size() / 2)
+    ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
+    return ambient
 func music_preview() -> void:
     if music_player == null or music_player.stream == null:
         notify_user("Musik konnte nicht geladen werden.")
