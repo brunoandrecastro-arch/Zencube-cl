@@ -310,7 +310,10 @@ func confirm_new() -> void:
 		return
 	var box = modal("Neue Partie?")
 	label("Die laufende Partie wird verworfen. Abgeschlossene Ergebnisse bleiben erhalten.",box)
-	button("Neu starten",box,func(): close_modal(); new_game())
+	button("Neu starten",box,func():
+		close_modal()
+		new_game()
+	)
 func undo() -> void:
 	if tutorial != null:
 		load_tutorial()
@@ -412,7 +415,10 @@ func open_help() -> void:
     var hints = CheckButton.new()
     hints.text = "Unmittelbare Gewinnfelder markieren"
     hints.button_pressed = bool(data.settings.hints)
-    hints.toggled.connect(func(v): data.settings.hints = v; refresh())
+    hints.toggled.connect(func(v):
+        data.settings.hints = v
+        refresh()
+    )
     box.add_child(hints)
     label("Salbei markiert eine mögliche Viererlinie für X, Terrakotta für O – jeweils mit drei bereits gesetzten Steinen.",box,14)
     button("Kamera zur nächsten Bedrohung",box,func():
@@ -424,15 +430,24 @@ func open_help() -> void:
                     var count = 0
                     for c in line:
                         if board.cells[c] == p: count += 1
-                    if count == 3: focus_line(line); return
+                    if count == 3:
+                        focus_line(line)
+                        return
         notify_user("Im Moment keine unmittelbare Bedrohung."))
     button("Seite gezielt ansehen",box,open_faces)
     if int(data.settings.mode) == 2 or tutorial != null:
         button("Nächste gültige Linie",box,func():
             preview_index = (preview_index+1)%rules.lines.size()
             preview = rules.lines[preview_index]
-            close_modal(); focus_line(preview); refresh())
-        button("Vorschau ausblenden",box,func(): preview = []; close_modal(); refresh())
+            close_modal()
+            focus_line(preview)
+            refresh()
+        )
+        button("Vorschau ausblenden",box,func():
+            preview = []
+            close_modal()
+            refresh()
+        )
     label("Tipp: 3+1 und 2+2 funktionieren nur auf zwei benachbarten Seiten und ohne übersprungene Felder.",box,14)
 func focus_line(line: Array) -> void:
 	var faces = []
@@ -440,9 +455,13 @@ func focus_line(line: Array) -> void:
 		var f = CubeGeometry.face(int(c))
 		if not faces.has(f): faces.append(f)
 	renderer.focus_faces(faces)
+func focus_and_close(face: int) -> void:
+	renderer.focus_faces([face])
+	close_modal()
 func open_faces() -> void:
 	var box = modal("Seite wählen")
-	for f in range(6): button(CubeGeometry.NAMES[f],box,func(): renderer.focus_faces([f]); close_modal())
+	for f in range(6):
+		button(CubeGeometry.NAMES[f],box,focus_and_close.bind(f))
 func open_net() -> void:
 	var box = modal("Alle sechs Seiten")
 	label("Alle Würfelseiten auf einen Blick. Tippe ein freies Feld, um zu setzen; der 3D-Würfel bleibt das Hauptspielfeld.",box,14)
@@ -587,32 +606,51 @@ func open_settings() -> void:
     for title in ["Bot: Leicht","Bot: Mittel","Bot: Schwer"]: level.add_item(title)
     level.selected = int(data.settings.level)
     level.custom_minimum_size.y = 52
-    level.item_selected.connect(func(index): data.settings.level = index; persist())
+    level.item_selected.connect(func(index):
+        data.settings.level = index
+        persist()
+    )
     box.add_child(level)
     var music = CheckButton.new()
     music.text = "Ruhige Zen-Garten-Musik"
     music.button_pressed = bool(data.settings.get("music",false))
-    music.toggled.connect(func(enabled): data.settings.music = enabled; sync_music(); persist())
+    music.toggled.connect(func(enabled):
+        data.settings.music = enabled
+        sync_music()
+        persist()
+    )
     box.add_child(music)
     var sounds = CheckButton.new()
     sounds.text = "Sanfte Spieltöne"
     sounds.button_pressed = bool(data.settings.sound)
-    sounds.toggled.connect(func(enabled): data.settings.sound = enabled; persist())
+    sounds.toggled.connect(func(enabled):
+        data.settings.sound = enabled
+        persist()
+    )
     box.add_child(sounds)
     var hints = CheckButton.new()
     hints.text = "Gewinnfelder als Hilfe zeigen"
     hints.button_pressed = bool(data.settings.hints)
-    hints.toggled.connect(func(enabled): data.settings.hints = enabled; refresh())
+    hints.toggled.connect(func(enabled):
+        data.settings.hints = enabled
+        refresh()
+    )
     box.add_child(hints)
     var alternate = CheckButton.new()
     alternate.text = "Startspieler nach jeder Runde wechseln"
     alternate.button_pressed = bool(data.settings.alternate)
-    alternate.toggled.connect(func(enabled): data.settings.alternate = enabled; persist())
+    alternate.toggled.connect(func(enabled):
+        data.settings.alternate = enabled
+        persist()
+    )
     box.add_child(alternate)
     var swap = CheckButton.new()
     swap.text = "Farbtausch erlauben (nur lokaler Modus)"
     swap.button_pressed = bool(data.settings.swap)
-    swap.toggled.connect(func(enabled): data.settings.swap = enabled; persist())
+    swap.toggled.connect(func(enabled):
+        data.settings.swap = enabled
+        persist()
+    )
     box.add_child(swap)
     button("Fertig",box,close_modal,false,true)
 

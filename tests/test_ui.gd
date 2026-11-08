@@ -27,9 +27,33 @@ func shot(name: String) -> void:
     await RenderingServer.frame_post_draw
     root.get_texture().get_image().save_png("res://reports/"+name+".png")
 func run() -> void:
-    var game = load("res://Main.tscn").instantiate()
+    var controller: Script = load("res://ui/GameController.gd") as Script
+    if controller == null:
+        printerr("FATAL: GameController.gd could not be loaded. See GDScript parse errors above.")
+        quit(1)
+        return
+    var compile_result: Error = controller.reload()
+    if compile_result != OK or not controller.can_instantiate():
+        printerr("FATAL: GameController.gd did not compile: ", error_string(compile_result))
+        quit(1)
+        return
+    var main_scene = load("res://Main.tscn") as PackedScene
+    if main_scene == null:
+        printerr("FATAL: Main.tscn did not load")
+        quit(1)
+        return
+    var game = main_scene.instantiate()
+    if game.get_script() == null or not game.has_method("open_welcome"):
+        printerr("FATAL: Main.tscn root has NO working GameController.gd! Loaded: ",game.get_class()," / ",game.get_script())
+        game.free()
+        quit(1)
+        return
     root.add_child(game)
     await process_frame
+    if game.ui == null or game.renderer == null:
+        printerr("FATAL: Main scene missing UI or cube. Review runtime errors above.")
+        quit(1)
+        return
     # A first-time user must see onboarding, not a forced second-player match.
     game.open_welcome()
     check(game.popup != null,"welcome overlay opens")
