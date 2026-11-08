@@ -1,0 +1,9 @@
+# Asset- und Musikrechte
+
+- `zen_garden_scene.webp`: eigens für dieses Projekt mit Bildgenerierung erstellter, eigenständiger Hintergrund. Kein gescraptes Webseitenbild.
+- `zen_garden_bg.png`: ältere, projektinterne generierte Sandgrafik.
+- `zen_ambient.wav`: für dieses Projekt mittels `tools/generate_ambient.py` synthetisch neu komponiertes Original-Ambient ohne Fremdaufnahmen.
+- `docs/approved_ui_reference.png`: durch Bildgenerierung erstellte **Designvorlage**, kein direktes UI-Asset. Die Texte/Buttons darin sind nicht interaktiv.
+- Godot-Lizenzen und Third-Party-Hinweise: siehe `GODOT-LICENSE.txt` und `GODOT-THIRD-PARTY.txt`.
+
+Die drei primären Gestaltungsassets wurden für dieses Projekt neu geschaffen und enthalten keine fremden Audiodateien oder kopierten Stockfotos.
