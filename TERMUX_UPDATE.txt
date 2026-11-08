@@ -1,0 +1,14 @@
+ZenCube DE/EN + Musikfix installieren (Termux)
+
+Die ZIP-Datei ZenCube_DE_EN_Music_Update.zip zuerst in den Android-Download-Ordner speichern.
+
+cd ~/ZenCube-3D
+unzip -o /storage/emulated/0/Download/ZenCube_DE_EN_Music_Update.zip
+python tests/test_language_audio.py
+python tests/test_108_rules.py
+git add ui/GameController.gd core/SaveManager.gd core/ZenLocalization.gd assets/zen_ambient.wav tests/test_language_audio.py tests/test_localized_ui.gd .github/workflows/android.yml CHANGELOG_V5_LANGUAGE_AUDIO.md
+git commit -m "Add German English selection and improve Zen music"
+git push
+
+Danach den Build unter https://github.com/brunoandrecastro-arch/Zencube-cl/actions öffnen.
+Unter Artifacts die neue APK herunterladen. In Einstellungen Musik einschalten bzw. Musikprobe testen.

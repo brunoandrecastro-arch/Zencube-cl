@@ -3,7 +3,7 @@ extends RefCounted
 const PATH = "user://zencube.json"
 const VERSION = 3
 static func defaults() -> Dictionary:
-    return {"version":VERSION,"settings":{"mode":1,"level":0,"swap":false,"alternate":true,"next_start":0,"hints":true,"sound":true,"music":false,"intro_seen":false,"tutorial_seen":false,"names":["Du","Spieler 2"]},"stats":{"played":0,"p1":0,"p2":0,"draw":0,"ai_wins":[0,0,0],"ai_losses":[0,0,0],"starter_wins":0,"second_wins":0,"starter_draws":0},"game":{}}
+    return {"version":VERSION,"settings":{"mode":1,"level":0,"swap":false,"alternate":true,"next_start":0,"hints":true,"sound":true,"music":true,"language":"","intro_seen":false,"tutorial_seen":false,"names":["Du","Spieler 2"]},"stats":{"played":0,"p1":0,"p2":0,"draw":0,"ai_wins":[0,0,0],"ai_losses":[0,0,0],"starter_wins":0,"second_wins":0,"starter_draws":0},"game":{}}
 static func load_data() -> Dictionary:
     var base = defaults()
     if not FileAccess.file_exists(PATH): return base

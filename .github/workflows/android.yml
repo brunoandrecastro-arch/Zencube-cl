@@ -36,6 +36,8 @@ jobs:
           "$GODOT" --headless --editor --import --quit
       - name: Verify 108 lines and simulated games
         run: python3 tests/test_108_rules.py
+      - name: Verify German/English strings and music WAV
+        run: python3 tests/test_language_audio.py
       - name: Godot engine tests
         run: |
           "$GODOT" --headless --path . --script tests/test_engine.gd
@@ -45,6 +47,9 @@ jobs:
       - name: Godot UI and menu tests (headless)
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_ui.gd
+      - name: Language switch and music playback smoke test
+        run: |
+          timeout 45 "$GODOT" --headless --path . --script tests/test_localized_ui.gd
       - name: Tactical simulations
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim

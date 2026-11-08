@@ -29,6 +29,40 @@ var tutorial_from_welcome = false
 var welcome_open = false
 var toast = ""
 var toast_until = 0
+const ZenLocale = preload("res://core/ZenLocalization.gd")
+func language_code() -> String:
+    if data == null: return "de"
+    return str(data.settings.get("language", "de"))
+func T(source: String) -> String:
+    return ZenLocale.english(source) if language_code() == "en" else source
+func translate_ui_tree(node: Node) -> void:
+    if node.has_meta("zen_source_text"):
+        if node is Button or node is Label:
+            node.text = T(str(node.get_meta("zen_source_text")))
+    for child in node.get_children():
+        translate_ui_tree(child)
+func choose_language(code: String) -> void:
+    if not code in ["de", "en"]: return
+    data.settings.language = code
+    close_modal()
+    translate_ui_tree(ui)
+    refresh()
+    if not bool(data.settings.get("intro_seen", false)):
+        open_welcome()
+    else:
+        open_menu()
+func change_language(code: String) -> void:
+    choose_language(code)
+    if bool(data.settings.get("intro_seen", false)):
+        open_settings()
+func open_language_choice() -> void:
+    var box = modal("Choose language · Sprache wählen")
+    # The first-run language decision must be made before starting the tutorial.
+    box.get_child(1).hide()
+    label("Select your language / Wähle deine Sprache", box, 18)
+    button("Deutsch", box, choose_language.bind("de"), false, true)
+    button("English", box, choose_language.bind("en"), false, true)
+    label("You can change this later in Settings. / Du kannst dies später ändern.", box, 13)
 func _ready() -> void:
     data = SaveManager.load_data()
     if SaveManager.valid_game(data.game):
@@ -40,7 +74,9 @@ func _ready() -> void:
     build_ui()
     build_sound()
     refresh()
-    if not bool(data.settings.get("intro_seen",false)):
+    if not str(data.settings.get("language", "")) in ["de", "en"]:
+        open_language_choice()
+    elif not bool(data.settings.get("intro_seen",false)):
         # Visual examples are shown before the very first game.
         open_welcome()
 func theme_style(bg: Color, radius: int = 18) -> StyleBoxFlat:
@@ -59,7 +95,8 @@ func theme_style(bg: Color, radius: int = 18) -> StyleBoxFlat:
     return st
 func button(text: String, parent: Node, callback: Callable, small: bool = false, primary: bool = false) -> Button:
     var b = Button.new()
-    b.text = text
+    b.text = T(text)
+    b.set_meta("zen_source_text", text)
     b.custom_minimum_size.y = 44 if small else 52
     b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     b.focus_mode = Control.FOCUS_NONE
@@ -74,7 +111,8 @@ func button(text: String, parent: Node, callback: Callable, small: bool = false,
     return b
 func label(text: String, parent: Node, size: int = 16, color: Color = Color("74614c")) -> Label:
     var l = Label.new()
-    l.text = text
+    l.text = T(text)
+    l.set_meta("zen_source_text", text)
     l.add_theme_font_size_override("font_size",size)
     l.add_theme_color_override("font_color",color)
     l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -209,33 +247,34 @@ func build_ui() -> void:
     meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 func mode_name() -> String:
     var mode = int(data.settings.mode)
-    if mode == 1: return "Du gegen Zen-Bot · "+["Leicht","Mittel","Schwer"][int(data.settings.level)]
-    if mode == 2: return "Lernmodus"
-    return "Zwei Spieler lokal"
+    if mode == 1: return T("Du gegen Zen-Bot · ")+T(["Leicht","Mittel","Schwer"][int(data.settings.level)])
+    if mode == 2: return T("Lernmodus")
+    return T("Zwei Spieler lokal")
 func player_name(owner: int) -> String:
     if int(data.settings.mode) == 1:
-        return "Zen-Bot" if owner == 1 else "Du"
-    return str(data.settings.names[owner])
+        return "Zen-Bot" if owner == 1 else T("Du")
+    var pname = str(data.settings.names[owner])
+    return T(pname)
 func refresh(animate: int = -1) -> void:
     var sym := "X" if board.turn == 1 else "O"
     var owner := board.current_owner()
     if int(data.settings.mode) == 1:
-        status.text = "Zen-Bot denkt nach …" if owner == 1 else "Du bist am Zug  ·  "+sym
+        status.text = T("Zen-Bot denkt nach …") if owner == 1 else T("Du bist am Zug  ·  ")+sym
     else:
-        status.text = player_name(owner)+" ist am Zug  ·  "+sym
+        status.text = player_name(owner)+T(" ist am Zug  ·  ")+sym
     status.add_theme_color_override("font_color", Color("453329") if board.turn == 1 else Color("a75f43"))
-    if board.swap_pending: status.text = player_name(board.owners[1])+" · Farbe wählen"
+    if board.swap_pending: status.text = player_name(board.owners[1])+T(" · Farbe wählen")
     if board.winner != 0:
-        status.text = "Unentschieden · gut gespielt!" if board.winner == 3 else player_name(board.owners[board.winner-1])+" gewinnt!"
+        status.text = T("Unentschieden · gut gespielt!") if board.winner == 3 else player_name(board.owners[board.winner-1])+T(" gewinnt!")
         status.add_theme_color_override("font_color", Color("67785b"))
-    detail.text = mode_name()+"  ·  Zug "+str(board.move_count())
-    if ai_running: detail.text += "  ·  Zen-Bot überlegt …"
+    detail.text = mode_name()+T("  ·  Zug ")+str(board.move_count())
+    if ai_running: detail.text += T("  ·  Zen-Bot überlegt …")
     swap_row.visible = board.swap_pending and not (int(data.settings.mode) == 1 and board.current_owner() == 1 and tutorial == null)
     tutorial_row.visible = tutorial != null
     if tutorial != null:
-        help_text.text = str(tutorial.step+1)+" / "+str(TutorialController.TEXTS.size())+"  ·  "+TutorialController.TEXTS[tutorial.step]
+        help_text.text = str(tutorial.step+1)+" / "+str(TutorialController.TEXTS.size())+"  ·  "+T(TutorialController.TEXTS[tutorial.step])
     else:
-        help_text.text = toast if Time.get_ticks_msec()<toast_until else "Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen"
+        help_text.text = toast if Time.get_ticks_msec()<toast_until else T("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen")
     renderer.selected = board.last_cell
     renderer.paint(board,bool(data.settings.hints) or tutorial != null,preview,animate)
     if tutorial == null: persist()
@@ -249,7 +288,7 @@ func persist() -> void:
         data.game["history"] = board.history.duplicate(true)
     if not SaveManager.save_data(data): notify_user("Speichern fehlgeschlagen: Speicherplatz prüfen.")
 func notify_user(message: String) -> void:
-    toast = message
+    toast = T(message)
     toast_until = Time.get_ticks_msec()+4000
     if help_text != null: help_text.text = message
 func on_cell(cell: int) -> void:
@@ -404,16 +443,16 @@ func open_balance() -> void:
     label("108 mögliche Gewinnlinien. Die Viererregel soll kurze Siege erschweren, mathematische Fairness ist noch nicht nachgewiesen. Wir wechseln das Startrecht zwischen Partien.",box,14)
 func open_stats() -> void:
     var box = modal("Deine Partien")
-    label("%d gespielt\n%d Siege für Spieler 1\n%d Siege für Spieler 2 / Computer\n%d Unentschieden" % [data.stats.played,data.stats.p1,data.stats.p2,data.stats.draw],box,20)
+    label(T("%d gespielt\n%d Siege für Spieler 1\n%d Siege für Spieler 2 / Computer\n%d Unentschieden") % [data.stats.played,data.stats.p1,data.stats.p2,data.stats.draw],box,20)
     label("STARTSPIELER / ZWEITSPIELER · SIEGE",box,12)
-    label("%d / %d  ·  Unentschieden: %d" % [data.stats.starter_wins,data.stats.second_wins,data.stats.starter_draws],box,16)
+    label(T("%d / %d  ·  Unentschieden: %d") % [data.stats.starter_wins,data.stats.second_wins,data.stats.starter_draws],box,16)
     label("GEGEN DIE KI · SIEGE / NIEDERLAGEN",box,12)
-    for i in range(3): label("%s: %d / %d" % [["Einfach","Mittel","Schwer"][i],data.stats.ai_wins[i],data.stats.ai_losses[i]],box)
+    for i in range(3): label("%s: %d / %d" % [T(["Einfach","Mittel","Schwer"][i]),data.stats.ai_wins[i],data.stats.ai_losses[i]],box)
     label("Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.",box,14)
 func open_help() -> void:
     var box = modal("Ein wenig Orientierung")
     var hints = CheckButton.new()
-    hints.text = "Unmittelbare Gewinnfelder markieren"
+    hints.text = T("Unmittelbare Gewinnfelder markieren")
     hints.button_pressed = bool(data.settings.hints)
     hints.toggled.connect(func(v):
         data.settings.hints = v
@@ -567,7 +606,7 @@ func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> vo
     parent.add_child(panel)
     var stack = VBoxContainer.new()
     panel.add_child(stack)
-    label(caption_text+"  ·  eine Gewinnlinie",stack,16,Color("483729"))
+    label(caption_text+T("  ·  eine Gewinnlinie"),stack,16,Color("483729"))
     var surfaces = HBoxContainer.new()
     surfaces.add_theme_constant_override("separation",4)
     stack.add_child(surfaces)
@@ -602,8 +641,16 @@ func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> vo
 func open_settings() -> void:
     var box = modal("Deine Einstellungen")
     label("Spiele in deinem Tempo.",box,15,Color("806c54"))
+    label("Sprache / Language",box,15)
+    var language_picker = OptionButton.new()
+    language_picker.custom_minimum_size.y = 52
+    language_picker.add_item("Deutsch", 0)
+    language_picker.add_item("English", 1)
+    language_picker.select(1 if language_code() == "en" else 0)
+    language_picker.item_selected.connect(func(index): change_language("en" if index == 1 else "de"))
+    box.add_child(language_picker)
     var level = OptionButton.new()
-    for title in ["Bot: Leicht","Bot: Mittel","Bot: Schwer"]: level.add_item(title)
+    for title in ["Bot: Leicht","Bot: Mittel","Bot: Schwer"]: level.add_item(T(title))
     level.selected = int(data.settings.level)
     level.custom_minimum_size.y = 52
     level.item_selected.connect(func(index):
@@ -612,7 +659,7 @@ func open_settings() -> void:
     )
     box.add_child(level)
     var music = CheckButton.new()
-    music.text = "Ruhige Zen-Garten-Musik"
+    music.text = T("Ruhige Zen-Garten-Musik")
     music.button_pressed = bool(data.settings.get("music",false))
     music.toggled.connect(func(enabled):
         data.settings.music = enabled
@@ -621,7 +668,7 @@ func open_settings() -> void:
     )
     box.add_child(music)
     var sounds = CheckButton.new()
-    sounds.text = "Sanfte Spieltöne"
+    sounds.text = T("Sanfte Spieltöne")
     sounds.button_pressed = bool(data.settings.sound)
     sounds.toggled.connect(func(enabled):
         data.settings.sound = enabled
@@ -629,7 +676,7 @@ func open_settings() -> void:
     )
     box.add_child(sounds)
     var hints = CheckButton.new()
-    hints.text = "Gewinnfelder als Hilfe zeigen"
+    hints.text = T("Gewinnfelder als Hilfe zeigen")
     hints.button_pressed = bool(data.settings.hints)
     hints.toggled.connect(func(enabled):
         data.settings.hints = enabled
@@ -637,7 +684,7 @@ func open_settings() -> void:
     )
     box.add_child(hints)
     var alternate = CheckButton.new()
-    alternate.text = "Startspieler nach jeder Runde wechseln"
+    alternate.text = T("Startspieler nach jeder Runde wechseln")
     alternate.button_pressed = bool(data.settings.alternate)
     alternate.toggled.connect(func(enabled):
         data.settings.alternate = enabled
@@ -645,13 +692,14 @@ func open_settings() -> void:
     )
     box.add_child(alternate)
     var swap = CheckButton.new()
-    swap.text = "Farbtausch erlauben (nur lokaler Modus)"
+    swap.text = T("Farbtausch erlauben (nur lokaler Modus)")
     swap.button_pressed = bool(data.settings.swap)
     swap.toggled.connect(func(enabled):
         data.settings.swap = enabled
         persist()
     )
     box.add_child(swap)
+    button("Musikprobe abspielen",box,music_preview)
     button("Fertig",box,close_modal,false,true)
 
 func build_sound() -> void:
@@ -675,8 +723,18 @@ func build_sound() -> void:
     if ambient != null:
         ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
         music_player.stream = ambient
-    music_player.volume_db = -28
+    music_player.volume_db = -12
     sync_music()
+func music_preview() -> void:
+    if music_player == null or music_player.stream == null:
+        notify_user("Musik konnte nicht geladen werden.")
+        return
+    music_player.play()
+    if not bool(data.settings.get("music", false)):
+        get_tree().create_timer(6.0).timeout.connect(func():
+            if is_instance_valid(music_player) and not bool(data.settings.get("music", false)):
+                music_player.stop()
+        )
 func sync_music() -> void:
     if music_player == null or music_player.stream == null: return
     if bool(data.settings.get("music",false)):
