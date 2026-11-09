@@ -41,6 +41,8 @@ var challenge_row: HBoxContainer
 var classic_views: HBoxContainer
 var classic_actions: HBoxContainer
 var challenge_leave_row: HBoxContainer
+var challenge_role_panel: PanelContainer
+var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
 func language_code() -> String:
     if data == null: return "de"
@@ -210,6 +212,13 @@ func build_ui() -> void:
     ribbon.add_child(header)
     status = label("",header,20,Color("453329"))
     detail = label("",header,12,Color("80684e"))
+    # Only challenge mode shows this explicit player/bot assignment.
+    challenge_role_panel = PanelContainer.new()
+    challenge_role_panel.add_theme_stylebox_override("panel",theme_style(Color("41543e",0.97),10))
+    header.add_child(challenge_role_panel)
+    challenge_role_label = label("",challenge_role_panel,15,Color("fff6df"))
+    challenge_role_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    challenge_role_panel.visible = false
 
     # Live 3D cube floats over the real garden scene. No static screenshot
     # can intercept cube gestures or pretend to be the board.
@@ -240,8 +249,13 @@ func build_ui() -> void:
     input_control = InputController.new(renderer,on_cell)
     container.gui_input.connect(input_control.handle)
 
-    help_text = label("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen",column,12,Color("543d27"))
+    # Accessible status strip: readable regardless of the garden background.
+    var feedback_panel = PanelContainer.new()
+    feedback_panel.add_theme_stylebox_override("panel",theme_style(Color("30271f",0.96),13))
+    column.add_child(feedback_panel)
+    help_text = label("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen",feedback_panel,15,Color("fff3df"))
     help_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    help_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     swap_row = row(column)
     button("X übernehmen",swap_row,func(): resolve_swap(true))
     button("O behalten",swap_row,func(): resolve_swap(false))
@@ -267,7 +281,13 @@ func build_ui() -> void:
     classic_actions = actions
     button("Rückgängig",actions,undo)
     button("Neue Partie",actions,confirm_new,true,true)
-    var meta = label("6 SEITEN · 54 FELDER · 108 VIERERLINIEN",column,11,Color("5b4430"))
+    var legend_panel = PanelContainer.new()
+    var legend_style = theme_style(Color("30271f",0.89),9)
+    legend_style.content_margin_top = 5
+    legend_style.content_margin_bottom = 5
+    legend_panel.add_theme_stylebox_override("panel",legend_style)
+    column.add_child(legend_panel)
+    var meta = label("6 SEITEN · 54 FELDER · 108 VIERERLINIEN",legend_panel,12,Color("fff3df"))
     meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 func mode_name() -> String:
     var mode = int(data.settings.mode)
@@ -281,6 +301,7 @@ func player_name(owner: int) -> String:
     return T(pname)
 func refresh(animate: int = -1) -> void:
     if challenge_active:
+        challenge_role_label.text = "You play X  ·  Zen-Bot plays O" if language_code() == "en" else "Du spielst X  ·  Zen-Bot spielt O"
         var p: Dictionary = challenges.puzzle(challenge_index)
         var kind: String = str(p.kind)
         if challenge_phase == -1:
@@ -321,6 +342,7 @@ func refresh(animate: int = -1) -> void:
             help_text.text = toast if Time.get_ticks_msec()<toast_until else T("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen")
     swap_row.visible = not challenge_active and board.swap_pending and not (int(data.settings.mode) == 1 and board.current_owner() == 1 and tutorial == null)
     tutorial_row.visible = not challenge_active and tutorial != null
+    challenge_role_panel.visible = challenge_active
     challenge_row.visible = challenge_active
     challenge_leave_row.visible = challenge_active
     classic_views.visible = not challenge_active
