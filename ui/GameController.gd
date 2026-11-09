@@ -33,7 +33,7 @@ var toast_until = 0
 var challenges: ZenChallenges
 var challenge_active: bool = false
 var challenge_index: int = 0
-var challenge_phase: int = 0 # 0: first move, 1: finish a fork, 2: solved
+var challenge_phase: int = 0 # player move index (0-based), -1: solved
 var challenge_hint_level: int = 0
 var challenge_message: String = ""
 var classic_backup: Dictionary = {}
@@ -253,6 +253,7 @@ func build_ui() -> void:
     button("◀",challenge_row,func(): open_challenge_number(challenge_index-1),true)
     button("Tipp",challenge_row,challenge_hint,true)
     button("Neustart",challenge_row,challenge_restart,true)
+    button("Stufen",challenge_row,open_challenge_levels,true)
     button("▶",challenge_row,func(): open_challenge_number(challenge_index+1),true)
     var leave = row(column)
     button("Classic fortsetzen",leave,leave_challenges,true,true)
@@ -282,18 +283,23 @@ func refresh(animate: int = -1) -> void:
     if challenge_active:
         var p: Dictionary = challenges.puzzle(challenge_index)
         var kind: String = str(p.kind)
-        if challenge_phase == 2:
+        if challenge_phase == -1:
             status.text = T("Gelöst! Ein Zen-Blatt für dich. 🍃")
+        elif kind == "sequence":
+            status.text = T("Erzwinge einen Sieg in %d Zügen") % int(p.moves)
+        elif kind == "defense":
+            status.text = T("Finde den einzigen rettenden Zug")
         elif kind == "win":
             status.text = T("Finde den Gewinnzug")
         elif kind == "block":
             status.text = T("Blockiere den Sieg von O")
-        elif challenge_phase == 1:
+        elif challenge_phase >= 1:
             status.text = T("Finde den zweiten Gewinnweg")
         else:
             status.text = T("Erzwinge einen Sieg in zwei Zügen")
-        status.add_theme_color_override("font_color",Color("67785b") if challenge_phase == 2 else Color("453329"))
-        detail.text = T("Zen Challenge") + " %02d/30   ·   🍃 %d/30" % [challenge_index+1,challenges.solved.size()]
+        status.add_theme_color_override("font_color",Color("67785b") if challenge_phase == -1 else Color("453329"))
+        var level: int = int(p.level)
+        detail.text = T("Zen Challenge") + " · " + T(["Anfänger", "Fortgeschritten", "Experte", "Zen-Meister", "Großmeister"][level-1]) + " %02d/20  ·  🍃 %d/100" % [((challenge_index % 20)+1),challenges.solved.size()]
         help_text.text = (toast if Time.get_ticks_msec() < toast_until else challenge_message if challenge_message != "" else T("Drehe den Würfel und finde den richtigen Zug."))
     else:
         var sym := "X" if board.turn == 1 else "O"
@@ -492,7 +498,7 @@ func open_menu() -> void:
         button("Zurück zu Zen Challenges",box,close_modal,false,true)
         button("Classic fortsetzen",box,leave_challenges)
     else:
-        button("Zen Challenges · 30 Rätsel",box,begin_challenges,false,true)
+        button("Zen Challenges · 100 Rätsel",box,begin_challenges,false,true)
     button("Einstellungen",box,open_settings)
     button("Deine Spielstatistik",box,open_stats)
     button("Regeln & Balance",box,open_balance)
@@ -536,6 +542,7 @@ func begin_challenges() -> void:
             first_unsolved = i
             break
     open_challenge_number(first_unsolved)
+    open_challenge_levels()
 
 func open_challenge_number(number: int) -> void:
     if not challenge_active or challenges == null or not challenges.valid: return
@@ -556,38 +563,47 @@ func open_challenge_number(number: int) -> void:
 func challenge_restart() -> void:
     if challenge_active: open_challenge_number(challenge_index)
 
+func open_challenge_levels() -> void:
+    if not challenge_active: return
+    var box = modal("Zen Challenges · 5 Stufen")
+    label(T("20 Rätsel je Stufe") + " · 🍃 %d/100" % challenges.solved.size(),box,15)
+    var levels: Array = ["Anfänger", "Fortgeschritten", "Experte", "Zen-Meister", "Großmeister"]
+    for level in range(1, 6):
+        var start_index: int = (level - 1) * 20
+        var completed: int = 0
+        for number in range(start_index, start_index + 20):
+            if challenges.solved.has(str(number + 1)): completed += 1
+        button(T(levels[level - 1]) + " · %d/20 🍃" % completed,box,Callable(self, "challenge_open_level").bind(level),false,level == 1)
+
+func challenge_open_level(level: int) -> void:
+    if not challenge_active or level < 1 or level > 5: return
+    var start_index: int = (level - 1) * 20
+    var selected: int = start_index
+    for i in range(start_index, start_index + 20):
+        if not challenges.solved.has(str(i + 1)):
+            selected = i
+            break
+    open_challenge_number(selected)
+
 func challenge_try_cell(cell: int) -> void:
-    if not challenge_active or challenge_phase == 2 or cell < 0 or cell >= 54 or board.cells[cell] != 0: return
+    if not challenge_active or challenge_phase == -1 or cell < 0 or cell >= 54 or board.cells[cell] != 0: return
     var p: Dictionary = challenges.puzzle(challenge_index)
-    if challenge_phase == 0:
-        if not p.solutions.has(cell):
-            notify_user("Nicht ganz – überlege, welche Kantenlinie entscheidend ist.")
-            return
-        board.cells[cell] = 1
-        board.last_cell = cell
-        play_sound(false)
-        if str(p.kind) == "fork":
-            var opponent_wins: Array = rules.threats(board.cells,2)
-            var threats: Array = rules.threats(board.cells,1)
-            if not opponent_wins.is_empty() or threats.size() < 2:
-                push_error("Zen Challenges: fork puzzle failed runtime validation")
-                open_challenge_number(challenge_index)
-                return
-            # The bot blocks one potential victory, but cannot block both.
-            var reply: int = int(threats[0])
-            board.cells[reply] = 2
-            board.last_cell = reply
-            challenge_phase = 1
-            challenge_message = T("Der Zen-Bot hat eine Linie geblockt. Finde die andere!")
-            play_sound(false)
-        else:
-            if str(p.kind) == "win":
-                board.win_lines = rules.victories(board.cells,1)
-            challenge_complete()
-    elif challenge_phase == 1:
-        var next_cells: Array = board.cells.duplicate()
-        next_cells[cell] = 1
-        var victories = rules.victories(next_cells,1)
+    var kind: String = str(p.kind)
+    var script_path: Array = p.get("path", [])
+    var next_move: int = -1
+    if kind == "sequence" and script_path.size() > challenge_phase * 2:
+        next_move = int(script_path[challenge_phase * 2])
+    elif kind == "fork" and challenge_phase == 0:
+        # The first move is chosen from the puzzle's certified fork solutions.
+        next_move = -1
+    elif challenge_phase == 0:
+        next_move = -1
+    # Later X moves in a fork finish any still-open winning line.
+    var last_move: bool = kind in ["fork", "sequence"] and challenge_phase > 0 and (kind == "fork" or script_path.size() <= challenge_phase * 2)
+    if last_move:
+        var candidate: Array = board.cells.duplicate()
+        candidate[cell] = 1
+        var victories: Array = rules.victories(candidate,1)
         if victories.is_empty():
             notify_user("Suche den zweiten Gewinnweg über die Kante.")
             return
@@ -595,10 +611,46 @@ func challenge_try_cell(cell: int) -> void:
         board.last_cell = cell
         board.win_lines = victories
         challenge_complete()
-    refresh(cell)
+        refresh(cell)
+        return
+    if (next_move >= 0 and cell != next_move) or (next_move < 0 and not p.solutions.has(cell)):
+        notify_user("Nicht ganz – überlege, welche Kantenlinie entscheidend ist.")
+        return
+    board.cells[cell] = 1
+    board.last_cell = cell
+    play_sound(false)
+    if kind in ["win", "block", "defense"]:
+        if kind == "win": board.win_lines = rules.victories(board.cells,1)
+        challenge_complete()
+        refresh(cell)
+        return
+    var threats: Array = rules.threats(board.cells,1)
+    if rules.threats(board.cells,2).size() > 0 or threats.is_empty():
+        push_error("Zen Challenges: broken forcing sequence")
+        challenge_restart()
+        return
+    var bot_block: int = -1
+    if kind == "sequence" and script_path.size() > challenge_phase * 2 + 1:
+        var script_reply: Variant = script_path[challenge_phase * 2 + 1]
+        if script_reply is Dictionary:
+            bot_block = int(threats[0])
+        else:
+            bot_block = int(script_reply)
+    else:
+        bot_block = int(threats[0])
+    if bot_block < 0 or bot_block >= 54 or board.cells[bot_block] != 0 or not threats.has(bot_block):
+        push_error("Zen Challenges: forcing response does not match winning lines")
+        challenge_restart()
+        return
+    board.cells[bot_block] = 2
+    board.last_cell = bot_block
+    challenge_phase += 1
+    challenge_message = T("Der Zen-Bot blockiert. Finde den nächsten Zug!")
+    play_sound(false)
+    refresh(bot_block)
 
 func challenge_complete() -> void:
-    challenge_phase = 2
+    challenge_phase = -1
     board.winner = 1 if not board.win_lines.is_empty() else 0
     challenge_message = T("Geschafft! 🍃 Wähle ▶ für das nächste Rätsel.")
     challenges.record_solved(challenge_index)
@@ -606,9 +658,17 @@ func challenge_complete() -> void:
     if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
 
 func challenge_hint() -> void:
-    if not challenge_active or challenge_phase == 2: return
+    if not challenge_active or challenge_phase == -1: return
     var targets: Array = challenges.solutions(challenge_index)
-    if challenge_phase == 1: targets = rules.threats(board.cells,1)
+    var active_p: Dictionary = challenges.puzzle(challenge_index)
+    if str(active_p.kind) == "sequence" and challenge_phase > 0:
+        var scripted: Array = active_p.get("path", [])
+        if scripted.size() > challenge_phase * 2:
+            targets = [int(scripted[challenge_phase * 2])]
+        else:
+            targets = rules.threats(board.cells,1)
+    elif challenge_phase > 0:
+        targets = rules.threats(board.cells,1)
     if targets.is_empty(): return
     var cell: int = int(targets[0])
     var face: int = CubeGeometry.face(cell)

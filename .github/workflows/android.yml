@@ -38,7 +38,7 @@ jobs:
         run: python3 tests/test_108_rules.py
       - name: Verify German/English strings and music WAV
         run: python3 tests/test_language_audio.py
-      - name: Verify Zen Challenges puzzle data
+      - name: Verify 100 Zen Challenges with forced lines and defense proofs
         run: python3 tests/test_challenges_data.py
       - name: Godot engine tests
         run: |
@@ -46,7 +46,7 @@ jobs:
       - name: Verify main scene and GameController script
         run: |
           timeout 35 "$GODOT" --headless --path . --script tests/test_scene_load.gd
-      - name: Verify Zen Challenges in the 3D game and Classic restoration
+      - name: Verify 100 tactical challenges on the 3D cube
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
       - name: Verify PCM music stream and playback controls

@@ -12,14 +12,14 @@ func _init(reference_lines: Array) -> void:
         push_error("Zen Challenges: puzzles are missing")
         return
     var contents = JSON.parse_string(FileAccess.get_file_as_string(PUZZLES_PATH))
-    if not contents is Dictionary or contents.get("format", "") != "zencube-challenges-v1":
+    if not contents is Dictionary or contents.get("format", "") != "zencube-challenges-v2":
         push_error("Zen Challenges: invalid data format")
         return
     var stored_lines = contents.get("lines", [])
     var stored_puzzles = contents.get("challenges", [])
     if not stored_lines is Array or not stored_puzzles is Array:
         return
-    if stored_lines.size() != reference_lines.size() or stored_lines.size() != 108 or stored_puzzles.size() != 30:
+    if stored_lines.size() != reference_lines.size() or stored_lines.size() != 108 or stored_puzzles.size() != 100:
         push_error("Zen Challenges: wrong number of lines or puzzles")
         return
     var real_keys: Dictionary = {}
@@ -32,13 +32,14 @@ func _init(reference_lines: Array) -> void:
     for p in stored_puzzles:
         if not p is Dictionary or not p.get("x") is Array or not p.get("o") is Array or not p.get("solutions") is Array:
             return
-        if not str(p.get("kind", "")) in ["win", "block", "fork"] or p.solutions.is_empty():
+        if not str(p.get("kind", "")) in ["win", "block", "fork", "sequence", "defense"] or p.solutions.is_empty():
             return
-    for puzzle in stored_puzzles:
+    # Godot JSON parser returns numeric values as floats; normalize cell IDs.
+    for p in stored_puzzles:
         for field in ["x", "o", "solutions"]:
-            puzzle[field] = puzzle[field].map(
-                func(value): return int(value)
-            )
+            p[field] = p[field].map(func(value): return int(value))
+        p["id"] = int(p["id"])
+        p["level"] = int(p["level"])
     puzzles = stored_puzzles
     valid = true
     load_progress()
@@ -52,7 +53,7 @@ func load_progress() -> void:
     if not FileAccess.file_exists(PROGRESS_PATH): return
     var parsed = JSON.parse_string(FileAccess.get_file_as_string(PROGRESS_PATH))
     if not parsed is Dictionary: return
-    for i in range(1, 31):
+    for i in range(1, 101):
         if parsed.get(str(i), false): solved[str(i)] = true
 
 func record_solved(index: int) -> void:
