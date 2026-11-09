@@ -17,7 +17,10 @@ assert 'language_picker.item_selected.connect' in controller
 assert 'translate_ui_tree(ui)' in controller
 assert 'music_player.volume_db = -2.0' in controller
 assert 'func music_preview() -> void:' in controller
-assert 'include_filter="assets/*.pcm"' in (BASE/'export_presets.cfg').read_text()
+preset = (BASE/'export_presets.cfg').read_text()
+filters = next((line.split('=', 1)[1].strip().strip('"') for line in preset.splitlines() if line.startswith('include_filter=')), '')
+assert 'assets/*.pcm' in [x.strip() for x in filters.split(',')], 'PCM music missing from export'
+
 pcm=(BASE/'assets/zen_ambient_music.pcm').read_bytes()
 assert len(pcm)==16000*24*2
 raw=struct.unpack('<'+str(len(pcm)//2)+'h',pcm)
