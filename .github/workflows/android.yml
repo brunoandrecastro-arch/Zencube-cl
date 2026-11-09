@@ -38,12 +38,17 @@ jobs:
         run: python3 tests/test_108_rules.py
       - name: Verify German/English strings and music WAV
         run: python3 tests/test_language_audio.py
+      - name: Verify Zen Challenges puzzle data
+        run: python3 tests/test_challenges_data.py
       - name: Godot engine tests
         run: |
           "$GODOT" --headless --path . --script tests/test_engine.gd
       - name: Verify main scene and GameController script
         run: |
           timeout 35 "$GODOT" --headless --path . --script tests/test_scene_load.gd
+      - name: Verify Zen Challenges in the 3D game and Classic restoration
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
       - name: Verify PCM music stream and playback controls
         run: |
           timeout 35 "$GODOT" --headless --path . --script tests/test_music_stream.gd

@@ -29,6 +29,18 @@ var tutorial_from_welcome = false
 var welcome_open = false
 var toast = ""
 var toast_until = 0
+# Challenge mode uses the same BoardModel, RulesEngine and 3D CubeRenderer.
+var challenges: ZenChallenges
+var challenge_active: bool = false
+var challenge_index: int = 0
+var challenge_phase: int = 0 # 0: first move, 1: finish a fork, 2: solved
+var challenge_hint_level: int = 0
+var challenge_message: String = ""
+var classic_backup: Dictionary = {}
+var challenge_row: HBoxContainer
+var classic_views: HBoxContainer
+var classic_actions: HBoxContainer
+var challenge_leave_row: HBoxContainer
 const ZenLocale = preload("res://core/ZenLocalization.gd")
 func language_code() -> String:
     if data == null: return "de"
@@ -71,6 +83,7 @@ func _ready() -> void:
         board.win_lines = rules.victories(board.cells,1)+rules.victories(board.cells,2)
     else:
         board.swap_enabled = bool(data.settings.swap)
+    challenges = ZenChallenges.new(rules.lines)
     build_ui()
     build_sound()
     refresh()
@@ -236,11 +249,21 @@ func build_ui() -> void:
     button("Zurück",tutorial_row,func(): tutorial_step(-1),true)
     button("Weiter",tutorial_row,func(): tutorial_step(1),true)
     button("Spielen",tutorial_row,end_tutorial,true,true)
+    challenge_row = row(column)
+    button("◀",challenge_row,func(): open_challenge_number(challenge_index-1),true)
+    button("Tipp",challenge_row,challenge_hint,true)
+    button("Neustart",challenge_row,challenge_restart,true)
+    button("▶",challenge_row,func(): open_challenge_number(challenge_index+1),true)
+    var leave = row(column)
+    button("Classic fortsetzen",leave,leave_challenges,true,true)
+    challenge_leave_row = leave
     var views = row(column)
+    classic_views = views
     button("Ansicht",views,func(): renderer.reset_view(),true)
     button("Alle Seiten",views,open_net,true)
     button("Hinweis",views,open_help,true)
     var actions = row(column)
+    classic_actions = actions
     button("Rückgängig",actions,undo)
     button("Neue Partie",actions,confirm_new,true,true)
     var meta = label("6 SEITEN · 54 FELDER · 108 VIERERLINIEN",column,11,Color("5b4430"))
@@ -256,30 +279,55 @@ func player_name(owner: int) -> String:
     var pname = str(data.settings.names[owner])
     return T(pname)
 func refresh(animate: int = -1) -> void:
-    var sym := "X" if board.turn == 1 else "O"
-    var owner := board.current_owner()
-    if int(data.settings.mode) == 1:
-        status.text = T("Zen-Bot denkt nach …") if owner == 1 else T("Du bist am Zug  ·  ")+sym
+    if challenge_active:
+        var p: Dictionary = challenges.puzzle(challenge_index)
+        var kind: String = str(p.kind)
+        if challenge_phase == 2:
+            status.text = T("Gelöst! Ein Zen-Blatt für dich. 🍃")
+        elif kind == "win":
+            status.text = T("Finde den Gewinnzug")
+        elif kind == "block":
+            status.text = T("Blockiere den Sieg von O")
+        elif challenge_phase == 1:
+            status.text = T("Finde den zweiten Gewinnweg")
+        else:
+            status.text = T("Erzwinge einen Sieg in zwei Zügen")
+        status.add_theme_color_override("font_color",Color("67785b") if challenge_phase == 2 else Color("453329"))
+        detail.text = T("Zen Challenge") + " %02d/30   ·   🍃 %d/30" % [challenge_index+1,challenges.solved.size()]
+        help_text.text = (toast if Time.get_ticks_msec() < toast_until else challenge_message if challenge_message != "" else T("Drehe den Würfel und finde den richtigen Zug."))
     else:
-        status.text = player_name(owner)+T(" ist am Zug  ·  ")+sym
-    status.add_theme_color_override("font_color", Color("453329") if board.turn == 1 else Color("a75f43"))
-    if board.swap_pending: status.text = player_name(board.owners[1])+T(" · Farbe wählen")
-    if board.winner != 0:
-        status.text = T("Unentschieden · gut gespielt!") if board.winner == 3 else player_name(board.owners[board.winner-1])+T(" gewinnt!")
-        status.add_theme_color_override("font_color", Color("67785b"))
-    detail.text = mode_name()+T("  ·  Zug ")+str(board.move_count())
-    if ai_running: detail.text += T("  ·  Zen-Bot überlegt …")
-    swap_row.visible = board.swap_pending and not (int(data.settings.mode) == 1 and board.current_owner() == 1 and tutorial == null)
-    tutorial_row.visible = tutorial != null
-    if tutorial != null:
-        help_text.text = str(tutorial.step+1)+" / "+str(TutorialController.TEXTS.size())+"  ·  "+T(TutorialController.TEXTS[tutorial.step])
-    else:
-        help_text.text = toast if Time.get_ticks_msec()<toast_until else T("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen")
+        var sym := "X" if board.turn == 1 else "O"
+        var owner := board.current_owner()
+        if int(data.settings.mode) == 1:
+            status.text = T("Zen-Bot denkt nach …") if owner == 1 else T("Du bist am Zug  ·  ")+sym
+        else:
+            status.text = player_name(owner)+T(" ist am Zug  ·  ")+sym
+        status.add_theme_color_override("font_color", Color("453329") if board.turn == 1 else Color("a75f43"))
+        if board.swap_pending: status.text = player_name(board.owners[1])+T(" · Farbe wählen")
+        if board.winner != 0:
+            status.text = T("Unentschieden · gut gespielt!") if board.winner == 3 else player_name(board.owners[board.winner-1])+T(" gewinnt!")
+            status.add_theme_color_override("font_color", Color("67785b"))
+        detail.text = mode_name()+T("  ·  Zug ")+str(board.move_count())
+        if ai_running: detail.text += T("  ·  Zen-Bot überlegt …")
+        if tutorial != null:
+            help_text.text = str(tutorial.step+1)+" / "+str(TutorialController.TEXTS.size())+"  ·  "+T(TutorialController.TEXTS[tutorial.step])
+        else:
+            help_text.text = toast if Time.get_ticks_msec()<toast_until else T("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen")
+    swap_row.visible = not challenge_active and board.swap_pending and not (int(data.settings.mode) == 1 and board.current_owner() == 1 and tutorial == null)
+    tutorial_row.visible = not challenge_active and tutorial != null
+    challenge_row.visible = challenge_active
+    challenge_leave_row.visible = challenge_active
+    classic_views.visible = not challenge_active
+    classic_actions.visible = not challenge_active
     renderer.selected = board.last_cell
-    renderer.paint(board,bool(data.settings.hints) or tutorial != null,preview,animate)
-    if tutorial == null: persist()
+    renderer.paint(board,(bool(data.settings.hints) or tutorial != null) and not challenge_active,preview,animate)
+    if tutorial == null and not challenge_active: persist()
     if net_active: update_net()
 func persist() -> void:
+    if challenge_active:
+        # Settings may be saved during a puzzle, but NEVER replace the classic save.
+        if not SaveManager.save_data(data): notify_user("Speichern fehlgeschlagen: Speicherplatz prüfen.")
+        return
     if tutorial != null:
         data.game = saved_training.board.duplicate(true)
         data.game["history"] = saved_training.history.duplicate(true)
@@ -293,6 +341,9 @@ func notify_user(message: String) -> void:
     if help_text != null: help_text.text = message
 func on_cell(cell: int) -> void:
     if cell < 0 or (popup != null and not net_active): return
+    if challenge_active:
+        challenge_try_cell(cell)
+        return
     if ai_running or (tutorial == null and int(data.settings.mode) == 1 and board.current_owner() == 1): return
     if tutorial != null:
         if tutorial.step in [0,5,6]: return
@@ -301,6 +352,9 @@ func on_cell(cell: int) -> void:
             return
     place(cell)
 func place(cell: int) -> void:
+    if challenge_active:
+        challenge_try_cell(cell)
+        return
     if not rules.play(board,cell):
         if board.swap_pending: notify_user("Zuerst X übernehmen oder O behalten wählen.")
         return
@@ -331,6 +385,8 @@ func resolve_swap(accept: bool) -> void:
         generation += 1
         refresh()
 func new_game() -> void:
+    if challenge_active:
+        leave_challenges()
     generation += 1
     board = BoardModel.new()
     board.swap_enabled = bool(data.settings.swap) and int(data.settings.mode) == 0
@@ -354,6 +410,9 @@ func confirm_new() -> void:
         new_game()
     )
 func undo() -> void:
+    if challenge_active:
+        challenge_restart()
+        return
     if tutorial != null:
         load_tutorial()
         return
@@ -373,9 +432,9 @@ func _process(_delta: float) -> void:
         var move = worker.wait_to_finish()
         worker = null
         ai_running = false
-        if worker_generation == generation and tutorial == null and board.winner == 0 and not board.swap_pending: place(int(move))
+        if worker_generation == generation and not challenge_active and tutorial == null and board.winner == 0 and not board.swap_pending: place(int(move))
         else: refresh()
-    if tutorial != null or int(data.settings.mode) != 1 or board.winner != 0: return
+    if challenge_active or tutorial != null or int(data.settings.mode) != 1 or board.winner != 0: return
     if board.swap_pending:
         if board.current_owner() == 1: resolve_swap(true)
         else: return
@@ -429,6 +488,11 @@ func open_menu() -> void:
     button("Zwei Spieler lokal",box,func(): start_mode(0,0))
     button("Viererlinien lernen",box,start_tutorial)
     button("Freies Training",box,func(): start_mode(2,0))
+    if challenge_active:
+        button("Zurück zu Zen Challenges",box,close_modal,false,true)
+        button("Classic fortsetzen",box,leave_challenges)
+    else:
+        button("Zen Challenges · 30 Rätsel",box,begin_challenges,false,true)
     button("Einstellungen",box,open_settings)
     button("Deine Spielstatistik",box,open_stats)
     button("Regeln & Balance",box,open_balance)
@@ -449,6 +513,128 @@ func open_stats() -> void:
     label("GEGEN DIE KI · SIEGE / NIEDERLAGEN",box,12)
     for i in range(3): label("%s: %d / %d" % [T(["Einfach","Mittel","Schwer"][i]),data.stats.ai_wins[i],data.stats.ai_losses[i]],box)
     label("Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.",box,14)
+# ---- Zen Challenges (same interactive 3D cube; Classic state is untouched) ----
+func begin_challenges() -> void:
+    if challenges == null or not challenges.valid:
+        notify_user("Zen Challenges konnten nicht geladen werden.")
+        close_modal()
+        return
+    if challenge_active:
+        close_modal()
+        return
+    if tutorial != null:
+        # Finish the tutorial before entering a new mode.
+        end_tutorial()
+    close_modal()
+    # Cancel outstanding bot moves. The stale worker result is discarded.
+    generation += 1
+    classic_backup = {"board":board.snapshot(), "history":board.history.duplicate(true), "preview":preview.duplicate(), "selected":renderer.selected}
+    challenge_active = true
+    var first_unsolved: int = 0
+    for i in range(challenges.puzzles.size()):
+        if not challenges.solved.has(str(i+1)):
+            first_unsolved = i
+            break
+    open_challenge_number(first_unsolved)
+
+func open_challenge_number(number: int) -> void:
+    if not challenge_active or challenges == null or not challenges.valid: return
+    if number < 0 or number >= challenges.puzzles.size(): return
+    close_modal()
+    generation += 1
+    challenge_index = number
+    challenge_phase = 0
+    challenge_hint_level = 0
+    challenge_message = ""
+    toast_until = 0
+    preview = []
+    board = BoardModel.new()
+    challenges.setup(board,challenge_index)
+    renderer.reset_view()
+    refresh()
+
+func challenge_restart() -> void:
+    if challenge_active: open_challenge_number(challenge_index)
+
+func challenge_try_cell(cell: int) -> void:
+    if not challenge_active or challenge_phase == 2 or cell < 0 or cell >= 54 or board.cells[cell] != 0: return
+    var p: Dictionary = challenges.puzzle(challenge_index)
+    if challenge_phase == 0:
+        if not p.solutions.has(cell):
+            notify_user("Nicht ganz – überlege, welche Kantenlinie entscheidend ist.")
+            return
+        board.cells[cell] = 1
+        board.last_cell = cell
+        play_sound(false)
+        if str(p.kind) == "fork":
+            var opponent_wins: Array = rules.threats(board.cells,2)
+            var threats: Array = rules.threats(board.cells,1)
+            if not opponent_wins.is_empty() or threats.size() < 2:
+                push_error("Zen Challenges: fork puzzle failed runtime validation")
+                open_challenge_number(challenge_index)
+                return
+            # The bot blocks one potential victory, but cannot block both.
+            var reply: int = int(threats[0])
+            board.cells[reply] = 2
+            board.last_cell = reply
+            challenge_phase = 1
+            challenge_message = T("Der Zen-Bot hat eine Linie geblockt. Finde die andere!")
+            play_sound(false)
+        else:
+            if str(p.kind) == "win":
+                board.win_lines = rules.victories(board.cells,1)
+            challenge_complete()
+    elif challenge_phase == 1:
+        var next_cells: Array = board.cells.duplicate()
+        next_cells[cell] = 1
+        var victories = rules.victories(next_cells,1)
+        if victories.is_empty():
+            notify_user("Suche den zweiten Gewinnweg über die Kante.")
+            return
+        board.cells[cell] = 1
+        board.last_cell = cell
+        board.win_lines = victories
+        challenge_complete()
+    refresh(cell)
+
+func challenge_complete() -> void:
+    challenge_phase = 2
+    board.winner = 1 if not board.win_lines.is_empty() else 0
+    challenge_message = T("Geschafft! 🍃 Wähle ▶ für das nächste Rätsel.")
+    challenges.record_solved(challenge_index)
+    play_sound(true)
+    if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
+
+func challenge_hint() -> void:
+    if not challenge_active or challenge_phase == 2: return
+    var targets: Array = challenges.solutions(challenge_index)
+    if challenge_phase == 1: targets = rules.threats(board.cells,1)
+    if targets.is_empty(): return
+    var cell: int = int(targets[0])
+    var face: int = CubeGeometry.face(cell)
+    if challenge_hint_level == 0:
+        challenge_message = T("Schau auf die Würfelseite: ") + T(CubeGeometry.NAMES[face])
+        renderer.focus_faces([face])
+    else:
+        challenge_message = T("Lösungshinweis: ") + T(CubeGeometry.NAMES[face]) + " · " + T("Zeile ") + str(int((cell%9)/3)+1) + " · " + T("Spalte ") + str(cell%3+1)
+    challenge_hint_level += 1
+    toast_until = 0
+    refresh()
+
+func leave_challenges() -> void:
+    if not challenge_active: return
+    close_modal()
+    challenge_active = false
+    generation += 1
+    board = BoardModel.new()
+    board.restore(classic_backup.board)
+    board.history = classic_backup.history.duplicate(true)
+    preview = classic_backup.preview.duplicate()
+    renderer.selected = int(classic_backup.selected)
+    classic_backup = {}
+    challenge_message = ""
+    refresh()
+
 func open_help() -> void:
     var box = modal("Ein wenig Orientierung")
     var hints = CheckButton.new()
@@ -538,6 +724,7 @@ func update_net() -> void:
         pair[0].text = ["·","X","O"][int(board.cells[pair[1]])]
         pair[0].add_theme_color_override("font_color", Color("453329") if board.cells[pair[1]] == 1 else Color("a75f43") if board.cells[pair[1]] == 2 else Color("74614c"))
 func start_tutorial(onboarding: bool = false) -> void:
+    if challenge_active: leave_challenges()
     close_modal()
     tutorial_from_welcome = onboarding
     if tutorial == null: saved_training = {"board":board.snapshot(),"history":board.history.duplicate(true)}
@@ -571,6 +758,7 @@ func end_tutorial() -> void:
     board.history = saved_training.history
     refresh()
 func start_mode(mode: int, level: int = 0, from_welcome: bool = false) -> void:
+    if challenge_active: leave_challenges()
     close_modal()
     if tutorial != null:
         tutorial = null
