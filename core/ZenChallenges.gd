@@ -34,6 +34,11 @@ func _init(reference_lines: Array) -> void:
             return
         if not str(p.get("kind", "")) in ["win", "block", "fork"] or p.solutions.is_empty():
             return
+    for puzzle in stored_puzzles:
+        for field in ["x", "o", "solutions"]:
+            puzzle[field] = puzzle[field].map(
+                func(value): return int(value)
+            )
     puzzles = stored_puzzles
     valid = true
     load_progress()
