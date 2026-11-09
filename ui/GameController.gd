@@ -589,7 +589,9 @@ func challenge_try_cell(cell: int) -> void:
     if not challenge_active or challenge_phase == -1 or cell < 0 or cell >= 54 or board.cells[cell] != 0: return
     var p: Dictionary = challenges.puzzle(challenge_index)
     var kind: String = str(p.kind)
-    var script_path: Array = p.get("path", [])
+    var script_path: Array = []
+    if kind == "sequence":
+        script_path = p.get("path", [])
     var next_move: int = -1
     if kind == "sequence" and script_path.size() > challenge_phase * 2:
         next_move = int(script_path[challenge_phase * 2])
