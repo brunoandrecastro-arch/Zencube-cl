@@ -11,7 +11,7 @@ assert len(dictionary)>=95, 'Translations missing'
 for key in ('Willkommen im Zen-Garten', 'Einstellungen', 'Neue Partie','Zurück zum Spiel', 'Direkt gegen Zen-Bot spielen','Ruhige Zen-Garten-Musik','Musikprobe abspielen','SEITE A','Du bist am Zug  ·  ', '3+1 · Drei X auf einer Seite und eines auf der Nachbarseite. Setze das letzte X!'):
     assert key in dictionary and dictionary[key]!=key, f'Missing: {key}'
 assert '\t' not in controller, 'Tabs break Godot script parsing'
-assert 'if not str(data.settings.get("language", "")) in ["de", "en"]' in controller
+assert 'if not str(data.settings.get("language", "")) in ["de", "en", "pt"]' in controller
 assert 'func open_language_choice() -> void:' in controller
 assert 'language_picker.item_selected.connect' in controller
 assert 'translate_ui_tree(ui)' in controller

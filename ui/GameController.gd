@@ -48,7 +48,7 @@ func language_code() -> String:
     if data == null: return "de"
     return str(data.settings.get("language", "de"))
 func T(source: String) -> String:
-    return ZenLocale.english(source) if language_code() == "en" else source
+    return ZenLocale.translate(source, language_code())
 func translate_ui_tree(node: Node) -> void:
     if node.has_meta("zen_source_text"):
         if node is Button or node is Label:
@@ -56,11 +56,16 @@ func translate_ui_tree(node: Node) -> void:
     for child in node.get_children():
         translate_ui_tree(child)
 func choose_language(code: String) -> void:
-    if not code in ["de", "en"]: return
+    if not code in ["de", "en", "pt"]: return
     data.settings.language = code
+    # Discard transient text in the previously selected language.
+    toast = ""
+    toast_until = 0
+    challenge_message = ""
     close_modal()
     translate_ui_tree(ui)
     refresh()
+    persist() # Saves settings without replacing Classic while in Challenges.
     if not bool(data.settings.get("intro_seen", false)):
         open_welcome()
     else:
@@ -70,13 +75,13 @@ func change_language(code: String) -> void:
     if bool(data.settings.get("intro_seen", false)):
         open_settings()
 func open_language_choice() -> void:
-    var box = modal("Choose language · Sprache wählen")
-    # The first-run language decision must be made before starting the tutorial.
+    # Before a language is chosen, show only endonyms and the language icon.
+    var box = modal("🌐")
     box.get_child(1).hide()
-    label("Select your language / Wähle deine Sprache", box, 18)
+    label("Deutsch  ·  English  ·  Português", box, 17)
     button("Deutsch", box, choose_language.bind("de"), false, true)
     button("English", box, choose_language.bind("en"), false, true)
-    label("You can change this later in Settings. / Du kannst dies später ändern.", box, 13)
+    button("Português", box, choose_language.bind("pt"), false, true)
 func _ready() -> void:
     data = SaveManager.load_data()
     if SaveManager.valid_game(data.game):
@@ -89,7 +94,7 @@ func _ready() -> void:
     build_ui()
     build_sound()
     refresh()
-    if not str(data.settings.get("language", "")) in ["de", "en"]:
+    if not str(data.settings.get("language", "")) in ["de", "en", "pt"]:
         open_language_choice()
     elif not bool(data.settings.get("intro_seen",false)):
         # Visual examples are shown before the very first game.
@@ -196,12 +201,12 @@ func build_ui() -> void:
     title_row.add_child(brand)
     var title_text = label("ZenCube 3D",brand,27,Color("f9e5b8"))
     title_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    var sub = label("— Zen Garden Edition —",brand,12,Color("e6c99d"))
+    var sub = label("— Zen-Garten-Edition —",brand,12,Color("e6c99d"))
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var menu = button("☰",title_row,open_menu,true)
     menu.custom_minimum_size.x = 46
     menu.size_flags_horizontal = Control.SIZE_SHRINK_END
-    var tagline = label("A calm strategy game of balance, space and focus.",column,11,Color("4a3423"))
+    var tagline = label("Ein ruhiges Strategiespiel für Balance, Raumgefühl und Konzentration.",column,11,Color("4a3423"))
     tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
     var ribbon = PanelContainer.new()
@@ -270,7 +275,7 @@ func build_ui() -> void:
     button("Stufen",challenge_row,open_challenge_levels,true)
     button("▶",challenge_row,func(): open_challenge_number(challenge_index+1),true)
     var leave = row(column)
-    button("Classic fortsetzen",leave,leave_challenges,true,true)
+    button("Klassisches Spiel fortsetzen",leave,leave_challenges,true,true)
     challenge_leave_row = leave
     var views = row(column)
     classic_views = views
@@ -301,7 +306,7 @@ func player_name(owner: int) -> String:
     return T(pname)
 func refresh(animate: int = -1) -> void:
     if challenge_active:
-        challenge_role_label.text = "You play X  ·  Zen-Bot plays O" if language_code() == "en" else "Du spielst X  ·  Zen-Bot spielt O"
+        challenge_role_label.text = T("Du spielst X  ·  Zen-Bot spielt O")
         var p: Dictionary = challenges.puzzle(challenge_index)
         var kind: String = str(p.kind)
         if challenge_phase == -1:
@@ -320,7 +325,7 @@ func refresh(animate: int = -1) -> void:
             status.text = T("Erzwinge einen Sieg in zwei Zügen")
         status.add_theme_color_override("font_color",Color("67785b") if challenge_phase == -1 else Color("453329"))
         var level: int = int(p.level)
-        detail.text = T("Zen Challenge") + " · " + T(["Anfänger", "Fortgeschritten", "Experte", "Zen-Meister", "Großmeister"][level-1]) + " %02d/20  ·  🍃 %d/100" % [((challenge_index % 20)+1),challenges.solved.size()]
+        detail.text = T("Zen-Rätsel") + " · " + T(["Anfänger", "Fortgeschritten", "Experte", "Zen-Meister", "Großmeister"][level-1]) + " %02d/20  ·  🍃 %d/100" % [((challenge_index % 20)+1),challenges.solved.size()]
         help_text.text = (toast if Time.get_ticks_msec() < toast_until else challenge_message if challenge_message != "" else T("Drehe den Würfel und finde den richtigen Zug."))
     else:
         var sym := "X" if board.turn == 1 else "O"
@@ -366,7 +371,7 @@ func persist() -> void:
 func notify_user(message: String) -> void:
     toast = T(message)
     toast_until = Time.get_ticks_msec()+4000
-    if help_text != null: help_text.text = message
+    if help_text != null: help_text.text = toast
 func on_cell(cell: int) -> void:
     if cell < 0 or (popup != null and not net_active): return
     if challenge_active:
@@ -517,10 +522,10 @@ func open_menu() -> void:
     button("Viererlinien lernen",box,start_tutorial)
     button("Freies Training",box,func(): start_mode(2,0))
     if challenge_active:
-        button("Zurück zu Zen Challenges",box,close_modal,false,true)
-        button("Classic fortsetzen",box,leave_challenges)
+        button("Zurück zu den Zen-Rätseln",box,close_modal,false,true)
+        button("Klassisches Spiel fortsetzen",box,leave_challenges)
     else:
-        button("Zen Challenges · 100 Rätsel",box,begin_challenges,false,true)
+        button("Zen-Rätsel · 100 Aufgaben",box,begin_challenges,false,true)
     button("Einstellungen",box,open_settings)
     button("Deine Spielstatistik",box,open_stats)
     button("Regeln & Balance",box,open_balance)
@@ -587,7 +592,7 @@ func challenge_restart() -> void:
 
 func open_challenge_levels() -> void:
     if not challenge_active: return
-    var box = modal("Zen Challenges · 5 Stufen")
+    var box = modal("Zen-Rätsel · 5 Stufen")
     label(T("20 Rätsel je Stufe") + " · 🍃 %d/100" % challenges.solved.size(),box,15)
     var levels: Array = ["Anfänger", "Fortgeschritten", "Experte", "Zen-Meister", "Großmeister"]
     for level in range(1, 6):
@@ -913,13 +918,15 @@ func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> vo
 func open_settings() -> void:
     var box = modal("Deine Einstellungen")
     label("Spiele in deinem Tempo.",box,15,Color("806c54"))
-    label("Sprache / Language",box,15)
+    label("Sprache",box,15)
     var language_picker = OptionButton.new()
     language_picker.custom_minimum_size.y = 52
     language_picker.add_item("Deutsch", 0)
     language_picker.add_item("English", 1)
-    language_picker.select(1 if language_code() == "en" else 0)
-    language_picker.item_selected.connect(func(index): change_language("en" if index == 1 else "de"))
+    language_picker.add_item("Português", 2)
+    var selected_language: int = ["de", "en", "pt"].find(language_code())
+    language_picker.select(maxi(0, selected_language))
+    language_picker.item_selected.connect(func(index): change_language(["de","en","pt"][index]))
     box.add_child(language_picker)
     var level = OptionButton.new()
     for title in ["Bot: Leicht","Bot: Mittel","Bot: Schwer"]: level.add_item(T(title))
