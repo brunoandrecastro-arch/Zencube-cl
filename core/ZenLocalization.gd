@@ -3,6 +3,13 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Kirschblüten und Steingarten": "Cherry blossoms and raked sand",
+    "Bambuswald und Steinpfade": "Bamboo forest and stone paths",
+    "Tempel im Abendlicht": "Temple in the evening light",
+    "Mondlicht und stilles Wasser": "Moonlight and still water",
+    "Licht über den Wolken": "Light above the clouds",
+    "Ausgewählt": "Selected",
+
     "Jeder Rang hat eine eigene Prüfung. Siege in Folge zählen nur beim gleichen Bot.": "Each rank has its own challenge. Only wins against the same bot count towards a streak.",
     "%d/%d Siege": "%d/%d wins",
     "%d/%d Siege in Folge": "%d/%d consecutive wins",
@@ -203,6 +210,13 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Kirschblüten und Steingarten": "Cerejeiras em flor e jardim de areia",
+    "Bambuswald und Steinpfade": "Bosque de bambu e caminhos de pedra",
+    "Tempel im Abendlicht": "Templo à luz do entardecer",
+    "Mondlicht und stilles Wasser": "Luar e águas tranquilas",
+    "Licht über den Wolken": "Luz acima das nuvens",
+    "Ausgewählt": "Selecionado",
+
     "Jeder Rang hat eine eigene Prüfung. Siege in Folge zählen nur beim gleichen Bot.": "Cada nível tem um desafio próprio. Só as vitórias contra o mesmo bot contam para a série.",
     "%d/%d Siege": "%d/%d vitórias",
     "%d/%d Siege in Folge": "%d/%d vitórias consecutivas",

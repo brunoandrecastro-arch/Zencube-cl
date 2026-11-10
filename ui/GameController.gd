@@ -340,6 +340,10 @@ func apply_world() -> void:
     if chosen == current_world: return
     current_world = chosen
     world_background.texture = Asc.WORLD_TEXTURES[chosen]
+    # The world changes without touching the real 3D gameplay viewport.
+    # A gentle fade keeps transitions calm and avoids flicker on mobile.
+    world_background.modulate.a = 0.86
+    create_tween().tween_property(world_background, "modulate:a", 1.0, 0.28)
 
 func refresh(animate: int = -1) -> void:
     apply_world()
@@ -639,13 +643,38 @@ func open_ascension() -> void:
 func open_worlds() -> void:
     Asc.ensure(data)
     var box = modal("Welten")
-    label("Wähle eine freigeschaltete Welt.",box,15)
+    label("Wähle eine freigeschaltete Welt.", box, 15)
     for i in range(5):
         var number: int = i
-        var b: Button = button(Asc.WORLDS[i],box,func(): select_world(number),true,i == int(data.ascension.world))
-        b.disabled = not Asc.world_unlocked(data,i)
-        if b.disabled: b.text += "  🔒"
-    button("Zum Hauptmenü",box,open_menu,true)
+        var card: PanelContainer = PanelContainer.new()
+        var card_style: StyleBoxFlat = theme_style(Color("fff2dc", 0.97), 14)
+        card_style.content_margin_top = 7
+        card_style.content_margin_bottom = 7
+        card.add_theme_stylebox_override("panel", card_style)
+        box.add_child(card)
+        var card_row: HBoxContainer = row(card)
+        # Only scenery is painted here. The playable cube is always rendered
+        # separately by CubeRenderer on the unchanged 54-cell SubViewport.
+        var thumbnail: TextureRect = TextureRect.new()
+        thumbnail.texture = Asc.WORLD_TEXTURES[i]
+        thumbnail.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        thumbnail.custom_minimum_size = Vector2(90, 104)
+        thumbnail.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+        thumbnail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        card_row.add_child(thumbnail)
+        var info: VBoxContainer = VBoxContainer.new()
+        info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        info.add_theme_constant_override("separation", 1)
+        card_row.add_child(info)
+        label(Asc.WORLD_SUBTITLES[i], info, 12, Color("6f5940"))
+        var b: Button = button(Asc.WORLDS[i], info, func(): select_world(number), true, i == int(data.ascension.world))
+        b.disabled = not Asc.world_unlocked(data, i)
+        if b.disabled:
+            b.text += "  🔒"
+        elif i == int(data.ascension.world):
+            label("Ausgewählt", info, 12, Color("526943"))
+    button("Zum Hauptmenü", box, open_menu, true)
 
 func select_world(number: int) -> void:
     if not Asc.world_unlocked(data,number): return

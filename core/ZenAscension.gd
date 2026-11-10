@@ -5,6 +5,7 @@ extends RefCounted
 const LEVELS = ["Leicht", "Mittel", "Schwer", "Meister", "Großmeister"]
 const RANKS = ["Zen-Anfänger", "Zen-Schüler", "Zen-Adept", "Zen-Meister", "Zen-Weiser", "Zen-Wächter"]
 const WORLDS = ["Zen-Garten", "Bambuspfad", "Bergtempel", "Mondgarten", "Himmelsgarten"]
+const WORLD_SUBTITLES = ["Kirschblüten und Steingarten", "Bambuswald und Steinpfade", "Tempel im Abendlicht", "Mondlicht und stilles Wasser", "Licht über den Wolken"]
 const WORLD_TEXTURES = [
     preload("res://assets/zen_garden_scene.webp"),
     preload("res://assets/zen_world_bamboo.webp"),
