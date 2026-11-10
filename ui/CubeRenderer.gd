@@ -100,22 +100,22 @@ func material(color: Color, glow: bool = false) -> StandardMaterial3D:
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return mat
 func palette() -> Dictionary:
-    return ZenCollection.SKINS[clampi(skin_id, 0, ZenCollection.SKINS.size()-1)]
+	return ZenCollection.SKINS[clampi(skin_id, 0, ZenCollection.SKINS.size()-1)]
 func face_color(face: int) -> Color:
-    return Color(str(palette().faces[clampi(face,0,5)]))
+	return Color(str(palette().faces[clampi(face,0,5)]))
 func apply_skin(next_skin: int) -> void:
-    skin_id = clampi(next_skin, 0, ZenCollection.SKINS.size()-1)
-    var style: Dictionary = palette()
-    mint = Color(str(style.x))
-    peach = Color(str(style.o))
-    if core_mesh_instance != null:
-        core_mesh_instance.material_override = material(Color(str(style.core)))
-    # Draw currently visible marks in the new palette without touching cells.
+	skin_id = clampi(next_skin, 0, ZenCollection.SKINS.size()-1)
+	var style: Dictionary = palette()
+	mint = Color(str(style.x))
+	peach = Color(str(style.o))
+	if core_mesh_instance != null:
+		core_mesh_instance.material_override = material(Color(str(style.core)))
+	# Draw currently visible marks in the new palette without touching cells.
 func face_material(color: Color) -> StandardMaterial3D:
-    var mat: StandardMaterial3D = material(color)
-    mat.metallic = float(palette().metal)
-    mat.roughness = float(palette().rough)
-    return mat
+	var mat: StandardMaterial3D = material(color)
+	mat.metallic = float(palette().metal)
+	mat.roughness = float(palette().rough)
+	return mat
 func reset_view() -> void:
 	pivot.rotation = Vector3(0.43,-0.58,-0.04)
 	camera.position.z = 9.3

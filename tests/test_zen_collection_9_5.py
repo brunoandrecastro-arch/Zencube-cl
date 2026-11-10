@@ -38,6 +38,7 @@ assert 'last_leaf_reward = Collection.reward_bot(data, difficulty)' in ui
 assert 'renderer.apply_skin(skin)' in ui
 assert 'renderer.apply_skin(int(data.economy.equipped))' in ui
 assert 'var color = face_color(CubeGeometry.face(c))' in r
+assert not any(line.startswith(' ') for line in r.splitlines()), 'CubeRenderer.gd mixes space indentation with existing tabs'
 assert 'face_material(color)' in r
 assert 'material(Color("fff0d1"),true)' in r
 assert '"economy":{"leaves":0,"owned":[0],"equipped":0,"migrated":false}' in save
