@@ -58,6 +58,11 @@ jobs:
         run: python3 tests/test_premium_materials_9_6.py
       - name: Verify 9.6.1 high-resolution surfaces, touch shop and new audio loops
         run: python3 tests/test_quality_audio_9_6_1.py
+      - name: Verify 1.0 audio tracks, store assets and Play metadata
+        run: python3 tests/test_release_candidate_1_0.py
+      - name: Verify five sound tracks on real Godot scene (headless)
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_release_candidate_1_0.gd
       - name: Test new paging and visual clarity on actual Godot scene (headless)
         run: |
           timeout 60 "$GODOT" --headless --path . --script tests/test_quality_audio_9_6_1.gd
@@ -107,7 +112,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          unzip -Z1 build/ZenCube-3D.apk | grep -F 'zen_ambient_music.pcm'
+          for file in zen_ambient_music.pcm zen_bamboo_music.pcm zen_moon_music.pcm zen_flute_music.pcm zen_koto_music.pcm; do
+            unzip -Z1 build/ZenCube-3D.apk | grep -F "$file"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: ZenCube-3D-debug

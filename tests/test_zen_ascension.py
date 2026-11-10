@@ -21,7 +21,7 @@ assert 'data.ascension.streaks[level] = 0' in prog, 'draws and defeats must rese
 assert 'clampi(level,0,4)' in ui
 assert 'zen_ambient_music.pcm' in ui
 assert 'assets/*.pcm' in (root/'export_presets.cfg').read_text()
-assert 'version/code=19' in (root/'export_presets.cfg').read_text()
+assert 'version/code=20' in (root/'export_presets.cfg').read_text()
 for path in ('core/RulesEngine.gd','core/ZenChallenges.gd','challenges/challenges.json','ui/CubeRenderer.gd'):
  assert (root/path).is_file()
 for code in ('EN','PT'):

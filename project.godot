@@ -1,6 +1,6 @@
 config_version=5
 [application]
-config/name="ZenCube 3D · Zen Garden"
+config/name="ZenCube 3D"
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"

@@ -1336,9 +1336,9 @@ func open_settings() -> void:
     box.add_child(music)
     label("Musiktitel", box, 15)
     var tracks: OptionButton = OptionButton.new()
-    for title in ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus"]:
+    for title in ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Shakuhachi – Nebelpfad", "Koto – Sternengarten"]:
         tracks.add_item(T(title))
-    tracks.select(clampi(int(data.settings.get("music_track", 0)), 0, 2))
+    tracks.select(clampi(int(data.settings.get("music_track", 0)), 0, 4))
     tracks.custom_minimum_size.y = 48
     tracks.item_selected.connect(func(index): select_music_track(index))
     box.add_child(tracks)
@@ -1414,6 +1414,10 @@ func make_zen_music_stream(track: int = 0) -> AudioStreamWAV:
         pcm = FileAccess.get_file_as_bytes("res://assets/zen_bamboo_music.pcm")
     elif track == 2:
         pcm = FileAccess.get_file_as_bytes("res://assets/zen_moon_music.pcm")
+    elif track == 3:
+        pcm = FileAccess.get_file_as_bytes("res://assets/zen_flute_music.pcm")
+    elif track == 4:
+        pcm = FileAccess.get_file_as_bytes("res://assets/zen_koto_music.pcm")
     if pcm.size() < 32000 or pcm.size() % 2 != 0:
         # Fallback audible tones if a distribution omits the PCM resource.
         push_warning("ZenCube music resource missing; using generated fallback audio")
@@ -1434,7 +1438,7 @@ func make_zen_music_stream(track: int = 0) -> AudioStreamWAV:
     ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
     return ambient
 func select_music_track(index: int) -> void:
-    data.settings.music_track = clampi(index, 0, 2)
+    data.settings.music_track = clampi(index, 0, 4)
     if music_player != null:
         music_player.stream = make_zen_music_stream(int(data.settings.music_track))
         music_player.set_meta("track", int(data.settings.music_track))
@@ -1452,7 +1456,7 @@ func music_preview() -> void:
         )
 func sync_music() -> void:
     if music_player == null: return
-    var chosen: int = clampi(int(data.settings.get("music_track", 0)), 0, 2)
+    var chosen: int = clampi(int(data.settings.get("music_track", 0)), 0, 4)
     if not music_player.has_meta("track") or int(music_player.get_meta("track")) != chosen:
         music_player.stream = make_zen_music_stream(chosen)
         music_player.set_meta("track", chosen)

@@ -27,10 +27,10 @@ assert 'range(shop_page * 5, mini((shop_page + 1) * 5, Collection.SKINS.size()))
 assert 'scroll.scroll_deadzone = 12' in ui
 assert 'skin_button.mouse_filter = Control.MOUSE_FILTER_PASS' in ui
 assert 'skin_button.add_theme_color_override("font_disabled_color", Color("42372d"))' in ui
-assert 'for title in ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus"]:' in ui
+assert 'for title in ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Shakuhachi – Nebelpfad", "Koto – Sternengarten"]:' in ui
 assert 'const SKINS = [' in collection and collection.count('"price":')==20
-assert 'version/code=19' in (BASE/'export_presets.cfg').read_text()
-assert 'version/name="9.6.1-refined-materials-bowls-handpan"' in (BASE/'export_presets.cfg').read_text()
+assert 'version/code=20' in (BASE/'export_presets.cfg').read_text()
+assert 'version/name="1.0.0-rc1"' in (BASE/'export_presets.cfg').read_text()
 assert 'Verify 9.6.1 high-resolution surfaces' in workflow
 
 waves=[]

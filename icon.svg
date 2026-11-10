@@ -1,1 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="432" height="432" viewBox="0 0 432 432"><rect width="432" height="432" rx="90" fill="#F3EBDD"/><path d="M216 70 348 146 348 290 216 366 84 290 84 146Z" fill="#D8C7AD" stroke="#594737" stroke-width="9"/><path d="M84 146 216 222 348 146M216 222V366" fill="none" stroke="#947D65" stroke-width="9"/><path d="m123 210 51 64m0-34-51 5" stroke="#453329" stroke-width="12" stroke-linecap="round"/><ellipse cx="281" cy="257" rx="27" ry="37" fill="none" stroke="#A75F43" stroke-width="11"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs><linearGradient id="bg" x1="0" y1="0" x2=".9" y2="1"><stop offset="0" stop-color="#1F4A40"/><stop offset="1" stop-color="#102B2A"/></linearGradient>
+<linearGradient id="top" x1=".1" y1="0" x2="1" y2="1"><stop stop-color="#B89A6B"/><stop offset="1" stop-color="#D3BF8C"/></linearGradient>
+<linearGradient id="left"><stop stop-color="#416C5C"/><stop offset="1" stop-color="#2B514C"/></linearGradient>
+<linearGradient id="right"><stop stop-color="#283C42"/><stop offset="1" stop-color="#192D32"/></linearGradient>
+</defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<circle cx="256" cy="251" r="207" stroke="#D5AE68" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="1170 150" transform="rotate(-58 256 251)" opacity=".87"/>
+<circle cx="256" cy="251" r="199" stroke="#F6E2B1" stroke-width="1.1" fill="none" opacity=".25"/>
+<g><polygon points="256.0,123.0 373.0,187.0 256.0,253.0 139.0,187.0" fill="url(#top)" stroke="#C49D5E" stroke-width="5" stroke-linejoin="round"/>
+<path d="M 217.00 144.33 L 334.00 209.00" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 295.00 144.33 L 178.00 209.00" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 178.00 165.67 L 295.00 231.00" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 334.00 165.67 L 217.00 231.00" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<polygon points="139.0,187.0 256.0,253.0 256.0,386.0 139.0,319.0" fill="url(#left)" stroke="#C49D5E" stroke-width="5" stroke-linejoin="round"/>
+<path d="M 139.00 231.00 L 256.00 297.33" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 178.00 209.00 L 178.00 341.33" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 139.00 275.00 L 256.00 341.67" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 217.00 231.00 L 217.00 363.67" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<polygon points="256.0,253.0 373.0,187.0 373.0,319.0 256.0,386.0" fill="url(#right)" stroke="#C49D5E" stroke-width="5" stroke-linejoin="round"/>
+<path d="M 256.00 297.33 L 373.00 231.00" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 295.00 231.00 L 295.00 363.67" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 256.00 341.67 L 373.00 275.00" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/>
+<path d="M 334.00 209.00 L 334.00 341.33" stroke="#D8C29A" stroke-opacity=".65" stroke-width="2.4"/><path d="M179 258 L198 290 M198 258 L179 290" stroke="#FDF0D3" stroke-width="9" stroke-linecap="round"/><ellipse cx="320" cy="285" rx="16" ry="22" fill="none" stroke="#4AD0B4" stroke-width="8"/></g>
+<path d="M211 429 Q256 447 301 429" fill="none" stroke="#D6B471" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+</svg>

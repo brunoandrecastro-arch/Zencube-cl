@@ -3,6 +3,8 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Shakuhachi – Nebelpfad": "Shakuhachi – Misty Path",
+    "Koto – Sternengarten": "Koto – Star Garden",
     "Rätsel gelöst!": "Challenge solved!",
     "Zen-Shop": "Zen Shop",
     "Zen-Shop · 🍃 %d": "Zen Shop · 🍃 %d",
@@ -287,6 +289,8 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Shakuhachi – Nebelpfad": "Shakuhachi – Caminho da Névoa",
+    "Koto – Sternengarten": "Koto – Jardim das Estrelas",
     "Rätsel gelöst!": "Desafio resolvido!",
     "Zen-Shop": "Loja Zen",
     "Zen-Shop · 🍃 %d": "Loja Zen · 🍃 %d",

@@ -45,7 +45,7 @@ assert '"economy":{"leaves":0,"owned":[0],"equipped":0,"migrated":false}' in sav
 assert 'const VERSION = 3' in save, 'Migration must preserve existing saves'
 assert 'if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)' in save
 assert 'include_filter="assets/*.pcm,challenges/*.json"' in (R/'export_presets.cfg').read_text()
-assert 'version/code=19' in (R/'export_presets.cfg').read_text()
+assert 'version/code=20' in (R/'export_presets.cfg').read_text()
 assert 'ZenCube 9.5 earned currency and 20 skins' in workflow
 for name in ['zen_ambient_music.pcm','zen_bamboo_music.pcm','zen_moon_music.pcm']:
     audio=(R/'assets'/name).read_bytes()
