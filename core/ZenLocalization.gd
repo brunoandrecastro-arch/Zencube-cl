@@ -204,7 +204,27 @@ const EN: Dictionary = {
     "Zen-Rätsel · 5 Stufen": "Zen Challenges · 5 levels",
     "Zurück zu den Zen-Rätseln": "Back to Zen Challenges",
     "Zen-Rätsel": "Zen Challenge",
-    "Neustart": "Restart"
+    "Neustart": "Restart",
+    "Siege gegen Zen-Bots erhöhen deinen Rang. Neue Ränge schalten Welten frei.": "Wins against Zen-Bots raise your rank. New ranks unlock worlds.",
+    "Die ersten drei Prüfungen zählen Siege insgesamt. Danach brauchst du Siegesserien.": "The first three exams count total wins. The final two require win streaks.",
+    "Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.": "Zen Guardian is the final rank exam. There are five worlds.",
+    "Welten ansehen": "View worlds",
+    "Von Anfang an verfügbar": "Available from the start",
+    "%d Siege gegen %s": "%d wins against %s",
+    "%d Siege in Folge gegen %s": "%d consecutive wins against %s",
+    "Freischaltung: ": "Unlock: ",
+    "Welten ändern nur das Aussehen. Dein Rang steigt durch Siege gegen den Zen-Bot.": "Worlds only change the scenery. Your rank rises when you beat Zen-Bots.",
+    "Neue Welten schaltest du über Zen Ascension frei.": "Unlock new worlds through Zen Ascension.",
+    "Freigeschaltet": "Unlocked",
+    "Rang & Fortschritt": "Rank & progress",
+    "Du hast als %s gewonnen.": "You won as %s.",
+    "Zen-Bot gewinnt mit %s.": "Zen-Bot wins as %s.",
+    "%s gewinnt mit %s.": "%s wins as %s.",
+    "Du hast gewonnen!": "You won!",
+    "Zen-Bot hat gewonnen.": "Zen-Bot won.",
+    "%s hat gewonnen.": "%s won.",
+    "Neue Welt freigeschaltet: %s": "New world unlocked: %s",
+    "Zen-Wächter erreicht – höchste Rangstufe!": "Zen Guardian reached – highest rank!"
 }
 static func english(source: String) -> String:
     return str(EN.get(source, source))
@@ -411,7 +431,27 @@ const PT: Dictionary = {
     "Zen-Rätsel · 5 Stufen": "Desafios Zen · 5 níveis",
     "Zurück zu den Zen-Rätseln": "Voltar aos desafios Zen",
     "Zen-Rätsel": "Desafio Zen",
-    "Neustart": "Recomeçar"
+    "Neustart": "Recomeçar",
+    "Siege gegen Zen-Bots erhöhen deinen Rang. Neue Ränge schalten Welten frei.": "As vitórias contra os Zen-Bots aumentam o teu nível. Os novos níveis desbloqueiam mundos.",
+    "Die ersten drei Prüfungen zählen Siege insgesamt. Danach brauchst du Siegesserien.": "Nas três primeiras provas contam as vitórias totais. Nas duas últimas precisas de vitórias seguidas.",
+    "Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.": "Guardião Zen é a última prova de nível. Existem cinco mundos.",
+    "Welten ansehen": "Ver mundos",
+    "Von Anfang an verfügbar": "Disponível desde o início",
+    "%d Siege gegen %s": "%d vitórias contra %s",
+    "%d Siege in Folge gegen %s": "%d vitórias seguidas contra %s",
+    "Freischaltung: ": "Desbloquear: ",
+    "Welten ändern nur das Aussehen. Dein Rang steigt durch Siege gegen den Zen-Bot.": "Os mundos mudam apenas o visual. Sobes de nível ao vencer os Zen-Bots.",
+    "Neue Welten schaltest du über Zen Ascension frei.": "Desbloqueia novos mundos através de Ascensão Zen.",
+    "Freigeschaltet": "Desbloqueado",
+    "Rang & Fortschritt": "Nível e progresso",
+    "Du hast als %s gewonnen.": "Ganhaste com %s.",
+    "Zen-Bot gewinnt mit %s.": "O Zen-Bot ganhou com %s.",
+    "%s gewinnt mit %s.": "%s ganhou com %s.",
+    "Du hast gewonnen!": "Ganhaste!",
+    "Zen-Bot hat gewonnen.": "O Zen-Bot ganhou.",
+    "%s hat gewonnen.": "%s ganhou.",
+    "Neue Welt freigeschaltet: %s": "Novo mundo desbloqueado: %s",
+    "Zen-Wächter erreicht – höchste Rangstufe!": "Guardião Zen alcançado – nível máximo!"
 }
 static func portuguese(source: String) -> String:
     return str(PT.get(source, source))

@@ -191,7 +191,7 @@ func build_ui() -> void:
     ui.add_child(garden)
     garden.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var veil = ColorRect.new()
-    veil.color = Color("f2dfbb",0.13)
+    veil.color = Color("e5d7c2",0.10)
     veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
     ui.add_child(veil)
     veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -273,7 +273,7 @@ func build_ui() -> void:
     container.size_flags_vertical = Control.SIZE_EXPAND_FILL
     game_stack.add_child(container)
     viewport = SubViewport.new()
-    viewport.size = Vector2i(440,440)
+    viewport.size = Vector2i(960,960)
     viewport.transparent_bg = true
     viewport.own_world_3d = true
     viewport.msaa_3d = Viewport.MSAA_4X
@@ -382,7 +382,12 @@ func refresh(animate: int = -1) -> void:
         status.add_theme_color_override("font_color", Color("453329") if board.turn == 1 else Color("a75f43"))
         if board.swap_pending: status.text = player_name(board.owners[1])+T(" · Farbe wählen")
         if board.winner != 0:
-            status.text = T("Unentschieden · gut gespielt!") if board.winner == 3 else player_name(board.owners[board.winner-1])+T(" gewinnt!")
+            if board.winner == 3:
+                status.text = T("Unentschieden · gut gespielt!")
+            elif int(data.settings.mode) == 1:
+                status.text = T("Du hast gewonnen!") if int(board.owners[board.winner - 1]) == 0 else T("Zen-Bot hat gewonnen.")
+            else:
+                status.text = T("%s hat gewonnen.") % player_name(int(board.owners[board.winner - 1]))
             status.add_theme_color_override("font_color", Color("67785b"))
         detail.text = mode_name()+T("  ·  Zug ")+str(board.move_count())
         if ai_running: detail.text += T("  ·  Zen-Bot überlegt …")
@@ -612,7 +617,8 @@ func open_ascension() -> void:
     var box = modal("Zen-Aufstieg")
     label("Dein Zen-Rang",box,17)
     label(T(Asc.RANKS[int(data.ascension.rank)]),box,23,Color("5b704b"))
-    label("Jeder Rang hat eine eigene Prüfung. Siege in Folge zählen nur beim gleichen Bot.",box,14)
+    label("Siege gegen Zen-Bots erhöhen deinen Rang. Neue Ränge schalten Welten frei.",box,14)
+    label("Die ersten drei Prüfungen zählen Siege insgesamt. Danach brauchst du Siegesserien.",box,13)
     for i in range(5):
         var done: bool = bool(data.ascension.completed[i])
         var accessible: bool = i <= int(data.ascension.rank)
@@ -637,13 +643,28 @@ func open_ascension() -> void:
         progress_bar.add_theme_stylebox_override("background",track)
         progress_bar.add_theme_stylebox_override("fill",fill)
         box.add_child(progress_bar)
-    button("Welten",box,open_worlds,true)
+    label("Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.",box,13)
+    button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
+
+func world_unlock_info(world: int) -> String:
+    # World 0 is free; worlds 1..4 are cosmetic rewards for completing
+    # the previous Ascension exam. No change to the game rules or difficulty.
+    if world <= 0:
+        return T("Von Anfang an verfügbar")
+    var exam: int = world - 1
+    var needed: int = Asc.target(exam)
+    var done: int = Asc.progress(data, exam)
+    var opponent: String = T(Asc.LEVELS[exam])
+    var requirement: String = (T("%d Siege in Folge gegen %s") if Asc.is_streak(exam) else T("%d Siege gegen %s")) % [needed, opponent]
+    var current: String = (T("%d/%d Siege in Folge") if Asc.is_streak(exam) else T("%d/%d Siege")) % [done, needed]
+    return T("Freischaltung: ") + requirement + "  ·  " + current
 
 func open_worlds() -> void:
     Asc.ensure(data)
     var box = modal("Welten")
-    label("Wähle eine freigeschaltete Welt.", box, 15)
+    label("Welten ändern nur das Aussehen. Dein Rang steigt durch Siege gegen den Zen-Bot.", box, 14)
+    label("Neue Welten schaltest du über Zen Ascension frei.", box, 13)
     for i in range(5):
         var number: int = i
         var card: PanelContainer = PanelContainer.new()
@@ -672,8 +693,12 @@ func open_worlds() -> void:
         b.disabled = not Asc.world_unlocked(data, i)
         if b.disabled:
             b.text += "  🔒"
+            label(world_unlock_info(i), info, 12, Color("6c5141"))
         elif i == int(data.ascension.world):
             label("Ausgewählt", info, 12, Color("526943"))
+        else:
+            label("Freigeschaltet", info, 12, Color("526943"))
+    button("Rang & Fortschritt", box, open_ascension, true, true)
     button("Zum Hauptmenü", box, open_menu, true)
 
 func select_world(number: int) -> void:
@@ -717,8 +742,20 @@ func show_result_screen() -> void:
         award.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         if bool(last_rank_up.get("rank_up",false)):
             label("Neuer Zen-Rang freigeschaltet!",box,15,Color("fff1d6"))
+            var rank_after: int = int(data.ascension.rank)
+            if rank_after >= 1 and rank_after < Asc.WORLDS.size():
+                label(T("Neue Welt freigeschaltet: %s") % T(Asc.WORLDS[rank_after]),box,15,Color("e7d3aa"))
+            else:
+                label("Zen-Wächter erreicht – höchste Rangstufe!",box,15,Color("e7d3aa"))
     elif board.winner in [1, 2]:
-        var symbol_label: Label = label("X gewinnt" if board.winner == 1 else "O gewinnt", box, 18, Color("ead3aa"))
+        var winning_symbol: String = "X" if board.winner == 1 else "O"
+        var summary: String = ""
+        if versus_bot:
+            summary = (T("Du hast als %s gewonnen.") if human_win else T("Zen-Bot gewinnt mit %s.")) % winning_symbol
+        else:
+            var winner_owner: int = int(board.owners[board.winner - 1])
+            summary = T("%s gewinnt mit %s.") % [player_name(winner_owner), winning_symbol]
+        var symbol_label: Label = label(summary, box, 18, Color("ead3aa"))
         symbol_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var detail_label: Label = label("Vier in einer Reihe. Über die Kante." if board.winner != 3 else "Noch eine Runde?", box, 15, Color("e7d6b9"))
     detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

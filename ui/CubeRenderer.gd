@@ -6,7 +6,7 @@ var tiles: Array = []
 var marks: Array = []
 var overlay: Node3D
 var mint = Color("453329")
-var peach = Color("a75f43")
+var peach = Color("16515a") # High-contrast deep jade O across all face colors
 var selected: int = -1
 func _ready() -> void:
 	pivot = Node3D.new()
@@ -69,7 +69,7 @@ func _ready() -> void:
 		tile.mesh = mesh
 		tile.basis = Basis(CubeGeometry.U[f],-CubeGeometry.V[f],CubeGeometry.N[f])
 		tile.position = CubeGeometry.center(c)
-		var face_base = [Color("c0b69a"),Color("c0b69a"),Color("74805b"),Color("b56d4d"),Color("e8d0ab"),Color("d8b995")][f]
+		var face_base = [Color("c0b69a"),Color("c0b69a"),Color("74805b"),Color("b68165"),Color("e8d0ab"),Color("d8b995")][f]
 		tile.material_override = material(face_base)
 		pivot.add_child(tile)
 		tiles.append(tile)
@@ -139,7 +139,7 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 	var winning = []
 	for line in board.win_lines: winning.append_array(line)
 	for c in range(54):
-		var color = [Color("c0b69a"),Color("c0b69a"),Color("74805b"),Color("b56d4d"),Color("e8d0ab"),Color("d8b995")][CubeGeometry.face(c)]
+		var color = [Color("c0b69a"),Color("c0b69a"),Color("74805b"),Color("b68165"),Color("e8d0ab"),Color("d8b995")][CubeGeometry.face(c)]
 		if tx.has(c): color = Color("b3c2a0")
 		if to.has(c): color = Color("d5a58d")
 		if preview.has(c): color = Color("c2b094")
@@ -157,13 +157,26 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 			bar(marks[c],Vector3(-0.23,-0.23,0),Vector3(0.23,0.23,0),mint,0.043)
 			bar(marks[c],Vector3(-0.23,0.23,0),Vector3(0.23,-0.23,0),mint,0.043)
 		elif board.cells[c] == 2:
+			# The ivory outer rim and dark-jade inner ring remain legible on
+			# terracotta, cream, brown and green cube faces (also at small sizes).
+			var border_ring = MeshInstance3D.new()
+			var border_torus = TorusMesh.new()
+			border_torus.inner_radius = 0.175
+			border_torus.outer_radius = 0.325
+			border_torus.rings = 32
+			border_torus.ring_segments = 12
+			border_ring.mesh = border_torus
+			border_ring.rotation.x = PI/2
+			border_ring.material_override = material(Color("fff0d1"),true)
+			marks[c].add_child(border_ring)
 			var ring = MeshInstance3D.new()
 			var torus = TorusMesh.new()
-			torus.inner_radius = 0.20
-			torus.outer_radius = 0.29
-			torus.rings = 24
-			torus.ring_segments = 8
+			torus.inner_radius = 0.205
+			torus.outer_radius = 0.295
+			torus.rings = 32
+			torus.ring_segments = 12
 			ring.mesh = torus
+			ring.position.z = 0.014
 			ring.rotation.x = PI/2
 			ring.material_override = material(peach,true)
 			marks[c].add_child(ring)

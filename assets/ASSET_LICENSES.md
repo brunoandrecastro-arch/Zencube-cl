@@ -10,3 +10,7 @@ Die drei primären Gestaltungsassets wurden für dieses Projekt neu geschaffen u
 
 ## ZenCube 9.4.2 Premium-Welten
 Die vier Hintergründe `zen_world_bamboo.webp`, `zen_world_temple.webp`, `zen_world_moon.webp` und `zen_world_heaven.webp` wurden für das Projekt aus unseren eigens generierten ZenCube-Konzeptgrafiken als reine Landschaften neu zusammengesetzt. Nicht enthalten sind eingebrannte UI-Elemente oder ein Spielwürfel. Sie können vom Benutzer im Spiel freigeschaltet werden. Der ursprüngliche Zen-Garten bleibt erhalten.
+
+## ZenCube 9.4.3 HD export
+
+Five existing original ZenCube world illustrations were re-exported at 1440×2560 as high-quality WebP and gently sharpened/toned for mobile readability. These are enhanced upscales from the earlier smaller illustrations, **not** claimed to be native 4K renders. No UI or playable cube is baked into scenery textures.

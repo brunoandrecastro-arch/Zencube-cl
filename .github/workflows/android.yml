@@ -50,9 +50,14 @@ jobs:
         run: python3 tests/test_zen_ascension.py
       - name: Verify premium world artwork and selection menu
         run: python3 tests/test_world_visuals_9_4_2.py
+      - name: Check HD worlds, unlock hints, O visibility and result copy
+        run: python3 tests/test_design_clarity_9_4_3.py
       - name: Verify premium world switching on the real cube (headless)
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_world_visuals_9_4_2.gd
+      - name: World unlock explanation and high-density cube render (headless)
+        run: |
+          timeout 50 "$GODOT" --headless --path . --script tests/test_design_clarity_9_4_3.gd
       - name: Zen Ascension progression and five bot levels (headless)
         run: |
           timeout 75 "$GODOT" --headless --path . --script tests/test_zen_ascension.gd
