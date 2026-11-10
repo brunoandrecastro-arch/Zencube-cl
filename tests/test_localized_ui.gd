@@ -40,7 +40,7 @@ func run() -> void:
         var new_match = game.T("Neue Partie")
         check(new_match==({"de":"Neue Partie","en":"New match","pt":"Nova partida"})[lang], "New game translation " + lang)
         game.open_menu()
-        check(find_button(game.popup, ({"de":"Gegen Bot spielen","en":"Play vs Bot","pt":"Jogar contra o bot"})[lang]) != null, "Main menu localized " + lang)
+        check(find_button(game.popup, ({"de":"Spielen","en":"Play","pt":"Jogar"})[lang]) != null, "Main menu localized " + lang)
         game.open_settings()
         check(find_button(game.popup, ({"de":"Musikprobe abspielen","en":"Play music sample","pt":"Ouvir uma amostra da música"})[lang]) != null, "Settings localized " + lang)
         var lang_picker = find_option(game.popup)

@@ -42,6 +42,10 @@ jobs:
         run: python3 tests/test_challenges_data.py
       - name: Verify full German, English, Portuguese localization
         run: python3 tests/test_i18n_3_languages.py
+      - name: Verify natural game copy in three languages
+        run: python3 tests/test_natural_copy.py
+      - name: Verify premium home menu, result screen and Android haptics
+        run: python3 tests/test_premium_ui_9_3.py
       - name: Godot engine tests
         run: |
           "$GODOT" --headless --path . --script tests/test_engine.gd
@@ -60,6 +64,9 @@ jobs:
       - name: Language switch and music playback smoke test
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_localized_ui.gd
+      - name: Premium result screen and simplified main menu (headless)
+        run: |
+          timeout 60 "$GODOT" --headless --path . --script tests/test_result_screen.gd
       - name: Tactical simulations
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim

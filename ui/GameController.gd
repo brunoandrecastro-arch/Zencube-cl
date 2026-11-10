@@ -99,6 +99,8 @@ func _ready() -> void:
     elif not bool(data.settings.get("intro_seen",false)):
         # Visual examples are shown before the very first game.
         open_welcome()
+    else:
+        open_menu()
 func theme_style(bg: Color, radius: int = 18) -> StyleBoxFlat:
     var st = StyleBoxFlat.new()
     st.bg_color = bg
@@ -127,8 +129,27 @@ func button(text: String, parent: Node, callback: Callable, small: bool = false,
         for color_key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
             b.add_theme_color_override(color_key,Color("fff3d5"))
     b.pressed.connect(callback)
+    b.button_down.connect(func():
+        b.create_tween().tween_property(b, "modulate", Color("e8dbc7"), 0.08)
+    )
+    b.button_up.connect(func():
+        b.create_tween().tween_property(b, "modulate", Color.WHITE, 0.12)
+    )
     parent.add_child(b)
     return b
+func premium_button(text: String, parent: Node, callback: Callable, featured: bool = false) -> Button:
+    var b: Button = button(text, parent, callback, false, false)
+    b.custom_minimum_size.y = 59
+    b.add_theme_font_size_override("font_size", 20)
+    var normal_color: Color = Color("536545") if featured else Color("352b24")
+    var hover_color: Color = Color("667b53") if featured else Color("46382d")
+    b.add_theme_stylebox_override("normal", theme_style(normal_color, 18))
+    b.add_theme_stylebox_override("hover", theme_style(hover_color, 18))
+    b.add_theme_stylebox_override("pressed", theme_style(Color("7b6846"), 18))
+    for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+        b.add_theme_color_override(key, Color("fff0cf"))
+    return b
+
 func label(text: String, parent: Node, size: int = 16, color: Color = Color("74614c")) -> Label:
     var l = Label.new()
     l.text = T(text)
@@ -388,16 +409,21 @@ func place(cell: int) -> void:
     if challenge_active:
         challenge_try_cell(cell)
         return
+    var placed_by_owner: int = board.current_owner()
     if not rules.play(board,cell):
         if board.swap_pending: notify_user("Zuerst X übernehmen oder O behalten wählen.")
         return
     renderer.selected = cell
     generation += 1
     play_sound(board.winner != 0)
+    if placed_by_owner == 0 or int(data.settings.mode) == 0:
+        vibrate_on_move()
     if board.winner != 0:
         if tutorial == null and int(data.settings.mode) != 2: record_result()
         if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
     refresh(cell)
+    if board.winner != 0 and tutorial == null and int(data.settings.mode) != 2:
+        call_deferred("show_result_screen")
 func record_result() -> void:
     if board.result_recorded: return
     board.result_recorded = true
@@ -465,9 +491,9 @@ func _process(_delta: float) -> void:
         var move = worker.wait_to_finish()
         worker = null
         ai_running = false
-        if worker_generation == generation and not challenge_active and tutorial == null and board.winner == 0 and not board.swap_pending: place(int(move))
+        if worker_generation == generation and not challenge_active and tutorial == null and board.winner == 0 and not board.swap_pending and popup == null: place(int(move))
         else: refresh()
-    if challenge_active or tutorial != null or int(data.settings.mode) != 1 or board.winner != 0: return
+    if challenge_active or tutorial != null or popup != null or int(data.settings.mode) != 1 or board.winner != 0: return
     if board.swap_pending:
         if board.current_owner() == 1: resolve_swap(true)
         else: return
@@ -514,22 +540,78 @@ func close_modal() -> void:
         popup.queue_free()
         popup = null
 func open_menu() -> void:
-    var box = modal("Deine Zen-Pause")
-    label("Wähle, wie du spielen möchtest. Kein Zeitdruck – nur Ruhe und Strategie.",box,15,Color("74614c"))
-    button("Schnell starten  ·  gegen Zen-Bot",box,func(): start_mode(1,0),false,true)
-    button("Gegen Bot spielen",box,func(): start_mode(1,int(data.settings.level)))
-    button("Zwei Spieler lokal",box,func(): start_mode(0,0))
-    button("Viererlinien lernen",box,start_tutorial)
-    button("Freies Training",box,func(): start_mode(2,0))
+    var box = modal("Hauptmenü")
+    popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.975), 26))
+    var heading: Label = box.get_child(0) as Label
+    heading.add_theme_color_override("font_color", Color("fce5b7"))
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var subtitle: Label = label("Vier in einer Reihe. Über die Kante.", box, 17, Color("e7d0a7"))
+    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    premium_button("Spielen", box, open_play_menu, true)
+    premium_button("Zen-Rätsel · 100 Aufgaben", box, begin_challenges)
+    premium_button("Statistik", box, open_stats)
+    premium_button("Einstellungen", box, open_settings)
+    button("Regeln & Balance", box, open_balance, true)
     if challenge_active:
-        button("Zurück zu den Zen-Rätseln",box,close_modal,false,true)
-        button("Klassisches Spiel fortsetzen",box,leave_challenges)
-    else:
-        button("Zen-Rätsel · 100 Aufgaben",box,begin_challenges,false,true)
-    button("Einstellungen",box,open_settings)
-    button("Deine Spielstatistik",box,open_stats)
-    button("Regeln & Balance",box,open_balance)
-    label("ZenCube 3D · 108 mögliche Viererlinien\nOffline · ohne Werbung · ohne Anmeldung",box,12)
+        button("Zurück zu den Zen-Rätseln", box, close_modal, true)
+        button("Klassisches Spiel fortsetzen", box, leave_challenges, true)
+
+func open_play_menu() -> void:
+    var box = modal("Spielmodus")
+    label("Gegen wen möchtest du spielen?", box, 16)
+    premium_button("Zen-Bot · Leicht", box, func(): start_mode(1, 0), true)
+    premium_button("Zen-Bot · Mittel", box, func(): start_mode(1, 1))
+    premium_button("Zen-Bot · Schwer", box, func(): start_mode(1, 2))
+    premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
+    button("Training", box, func(): start_mode(2, 0), true)
+    button("Viererlinien lernen", box, start_tutorial, true)
+    button("Zum Hauptmenü", box, open_menu, true)
+
+func show_result_screen() -> void:
+    # Called deferred after a real Classic match finishes. A new match cancels it.
+    if challenge_active or tutorial != null or board.winner == 0 or popup != null:
+        return
+    if int(data.settings.mode) == 2:
+        return
+    var human_win: bool = false
+    if board.winner in [1, 2]:
+        human_win = int(board.owners[board.winner-1]) == 0
+    var versus_bot: bool = int(data.settings.mode) == 1
+    var level: int = int(data.settings.level)
+    var special: bool = versus_bot and human_win and level >= 1 and int(data.stats.ai_wins[level]) == 1
+    var headline: String = "Unentschieden"
+    if board.winner != 3:
+        if special:
+            headline = "Zen erreicht!"
+        elif human_win or not versus_bot:
+            headline = "Gewonnen!"
+        else:
+            headline = "Verloren"
+    var box = modal(headline)
+    # Let the actual 3D winning line stay visible above the results panel.
+    popup.anchor_top = 0.51
+    popup.offset_top = 0
+    popup.add_theme_stylebox_override("panel", theme_style(Color("342820", 0.985), 25))
+    var heading: Label = box.get_child(0) as Label
+    box.get_child(1).hide()
+    heading.add_theme_color_override("font_color", Color("f8dfaa"))
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    if special:
+        var rank: String = "Zen-Meister" if level == 2 else "Zen-Schüler"
+        var rank_label: Label = label(rank, box, 23, Color("edd18e"))
+        rank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    elif board.winner in [1, 2]:
+        var symbol_label: Label = label("X gewinnt" if board.winner == 1 else "O gewinnt", box, 18, Color("ead3aa"))
+        symbol_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var detail_label: Label = label("Vier in einer Reihe. Über die Kante." if board.winner != 3 else "Noch eine Runde?", box, 15, Color("e7d6b9"))
+    detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    premium_button("Noch eine Partie", box, play_again_after_result, true)
+    premium_button("Hauptmenü", box, open_menu)
+
+func play_again_after_result() -> void:
+    close_modal()
+    new_game()
+
 func open_balance() -> void:
     var box = modal("Vier Steine. Zwei Seiten.")
     label("So gewinnt man",box,20,Color("7b886d"))
@@ -954,6 +1036,14 @@ func open_settings() -> void:
         persist()
     )
     box.add_child(sounds)
+    var vibration = CheckButton.new()
+    vibration.text = T("Vibration bei Spielzügen")
+    vibration.button_pressed = bool(data.settings.get("haptics", true))
+    vibration.toggled.connect(func(enabled):
+        data.settings.haptics = enabled
+        persist()
+    )
+    box.add_child(vibration)
     var hints = CheckButton.new()
     hints.text = T("Gewinnfelder als Hilfe zeigen")
     hints.button_pressed = bool(data.settings.hints)
@@ -995,7 +1085,7 @@ func build_sound() -> void:
         samples.encode_s16(i*2,value)
     wave.data = samples
     sound_player.stream = wave
-    sound_player.volume_db = -9
+    sound_player.volume_db = -4.5
     music_player = AudioStreamPlayer.new()
     music_player.name = "ZenGardenMusic"
     add_child(music_player)
@@ -1041,6 +1131,12 @@ func sync_music() -> void:
         if not music_player.playing: music_player.play()
     elif music_player.playing:
         music_player.stop()
+func vibrate_on_move() -> void:
+    if not bool(data.settings.get("haptics", true)):
+        return
+    if OS.get_name() == "Android":
+        Input.vibrate_handheld(22)
+
 func play_sound(win: bool) -> void:
     if not bool(data.settings.sound): return
     sound_player.pitch_scale = 1.5 if win else 1.0

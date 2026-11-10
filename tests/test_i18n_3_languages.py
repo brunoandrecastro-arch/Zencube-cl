@@ -19,7 +19,7 @@ assert EN and PT
 
 def strings_from_ui(source):
     keys=set()
-    for match in re.finditer(r'\b(?:label|button|modal|notify_user|T)\(\s*("(?:[^"\\]|\\.)*")',source):
+    for match in re.finditer(r'\b(?:label|button|premium_button|modal|notify_user|T)\(\s*("(?:[^"\\]|\\.)*")',source):
         keys.add(json.loads(match.group(1)))
     return keys
 
@@ -34,7 +34,8 @@ for file in ('ui/TutorialController.gd','core/CubeGeometry.gd'):
     keys.update(json.loads(m.group(0)) for m in re.finditer(r'"(?:[^"\\]|\\.)*"',arr))
 keys.update(['Anfänger','Fortgeschritten','Experte','Zen-Meister','Großmeister',
     'Leicht','Mittel','Schwer','Bot: Leicht','Bot: Mittel','Bot: Schwer',
-    'Du spielst X  ·  Zen-Bot spielt O'])
+    'Du spielst X  ·  Zen-Bot spielt O',
+    'Zen erreicht!','Zen-Schüler','Gewonnen!','Verloren','X gewinnt','O gewinnt','Noch eine Runde?'])
 # Proper names, symbols, explicit language endonyms and formatting-only strings.
 exempt={'','ZenCube 3D','☰','◀','▶','🌐','Deutsch','English','Português',
         'Deutsch  ·  English  ·  Português','%s: %d / %d'}

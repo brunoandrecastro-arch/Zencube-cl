@@ -3,6 +3,26 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Hauptmenü": "Main menu",
+    "Spielmodus": "Game mode",
+    "Gegen wen möchtest du spielen?": "Who would you like to play?",
+    "Zen-Bot · Leicht": "Zen-Bot · Easy",
+    "Zen-Bot · Mittel": "Zen-Bot · Medium",
+    "Zen-Bot · Schwer": "Zen-Bot · Hard",
+    "Training": "Practice",
+    "Zum Hauptmenü": "Back to main menu",
+    "Statistik": "Statistics",
+    "Vier in einer Reihe. Über die Kante.": "Four in a row. Across the edge.",
+    "Gewonnen!": "You won!",
+    "Verloren": "You lost",
+    "Zen erreicht!": "Zen Achieved!",
+    "Zen-Schüler": "Zen Apprentice",
+    "X gewinnt": "X wins",
+    "O gewinnt": "O wins",
+    "Noch eine Runde?": "Another round?",
+    "Noch eine Partie": "Play again",
+    "Vibration bei Spielzügen": "Vibrate when placing a mark",
+
     "  ·  Zen-Bot überlegt …": "  ·  Zen-Bot is thinking …",
     "  ·  Zug ": "  ·  Move ",
     "  ·  eine Gewinnlinie": "  ·  one winning line",
@@ -157,6 +177,26 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Hauptmenü": "Menu principal",
+    "Spielmodus": "Modo de jogo",
+    "Gegen wen möchtest du spielen?": "Contra quem queres jogar?",
+    "Zen-Bot · Leicht": "Zen-Bot · Fácil",
+    "Zen-Bot · Mittel": "Zen-Bot · Médio",
+    "Zen-Bot · Schwer": "Zen-Bot · Difícil",
+    "Training": "Treino",
+    "Zum Hauptmenü": "Voltar ao menu principal",
+    "Statistik": "Estatísticas",
+    "Vier in einer Reihe. Über die Kante.": "Quatro em linha. Para lá da aresta.",
+    "Gewonnen!": "Ganhaste!",
+    "Verloren": "Perdeste",
+    "Zen erreicht!": "Zen alcançado!",
+    "Zen-Schüler": "Aprendiz Zen",
+    "X gewinnt": "X ganha",
+    "O gewinnt": "O ganha",
+    "Noch eine Runde?": "Mais uma partida?",
+    "Noch eine Partie": "Jogar novamente",
+    "Vibration bei Spielzügen": "Vibrar ao colocar uma peça",
+
     "  ·  Zen-Bot überlegt …": "  ·  O Zen-Bot está a pensar …",
     "  ·  Zug ": "  ·  Jogada ",
     "  ·  eine Gewinnlinie": "  ·  uma linha vencedora",
@@ -310,7 +350,43 @@ const PT: Dictionary = {
 static func portuguese(source: String) -> String:
     return str(PT.get(source, source))
 
+const NATURAL_COPY: Dictionary = {
+    "Ein ruhiges Strategiespiel für Balance, Raumgefühl und Konzentration.": ["Vier in einer Reihe. Über die Kante.", "Four in a row. Across the edge.", "Quatro em linha. Para lá da aresta."],
+    "Deine Zen-Pause": ["Hauptmenü", "Main menu", "Menu principal"],
+    "Wähle, wie du spielen möchtest. Kein Zeitdruck – nur Ruhe und Strategie.": ["Wähle einen Spielmodus.", "Choose a game mode.", "Escolhe um modo de jogo."],
+    "Willkommen im Zen-Garten": ["So funktioniert ZenCube", "How ZenCube works", "Como jogar ZenCube"],
+    "Atme durch. Drehe den Würfel. Entdecke neue Wege zu gewinnen.": ["Verbinde vier gleiche Zeichen über eine Würfelkante.", "Connect four matching marks across a cube edge.", "Liga quatro símbolos iguais através de uma aresta do cubo."],
+    "Spiele in deinem Tempo.": ["Sprache, Ton und Spielregeln.", "Language, sound and game rules.", "Idioma, som e regras do jogo."],
+    "Deine Spielstatistik": ["Statistik", "Statistics", "Estatísticas"],
+    "Deine Partien": ["Statistik", "Statistics", "Estatísticas"],
+    "Freies Training": ["Training", "Practice", "Treino"],
+    "Zen-Rätsel · 100 Aufgaben": ["100 Zen-Rätsel", "100 Zen Challenges", "100 Desafios Zen"],
+    "Drehe den Würfel und finde den richtigen Zug.": ["Finde den besten Zug.", "Find the best move.", "Encontra a melhor jogada."],
+    "Nicht ganz – überlege, welche Kantenlinie entscheidend ist.": ["Nicht ganz. Prüfe die Linien über der Kante.", "Not quite. Check the lines across the edge.", "Ainda não. Vê as linhas que atravessam a aresta."],
+    "Gelöst! Ein Zen-Blatt für dich. 🍃": ["Rätsel gelöst! 🍃", "Challenge solved! 🍃", "Desafio resolvido! 🍃"],
+    "Geschafft! 🍃 Wähle ▶ für das nächste Rätsel.": ["Geschafft! ▶ Nächstes Rätsel.", "Solved! ▶ Next challenge.", "Concluído! ▶ Próximo desafio."],
+    "Unentschieden · gut gespielt!": ["Unentschieden", "Draw", "Empate"],
+    "Zen-Bot denkt nach …": ["Zen-Bot ist am Zug …", "Zen-Bot is playing …", "É a vez do Zen-Bot …"],
+    "Ruhige Zen-Garten-Musik": ["Hintergrundmusik", "Background music", "Música de fundo"],
+    "Sanfte Spieltöne": ["Soundeffekte", "Sound effects", "Efeitos sonoros"],
+    "Der Zen-Bot blockiert. Finde den nächsten Zug!": ["Der Bot hat blockiert. Dein Zug.", "The bot blocked. Your move.", "O bot bloqueou. É a tua vez."],
+    "Suche den zweiten Gewinnweg über die Kante.": ["Finde die andere Gewinnlinie.", "Find the other winning line.", "Encontra a outra linha vencedora."],
+    "Finde den zweiten Gewinnweg": ["Finde die andere Gewinnlinie", "Find the other winning line", "Encontra a outra linha vencedora"],
+    "Bewegen · Streiche über den Würfel. Ziehen dreht, zwei Finger zoomen.": ["Drehen: mit einem Finger ziehen. Zoomen: zwei Finger.", "Rotate: drag with one finger. Zoom: use two fingers.", "Rodar: arrasta com um dedo. Zoom: usa dois dedos."],
+    "Setzen · Tippe ein freies Feld. Du spielst X gegen Zen-Bot O.": ["Tippe auf ein freies Feld. Du bist X, der Bot ist O.", "Tap an empty square. You are X; the bot is O.", "Toca numa casa livre. Tu és X; o bot é O."],
+    "Wichtig · Drei X auf einer Seite allein reichen NICHT. Nur 4 über zwei Seiten zählen.": ["Nur vier gleiche Zeichen über eine Kante zählen.", "Only four matching marks across an edge count.", "Só contam quatro símbolos iguais através de uma aresta."],
+    "Bereit? Über „Spielen“ geht es los. Beim ersten Start spielst du gegen Zen-Bot auf Leicht.": ["Bereit? Starte gegen den leichten Zen-Bot.", "Ready? Start against the easy Zen-Bot.", "Pronto? Começa contra o Zen-Bot no nível fácil."],
+    "Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.": ["Nur beendete Partien zählen. Training und Tutorial zählen nicht. Beim Farbtausch bleiben Siege dem richtigen Spieler zugeordnet.", "Only finished matches count. Practice and tutorial games do not. Wins still count for the correct player after a symbol swap.", "Só contam partidas terminadas. O treino e o tutorial não contam. Se trocarmos os símbolos, a vitória continua atribuída ao jogador certo."],
+}
+
 static func translate(source: String, code: String) -> String:
+    # Short, game-first wording; explicit DE/EN/PT-PT variants prevent mixed text.
+    if NATURAL_COPY.has(source):
+        var variants: Array = NATURAL_COPY[source]
+        match code:
+            "en": return str(variants[1])
+            "pt": return str(variants[2])
+            _: return str(variants[0])
     match code:
         "en": return english(source)
         "pt": return portuguese(source)
