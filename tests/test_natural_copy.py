@@ -23,6 +23,6 @@ for key in ('Ein ruhiges Strategiespiel für Balance, Raumgefühl und Konzentrat
 assert 'if NATURAL_COPY.has(source)' in s
 assert '"en": return str(variants[1])' in s
 assert '"pt": return str(variants[2])' in s
-assert 'version/name="9.4.3-world-clarity-hd"' in (ROOT/'export_presets.cfg').read_text()
-assert 'version/code=16' in (ROOT/'export_presets.cfg').read_text()
+assert 'version/name="9.5-zen-collection"' in (ROOT/'export_presets.cfg').read_text()
+assert 'version/code=17' in (ROOT/'export_presets.cfg').read_text()
 print(f'OK: {len(translations)} natural text replacements in DE, EN and PT-PT')

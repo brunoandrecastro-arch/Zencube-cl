@@ -22,7 +22,8 @@ assert 'Neue Welt freigeschaltet: %s' in ui
 assert 'var border_ring = MeshInstance3D.new()' in r
 assert 'material(Color("fff0d1"),true)' in r
 assert 'var peach = Color("16515a")' in r
-assert 'Color("b68165")' in r
+collection=(BASE/'core/ZenCollection.gd').read_text()
+assert '"b68165"' in collection, 'The original terracotta skin remains present' 
 for name in ['zen_garden_scene.webp','zen_world_bamboo.webp','zen_world_temple.webp','zen_world_moon.webp','zen_world_heaven.webp']:
     pic=BASE/'assets'/name
     data=pic.read_bytes()

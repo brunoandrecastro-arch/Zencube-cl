@@ -30,7 +30,7 @@ assert 'music_player.stream = make_zen_music_stream()' in controller
 assert 'ambient.data = pcm' in controller
 assert 'ambient.loop_end = int(pcm.size() / 2)' in controller
 save=(BASE/'core/SaveManager.gd').read_text()
-assert '"music":true,"language":""' in save, 'Default language/audio missing'
+assert '"music":true,"music_track":0,"language":""' in save, 'Default language/audio missing'
 assert 'const VERSION = 3' in save, 'Existing saved games must not be wiped'
 with wave.open(str(BASE/'assets/zen_ambient.wav'),'rb') as w:
     assert w.getnchannels()==1 and w.getsampwidth()==2

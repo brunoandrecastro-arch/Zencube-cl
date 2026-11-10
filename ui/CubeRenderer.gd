@@ -8,6 +8,8 @@ var overlay: Node3D
 var mint = Color("453329")
 var peach = Color("16515a") # High-contrast deep jade O across all face colors
 var selected: int = -1
+var skin_id: int = 0
+var core_mesh_instance: MeshInstance3D
 func _ready() -> void:
 	pivot = Node3D.new()
 	add_child(pivot)
@@ -39,6 +41,7 @@ func _ready() -> void:
 	core_mesh.size = Vector3(3.03,3.03,3.03)
 	core.mesh = core_mesh
 	core.material_override = material(Color("6a5240"))
+	core_mesh_instance = core
 	pivot.add_child(core)
 	# Minimal stationary sand-and-stone podium evokes a Japanese dry garden.
 	# This is decorative geometry only; it never receives picking/collision.
@@ -69,8 +72,8 @@ func _ready() -> void:
 		tile.mesh = mesh
 		tile.basis = Basis(CubeGeometry.U[f],-CubeGeometry.V[f],CubeGeometry.N[f])
 		tile.position = CubeGeometry.center(c)
-		var face_base = [Color("c0b69a"),Color("c0b69a"),Color("74805b"),Color("b68165"),Color("e8d0ab"),Color("d8b995")][f]
-		tile.material_override = material(face_base)
+		var face_base = face_color(f)
+		tile.material_override = face_material(face_base)
 		pivot.add_child(tile)
 		tiles.append(tile)
 		var body = StaticBody3D.new()
@@ -96,6 +99,23 @@ func material(color: Color, glow: bool = false) -> StandardMaterial3D:
 	if glow:
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return mat
+func palette() -> Dictionary:
+    return ZenCollection.SKINS[clampi(skin_id, 0, ZenCollection.SKINS.size()-1)]
+func face_color(face: int) -> Color:
+    return Color(str(palette().faces[clampi(face,0,5)]))
+func apply_skin(next_skin: int) -> void:
+    skin_id = clampi(next_skin, 0, ZenCollection.SKINS.size()-1)
+    var style: Dictionary = palette()
+    mint = Color(str(style.x))
+    peach = Color(str(style.o))
+    if core_mesh_instance != null:
+        core_mesh_instance.material_override = material(Color(str(style.core)))
+    # Draw currently visible marks in the new palette without touching cells.
+func face_material(color: Color) -> StandardMaterial3D:
+    var mat: StandardMaterial3D = material(color)
+    mat.metallic = float(palette().metal)
+    mat.roughness = float(palette().rough)
+    return mat
 func reset_view() -> void:
 	pivot.rotation = Vector3(0.43,-0.58,-0.04)
 	camera.position.z = 9.3
@@ -139,13 +159,13 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 	var winning = []
 	for line in board.win_lines: winning.append_array(line)
 	for c in range(54):
-		var color = [Color("c0b69a"),Color("c0b69a"),Color("74805b"),Color("b68165"),Color("e8d0ab"),Color("d8b995")][CubeGeometry.face(c)]
+		var color = face_color(CubeGeometry.face(c))
 		if tx.has(c): color = Color("b3c2a0")
 		if to.has(c): color = Color("d5a58d")
 		if preview.has(c): color = Color("c2b094")
 		if winning.has(c): color = Color("a5b38e")
 		if c == selected: color = color.lightened(0.18)
-		tiles[c].material_override = material(color)
+		tiles[c].material_override = face_material(color)
 		if winning.has(c):
 			var pulse = create_tween().set_loops(2)
 			pulse.tween_property(tiles[c].material_override,"albedo_color",color.lightened(0.2),0.25)
@@ -154,8 +174,10 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 			marks[c].remove_child(child)
 			child.queue_free()
 		if board.cells[c] == 1:
-			bar(marks[c],Vector3(-0.23,-0.23,0),Vector3(0.23,0.23,0),mint,0.043)
-			bar(marks[c],Vector3(-0.23,0.23,0),Vector3(0.23,-0.23,0),mint,0.043)
+			bar(marks[c],Vector3(-0.23,-0.23,0),Vector3(0.23,0.23,0),Color("fff0d1"),0.067)
+			bar(marks[c],Vector3(-0.23,0.23,0),Vector3(0.23,-0.23,0),Color("fff0d1"),0.067)
+			bar(marks[c],Vector3(-0.23,-0.23,0.006),Vector3(0.23,0.23,0.006),mint,0.037)
+			bar(marks[c],Vector3(-0.23,0.23,0.006),Vector3(0.23,-0.23,0.006),mint,0.037)
 		elif board.cells[c] == 2:
 			# The ivory outer rim and dark-jade inner ring remain legible on
 			# terracotta, cream, brown and green cube faces (also at small sizes).

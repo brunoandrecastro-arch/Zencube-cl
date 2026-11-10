@@ -14,3 +14,7 @@ Die vier Hintergründe `zen_world_bamboo.webp`, `zen_world_temple.webp`, `zen_wo
 ## ZenCube 9.4.3 HD export
 
 Five existing original ZenCube world illustrations were re-exported at 1440×2560 as high-quality WebP and gently sharpened/toned for mobile readability. These are enhanced upscales from the earlier smaller illustrations, **not** claimed to be native 4K renders. No UI or playable cube is baked into scenery textures.
+
+### ZenCube 9.5 original background music
+
+`zen_bamboo_music.pcm` (Bambus im Morgenwind) and `zen_moon_music.pcm` (Mondlicht am Teich) were originally synthesized for ZenCube 9.5 with deterministic sine-based pads, plucked pentatonic melodies and filtered air noise. No music samples, third-party recordings or third-party compositions were used. Original Zen-garden music remains unchanged. WAV preview counterparts are not required by the Android runtime.

@@ -52,6 +52,11 @@ jobs:
         run: python3 tests/test_world_visuals_9_4_2.py
       - name: Check HD worlds, unlock hints, O visibility and result copy
         run: python3 tests/test_design_clarity_9_4_3.py
+      - name: ZenCube 9.5 earned currency and 20 skins (static)
+        run: python3 tests/test_zen_collection_9_5.py
+      - name: ZenCube 9.5 economy, 3 tracks and shop on the real cube (headless)
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_zen_collection_9_5.gd
       - name: Verify premium world switching on the real cube (headless)
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_world_visuals_9_4_2.gd

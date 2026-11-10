@@ -41,6 +41,8 @@ var world_background: TextureRect
 var rank_label: Label
 var current_world: int = -1
 var last_rank_up: Dictionary = {"rank_up": false, "new_rank": 0}
+var last_leaf_reward: int = 0
+const Collection = preload("res://core/ZenCollection.gd")
 
 var challenge_row: HBoxContainer
 var classic_views: HBoxContainer
@@ -98,8 +100,12 @@ func _ready() -> void:
     else:
         board.swap_enabled = bool(data.settings.swap)
     challenges = ZenChallenges.new(rules.lines)
+    Collection.ensure(data)
+    # Once-only migration: previous Zen-Bot wins and solved puzzles receive leaves.
+    Collection.migrate_previous_rewards(data, challenges.solved)
     build_ui()
     build_sound()
+    renderer.apply_skin(int(data.economy.equipped))
     refresh()
     if not str(data.settings.get("language", "")) in ["de", "en", "pt"]:
         open_language_choice()
@@ -375,6 +381,7 @@ func apply_world() -> void:
     create_tween().tween_property(world_background, "modulate:a", 1.0, 0.28)
 
 func refresh(animate: int = -1) -> void:
+    Collection.ensure(data)
     apply_world()
     rank_label.visible = not challenge_active
     if not challenge_active:
@@ -384,7 +391,7 @@ func refresh(animate: int = -1) -> void:
         var p: Dictionary = challenges.puzzle(challenge_index)
         var kind: String = str(p.kind)
         if challenge_phase == -1:
-            status.text = T("Gelöst! Ein Zen-Blatt für dich. 🍃")
+            status.text = T("Rätsel gelöst!")
         elif kind == "sequence":
             status.text = T("Erzwinge einen Sieg in %d Zügen") % int(p.moves)
         elif kind == "defense":
@@ -399,7 +406,7 @@ func refresh(animate: int = -1) -> void:
             status.text = T("Erzwinge einen Sieg in zwei Zügen")
         status.add_theme_color_override("font_color",Color("67785b") if challenge_phase == -1 else Color("453329"))
         var level: int = int(p.level)
-        detail.text = T("Zen-Rätsel") + " · " + T(["Anfänger", "Fortgeschritten", "Experte", "Zen-Meister", "Großmeister"][level-1]) + " %02d/20  ·  🍃 %d/100" % [((challenge_index % 20)+1),challenges.solved.size()]
+        detail.text = T("Zen-Rätsel") + " · " + T(["Anfänger", "Fortgeschritten", "Experte", "Zen-Meister", "Großmeister"][level-1]) + " %02d/20  ·  ✓ %d/100" % [((challenge_index % 20)+1),challenges.solved.size()]
         help_text.text = (toast if Time.get_ticks_msec() < toast_until else challenge_message if challenge_message != "" else T("Drehe den Würfel und finde den richtigen Zug."))
     else:
         var sym := "X" if board.turn == 1 else "O"
@@ -485,6 +492,7 @@ func place(cell: int) -> void:
 func record_result() -> void:
     if board.result_recorded: return
     last_rank_up = {"rank_up": false, "new_rank": int(data.ascension.rank)}
+    last_leaf_reward = 0
     board.result_recorded = true
     data.stats.played += 1
     if bool(data.settings.alternate): data.settings.next_start = 1-board.starter_owner
@@ -504,6 +512,8 @@ func record_result() -> void:
             # A loss resets only the active unfinished streak exam.
             last_rank_up = Asc.record_match(data, difficulty, 1 if owner == 0 else -1)
             data.stats["ai_wins" if owner == 0 else "ai_losses"][difficulty] += 1
+            if owner == 0:
+                last_leaf_reward = Collection.reward_bot(data, difficulty)
 func resolve_swap(accept: bool) -> void:
     if rules.swap(board,accept):
         generation += 1
@@ -618,12 +628,64 @@ func open_menu() -> void:
     premium_button("Zen-Rätsel · 100 Aufgaben", box, begin_challenges)
     premium_button("Zen-Aufstieg", box, open_ascension)
     premium_button("Welten", box, open_worlds)
+    premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
     premium_button("Einstellungen", box, open_settings)
     button("Regeln & Balance", box, open_balance, true)
     if challenge_active:
         button("Zurück zu den Zen-Rätseln", box, close_modal, true)
         button("Klassisches Spiel fortsetzen", box, leave_challenges, true)
+
+func open_store() -> void:
+    Collection.ensure(data)
+    var box = modal("Zen-Shop")
+    label(T("Deine Zen-Blätter: 🍃 %d") % int(data.economy.leaves), box, 20, Color("50663e"))
+    label("Gewinne gegen den Zen-Bot oder löse neue Challenges. Stärkere Bots geben mehr Blätter.", box, 13)
+    var rewards: String = ""
+    for i in range(5):
+        if i > 0: rewards += "  ·  "
+        rewards += T(Asc.LEVELS[i]) + ": +" + str(Collection.BOT_REWARDS[i])
+    label(rewards, box, 12)
+    label("Skins ändern nur die Würfeloptik. Alle 108 Gewinnlinien bleiben gleich.", box, 13)
+    for i in range(Collection.SKINS.size()):
+        var skin_id: int = i
+        var skin: Dictionary = Collection.SKINS[i]
+        var card: PanelContainer = PanelContainer.new()
+        card.add_theme_stylebox_override("panel", theme_style(Color("fff0d9", 0.96), 12))
+        box.add_child(card)
+        var inner: VBoxContainer = VBoxContainer.new()
+        card.add_child(inner)
+        var card_row: HBoxContainer = row(inner)
+        # Three swatches preview the REAL color/material preset used by the 3D cube.
+        for face in [0, 2, 3]:
+            var sample: ColorRect = ColorRect.new()
+            sample.color = Color(str(skin.faces[face]))
+            sample.custom_minimum_size = Vector2(28, 28)
+            sample.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            card_row.add_child(sample)
+        var name_label: Label = label(T(str(skin.name)), card_row, 16, Color("4b3428"))
+        name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        var owned: bool = data.economy.owned.has(i)
+        var equipped: bool = int(data.economy.equipped) == i
+        var title: String = ""
+        if equipped: title = "✓ " + T("Ausgerüstet")
+        elif owned: title = T("Skin verwenden")
+        else: title = T("Kaufen für 🍃 %d") % int(skin.price)
+        var skin_button: Button = button(title, inner, func(): store_select_skin(skin_id), true, equipped)
+        skin_button.disabled = equipped or (not owned and int(data.economy.leaves) < int(skin.price))
+    button("Zum Hauptmenü", box, open_menu, true)
+
+func store_select_skin(skin: int) -> void:
+    Collection.ensure(data)
+    if not data.economy.owned.has(skin):
+        if not Collection.buy(data, skin):
+            notify_user("Nicht genug Zen-Blätter.")
+            return
+    if Collection.equip(data, skin):
+        renderer.apply_skin(skin)
+        refresh()
+        persist()
+        open_store()
 
 func open_play_menu() -> void:
     Asc.ensure(data)
@@ -636,6 +698,8 @@ func open_play_menu() -> void:
         if not Asc.level_unlocked(data,i):
             b.disabled = true
             b.text += "  🔒"
+        else:
+            label(T("Sieg-Belohnung: 🍃 %d") % int(Collection.BOT_REWARDS[i]), box, 12)
     premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
     button("Training", box, func(): start_mode(2, 0), true)
     button("Viererlinien lernen", box, start_tutorial, true)
@@ -786,6 +850,9 @@ func show_result_screen() -> void:
             summary = T("%s gewinnt mit %s.") % [player_name(winner_owner), winning_symbol]
         var symbol_label: Label = label(summary, box, 18, Color("ead3aa"))
         symbol_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    if versus_bot and last_leaf_reward > 0:
+        var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 18, Color("d3e5b6"))
+        reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var detail_label: Label = label("Vier in einer Reihe. Über die Kante." if board.winner != 3 else "Noch eine Runde?", box, 15, Color("e7d6b9"))
     detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Noch eine Partie", box, play_again_after_result, true)
@@ -859,14 +926,14 @@ func challenge_restart() -> void:
 func open_challenge_levels() -> void:
     if not challenge_active: return
     var box = modal("Zen-Rätsel · 5 Stufen")
-    label(T("20 Rätsel je Stufe") + " · 🍃 %d/100" % challenges.solved.size(),box,15)
+    label(T("20 Rätsel je Stufe") + " · ✓ %d/100" % challenges.solved.size(),box,15)
     var levels: Array = ["Anfänger", "Fortgeschritten", "Experte", "Zen-Meister", "Großmeister"]
     for level in range(1, 6):
         var start_index: int = (level - 1) * 20
         var completed: int = 0
         for number in range(start_index, start_index + 20):
             if challenges.solved.has(str(number + 1)): completed += 1
-        button(T(levels[level - 1]) + " · %d/20 🍃" % completed,box,Callable(self, "challenge_open_level").bind(level),false,level == 1)
+        button(T(levels[level - 1]) + " · %d/20 ✓" % completed,box,Callable(self, "challenge_open_level").bind(level),false,level == 1)
 
 func challenge_open_level(level: int) -> void:
     if not challenge_active or level < 1 or level > 5: return
@@ -947,8 +1014,15 @@ func challenge_try_cell(cell: int) -> void:
 func challenge_complete() -> void:
     challenge_phase = -1
     board.winner = 1 if not board.win_lines.is_empty() else 0
-    challenge_message = T("Geschafft! 🍃 Wähle ▶ für das nächste Rätsel.")
+    var was_solved: bool = challenges.solved.has(str(challenge_index + 1))
     challenges.record_solved(challenge_index)
+    if not was_solved:
+        var puzzle_level: int = int(challenges.puzzle(challenge_index).level)
+        var leaves: int = Collection.reward_challenge(data, puzzle_level)
+        challenge_message = T("Rätsel gelöst! +%d Zen-Blätter 🍃") % leaves
+    else:
+        challenge_message = T("Rätsel erneut gelöst.")
+    persist()
     play_sound(true)
     if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
 
@@ -1219,6 +1293,14 @@ func open_settings() -> void:
         persist()
     )
     box.add_child(music)
+    label("Musiktitel", box, 15)
+    var tracks: OptionButton = OptionButton.new()
+    for title in ["Zen-Garten (Original)", "Bambus im Morgenwind", "Mondlicht am Teich"]:
+        tracks.add_item(T(title))
+    tracks.select(clampi(int(data.settings.get("music_track", 0)), 0, 2))
+    tracks.custom_minimum_size.y = 48
+    tracks.item_selected.connect(func(index): select_music_track(index))
+    box.add_child(tracks)
     var sounds = CheckButton.new()
     sounds.text = T("Sanfte Spieltöne")
     sounds.button_pressed = bool(data.settings.sound)
@@ -1285,8 +1367,12 @@ func build_sound() -> void:
     music_player.stream = make_zen_music_stream()
     music_player.volume_db = -2.0
     sync_music()
-func make_zen_music_stream() -> AudioStreamWAV:
+func make_zen_music_stream(track: int = 0) -> AudioStreamWAV:
     var pcm: PackedByteArray = FileAccess.get_file_as_bytes("res://assets/zen_ambient_music.pcm")
+    if track == 1:
+        pcm = FileAccess.get_file_as_bytes("res://assets/zen_bamboo_music.pcm")
+    elif track == 2:
+        pcm = FileAccess.get_file_as_bytes("res://assets/zen_moon_music.pcm")
     if pcm.size() < 32000 or pcm.size() % 2 != 0:
         # Fallback audible tones if a distribution omits the PCM resource.
         push_warning("ZenCube music resource missing; using generated fallback audio")
@@ -1306,6 +1392,13 @@ func make_zen_music_stream() -> AudioStreamWAV:
     ambient.loop_end = int(pcm.size() / 2)
     ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
     return ambient
+func select_music_track(index: int) -> void:
+    data.settings.music_track = clampi(index, 0, 2)
+    if music_player != null:
+        music_player.stream = make_zen_music_stream(int(data.settings.music_track))
+        music_player.set_meta("track", int(data.settings.music_track))
+    sync_music()
+    persist()
 func music_preview() -> void:
     if music_player == null or music_player.stream == null:
         notify_user("Musik konnte nicht geladen werden.")
@@ -1317,7 +1410,12 @@ func music_preview() -> void:
                 music_player.stop()
         )
 func sync_music() -> void:
-    if music_player == null or music_player.stream == null: return
+    if music_player == null: return
+    var chosen: int = clampi(int(data.settings.get("music_track", 0)), 0, 2)
+    if not music_player.has_meta("track") or int(music_player.get_meta("track")) != chosen:
+        music_player.stream = make_zen_music_stream(chosen)
+        music_player.set_meta("track", chosen)
+    if music_player.stream == null: return
     if bool(data.settings.get("music",false)):
         if not music_player.playing: music_player.play()
     elif music_player.playing:
