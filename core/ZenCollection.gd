@@ -25,6 +25,7 @@ const SKINS = [
     {"name":"Lotusgold", "price":565, "faces":["f1dea6", "dfc77b", "bd984e", "d5b36c", "f7eac4", "c8ad65"], "core":"806039", "x":"514029", "o":"155463", "metal":0.50, "rough":0.31},
     {"name":"Polarlicht", "price":615, "faces":["a5dfd1", "77cabb", "6b88bc", "9f7fc5", "c3dfe7", "7bbab9"], "core":"394f71", "x":"24364d", "o":"1a5264", "metal":0.30, "rough":0.34},
     {"name":"Himmelsgold", "price":690, "faces":["fff0ce", "ead8a7", "c7b37c", "eed3a1", "fff7e3", "dac39e"], "core":"7d693f", "x":"4b3c2e", "o":"17616a", "metal":0.58, "rough":0.26},
+]
 
 static func ensure(data: Dictionary) -> void:
     if not data.get("economy") is Dictionary: data["economy"] = {}

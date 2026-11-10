@@ -11,6 +11,8 @@ r=(R/'ui/CubeRenderer.gd').read_text()
 save=(R/'core/SaveManager.gd').read_text()
 workflow=(R/'.github/workflows/android.yml').read_text()
 translations=(R/'core/ZenLocalization.gd').read_text()
+assert s.count('const SKINS = [') == 1
+assert s.count('\n]\n\nstatic func ensure(data: Dictionary) -> void:') == 1, 'Unclosed SKINS array in ZenCollection.gd'
 extract=s.split('const SKINS = [',1)[1].split('\n]\n',1)[0]
 records=re.findall(r'^\s*(\{.*\}),?\s*$',extract,re.M)
 skins=[ast.literal_eval(record) for record in records]
