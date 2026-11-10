@@ -266,10 +266,14 @@ func build_ui() -> void:
     var game_stack = VBoxContainer.new()
     game_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
     game_card.add_child(game_stack)
-    var container = SubViewportContainer.new()
+    # Keep a real 960px SubViewport independent of the phone-sized UI.
+    # SubViewportContainer(stretch=true) would silently resize it to its UI rect.
+    var container = TextureRect.new()
     container.mouse_filter = Control.MOUSE_FILTER_STOP
-    container.stretch = true
+    container.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    container.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     container.custom_minimum_size = Vector2(0,225)
+    container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     container.size_flags_vertical = Control.SIZE_EXPAND_FILL
     game_stack.add_child(container)
     viewport = SubViewport.new()
@@ -278,11 +282,12 @@ func build_ui() -> void:
     viewport.own_world_3d = true
     viewport.msaa_3d = Viewport.MSAA_4X
     viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-    container.add_child(viewport)
+    add_child(viewport)
     renderer = CubeRenderer.new()
     viewport.add_child(renderer)
     input_control = InputController.new(renderer,on_cell)
-    container.gui_input.connect(input_control.handle)
+    container.texture = viewport.get_texture()
+    container.gui_input.connect(_on_cube_surface_input.bind(container))
 
     # Accessible status strip: readable regardless of the garden background.
     var feedback_panel = PanelContainer.new()
@@ -324,6 +329,30 @@ func build_ui() -> void:
     column.add_child(legend_panel)
     var meta = label("6 SEITEN · 54 FELDER · 108 VIERERLINIEN",legend_panel,12,Color("fff3df"))
     meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+# Transform actual phone taps into the 960x960 picking coordinates.
+# Drags keep physical pixel deltas so cube rotation feels the same as before.
+func _on_cube_surface_input(event: InputEvent, surface: TextureRect) -> void:
+    var side: float = minf(surface.size.x, surface.size.y)
+    if side < 1.0: return
+    var inset: Vector2 = (surface.size - Vector2(side,side)) * 0.5
+    var ratio: float = float(viewport.size.x) / side
+    if event is InputEventScreenTouch:
+        var touch: InputEventScreenTouch = event.duplicate() as InputEventScreenTouch
+        touch.position = (event.position - inset) * ratio
+        input_control.handle(touch)
+    elif event is InputEventScreenDrag:
+        var drag: InputEventScreenDrag = event.duplicate() as InputEventScreenDrag
+        drag.position = (event.position - inset) * ratio
+        input_control.handle(drag)
+    elif event is InputEventMouseButton:
+        var mouse: InputEventMouseButton = event.duplicate() as InputEventMouseButton
+        mouse.position = (event.position - inset) * ratio
+        input_control.handle(mouse)
+    elif event is InputEventMouseMotion:
+        var motion: InputEventMouseMotion = event.duplicate() as InputEventMouseMotion
+        motion.position = (event.position - inset) * ratio
+        input_control.handle(motion)
+
 func mode_name() -> String:
     var mode = int(data.settings.mode)
     if mode == 1: return T("Du gegen Zen-Bot · ")+T(Asc.LEVELS[clampi(int(data.settings.level),0,4)])

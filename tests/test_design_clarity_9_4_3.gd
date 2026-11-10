@@ -29,8 +29,15 @@ func run() -> void:
     game.refresh()
     check(game.renderer.tiles.size() == 54,"54 real selectable cube cells")
     check(game.viewport.size == Vector2i(960,960),"higher-resolution real cube render")
+    var ui_surface: TextureRect = null
+    for n in game.ui.find_children("*", "TextureRect", true, false):
+        var candidate: TextureRect = n as TextureRect
+        if candidate != null and candidate.texture == game.viewport.get_texture():
+            ui_surface = candidate
+            break
+    check(ui_surface != null, "real 960px cube rendered into UI texture")
     for tex in ZenAscension.WORLD_TEXTURES:
-        check(tex.get_size() == Vector2i(1440,2560),"HD backdrop")
+        check(tex.get_size() == Vector2(1440,2560),"HD backdrop")
     game.open_worlds()
     check(has_text(game.popup,"Freischaltung: 3 Siege gegen Leicht"),"German bamboo unlock hint")
     check(has_text(game.popup,"3 Siege in Folge gegen Meister"),"German streak unlock hint")
