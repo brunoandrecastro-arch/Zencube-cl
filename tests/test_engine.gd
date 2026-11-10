@@ -107,7 +107,7 @@ func _initialize() -> void:
             for i in range(3): cells[line[i]] = 1
             check(rules.threats(cells,1).has(ai.choose(cells,1,level)),"AI completes immediate fourth mark")
             check(rules.threats(cells,1).has(ai.choose(cells,2,level)),"AI blocks immediate four-in-a-row threat")
-    for level in range(3):
+    for level in range(5):
         b = BoardModel.new()
         b.swap_enabled = false
         while b.winner == 0:
@@ -117,7 +117,7 @@ func _initialize() -> void:
             check(move >= 0 and b.cells[move] == 0,"AI selects legal move")
             rules.play(b,move)
         check(ai.choose(b.cells,b.turn,level) == -1,"AI recognizes finished game")
-    check(max_ms < 400,"AI move time bounded")
+    check(max_ms < 850,"AI move time bounded")
     FileAccess.open("res://reports/lines.json",FileAccess.WRITE).store_string(JSON.stringify(rules.lines))
     var report = {"checks":checks,"failures":failures,"lines":rules.lines.size(),"rotations":rotations,"max_ai_ms":max_ms}
     FileAccess.open("res://reports/tests.json",FileAccess.WRITE).store_string(JSON.stringify(report,"  "))

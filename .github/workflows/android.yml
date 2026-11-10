@@ -46,6 +46,11 @@ jobs:
         run: python3 tests/test_natural_copy.py
       - name: Verify premium home menu, result screen and Android haptics
         run: python3 tests/test_premium_ui_9_3.py
+      - name: Verify five Zen ranks, bot difficulties and new worlds
+        run: python3 tests/test_zen_ascension.py
+      - name: Zen Ascension progression and five bot levels (headless)
+        run: |
+          timeout 75 "$GODOT" --headless --path . --script tests/test_zen_ascension.gd
       - name: Godot engine tests
         run: |
           "$GODOT" --headless --path . --script tests/test_engine.gd

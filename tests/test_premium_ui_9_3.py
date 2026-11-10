@@ -14,7 +14,7 @@ for phrase in ('func premium_button(', 'func open_play_menu()', 'func show_resul
     assert phrase in ui, phrase
 assert '"haptics":true' in save and 'const VERSION = 3' in save
 assert 'permissions/vibrate=true' in exp
-assert 'version/code=12' in exp and 'version/name="9.3-premium-foundation"' in exp
+assert 'version/code=13' in exp and 'version/name="9.4-zen-ascension"' in exp
 for code in ('EN','PT'):
     src=loc.split('const '+code+': Dictionary = {',1)[1].split('\n}',1)[0]
     entries=ast.literal_eval('{'+src+'\n}')

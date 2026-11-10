@@ -37,6 +37,11 @@ var challenge_phase: int = 0 # player move index (0-based), -1: solved
 var challenge_hint_level: int = 0
 var challenge_message: String = ""
 var classic_backup: Dictionary = {}
+var world_background: TextureRect
+var rank_label: Label
+var current_world: int = -1
+var last_rank_up: Dictionary = {"rank_up": false, "new_rank": 0}
+
 var challenge_row: HBoxContainer
 var classic_views: HBoxContainer
 var classic_actions: HBoxContainer
@@ -44,6 +49,7 @@ var challenge_leave_row: HBoxContainer
 var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
+const Asc = preload("res://core/ZenAscension.gd")
 func language_code() -> String:
     if data == null: return "de"
     return str(data.settings.get("language", "de"))
@@ -84,6 +90,7 @@ func open_language_choice() -> void:
     button("Português", box, choose_language.bind("pt"), false, true)
 func _ready() -> void:
     data = SaveManager.load_data()
+    Asc.ensure(data)
     if SaveManager.valid_game(data.game):
         board.restore(data.game)
         board.history = data.game.get("history",[])
@@ -175,6 +182,7 @@ func build_ui() -> void:
 
     # A dedicated original illustration, with NO baked-in buttons or cube.
     var garden = TextureRect.new()
+    world_background = garden
     garden.name = "GardenBackground"
     garden.texture = load("res://assets/zen_garden_scene.webp")
     garden.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -238,6 +246,7 @@ func build_ui() -> void:
     ribbon.add_child(header)
     status = label("",header,20,Color("453329"))
     detail = label("",header,12,Color("80684e"))
+    rank_label = label("",header,12,Color("67785b"))
     # Only challenge mode shows this explicit player/bot assignment.
     challenge_role_panel = PanelContainer.new()
     challenge_role_panel.add_theme_stylebox_override("panel",theme_style(Color("41543e",0.97),10))
@@ -317,7 +326,7 @@ func build_ui() -> void:
     meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 func mode_name() -> String:
     var mode = int(data.settings.mode)
-    if mode == 1: return T("Du gegen Zen-Bot · ")+T(["Leicht","Mittel","Schwer"][int(data.settings.level)])
+    if mode == 1: return T("Du gegen Zen-Bot · ")+T(Asc.LEVELS[clampi(int(data.settings.level),0,4)])
     if mode == 2: return T("Lernmodus")
     return T("Zwei Spieler lokal")
 func player_name(owner: int) -> String:
@@ -325,7 +334,18 @@ func player_name(owner: int) -> String:
         return "Zen-Bot" if owner == 1 else T("Du")
     var pname = str(data.settings.names[owner])
     return T(pname)
+func apply_world() -> void:
+    if world_background == null or data == null: return
+    var chosen: int = clampi(int(data.ascension.get("world",0)), 0, 4)
+    if chosen == current_world: return
+    current_world = chosen
+    world_background.texture = Asc.WORLD_TEXTURES[chosen]
+
 func refresh(animate: int = -1) -> void:
+    apply_world()
+    rank_label.visible = not challenge_active
+    if not challenge_active:
+        rank_label.text = T("Zen-Rang") + ": " + T(Asc.RANKS[int(data.ascension.rank)]) + "  ·  " + T(Asc.WORLDS[int(data.ascension.world)])
     if challenge_active:
         challenge_role_label.text = T("Du spielst X  ·  Zen-Bot spielt O")
         var p: Dictionary = challenges.puzzle(challenge_index)
@@ -426,6 +446,7 @@ func place(cell: int) -> void:
         call_deferred("show_result_screen")
 func record_result() -> void:
     if board.result_recorded: return
+    last_rank_up = {"rank_up": false, "new_rank": int(data.ascension.rank)}
     board.result_recorded = true
     data.stats.played += 1
     if bool(data.settings.alternate): data.settings.next_start = 1-board.starter_owner
@@ -438,7 +459,12 @@ func record_result() -> void:
         else: data.stats.second_wins += 1
         data.stats["p1" if owner == 0 else "p2"] += 1
         if int(data.settings.mode) == 1:
-            data.stats["ai_wins" if owner == 0 else "ai_losses"][int(data.settings.level)] += 1
+            var difficulty: int = clampi(int(data.settings.level),0,4)
+            if owner == 0:
+                # Determine rank-up BEFORE legacy win statistics are incremented;
+                # ensure() also imports historical AI wins from older versions.
+                last_rank_up = Asc.clear_level(data, difficulty)
+            data.stats["ai_wins" if owner == 0 else "ai_losses"][difficulty] += 1
 func resolve_swap(accept: bool) -> void:
     if rules.swap(board,accept):
         generation += 1
@@ -505,7 +531,9 @@ func _process(_delta: float) -> void:
         var player = board.turn
         var level = int(data.settings.level)
         var seed_value = int(Time.get_ticks_usec())
-        worker.start(func(): return AIEngine.new(seed_value).choose(cells,player,level,220))
+        var budgets: Array = [45, 95, 200, 330, 520]
+        var budget: int = int(budgets[clampi(level,0,4)])
+        worker.start(func(): return AIEngine.new(seed_value).choose(cells,player,level,budget))
         refresh()
 func _exit_tree() -> void:
     if worker != null: worker.wait_to_finish()
@@ -549,6 +577,8 @@ func open_menu() -> void:
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Spielen", box, open_play_menu, true)
     premium_button("Zen-Rätsel · 100 Aufgaben", box, begin_challenges)
+    premium_button("Zen-Aufstieg", box, open_ascension)
+    premium_button("Welten", box, open_worlds)
     premium_button("Statistik", box, open_stats)
     premium_button("Einstellungen", box, open_settings)
     button("Regeln & Balance", box, open_balance, true)
@@ -557,15 +587,50 @@ func open_menu() -> void:
         button("Klassisches Spiel fortsetzen", box, leave_challenges, true)
 
 func open_play_menu() -> void:
+    Asc.ensure(data)
     var box = modal("Spielmodus")
     label("Gegen wen möchtest du spielen?", box, 16)
-    premium_button("Zen-Bot · Leicht", box, func(): start_mode(1, 0), true)
-    premium_button("Zen-Bot · Mittel", box, func(): start_mode(1, 1))
-    premium_button("Zen-Bot · Schwer", box, func(): start_mode(1, 2))
+    for i in range(5):
+        var lvl: int = i
+        var source: String = "Zen-Bot · " + Asc.LEVELS[i]
+        var b: Button = premium_button(source, box, func(): start_mode(1, lvl), i == int(data.ascension.rank))
+        if not Asc.level_unlocked(data,i):
+            b.disabled = true
+            b.text += "  🔒"
     premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
     button("Training", box, func(): start_mode(2, 0), true)
     button("Viererlinien lernen", box, start_tutorial, true)
     button("Zum Hauptmenü", box, open_menu, true)
+
+func open_ascension() -> void:
+    Asc.ensure(data)
+    var box = modal("Zen-Aufstieg")
+    label("Dein Zen-Rang",box,17)
+    label(T(Asc.RANKS[int(data.ascension.rank)]),box,23,Color("5b704b"))
+    label("Besiege den nächsten Zen-Bot, um aufzusteigen.",box,14)
+    for i in range(5):
+        var done: bool = bool(data.ascension.completed[i])
+        var state: String = "✓ " if done else "○ " if i <= int(data.ascension.rank) else "🔒 "
+        label(state + T(Asc.RANKS[i+1]) + " · " + T(Asc.LEVELS[i]),box,16)
+    button("Welten",box,open_worlds,true)
+    button("Spielen",box,open_play_menu,true,true)
+
+func open_worlds() -> void:
+    Asc.ensure(data)
+    var box = modal("Welten")
+    label("Wähle eine freigeschaltete Welt.",box,15)
+    for i in range(5):
+        var number: int = i
+        var b: Button = button(Asc.WORLDS[i],box,func(): select_world(number),true,i == int(data.ascension.world))
+        b.disabled = not Asc.world_unlocked(data,i)
+        if b.disabled: b.text += "  🔒"
+    button("Zum Hauptmenü",box,open_menu,true)
+
+func select_world(number: int) -> void:
+    if not Asc.world_unlocked(data,number): return
+    data.ascension.world = number
+    close_modal()
+    refresh()
 
 func show_result_screen() -> void:
     # Called deferred after a real Classic match finishes. A new match cancels it.
@@ -578,7 +643,7 @@ func show_result_screen() -> void:
         human_win = int(board.owners[board.winner-1]) == 0
     var versus_bot: bool = int(data.settings.mode) == 1
     var level: int = int(data.settings.level)
-    var special: bool = versus_bot and human_win and level >= 1 and int(data.stats.ai_wins[level]) == 1
+    var special: bool = versus_bot and human_win and (bool(last_rank_up.get("rank_up",false)) or level == 4)
     var headline: String = "Unentschieden"
     if board.winner != 3:
         if special:
@@ -597,9 +662,11 @@ func show_result_screen() -> void:
     heading.add_theme_color_override("font_color", Color("f8dfaa"))
     heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     if special:
-        var rank: String = "Zen-Meister" if level == 2 else "Zen-Schüler"
-        var rank_label: Label = label(rank, box, 23, Color("edd18e"))
-        rank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        var unlocked_rank: String = T(Asc.RANKS[int(data.ascension.rank)])
+        var award: Label = label(unlocked_rank,box,23,Color("edd18e"))
+        award.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        if bool(last_rank_up.get("rank_up",false)):
+            label("Neuer Zen-Rang freigeschaltet!",box,15,Color("fff1d6"))
     elif board.winner in [1, 2]:
         var symbol_label: Label = label("X gewinnt" if board.winner == 1 else "O gewinnt", box, 18, Color("ead3aa"))
         symbol_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -626,7 +693,8 @@ func open_stats() -> void:
     label("STARTSPIELER / ZWEITSPIELER · SIEGE",box,12)
     label(T("%d / %d  ·  Unentschieden: %d") % [data.stats.starter_wins,data.stats.second_wins,data.stats.starter_draws],box,16)
     label("GEGEN DIE KI · SIEGE / NIEDERLAGEN",box,12)
-    for i in range(3): label("%s: %d / %d" % [T(["Einfach","Mittel","Schwer"][i]),data.stats.ai_wins[i],data.stats.ai_losses[i]],box)
+    for i in range(5): label("%s: %d / %d" % [T(Asc.LEVELS[i]),data.stats.ai_wins[i],data.stats.ai_losses[i]],box)
+    button("Zen-Aufstieg",box,open_ascension,true)
     label("Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.",box,14)
 # ---- Zen Challenges (same interactive 3D cube; Classic state is untouched) ----
 func begin_challenges() -> void:
@@ -936,7 +1004,7 @@ func start_mode(mode: int, level: int = 0, from_welcome: bool = false) -> void:
         preview = []
         tutorial_from_welcome = false
     data.settings.mode = mode
-    data.settings.level = clampi(level,0,2)
+    data.settings.level = clampi(level,0,4)
     data.settings.intro_seen = true
     if from_welcome:
         data.settings.next_start = 0
@@ -1011,11 +1079,18 @@ func open_settings() -> void:
     language_picker.item_selected.connect(func(index): change_language(["de","en","pt"][index]))
     box.add_child(language_picker)
     var level = OptionButton.new()
-    for title in ["Bot: Leicht","Bot: Mittel","Bot: Schwer"]: level.add_item(T(title))
-    level.selected = int(data.settings.level)
+    for title in ["Bot: Leicht","Bot: Mittel","Bot: Schwer","Bot: Meister","Bot: Großmeister"]: level.add_item(T(title))
+    for index in range(5):
+        level.set_item_disabled(index, not Asc.level_unlocked(data,index))
+    level.selected = clampi(int(data.settings.level),0,4)
     level.custom_minimum_size.y = 52
     level.item_selected.connect(func(index):
-        data.settings.level = index
+        # Difficulty can be selected only after its previous rank is achieved.
+        if Asc.level_unlocked(data,index):
+            data.settings.level = index
+        else:
+            level.select(clampi(int(data.settings.level),0,4))
+            notify_user("Besiege zuerst die vorherige Bot-Stufe.")
         persist()
     )
     box.add_child(level)

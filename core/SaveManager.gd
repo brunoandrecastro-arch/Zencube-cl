@@ -3,7 +3,7 @@ extends RefCounted
 const PATH = "user://zencube.json"
 const VERSION = 3
 static func defaults() -> Dictionary:
-    return {"version":VERSION,"settings":{"mode":1,"level":0,"swap":false,"alternate":true,"next_start":0,"hints":true,"sound":true,"haptics":true,"music":true,"language":"","intro_seen":false,"tutorial_seen":false,"names":["Du","Spieler 2"]},"stats":{"played":0,"p1":0,"p2":0,"draw":0,"ai_wins":[0,0,0],"ai_losses":[0,0,0],"starter_wins":0,"second_wins":0,"starter_draws":0},"game":{}}
+    return {"version":VERSION,"settings":{"mode":1,"level":0,"swap":false,"alternate":true,"next_start":0,"hints":true,"sound":true,"haptics":true,"music":true,"language":"","intro_seen":false,"tutorial_seen":false,"names":["Du","Spieler 2"]},"stats":{"played":0,"p1":0,"p2":0,"draw":0,"ai_wins":[0,0,0,0,0],"ai_losses":[0,0,0,0,0],"starter_wins":0,"second_wins":0,"starter_draws":0},"ascension":{"completed":[false,false,false,false,false],"rank":0,"world":0},"game":{}}
 static func load_data() -> Dictionary:
     var base = defaults()
     if not FileAccess.file_exists(PATH): return base
@@ -20,6 +20,14 @@ static func load_data() -> Dictionary:
     for key in ["settings","stats"]:
         if data.get(key) is Dictionary: base[key].merge(data[key],true)
     if data.get("game") is Dictionary: base.game = data.game
+    if data.get("ascension") is Dictionary: base.ascension.merge(data.ascension, true)
+    for key in ["ai_wins", "ai_losses"]:
+        var raw_values: Variant = base.stats.get(key, [])
+        var values: Array = raw_values if raw_values is Array else []
+        var extended: Array = [0, 0, 0, 0, 0]
+        for i in range(mini(values.size(), 5)):
+            extended[i] = maxi(0, int(values[i]))
+        base.stats[key] = extended
     return base
 static func save_data(data: Dictionary) -> bool:
     var file = FileAccess.open(PATH+".tmp",FileAccess.WRITE)

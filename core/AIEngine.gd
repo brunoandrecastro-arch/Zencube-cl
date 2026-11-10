@@ -5,6 +5,7 @@ var rng = RandomNumberGenerator.new()
 var deadline: int
 var nodes: int = 0
 var timed_out: bool = false
+var branch_width: int = 8
 func _init(seed_value: int = 42) -> void:
 	rng.seed = seed_value
 func legal(cells: Array) -> Array:
@@ -41,7 +42,8 @@ func choose(cells_in: Array, player: int, level: int, budget_ms: int = 220) -> i
 	if not rules.victories(cells,1).is_empty() or not rules.victories(cells,2).is_empty(): return -1
 	var moves = legal(cells)
 	if moves.is_empty(): return -1
-	if level == 0 and rng.randf() < 0.62: return moves[rng.randi_range(0,moves.size()-1)]
+	level = clampi(level, 0, 4)
+	if level == 0 and rng.randf() < 0.72: return moves[rng.randi_range(0,moves.size()-1)]
 	var wins = rules.threats(cells,player)
 	if not wins.is_empty(): return wins[0]
 	var blocks = rules.threats(cells,3-player)
@@ -51,13 +53,17 @@ func choose(cells_in: Array, player: int, level: int, budget_ms: int = 220) -> i
 	timed_out = false
 	var order = ranked(cells,player)
 	var best = order[0][0]
-	if level < 2:
+	if level <= 1:
 		var tied = order.filter(func(x): return x[1] == order[0][1])
 		return tied[rng.randi_range(0,tied.size()-1)][0]
-	for depth in range(2,5):
+	# Level 2: one shallow two-ply search; levels 3/4: deeper bounded search.
+	var depth_limit: int = [0, 0, 2, 4, 5][level]
+	var top_moves: int = [0, 0, 7, 12, 15][level]
+	branch_width = [0, 0, 5, 8, 10][level]
+	for depth in range(2,depth_limit+1):
 		var iteration_best = best
 		var score_best = -INF
-		for move in order.slice(0,12):
+		for move in order.slice(0,top_moves):
 			cells[move[0]] = player
 			var score = -search(cells,3-player,depth-1,-INF,INF)
 			cells[move[0]] = 0
@@ -81,7 +87,7 @@ func search(cells: Array, player: int, depth: int, alpha_in: float, beta: float)
 	if depth <= 0: return evaluate(cells,player)
 	var order = []
 	if blocks.size() == 1: order = [[blocks[0],0]]
-	else: order = ranked(cells,player).slice(0,8)
+	else: order = ranked(cells,player).slice(0,branch_width)
 	if order.is_empty(): return 0
 	var alpha = alpha_in
 	for move in order:
