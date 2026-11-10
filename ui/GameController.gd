@@ -453,6 +453,8 @@ func record_result() -> void:
     if board.winner == 3:
         data.stats.draw += 1
         data.stats.starter_draws += 1
+        if int(data.settings.mode) == 1:
+            last_rank_up = Asc.record_match(data, clampi(int(data.settings.level),0,4), 0)
     else:
         var owner = int(board.owners[board.winner-1])
         if owner == board.starter_owner: data.stats.starter_wins += 1
@@ -460,10 +462,9 @@ func record_result() -> void:
         data.stats["p1" if owner == 0 else "p2"] += 1
         if int(data.settings.mode) == 1:
             var difficulty: int = clampi(int(data.settings.level),0,4)
-            if owner == 0:
-                # Determine rank-up BEFORE legacy win statistics are incremented;
-                # ensure() also imports historical AI wins from older versions.
-                last_rank_up = Asc.clear_level(data, difficulty)
+            # Ascension evaluates the result BEFORE the win counter changes.
+            # A loss resets only the active unfinished streak exam.
+            last_rank_up = Asc.record_match(data, difficulty, 1 if owner == 0 else -1)
             data.stats["ai_wins" if owner == 0 else "ai_losses"][difficulty] += 1
 func resolve_swap(accept: bool) -> void:
     if rules.swap(board,accept):
@@ -607,11 +608,31 @@ func open_ascension() -> void:
     var box = modal("Zen-Aufstieg")
     label("Dein Zen-Rang",box,17)
     label(T(Asc.RANKS[int(data.ascension.rank)]),box,23,Color("5b704b"))
-    label("Besiege den nächsten Zen-Bot, um aufzusteigen.",box,14)
+    label("Jeder Rang hat eine eigene Prüfung. Siege in Folge zählen nur beim gleichen Bot.",box,14)
     for i in range(5):
         var done: bool = bool(data.ascension.completed[i])
-        var state: String = "✓ " if done else "○ " if i <= int(data.ascension.rank) else "🔒 "
+        var accessible: bool = i <= int(data.ascension.rank)
+        var state: String = "✓ " if done else "○ " if accessible else "🔒 "
         label(state + T(Asc.RANKS[i+1]) + " · " + T(Asc.LEVELS[i]),box,16)
+        var number: int = Asc.progress(data, i)
+        var goal: int = Asc.target(i)
+        var description: String = T("Geschafft") if done else (T("%d/%d Siege in Folge") if Asc.is_streak(i) else T("%d/%d Siege")) % [number, goal]
+        label(description,box,14,Color("53643e") if done else Color("74614c"))
+        var progress_bar = ProgressBar.new()
+        progress_bar.max_value = float(goal)
+        progress_bar.value = float(number)
+        progress_bar.show_percentage = false
+        progress_bar.custom_minimum_size.y = 9
+        progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        var track: StyleBoxFlat = StyleBoxFlat.new()
+        track.bg_color = Color("e4d5b9")
+        track.set_corner_radius_all(5)
+        var fill: StyleBoxFlat = StyleBoxFlat.new()
+        fill.bg_color = Color("667f53")
+        fill.set_corner_radius_all(5)
+        progress_bar.add_theme_stylebox_override("background",track)
+        progress_bar.add_theme_stylebox_override("fill",fill)
+        box.add_child(progress_bar)
     button("Welten",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
 

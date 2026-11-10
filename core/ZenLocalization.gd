@@ -3,6 +3,10 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Jeder Rang hat eine eigene Prüfung. Siege in Folge zählen nur beim gleichen Bot.": "Each rank has its own challenge. Only wins against the same bot count towards a streak.",
+    "%d/%d Siege": "%d/%d wins",
+    "%d/%d Siege in Folge": "%d/%d consecutive wins",
+    "Geschafft": "Completed",
     "Zen-Aufstieg": "Zen Ascension",
     "Welten": "Worlds",
     "Dein Zen-Rang": "Your Zen rank",
@@ -199,6 +203,10 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Jeder Rang hat eine eigene Prüfung. Siege in Folge zählen nur beim gleichen Bot.": "Cada nível tem um desafio próprio. Só as vitórias contra o mesmo bot contam para a série.",
+    "%d/%d Siege": "%d/%d vitórias",
+    "%d/%d Siege in Folge": "%d/%d vitórias consecutivas",
+    "Geschafft": "Concluído",
     "Zen-Aufstieg": "Ascensão Zen",
     "Welten": "Mundos",
     "Dein Zen-Rang": "O teu nível Zen",
