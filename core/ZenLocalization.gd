@@ -263,7 +263,20 @@ const EN: Dictionary = {
     "Zen-Bot hat gewonnen.": "Zen-Bot won.",
     "%s hat gewonnen.": "%s won.",
     "Neue Welt freigeschaltet: %s": "New world unlocked: %s",
-    "Zen-Wächter erreicht – höchste Rangstufe!": "Zen Guardian reached – highest rank!"
+    "Zen-Wächter erreicht – höchste Rangstufe!": "Zen Guardian reached – highest rank!",
+    "Putz": "Plaster",
+    "Bambusfasern": "Bamboo fiber",
+    "Glasur": "Glazed ceramic",
+    "Gebürstetes Kupfer": "Brushed copper",
+    "Marmoradern": "Marble veining",
+    "Klarglas": "Clear glass",
+    "Kristall": "Crystal",
+    "Korallenstein": "Coral stone",
+    "Eis": "Ice",
+    "Obsidian": "Obsidian",
+    "Gebürstetes Gold": "Brushed gold",
+    "Irisierendes Glas": "Iridescent glass",
+    "Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.": "Wood, stone, marble or glass: every surface looks different. All 108 winning lines stay the same."
 }
 static func english(source: String) -> String:
     return str(EN.get(source, source))
@@ -529,7 +542,20 @@ const PT: Dictionary = {
     "Zen-Bot hat gewonnen.": "O Zen-Bot ganhou.",
     "%s hat gewonnen.": "%s ganhou.",
     "Neue Welt freigeschaltet: %s": "Novo mundo desbloqueado: %s",
-    "Zen-Wächter erreicht – höchste Rangstufe!": "Guardião Zen alcançado – nível máximo!"
+    "Zen-Wächter erreicht – höchste Rangstufe!": "Guardião Zen alcançado – nível máximo!",
+    "Putz": "Reboco",
+    "Bambusfasern": "Fibra de bambu",
+    "Glasur": "Cerâmica vidrada",
+    "Gebürstetes Kupfer": "Cobre escovado",
+    "Marmoradern": "Veios de mármore",
+    "Klarglas": "Vidro transparente",
+    "Kristall": "Cristal",
+    "Korallenstein": "Pedra coral",
+    "Eis": "Gelo",
+    "Obsidian": "Obsidiana",
+    "Gebürstetes Gold": "Ouro escovado",
+    "Irisierendes Glas": "Vidro iridescente",
+    "Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.": "Madeira, pedra, mármore ou vidro: cada superfície tem um aspeto diferente. As 108 linhas de vitória mantêm-se."
 }
 static func portuguese(source: String) -> String:
     return str(PT.get(source, source))

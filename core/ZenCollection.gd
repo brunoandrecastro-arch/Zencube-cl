@@ -1,5 +1,7 @@
 class_name ZenCollection
 extends RefCounted
+# Index stability protects already-owned 9.5 skins; their MATERIALS are visual only.
+const MATERIALS = ["Putz", "Kirschholz", "Bambusfasern", "Sandstein", "Glasur", "Jade", "Mondstein", "Gebürstetes Kupfer", "Marmoradern", "Klarglas", "Bernstein", "Kristall", "Korallenstein", "Smaragd", "Eis", "Lavastein", "Obsidian", "Gebürstetes Gold", "Irisierendes Glas", "Himmelsgold"]
 # Earned-only in-game currency, no accounts or purchases.
 # Each skin is a real 3D palette/material preset; the board geometry never changes.
 const BOT_REWARDS = [8, 15, 25, 40, 65]

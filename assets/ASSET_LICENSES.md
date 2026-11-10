@@ -18,3 +18,9 @@ Five existing original ZenCube world illustrations were re-exported at 1440×256
 ### ZenCube 9.5 original background music
 
 `zen_bamboo_music.pcm` (Bambus im Morgenwind) and `zen_moon_music.pcm` (Mondlicht am Teich) were originally synthesized for ZenCube 9.5 with deterministic sine-based pads, plucked pentatonic melodies and filtered air noise. No music samples, third-party recordings or third-party compositions were used. Original Zen-garden music remains unchanged. WAV preview counterparts are not required by the Android runtime.
+
+## ZenCube 9.6 – Newly generated world scenes and 20 surface textures
+
+Five **new** independently AI-generated 941×1672 landscape illustrations without built-in UI/cube were supplied in this conversation. They were resized to 1440×2560 high-quality WebP for Android. These are **not native 4K renders**; no claim that resizing adds native resolution. Original scenes entirely replace the previous 9.4.3 blurred world pictures.
+
+All 20 512×512 procedural surface textures (`assets/skins/skin_00.webp`…`skin_19.webp`) were generated locally for this project: faux wood grain, stone, ceramic, glass, gems and brushed metals. No third-party texture assets. Player save keys and skin index identifiers remain stable.

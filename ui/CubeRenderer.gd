@@ -8,6 +8,7 @@ var overlay: Node3D
 var mint = Color("453329")
 var peach = Color("16515a") # High-contrast deep jade O across all face colors
 var selected: int = -1
+var surface_textures: Array[Texture2D] = []
 var skin_id: int = 0
 var core_mesh_instance: MeshInstance3D
 func _ready() -> void:
@@ -91,6 +92,7 @@ func _ready() -> void:
 		marks.append(mark)
 	overlay = Node3D.new()
 	pivot.add_child(overlay)
+	load_surface_textures()
 	reset_view()
 func material(color: Color, glow: bool = false) -> StandardMaterial3D:
 	var mat = StandardMaterial3D.new()
@@ -99,6 +101,16 @@ func material(color: Color, glow: bool = false) -> StandardMaterial3D:
 	if glow:
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return mat
+# Each shop entry uses independently authored procedural grain/vein/brushed/glass artwork.
+# Preloading ensures textures are in Godot's Android export and cached for every tile.
+func load_surface_textures() -> void:
+	if not surface_textures.is_empty(): return
+	for i in range(20):
+		var image_path: String = "res://assets/skins/skin_%02d.webp" % i
+		var texture: Texture2D = load(image_path) as Texture2D
+		surface_textures.append(texture)
+		if texture == null: push_warning("Missing skin artwork: " + image_path)
+
 func palette() -> Dictionary:
 	return ZenCollection.SKINS[clampi(skin_id, 0, ZenCollection.SKINS.size()-1)]
 func face_color(face: int) -> Color:
@@ -106,8 +118,9 @@ func face_color(face: int) -> Color:
 func apply_skin(next_skin: int) -> void:
 	skin_id = clampi(next_skin, 0, ZenCollection.SKINS.size()-1)
 	var style: Dictionary = palette()
-	mint = Color(str(style.x))
-	peach = Color(str(style.o))
+	# Stable silhouette and team colors for all 20 materials.
+	mint = Color("352923") # X: warm charcoal
+	peach = Color("08788c") # O: saturated blue-teal
 	if core_mesh_instance != null:
 		core_mesh_instance.material_override = material(Color(str(style.core)))
 	# Draw currently visible marks in the new palette without touching cells.
@@ -115,6 +128,19 @@ func face_material(color: Color) -> StandardMaterial3D:
 	var mat: StandardMaterial3D = material(color)
 	mat.metallic = float(palette().metal)
 	mat.roughness = float(palette().rough)
+	if surface_textures.size() > skin_id:
+		mat.albedo_texture = surface_textures[skin_id]
+	# Three material families use actual semi-transparent surfaces. The internal
+	# walnut core remains visible underneath, while bright X/O outlines stay opaque.
+	if skin_id in [9, 18]:
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		var glass_color: Color = mat.albedo_color
+		glass_color.a = 0.55 if skin_id == 9 else 0.73
+		mat.albedo_color = glass_color
+		mat.metallic = 0.04
+		mat.roughness = 0.12 if skin_id == 9 else 0.22
+	elif skin_id in [11, 14]:
+		mat.roughness = 0.18
 	return mat
 func reset_view() -> void:
 	pivot.rotation = Vector3(0.43,-0.58,-0.04)
@@ -174,10 +200,10 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 			marks[c].remove_child(child)
 			child.queue_free()
 		if board.cells[c] == 1:
-			bar(marks[c],Vector3(-0.23,-0.23,0),Vector3(0.23,0.23,0),Color("fff0d1"),0.067)
-			bar(marks[c],Vector3(-0.23,0.23,0),Vector3(0.23,-0.23,0),Color("fff0d1"),0.067)
-			bar(marks[c],Vector3(-0.23,-0.23,0.006),Vector3(0.23,0.23,0.006),mint,0.037)
-			bar(marks[c],Vector3(-0.23,0.23,0.006),Vector3(0.23,-0.23,0.006),mint,0.037)
+			bar(marks[c],Vector3(-0.23,-0.23,0),Vector3(0.23,0.23,0),Color("fff0d1"),0.072)
+			bar(marks[c],Vector3(-0.23,0.23,0),Vector3(0.23,-0.23,0),Color("fff0d1"),0.072)
+			bar(marks[c],Vector3(-0.23,-0.23,0.006),Vector3(0.23,0.23,0.006),mint,0.057)
+			bar(marks[c],Vector3(-0.23,0.23,0.006),Vector3(0.23,-0.23,0.006),mint,0.057)
 		elif board.cells[c] == 2:
 			# The ivory outer rim and dark-jade inner ring remain legible on
 			# terracotta, cream, brown and green cube faces (also at small sizes).
@@ -198,9 +224,9 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 			torus.rings = 32
 			torus.ring_segments = 12
 			ring.mesh = torus
-			ring.position.z = 0.014
+			ring.position.z = 0.022
 			ring.rotation.x = PI/2
-			ring.material_override = material(peach,true)
+			ring.material_override = material(Color("08788c"),true)
 			marks[c].add_child(ring)
 		if c == animate_cell:
 			marks[c].scale = Vector3.ONE*0.3

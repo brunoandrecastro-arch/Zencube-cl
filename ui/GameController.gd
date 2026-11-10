@@ -646,7 +646,7 @@ func open_store() -> void:
         if i > 0: rewards += "  ·  "
         rewards += T(Asc.LEVELS[i]) + ": +" + str(Collection.BOT_REWARDS[i])
     label(rewards, box, 12)
-    label("Skins ändern nur die Würfeloptik. Alle 108 Gewinnlinien bleiben gleich.", box, 13)
+    label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
     for i in range(Collection.SKINS.size()):
         var skin_id: int = i
         var skin: Dictionary = Collection.SKINS[i]
@@ -663,8 +663,16 @@ func open_store() -> void:
             sample.custom_minimum_size = Vector2(28, 28)
             sample.mouse_filter = Control.MOUSE_FILTER_IGNORE
             card_row.add_child(sample)
+        var material_thumb: TextureRect = TextureRect.new()
+        material_thumb.texture = load("res://assets/skins/skin_%02d.webp" % i)
+        material_thumb.custom_minimum_size = Vector2(56, 56)
+        material_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        material_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        material_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        card_row.add_child(material_thumb)
         var name_label: Label = label(T(str(skin.name)), card_row, 16, Color("4b3428"))
         name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        var surface_note: Label = label(T(str(Collection.MATERIALS[i])), inner, 12, Color("776250"))
         var owned: bool = data.economy.owned.has(i)
         var equipped: bool = int(data.economy.equipped) == i
         var title: String = ""
