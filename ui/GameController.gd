@@ -586,6 +586,7 @@ func _process(_delta: float) -> void:
         refresh()
 func _exit_tree() -> void:
     if worker != null: worker.wait_to_finish()
+var shop_page: int = 0
 func modal(title: String) -> VBoxContainer:
     close_modal()
     popup = PanelContainer.new()
@@ -601,6 +602,9 @@ func modal(title: String) -> VBoxContainer:
     popup.create_tween().tween_property(popup,"modulate:a",1.0,0.18)
     var scroll = ScrollContainer.new()
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    scroll.scroll_deadzone = 12 # touchscreen gesture threshold, avoid accidental buying
+    scroll.follow_focus = false
     scroll.mouse_filter = Control.MOUSE_FILTER_STOP
     popup.add_child(scroll)
     var box = VBoxContainer.new()
@@ -647,15 +651,20 @@ func open_store() -> void:
         rewards += T(Asc.LEVELS[i]) + ": +" + str(Collection.BOT_REWARDS[i])
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
-    for i in range(Collection.SKINS.size()):
+    shop_page = clampi(shop_page, 0, 3)
+    store_page_buttons(box)
+    for i in range(shop_page * 5, mini((shop_page + 1) * 5, Collection.SKINS.size())):
         var skin_id: int = i
         var skin: Dictionary = Collection.SKINS[i]
         var card: PanelContainer = PanelContainer.new()
         card.add_theme_stylebox_override("panel", theme_style(Color("fff0d9", 0.96), 12))
+        card.mouse_filter = Control.MOUSE_FILTER_PASS
         box.add_child(card)
         var inner: VBoxContainer = VBoxContainer.new()
+        inner.mouse_filter = Control.MOUSE_FILTER_PASS
         card.add_child(inner)
         var card_row: HBoxContainer = row(inner)
+        card_row.mouse_filter = Control.MOUSE_FILTER_PASS
         # Three swatches preview the REAL color/material preset used by the 3D cube.
         for face in [0, 2, 3]:
             var sample: ColorRect = ColorRect.new()
@@ -680,8 +689,32 @@ func open_store() -> void:
         elif owned: title = T("Skin verwenden")
         else: title = T("Kaufen für 🍃 %d") % int(skin.price)
         var skin_button: Button = button(title, inner, func(): store_select_skin(skin_id), true, equipped)
+        # Important on Android: swipes starting ON the button also reach the ScrollContainer.
+        skin_button.mouse_filter = Control.MOUSE_FILTER_PASS
         skin_button.disabled = equipped or (not owned and int(data.economy.leaves) < int(skin.price))
+        skin_button.add_theme_color_override("font_disabled_color", Color("42372d"))
+        skin_button.add_theme_stylebox_override("disabled", theme_style(Color("e7dfd0"), 12))
+    store_page_buttons(box)
     button("Zum Hauptmenü", box, open_menu, true)
+
+func store_page_buttons(parent: VBoxContainer) -> void:
+    var pager: HBoxContainer = row(parent)
+    pager.mouse_filter = Control.MOUSE_FILTER_PASS
+    var back: Button = button(T("Vorherige Skins") + " ◀", pager, func(): change_shop_page(-1), true)
+    back.disabled = shop_page == 0
+    var counter: Label = label(T("Seite %d von 4") % (shop_page + 1), pager, 13, Color("514232"))
+    counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    counter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var forward: Button = button(T("Weitere Skins") + "  ▶", pager, func(): change_shop_page(1), true)
+    forward.disabled = shop_page == 3
+    for b in [back, forward]:
+        b.mouse_filter = Control.MOUSE_FILTER_PASS
+        b.add_theme_color_override("font_disabled_color", Color("5b5144"))
+        b.add_theme_stylebox_override("disabled", theme_style(Color("e7dfd0"), 12))
+
+func change_shop_page(delta: int) -> void:
+    shop_page = clampi(shop_page + delta, 0, 3)
+    open_store()
 
 func store_select_skin(skin: int) -> void:
     Collection.ensure(data)
@@ -1303,7 +1336,7 @@ func open_settings() -> void:
     box.add_child(music)
     label("Musiktitel", box, 15)
     var tracks: OptionButton = OptionButton.new()
-    for title in ["Zen-Garten (Original)", "Bambus im Morgenwind", "Mondlicht am Teich"]:
+    for title in ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus"]:
         tracks.add_item(T(title))
     tracks.select(clampi(int(data.settings.get("music_track", 0)), 0, 2))
     tracks.custom_minimum_size.y = 48

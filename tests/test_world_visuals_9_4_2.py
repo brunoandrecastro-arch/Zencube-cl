@@ -8,7 +8,7 @@ a=(ROOT/'core/ZenAscension.gd').read_text()
 ui=(ROOT/'ui/GameController.gd').read_text()
 l=(ROOT/'core/ZenLocalization.gd').read_text()
 preset=(ROOT/'export_presets.cfg').read_text()
-assert 'version/code=18' in preset and 'version/name="9.6-premium-material-worlds"' in preset
+assert 'version/code=19' in preset and 'version/name="9.6.1-refined-materials-bowls-handpan"' in preset
 assert 'const WORLD_SUBTITLES = [' in a
 assert a.count('preload("res://assets/zen_')==5
 assert 'thumbnail.texture = Asc.WORLD_TEXTURES[i]' in ui

@@ -19,8 +19,8 @@ assert 'var winning_symbol:' in ui
 assert 'viewport.size = Vector2i(960,960)' in ui
 assert 'status.text = T("Du hast gewonnen!")' in ui
 assert 'Neue Welt freigeschaltet: %s' in ui
-assert 'var border_ring = MeshInstance3D.new()' in r
-assert 'material(Color("fff0d1"),true)' in r
+assert 'var border_ring: MeshInstance3D = MeshInstance3D.new()' in r
+assert 'border_ring.material_override = material(o_border, true)' in r
 assert 'var peach = Color("16515a")' in r
 collection=(BASE/'core/ZenCollection.gd').read_text()
 assert '"b68165"' in collection, 'The original terracotta skin remains present' 

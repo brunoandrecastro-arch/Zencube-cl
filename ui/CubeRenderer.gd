@@ -128,6 +128,7 @@ func face_material(color: Color) -> StandardMaterial3D:
 	var mat: StandardMaterial3D = material(color)
 	mat.metallic = float(palette().metal)
 	mat.roughness = float(palette().rough)
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	if surface_textures.size() > skin_id:
 		mat.albedo_texture = surface_textures[skin_id]
 	# Three material families use actual semi-transparent surfaces. The internal
@@ -199,34 +200,41 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 		for child in marks[c].get_children():
 			marks[c].remove_child(child)
 			child.queue_free()
+		# For every material choose contrast dynamically by actual face luminance.
+		# X remains angular and warm; O remains round and blue-green.
+		var brightness: float = color.get_luminance()
+		var dark_tile: bool = brightness < 0.41
+		var x_main: Color = Color("ffe1a0") if dark_tile else Color("282b30")
+		var x_border: Color = Color("33251e") if dark_tile else Color("fff4db")
+		var o_main: Color = Color("94ffda") if dark_tile else Color("04748a")
+		var o_border: Color = Color("273530") if dark_tile else Color("fff4df")
 		if board.cells[c] == 1:
-			bar(marks[c],Vector3(-0.23,-0.23,0),Vector3(0.23,0.23,0),Color("fff0d1"),0.072)
-			bar(marks[c],Vector3(-0.23,0.23,0),Vector3(0.23,-0.23,0),Color("fff0d1"),0.072)
-			bar(marks[c],Vector3(-0.23,-0.23,0.006),Vector3(0.23,0.23,0.006),mint,0.057)
-			bar(marks[c],Vector3(-0.23,0.23,0.006),Vector3(0.23,-0.23,0.006),mint,0.057)
+			# Draw a thinner bright/dark outline, then a raised high-contrast X.
+			bar(marks[c], Vector3(-0.24,-0.24,-0.018), Vector3(0.24,0.24,-0.018), x_border, 0.090)
+			bar(marks[c], Vector3(-0.24,0.24,-0.018), Vector3(0.24,-0.24,-0.018), x_border, 0.090)
+			bar(marks[c], Vector3(-0.24,-0.24,0.054), Vector3(0.24,0.24,0.054), x_main, 0.065)
+			bar(marks[c], Vector3(-0.24,0.24,0.054), Vector3(0.24,-0.24,0.054), x_main, 0.065)
 		elif board.cells[c] == 2:
-			# The ivory outer rim and dark-jade inner ring remain legible on
-			# terracotta, cream, brown and green cube faces (also at small sizes).
-			var border_ring = MeshInstance3D.new()
-			var border_torus = TorusMesh.new()
-			border_torus.inner_radius = 0.175
-			border_torus.outer_radius = 0.325
+			var border_ring: MeshInstance3D = MeshInstance3D.new()
+			var border_torus: TorusMesh = TorusMesh.new()
+			border_torus.inner_radius = 0.155
+			border_torus.outer_radius = 0.335
 			border_torus.rings = 32
-			border_torus.ring_segments = 12
+			border_torus.ring_segments = 16
 			border_ring.mesh = border_torus
-			border_ring.rotation.x = PI/2
-			border_ring.material_override = material(Color("fff0d1"),true)
+			border_ring.rotation.x = PI / 2.0
+			border_ring.material_override = material(o_border, true)
 			marks[c].add_child(border_ring)
-			var ring = MeshInstance3D.new()
-			var torus = TorusMesh.new()
-			torus.inner_radius = 0.205
-			torus.outer_radius = 0.295
+			var ring: MeshInstance3D = MeshInstance3D.new()
+			var torus: TorusMesh = TorusMesh.new()
+			torus.inner_radius = 0.195
+			torus.outer_radius = 0.300
 			torus.rings = 32
-			torus.ring_segments = 12
+			torus.ring_segments = 16
 			ring.mesh = torus
-			ring.position.z = 0.022
-			ring.rotation.x = PI/2
-			ring.material_override = material(Color("08788c"),true)
+			ring.position.z = 0.065
+			ring.rotation.x = PI / 2.0
+			ring.material_override = material(o_main, true)
 			marks[c].add_child(ring)
 		if c == animate_cell:
 			marks[c].scale = Vector3.ONE*0.3

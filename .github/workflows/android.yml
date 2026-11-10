@@ -56,6 +56,11 @@ jobs:
         run: python3 tests/test_zen_collection_9_5.py
       - name: Verify five new crisp worlds and 20 surface material maps
         run: python3 tests/test_premium_materials_9_6.py
+      - name: Verify 9.6.1 high-resolution surfaces, touch shop and new audio loops
+        run: python3 tests/test_quality_audio_9_6_1.py
+      - name: Test new paging and visual clarity on actual Godot scene (headless)
+        run: |
+          timeout 60 "$GODOT" --headless --path . --script tests/test_quality_audio_9_6_1.gd
       - name: Test actual material texture rendering (headless)
         run: |
           timeout 55 "$GODOT" --headless --path . --script tests/test_premium_materials_9_6.gd

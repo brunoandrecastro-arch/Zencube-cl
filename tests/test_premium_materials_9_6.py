@@ -20,7 +20,7 @@ for i in range(20):
     assert data[:4]==b'RIFF' and data[8:16]==b'WEBPVP8 ',i
     pos=data.index(b'\x9d\x01\x2a')+3
     dims=(int.from_bytes(data[pos:pos+2],'little')&16383,int.from_bytes(data[pos+2:pos+4],'little')&16383)
-    assert dims==(512,512),(i,dims)
+    assert dims==(1024,1024),(i,dims)
     sizes.append(f.stat().st_size)
     hashes.append(hashlib.sha256(f.read_bytes()).hexdigest())
 assert len(set(hashes))==20

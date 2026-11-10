@@ -40,12 +40,12 @@ assert 'renderer.apply_skin(int(data.economy.equipped))' in ui
 assert 'var color = face_color(CubeGeometry.face(c))' in r
 assert not any(line.startswith(' ') for line in r.splitlines()), 'CubeRenderer.gd mixes space indentation with existing tabs'
 assert 'face_material(color)' in r
-assert 'material(Color("fff0d1"),true)' in r
+assert 'var x_main: Color' in r and 'var o_main: Color' in r and 'border_ring.material_override = material(o_border, true)' in r
 assert '"economy":{"leaves":0,"owned":[0],"equipped":0,"migrated":false}' in save
 assert 'const VERSION = 3' in save, 'Migration must preserve existing saves'
 assert 'if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)' in save
 assert 'include_filter="assets/*.pcm,challenges/*.json"' in (R/'export_presets.cfg').read_text()
-assert 'version/code=18' in (R/'export_presets.cfg').read_text()
+assert 'version/code=19' in (R/'export_presets.cfg').read_text()
 assert 'ZenCube 9.5 earned currency and 20 skins' in workflow
 for name in ['zen_ambient_music.pcm','zen_bamboo_music.pcm','zen_moon_music.pcm']:
     audio=(R/'assets'/name).read_bytes()

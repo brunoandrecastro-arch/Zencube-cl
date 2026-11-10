@@ -60,7 +60,7 @@ func run() -> void:
         game.open_store()
         check(game.popup!=null,"shop opens")
         if game.popup != null:
-            check(count_cards(game.popup)==60,"20 shop cards with three material swatches each")
+            check(count_cards(game.popup)==15,"shop first page has five cards with three swatches each")
         for track in range(3):
             var stream: AudioStreamWAV = game.make_zen_music_stream(track)
             check(stream!=null and stream.data.size()>300000,"music track %d loads" % track)
