@@ -35,7 +35,8 @@ assert (BASE/'assets/music/cyberwave_main.mp3').stat().st_size > 100_000, 'Cyber
 assert 'ambient.data = pcm' in controller
 assert 'ambient.loop_end = int(pcm.size() / 2)' in controller
 save=(BASE/'core/SaveManager.gd').read_text()
-assert '"music":true,"music_track":7,"language":""' in save, 'RC4 default must be Cyberwave'
+assert '"music":true,"music_track":7,"music_mode":"base","language":""' in save, 'New games default to Base world music with stable track ID 7'
+assert 'base.settings["music_mode"] = "manual"' in save, 'Existing users keep the manual track selection'
 assert 'const VERSION = 3' in save, 'Existing saved games must not be wiped'
 with wave.open(str(BASE/'assets/zen_ambient.wav'),'rb') as w:
     assert w.getnchannels()==1 and w.getsampwidth()==2
