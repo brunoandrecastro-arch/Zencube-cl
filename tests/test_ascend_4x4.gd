@@ -42,12 +42,18 @@ func run() -> void:
     check(ZenAscend.next_move(cells,lines,2) == int(lines[0][3]), "bot blocks immediate loss")
     var data: Dictionary = SaveManager.defaults()
     ZenAscend.ensure(data)
-    check(ZenAscend.TEST_UNLOCKED and ZenAscend.unlocked(data), "test build unlock")
+    # CI runs headlessly without the Android export's special feature tag.
+    # The actual debug APK receives zencube_ascend_test from its export preset.
+    var test_access: bool = ZenAscend.test_access_enabled()
+    var expected_test_access: bool = ZenAscend.TEST_UNLOCKED and OS.has_feature("zencube_ascend_test") and OS.has_feature("debug") and not OS.has_feature("release")
+    check(test_access == expected_test_access, "test entitlement follows debug feature tag")
+    check(ZenAscend.unlocked(data) == test_access, "beginner access follows build variant")
     check(not ZenAscend.unlocked_for_release(data), "production: beginner locked")
     data.ascension.rank = 2
     check(not ZenAscend.unlocked_for_release(data), "production: Zen Adept still locked")
     data.ascension.rank = 3
     check(ZenAscend.unlocked_for_release(data), "production: Zen Master unlocks 4x4")
+    check(ZenAscend.unlocked(data), "Zen Master unlocks even without test flag")
     data.economy.leaves = 800
     check(not ZenAscend.buy(data) and int(data.economy.leaves)==800, "no store charge after Zen Master")
     data.ascension.rank = 0
@@ -56,6 +62,8 @@ func run() -> void:
     data.economy.leaves = 800
     check(ZenAscend.buy(data), "shop buy")
     check(int(data.economy.leaves)==50 and bool(data.economy.ascend_owned),"shop deducts once")
+    check(ZenAscend.unlocked_for_release(data), "purchase unlocks release")
+    check(ZenAscend.unlocked(data), "purchase allows entry regardless of build variant")
     check(not ZenAscend.buy(data), "cannot buy twice")
     check(int(data.economy.leaves)==50,"no double charge")
     # 4x4 never alters Classic's 54 cells, 108 lines or the saved match.

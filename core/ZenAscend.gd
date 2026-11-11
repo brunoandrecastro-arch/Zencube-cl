@@ -1,7 +1,8 @@
 class_name ZenAscend
 extends RefCounted
 # Separate 4x4 mode: the existing Classic 3x3 rules and saves are untouched.
-# For internal testing only. Set false before the public store release.
+# Only exported Android debug APKs with the internal feature tag receive test access.
+# Production / Play Store releases can never use this override.
 const TEST_UNLOCKED: bool = true
 const PRICE: int = 750
 const CELLS: int = 96
@@ -66,8 +67,12 @@ static func t(source: String, language: String) -> String:
 static func unlocked_for_release(data: Dictionary) -> bool:
     return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 3
 
+static func test_access_enabled() -> bool:
+    # Both the debug-only tag and a debug runtime are required; release always wins.
+    return TEST_UNLOCKED and OS.has_feature("zencube_ascend_test") and OS.has_feature("debug") and not OS.has_feature("release")
+
 static func unlocked(data: Dictionary) -> bool:
-    return TEST_UNLOCKED or unlocked_for_release(data)
+    return test_access_enabled() or unlocked_for_release(data)
 
 static func buy(data: Dictionary) -> bool:
     # Do not charge anyone who already unlocked the mode through Zen-Meister.

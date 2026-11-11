@@ -66,6 +66,8 @@ jobs:
         run: python3 tests/test_rc4_music_tabs.py
       - name: RC5 titles, Zen Meister unlock and bot difficulty (static)
         run: python3 tests/test_rc5_titles_unlock.py
+      - name: RC6 ensure separate test APK and public release unlock gates
+        run: python3 tests/test_rc6_release_gate.py
       - name: RC5 fair bot difficulty and tactical checks (headless)
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_rc5_bot_balance.gd
