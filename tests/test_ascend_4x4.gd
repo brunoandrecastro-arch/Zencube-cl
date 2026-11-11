@@ -42,15 +42,14 @@ func run() -> void:
     check(ZenAscend.next_move(cells,lines,2) == int(lines[0][3]), "bot blocks immediate loss")
     var data: Dictionary = SaveManager.defaults()
     ZenAscend.ensure(data)
-    # CI runs headlessly without the Android export's special feature tag.
-    # The actual debug APK receives zencube_ascend_test from its export preset.
-    var test_access: bool = ZenAscend.test_access_enabled()
-    var expected_test_access: bool = ZenAscend.TEST_UNLOCKED and OS.has_feature("zencube_ascend_test") and OS.has_feature("debug") and not OS.has_feature("release")
-    check(test_access == expected_test_access, "test entitlement follows debug feature tag")
-    check(ZenAscend.unlocked(data) == test_access, "beginner access follows build variant")
-    check(not ZenAscend.unlocked_for_release(data), "production: beginner locked")
+    # The debug APK must enforce precisely the same gate as the Play AAB.
+    check(not ZenAscend.TEST_UNLOCKED, "free debug access disabled")
+    check(not ZenAscend.test_access_enabled(), "test override never active")
+    check(not ZenAscend.unlocked(data), "new player locked")
+    check(not ZenAscend.unlocked_for_release(data), "production beginner locked")
     data.ascension.rank = 2
-    check(not ZenAscend.unlocked_for_release(data), "production: Zen Adept still locked")
+    check(not ZenAscend.unlocked(data), "rank 2 still locked")
+    check(not ZenAscend.unlocked_for_release(data), "production rank 2 still locked")
     data.ascension.rank = 3
     check(ZenAscend.unlocked_for_release(data), "production: Zen Master unlocks 4x4")
     check(ZenAscend.unlocked(data), "Zen Master unlocks even without test flag")

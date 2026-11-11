@@ -30,7 +30,7 @@ for code in ('EN', 'PT'):
     for title in expected:
         assert dictionary[title] == title, f'{code} changed soundtrack title: {title}'
     assert dictionary['Überarbeitete Bot-Stufen: Mittel fairer, Meister anspruchsvoll und schlagbar.']
-assert 'const TEST_UNLOCKED: bool = true' in mode, 'internal test must remain playable without grind'
+assert 'const TEST_UNLOCKED: bool = false' in mode, 'debug must obey Zen-Meister or purchase gate'
 assert 'static func unlocked_for_release(data: Dictionary)' in mode
 assert 'get("rank",0)) >= 3' in mode, 'production unlock must start at Zen Meister rank (3)'
 assert 'if unlocked_for_release(data): return false' in mode, 'already earned mode must not charge leaves'
@@ -40,4 +40,4 @@ assert 'level == 1 and rng.randf() < 0.62' in ai
 assert 'level == 3 and rng.randf() < 0.24' in ai
 assert 'if placed <= 3 or rng.randf() < block_probability: return blocks[0]' in ai
 assert 'func search(' in ai and '[0, 0, 2, 4, 5][level]' in ai, 'original advanced bot structure must remain'
-print('RC5 PASS: seven fantasy titles, consistent DE/EN/PT, stable music ID, Zen Meister release unlock, test access and friendly bot tiers')
+print('RC5 PASS: seven fantasy titles, consistent DE/EN/PT, stable music ID, Zen Meister release unlock, locked 4x4 in all builds and friendly bot tiers')

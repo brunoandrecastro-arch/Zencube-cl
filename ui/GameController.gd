@@ -651,7 +651,7 @@ func open_menu() -> void:
     premium_button("Spielen", box, open_play_menu, true)
     premium_button("Zen-Rätsel · 100 Aufgaben", box, begin_challenges)
     premium_button("Zen-Aufstieg", box, open_ascension)
-    premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("  ·  TEST" if ZMode.TEST_UNLOCKED else ""), box, open_ascend_intro)
+    premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
     premium_button("Welten", box, open_worlds)
     premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
@@ -1108,8 +1108,6 @@ func open_ascend_intro() -> void:
     label(ZMode.t("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).",language_code()),box,15)
     label(ZMode.t("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.",language_code()),box,14)
     label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,14)
-    if ZMode.test_access_enabled():
-        label(ZMode.t("Testversion: direkt spielbar",language_code()),box,15,Color("526943"))
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,start_ascend,true,true)
     else:

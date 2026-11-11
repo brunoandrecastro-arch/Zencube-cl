@@ -8,7 +8,8 @@ controller=(ROOT/'ui/GameController.gd').read_text()
 ui=(ROOT/'ui/AscendController.gd').read_text()
 renderer=(ROOT/'ui/AscendRenderer.gd').read_text()
 save=(ROOT/'core/SaveManager.gd').read_text()
-assert 'const TEST_UNLOCKED: bool = true' in new
+assert 'const TEST_UNLOCKED: bool = false' in new
+assert 'return unlocked_for_release(data)' in new
 assert 'const PRICE: int = 750' in new
 assert 'func generate_lines()' in new and 'func next_move(' in new
 assert 'res://Ascend.tscn' in controller
@@ -49,4 +50,4 @@ for a in range(6):
     lines.append([bound(a,b,t,lane,k) for k in range(split-1,-1,-1)]+[bound(b,a,t,lane,k) for k in range(4-split)])
 assert len(lines)==204 and len({tuple(sorted(line)) for line in lines})==204
 assert all(len(x)==4 and len(set(x))==4 and min(x)>=0 and max(x)<96 for x in lines)
-print('PASS: 96 cells, 204 unique winning lines (60 face, 144 across edges); test unlock, shop, stats, profiles and original Classic preserved')
+print('PASS: 96 cells, 204 unique winning lines (60 face, 144 across edges); rank/purchase gate, shop, stats, profiles and original Classic preserved')
