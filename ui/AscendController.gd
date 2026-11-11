@@ -2,6 +2,9 @@ extends Node3D
 # Standalone 4x4 scene so no Classic board, AI or rules are replaced.
 const Mode = preload("res://core/ZenAscend.gd")
 const Locale = preload("res://core/ZenLocalization.gd")
+const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
+const WorldMusic = preload("res://core/ZenWorldMusic.gd")
+# ZENCUBE WORLD MUSIC PATCH 1
 var data: Dictionary = {}
 var lines: Array = []
 var cells: Array = []
@@ -20,6 +23,7 @@ var rank_label: Label
 var instructions: Label
 var layer: Control
 var menu_dialog: ConfirmationDialog
+var world_music: AudioStreamPlayer
 var touch_positions: Dictionary = {}
 var touch_down: Vector2 = Vector2.ZERO
 var touched_cell: int = -1
@@ -57,6 +61,7 @@ func _ready() -> void:
     vp.add_child(cube)
     build_interface()
     cube.set_skin(int(data.economy.get("equipped",0)))
+    start_world_music()
     draw()
     # The explanation is guaranteed on first entry, including in the test build.
     if not bool(data.ascend.help_seen):
@@ -65,6 +70,22 @@ func _ready() -> void:
         call_deferred("show_rules")
     else:
         call_deferred("show_mode_picker")
+
+func start_world_music() -> void:
+    if not bool(data.settings.get("music", false)):
+        return
+    var selected: int = MusicPolicy.selected_track(data)
+    var song: AudioStream = WorldMusic.stream_for(selected)
+    if song == null:
+        push_warning("Zen Ascend: missing soundtrack for track " + str(selected))
+        return
+    world_music = AudioStreamPlayer.new()
+    world_music.name = "ZenAscendWorldMusic"
+    world_music.volume_db = -54.0
+    world_music.stream = song
+    add_child(world_music)
+    world_music.play()
+    create_tween().tween_property(world_music, "volume_db", -2.0, 1.2)
 
 func style(color: Color, radius: int = 17) -> StyleBoxFlat:
     var box: StyleBoxFlat = StyleBoxFlat.new()

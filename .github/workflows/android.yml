@@ -68,6 +68,11 @@ jobs:
         run: python3 tests/test_rc5_titles_unlock.py
       - name: RC6 ensure separate test APK and public release unlock gates
         run: python3 tests/test_rc6_release_gate.py
+      - name: World music policy migration and fixed IDs (static)
+        run: python3 tests/test_world_music_static.py
+      - name: World music and shop entitlements (headless)
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_world_music.gd
       - name: RC5 fair bot difficulty and tactical checks (headless)
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_rc5_bot_balance.gd

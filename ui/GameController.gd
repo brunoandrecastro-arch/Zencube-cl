@@ -23,6 +23,8 @@ var worker_generation = -1
 var ai_running = false
 var sound_player: AudioStreamPlayer
 var music_player: AudioStreamPlayer
+var music_fade_player: AudioStreamPlayer
+var music_transition: Tween
 var net_buttons: Array = []
 var net_active = false
 var tutorial_from_welcome = false
@@ -53,6 +55,8 @@ var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
 const Asc = preload("res://core/ZenAscension.gd")
 const ZMode = preload("res://core/ZenAscend.gd")
+const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
+# ZENCUBE WORLD MUSIC PATCH 1
 func language_code() -> String:
     if data == null: return "de"
     return str(data.settings.get("language", "de"))
@@ -380,6 +384,7 @@ func apply_world() -> void:
     # A gentle fade keeps transitions calm and avoids flicker on mobile.
     world_background.modulate.a = 0.86
     create_tween().tween_property(world_background, "modulate:a", 1.0, 0.28)
+    sync_music() # Auto-World theme follows the selected World.
 
 func refresh(animate: int = -1) -> void:
     Collection.ensure(data)
@@ -749,7 +754,7 @@ func store_music_section(parent: VBoxContainer) -> void:
         elif track_id == 8:
             label("Neue Musik zum Freischalten", parent, 17, Color("526943"))
         var owned: bool = Collection.music_unlocked(data, track_id)
-        var chosen: bool = int(data.settings.get("music_track", 7)) == track_id
+        var chosen: bool = MusicPolicy.mode(data) == "manual" and int(data.settings.get("music_track", 7)) == track_id
         var card: PanelContainer = PanelContainer.new()
         card.mouse_filter = Control.MOUSE_FILTER_PASS
         card.add_theme_stylebox_override("panel", theme_style(Color("fff0d9",0.96),12))
@@ -780,6 +785,8 @@ func stop_shop_preview() -> void:
         music_preview_player.stop()
     if music_player != null:
         music_player.stream_paused = false
+    if music_fade_player != null:
+        music_fade_player.stream_paused = false
 
 func preview_shop_music(track: int) -> void:
     # A 12-second preview does NOT purchase or unlock the track.
@@ -792,6 +799,8 @@ func preview_shop_music(track: int) -> void:
         return
     if music_player != null:
         music_player.stream_paused = true
+    if music_fade_player != null:
+        music_fade_player.stream_paused = true
     music_preview_player.play()
     var token: int = music_preview_generation
     get_tree().create_timer(12.0).timeout.connect(func():
@@ -1548,16 +1557,22 @@ func open_settings() -> void:
     box.add_child(music)
     label("Musiktitel", box, 15)
     var tracks: OptionButton = OptionButton.new()
+    tracks.add_item(MusicPolicy.base_label(language_code()))
     var music_names: Array = ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Nebelpfad", "Stein und Wasser", "Regentropfen im Zen-Garten", "Sternenlicht am Tempel"] + NEW_MUSIC_TITLES
     for i in range(music_names.size()):
         var display: String = T(str(music_names[i]))
         if not Collection.music_unlocked(data, i):
             display += "  🔒 🍃 %d" % Collection.music_price(i)
         tracks.add_item(display)
-        tracks.set_item_disabled(i, not Collection.music_unlocked(data, i))
-    tracks.select(clampi(int(data.settings.get("music_track", 7)), 0, 13))
+        tracks.set_item_disabled(i + 1, not Collection.music_unlocked(data, i))
+    tracks.select(0 if MusicPolicy.mode(data) == "base" else clampi(int(data.settings.get("music_track", 7)), 0, 13) + 1)
     tracks.custom_minimum_size.y = 48
-    tracks.item_selected.connect(func(index): select_music_track(index))
+    tracks.item_selected.connect(func(index):
+        if index == 0:
+            select_base_music()
+        else:
+            select_music_track(index - 1)
+    )
     box.add_child(tracks)
     var sounds = CheckButton.new()
     sounds.text = T("Sanfte Spieltöne")
@@ -1624,6 +1639,10 @@ func build_sound() -> void:
     # This makes Android music decoding use the same engine format as working SFX.
     music_player.stream = music_stream(int(data.settings.get("music_track", 7)))
     music_player.volume_db = -2.0
+    music_fade_player = AudioStreamPlayer.new()
+    music_fade_player.name = "ZenWorldMusicCrossfade"
+    music_fade_player.volume_db = -54.0
+    add_child(music_fade_player)
     music_preview_player = AudioStreamPlayer.new()
     music_preview_player.name = "ZenShopPreview"
     music_preview_player.volume_db = -4.5
@@ -1670,15 +1689,18 @@ func music_stream(track: int) -> AudioStream:
             return imported
     return make_zen_music_stream(track)
 
+func select_base_music() -> void:
+    data.settings["music_mode"] = "base"
+    sync_music()
+    persist()
+
 func select_music_track(index: int) -> void:
     Collection.ensure(data)
     if not Collection.music_unlocked(data, index):
         notify_user("Schalte diesen Musiktitel zuerst im Zen-Shop frei.")
         return
     data.settings.music_track = clampi(index, 0, 13)
-    if music_player != null:
-        music_player.stream = music_stream(int(data.settings.music_track))
-        music_player.set_meta("track", int(data.settings.music_track))
+    data.settings["music_mode"] = "manual"
     sync_music()
     persist()
 func music_preview() -> void:
@@ -1692,19 +1714,47 @@ func music_preview() -> void:
                 music_player.stop()
         )
 func sync_music() -> void:
-    if music_player == null: return
-    var chosen: int = clampi(int(data.settings.get("music_track", 7)), 0, 13)
-    if data != null and not Collection.music_unlocked(data, chosen):
-        chosen = 7
-        data.settings.music_track = 7
-    if not music_player.has_meta("track") or int(music_player.get_meta("track")) != chosen:
-        music_player.stream = music_stream(chosen)
+    if music_player == null or data == null: return
+    var chosen: int = MusicPolicy.selected_track(data)
+    if not bool(data.settings.get("music", false)):
+        if music_transition != null and music_transition.is_running():
+            music_transition.kill()
+        if music_player.playing: music_player.stop()
+        if music_fade_player != null and music_fade_player.playing: music_fade_player.stop()
+        return
+    var actual: int = int(music_player.get_meta("track")) if music_player.has_meta("track") else -1
+    if actual == chosen:
+        if not music_player.playing:
+            music_player.volume_db = -2.0
+            music_player.play()
+        return
+    var next_stream: AudioStream = music_stream(chosen)
+    if next_stream == null:
+        push_warning("ZenCube soundtrack missing: " + str(chosen))
+        return
+    if music_transition != null and music_transition.is_running():
+        music_transition.kill()
+    if music_fade_player != null and music_player.playing and not music_player.stream_paused:
+        music_fade_player.stop()
+        music_fade_player.stream = next_stream
+        music_fade_player.set_meta("track", chosen)
+        music_fade_player.volume_db = -54.0
+        music_fade_player.play()
+        var previous_player: AudioStreamPlayer = music_player
+        music_player = music_fade_player
+        music_fade_player = previous_player
+        music_transition = create_tween().set_parallel(true)
+        music_transition.tween_property(music_player, "volume_db", -2.0, 1.8)
+        music_transition.tween_property(music_fade_player, "volume_db", -54.0, 1.8)
+        music_transition.finished.connect(func():
+            if is_instance_valid(previous_player) and previous_player != music_player:
+                previous_player.stop()
+        )
+    else:
+        music_player.stream = next_stream
         music_player.set_meta("track", chosen)
-    if music_player.stream == null: return
-    if bool(data.settings.get("music",false)):
-        if not music_player.playing: music_player.play()
-    elif music_player.playing:
-        music_player.stop()
+        music_player.volume_db = -2.0
+        music_player.play()
 func vibrate_on_move() -> void:
     if not bool(data.settings.get("haptics", true)):
         return

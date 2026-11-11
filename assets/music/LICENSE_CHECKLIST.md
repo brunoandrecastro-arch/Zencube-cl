@@ -1,33 +1,17 @@
-# RC4 – von Nutzer bereitgestellte Musik und Lizenzhinweise
+# ZenCube 3D – Soundtrack provenance (pending final verification)
 
-Diese sieben MP3-Aufnahmen wurden für die Testversion vom Nutzer bereitgestellt.
-**Keine Aufnahme ist eine originale Eigenkomposition von ZenCube.**
-Aufnahme/Urheber bitte bei Release korrekt zuordnen. Die Berechtigung zur
-Nutzung im Spiel muss pro Stück unabhängig vom Dateinamen belegt werden.
+The seven tracks occupying IDs 7–13 have been replaced with newly generated recordings supplied by the project's creator. They are reported to have been generated using a Suno Pro subscription on 11 November 2026. This document **does not independently certify licensing**.
 
-| Track-ID | Dateiname im Spiel | Künstler / Titel lt. Upload | Status |
+| Music ID | Display title | In-app file | Availability |
 |---|---|---|---|
-| 7 | cyberwave_main.mp3 | Cyberwave Orchestra – Peaceful Asian Forest Loop | Kostenloser Haupttitel |
-| 8 | zen_piano.mp3 | Marlowe Music – Zen Piano | Zen-Shop |
-| 9 | velario_zen.mp3 | Velario Music – Zen Music | Zen-Shop |
-| 10 | nature_wonder.mp3 | Sonican – Nature Wonder | Zen-Shop |
-| 11 | calm_spirit.mp3 | Sonican – Calm Spirit (Chinese Music Loop) | Zen-Shop |
-| 12 | zen_of_nature.mp3 | Sonican – Zen of Nature | Zen-Shop |
-| 13 | sitar_story.mp3 | Sonican – Indian Music Loop Sitar Story | Zen-Shop |
+| 7 | Whispers of the Ancient Forest | `cyberwave_main.mp3` | Zen-Garten + free selection |
+| 8 | Echoes of a Forgotten Dream | `zen_piano.mp3` | Mondgarten, or global selection after purchase |
+| 9 | The Path of Serenity | `velario_zen.mp3` | Bambuspfad, or global selection after purchase |
+| 10 | Where the Waters Sleep | `nature_wonder.mp3` | Optional Shop title |
+| 11 | Spirit of the Jade River | `calm_spirit.mp3` | Bergtempel, or global selection after purchase |
+| 12 | A Thousand Silent Skies | `zen_of_nature.mp3` | Himmelsgarten, or global selection after purchase |
+| 13 | Tales Beneath the Golden Sun | `sitar_story.mp3` | Optional Shop title |
 
-Zum ersten Titel: https://pixabay.com/music/world-peaceful-asian-forest-loop-calming-asian-ambient-music-249190/
-Das Angebot bezeichnet den Titel als unter Pixabay Content License verfügbar und als Content-ID-registriert.
-Die Pixabay-Lizenz erlaubt grundsätzlich die Verwendung innerhalb neuer kreativer Werke,
-**nicht aber die eigenständige Weiterverteilung oder den Verkauf der Originalaufnahme als Datei**.
-https://pixabay.com/service/license-summary/
-https://pixabay.com/service/terms/
+The historic filenames and numeric music IDs are **technical compatibility identifiers**, not composer or source attributions. The seven replaced third-party recordings must not be included in any distributable build. Prior source-recording licensing notes are historical only and not valid attribution for the new audio.
 
-Vor einer Play-Store-Freigabe:
-- Originalseiten und zugehörige aktuelle Lizenztexte für alle 7 Dateien dokumentieren.
-- Klären, ob die Freischaltung per Ingamewährung als eingebundene Hintergrundmusik im Spiel
-  rechtlich unter die Lizenz fällt; keine MP3-Dateien separat zum Download anbieten.
-- Falls Content-ID-Claims relevant sind, Nachweise / Freistellung der Autoren einholen.
-- Die externe Musik niemals als selbst komponierte ZenCube-Musik ausgeben.
-
-Technik: MP3-Dateien werden in Godot als AudioStreamMP3 importiert und innerhalb
-des Spiels zum Abspielen genutzt; die Original-MP3-Dateien werden nicht im UI exportiert.
+**Required before Google Play:** privately retain proof that Pro was active at each song's generation time, original Suno songs and generation records, the applicable commercial-use terms, and any clearance required for third-party material. Verify that replacing a file did not inadvertently leave copies of old recordings in active export paths. Do not declare rights verified until documentation has been reviewed.

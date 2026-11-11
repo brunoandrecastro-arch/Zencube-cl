@@ -3,7 +3,7 @@ extends RefCounted
 const PATH = "user://zencube.json"
 const VERSION = 3
 static func defaults() -> Dictionary:
-    return {"version":VERSION,"settings":{"mode":1,"level":0,"swap":false,"alternate":true,"next_start":0,"hints":true,"sound":true,"haptics":true,"music":true,"music_track":7,"language":"","intro_seen":false,"tutorial_seen":false,"names":["Du","Spieler 2"]},"stats":{"played":0,"p1":0,"p2":0,"draw":0,"ai_wins":[0,0,0,0,0],"ai_losses":[0,0,0,0,0],"starter_wins":0,"second_wins":0,"starter_draws":0},"ascension":{"completed":[false,false,false,false,false],"streaks":[0,0,0,0,0],"rank":0,"world":0},"economy":{"leaves":0,"owned":[0],"equipped":0,"migrated":false},"ascend":{},"game":{}}
+    return {"version":VERSION,"settings":{"mode":1,"level":0,"swap":false,"alternate":true,"next_start":0,"hints":true,"sound":true,"haptics":true,"music":true,"music_track":7,"music_mode":"base","language":"","intro_seen":false,"tutorial_seen":false,"names":["Du","Spieler 2"]},"stats":{"played":0,"p1":0,"p2":0,"draw":0,"ai_wins":[0,0,0,0,0],"ai_losses":[0,0,0,0,0],"starter_wins":0,"second_wins":0,"starter_draws":0},"ascension":{"completed":[false,false,false,false,false],"streaks":[0,0,0,0,0],"rank":0,"world":0},"economy":{"leaves":0,"owned":[0],"equipped":0,"migrated":false},"ascend":{},"game":{}}
 static func load_data() -> Dictionary:
     var base = defaults()
     if not FileAccess.file_exists(PATH): return base
@@ -17,8 +17,13 @@ static func load_data() -> Dictionary:
             for setting in ["hints","sound","alternate"]:
                 if data.settings.has(setting): base.settings[setting] = data.settings[setting]
         return base
+    # Existing players selected songs before Base existed. Preserve that preference.
+    if data.get("settings") is Dictionary and not data.settings.has("music_mode"):
+        base.settings["music_mode"] = "manual"
     for key in ["settings","stats"]:
         if data.get(key) is Dictionary: base[key].merge(data[key],true)
+    if not str(base.settings.get("music_mode", "base")) in ["base", "manual"]:
+        base.settings["music_mode"] = "base"
     if data.get("game") is Dictionary: base.game = data.game
     if data.get("ascension") is Dictionary: base.ascension.merge(data.ascension, true)
     if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)
