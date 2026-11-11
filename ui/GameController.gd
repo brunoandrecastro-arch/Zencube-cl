@@ -52,6 +52,7 @@ var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
 const Asc = preload("res://core/ZenAscension.gd")
+const ZMode = preload("res://core/ZenAscend.gd")
 func language_code() -> String:
     if data == null: return "de"
     return str(data.settings.get("language", "de"))
@@ -366,7 +367,7 @@ func mode_name() -> String:
     return T("Zwei Spieler lokal")
 func player_name(owner: int) -> String:
     if int(data.settings.mode) == 1:
-        return "Zen-Bot" if owner == 1 else T("Du")
+        return "Zen-Bot" if owner == 1 else str(data.settings.names[0])
     var pname = str(data.settings.names[owner])
     return T(pname)
 func apply_world() -> void:
@@ -631,6 +632,7 @@ func open_menu() -> void:
     premium_button("Spielen", box, open_play_menu, true)
     premium_button("Zen-Rätsel · 100 Aufgaben", box, begin_challenges)
     premium_button("Zen-Aufstieg", box, open_ascension)
+    premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("  ·  TEST" if ZMode.TEST_UNLOCKED else ""), box, open_ascend_intro)
     premium_button("Welten", box, open_worlds)
     premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
@@ -651,6 +653,13 @@ func open_store() -> void:
         rewards += T(Asc.LEVELS[i]) + ": +" + str(Collection.BOT_REWARDS[i])
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
+    label(ZMode.t("Zen Ascend 4×4",language_code()),box,20,Color("526943"))
+    label(ZMode.t("Freischalten durch Zen-Wächter (höchster Rang) oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
+    if ZMode.unlocked(data):
+        button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
+    else:
+        var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 750",language_code()),box,buy_ascend,true)
+        unlock_button.disabled = int(data.economy.leaves) < ZMode.PRICE
     store_music_section(box)
     shop_page = clampi(shop_page, 0, 3)
     store_page_buttons(box)
@@ -782,6 +791,7 @@ func open_play_menu() -> void:
             b.text += "  🔒"
         else:
             label(T("Sieg-Belohnung: 🍃 %d") % int(Collection.BOT_REWARDS[i]), box, 12)
+    premium_button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro)
     premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
     button("Training", box, func(): start_mode(2, 0), true)
     button("Viererlinien lernen", box, start_tutorial, true)
@@ -819,6 +829,8 @@ func open_ascension() -> void:
         progress_bar.add_theme_stylebox_override("fill",fill)
         box.add_child(progress_bar)
     label("Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.",box,13)
+    label(ZMode.t("Freischalten durch Zen-Wächter (höchster Rang) oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
+    button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro,true)
     button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
 
@@ -959,8 +971,90 @@ func open_stats() -> void:
     label(T("%d / %d  ·  Unentschieden: %d") % [data.stats.starter_wins,data.stats.second_wins,data.stats.starter_draws],box,16)
     label("GEGEN DIE KI · SIEGE / NIEDERLAGEN",box,12)
     for i in range(5): label("%s: %d / %d" % [T(Asc.LEVELS[i]),data.stats.ai_wins[i],data.stats.ai_losses[i]],box)
+    var name_a: String = str(data.settings.names[0])
+    var name_b: String = str(data.settings.names[1])
+    var total_classic: int = maxi(1,int(data.stats.played))
+    var classic_win_rate: float = float(data.stats.p1)*100.0/float(total_classic)
+    # Two compact premium overview cards make long-form statistics scannable.
+    var summary_card: PanelContainer = PanelContainer.new()
+    summary_card.add_theme_stylebox_override("panel",theme_style(Color("f7e6ca",0.98),16))
+    box.add_child(summary_card)
+    var summary_stack: VBoxContainer = VBoxContainer.new()
+    summary_card.add_child(summary_stack)
+    label(ZMode.t("Spieler 1",language_code()) + ": " + name_a + "   ·   " + ZMode.t("Spieler 2",language_code()) + ": " + name_b,summary_stack,17,Color("4d6245"))
+    label(ZMode.t("Siegquote",language_code()) + " (" + name_a + "): %.1f%%" % classic_win_rate,summary_stack,14)
+    var classic_bar: ProgressBar = ProgressBar.new()
+    classic_bar.max_value = 100.0
+    classic_bar.value = classic_win_rate
+    classic_bar.show_percentage = false
+    classic_bar.custom_minimum_size.y = 12
+    classic_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    summary_stack.add_child(classic_bar)
+    var stat_detail: String = "%s: %d  ·  %s: %d" % [name_a,int(data.stats.p1),name_b,int(data.stats.p2)]
+    label(stat_detail,box,16)
+    label(ZMode.t("Siegquote",language_code()) + " (" + name_a + "): %.1f%%" % classic_win_rate,box,14)
+    label(ZMode.t("Zen-Rang",language_code()) + ": " + T(Asc.RANKS[int(data.ascension.rank)]),box,18,Color("526943"))
+    if int(data.ascension.rank) < 5:
+        var next_exam: int = int(data.ascension.rank)
+        var progress: int = Asc.progress(data,next_exam)
+        label(ZMode.t("Nächste Rangprüfung",language_code()) + ": " + T(Asc.LEVELS[next_exam]) + "  ·  %d/%d" % [progress,Asc.target(next_exam)],box,14)
+        var rank_bar: ProgressBar = ProgressBar.new()
+        rank_bar.max_value = float(Asc.target(next_exam))
+        rank_bar.value = float(progress)
+        rank_bar.show_percentage = false
+        rank_bar.custom_minimum_size.y = 11
+        rank_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        box.add_child(rank_bar)
+    ZMode.ensure(data)
+    var zs: Dictionary = data.ascend
+    label(ZMode.t("4×4 Partien",language_code()) + ": %d" % int(zs.played),box,18,Color("526943"))
+    stat_detail = "%s: %d  ·  %s: %d  ·  %s: %d" % [ZMode.t("Siege",language_code()),int(zs.p1),ZMode.t("Niederlagen",language_code()),int(zs.bot_losses),ZMode.t("Unentschieden",language_code()),int(zs.draw)]
+    label(stat_detail,box,14)
+    stat_detail = "%s: %d  ·  %s: %d" % [ZMode.t("4×4 gegen Bot",language_code()),int(zs.bot_played),ZMode.t("4×4 zu zweit",language_code()),int(zs.local_played)]
+    label(stat_detail,box,14)
+    stat_detail = "%s: %d  ·  %s: %d" % [ZMode.t("Beste Siegesserie",language_code()),int(zs.best_streak),ZMode.t("Aktuelle Siegesserie",language_code()),int(zs.current_streak)]
+    label(stat_detail,box,14)
+    stat_detail = "%s: %d  ·  %s: %.1f" % [ZMode.t("Züge gesamt",language_code()),int(zs.moves),ZMode.t("Züge pro Partie",language_code()),float(zs.moves)/float(maxi(1,int(zs.played)))]
+    label(stat_detail,box,14)
     button("Zen-Aufstieg",box,open_ascension,true)
     label("Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.",box,14)
+# ---- Separate 4x4 Zen Ascend mode and persistent player profiles ----
+func save_player_name(index: int, value: String) -> void:
+    if index < 0 or index > 1: return
+    var cleaned: String = value.strip_edges().replace("\n", " ").replace("\r", " ").substr(0,24)
+    if cleaned == "": cleaned = "Du" if index == 0 else "Spieler 2"
+    data.settings.names[index] = cleaned
+    persist()
+
+func open_ascend_intro() -> void:
+    ZMode.ensure(data)
+    var box = modal(ZMode.t("Zen Ascend 4×4",language_code()))
+    label(ZMode.t("Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).",language_code()),box,16)
+    label(ZMode.t("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).",language_code()),box,15)
+    label(ZMode.t("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.",language_code()),box,14)
+    label(ZMode.t("Freischalten durch Zen-Wächter (höchster Rang) oder für 750 Zen-Blätter im Shop.",language_code()),box,14)
+    if ZMode.TEST_UNLOCKED:
+        label(ZMode.t("Testversion: direkt spielbar",language_code()),box,15,Color("526943"))
+    if ZMode.unlocked(data):
+        button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,start_ascend,true,true)
+    else:
+        var buy_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 750",language_code()),box,buy_ascend,true,true)
+        buy_button.disabled = int(data.economy.leaves) < ZMode.PRICE
+        button("Zen-Shop",box,open_store,true)
+
+func buy_ascend() -> void:
+    if not ZMode.buy(data):
+        notify_user("Nicht genug Zen-Blätter.")
+        return
+    persist()
+    open_ascend_intro()
+
+func start_ascend() -> void:
+    if not ZMode.unlocked(data): return
+    close_modal()
+    persist()
+    get_tree().change_scene_to_file("res://Ascend.tscn")
+
 # ---- Zen Challenges (same interactive 3D cube; Classic state is untouched) ----
 func begin_challenges() -> void:
     if challenges == null or not challenges.valid:
@@ -1340,6 +1434,17 @@ func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> vo
 func open_settings() -> void:
     var box = modal("Deine Einstellungen")
     label("Spiele in deinem Tempo.",box,15,Color("806c54"))
+    for i in range(2):
+        var idx: int = i
+        label(ZMode.t("Spielername",language_code()) + " " + str(i+1),box,14)
+        var name_field: LineEdit = LineEdit.new()
+        name_field.max_length = 24
+        name_field.text = str(data.settings.names[i])
+        name_field.placeholder_text = ZMode.t("Spieler 1" if i==0 else "Spieler 2",language_code())
+        name_field.custom_minimum_size.y = 49
+        name_field.text_submitted.connect(func(value: String): save_player_name(idx,value))
+        name_field.focus_exited.connect(func(): save_player_name(idx,name_field.text))
+        box.add_child(name_field)
     label("Sprache",box,15)
     var language_picker = OptionButton.new()
     language_picker.custom_minimum_size.y = 52
