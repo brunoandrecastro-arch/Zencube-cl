@@ -12,7 +12,7 @@ assert 'const MUSIC_PRICES: Dictionary = {5: 120, 6: 180}' in coll
 for key in ['music_price(', 'music_unlocked(', 'buy_music(', 'owned_music', 'wallet["owned_music"] = music_owned', 'if price <= 0 or int(data.economy.leaves) < price: return false']:
  assert key in coll, key
 assert 'if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)' in save
-assert 'var music_names: Array' in ui and 'tracks.set_item_disabled(i, not Collection.music_unlocked' in ui
+assert 'var music_names: Array' in ui and 'tracks.set_item_disabled(i + 1, not Collection.music_unlocked' in ui
 assert 'func store_music_section(' in ui and 'func store_select_music(' in ui
 assert 'store_music_section(box)' in ui and 'change_shop_tab(1)' in ui
 assert 'if not Collection.music_unlocked(data, index):' in ui
