@@ -26,11 +26,16 @@ new_rms=math.sqrt(sum(v*v for v in raw)/len(raw))
 assert -19<20*math.log10(new_rms/32768)<-8
 assert max(abs(min(raw)),max(raw))<31500
 assert 'ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD' in controller
-assert 'music_player.stream = make_zen_music_stream()' in controller
+# RC4 chooses MP3 (Cyberwave by default), keeping the old PCM soundtrack.
+assert 'music_player.stream = music_stream(int(data.settings.get("music_track", 7)))' in controller
+assert 'func music_stream(track: int) -> AudioStream:' in controller
+assert 'return make_zen_music_stream(track)' in controller, 'Legacy PCM songs must remain playable'
+assert 'res://assets/music/cyberwave_main.mp3' in controller
+assert (BASE/'assets/music/cyberwave_main.mp3').stat().st_size > 100_000, 'Cyberwave missing'
 assert 'ambient.data = pcm' in controller
 assert 'ambient.loop_end = int(pcm.size() / 2)' in controller
 save=(BASE/'core/SaveManager.gd').read_text()
-assert '"music":true,"music_track":0,"language":""' in save, 'Default language/audio missing'
+assert '"music":true,"music_track":7,"language":""' in save, 'RC4 default must be Cyberwave'
 assert 'const VERSION = 3' in save, 'Existing saved games must not be wiped'
 with wave.open(str(BASE/'assets/zen_ambient.wav'),'rb') as w:
     assert w.getnchannels()==1 and w.getsampwidth()==2
