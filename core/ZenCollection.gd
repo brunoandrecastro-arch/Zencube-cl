@@ -6,6 +6,7 @@ const MATERIALS = ["Putz", "Kirschholz", "Bambusfasern", "Sandstein", "Glasur", 
 # Each skin is a real 3D palette/material preset; the board geometry never changes.
 const BOT_REWARDS = [8, 15, 25, 40, 65]
 const CHALLENGE_REWARDS = [6, 10, 15, 25, 40]
+const MUSIC_PRICES: Dictionary = {5: 120, 6: 180}
 const SKINS = [
     {"name":"Klassischer Zen", "price":0, "faces":["c0b69a", "c0b69a", "74805b", "b68165", "e8d0ab", "d8b995"], "core":"6a5240", "x":"453329", "o":"16515a", "metal":0.03, "rough":0.78},
     {"name":"Kirschholz", "price":70, "faces":["c7a48d", "d3ad96", "b37d69", "bc8a78", "e0b89c", "c99980"], "core":"593b34", "x":"52312a", "o":"174d54", "metal":0.04, "rough":0.75},
@@ -44,6 +45,14 @@ static func ensure(data: Dictionary) -> void:
     var selected: int = int(wallet.get("equipped", 0))
     wallet["equipped"] = selected if owned.has(selected) else 0
     wallet["migrated"] = bool(wallet.get("migrated", false))
+    var music_raw: Variant = wallet.get("owned_music", [])
+    var music_owned: Array = []
+    if music_raw is Array:
+        for value in music_raw:
+            var track: int = int(value)
+            if track in [5, 6] and not music_owned.has(track): music_owned.append(track)
+    music_owned.sort()
+    wallet["owned_music"] = music_owned
 
 static func reward_bot(data: Dictionary, difficulty: int) -> int:
     ensure(data)
@@ -89,4 +98,23 @@ static func equip(data: Dictionary, skin: int) -> bool:
     ensure(data)
     if skin < 0 or skin >= SKINS.size() or not data.economy.owned.has(skin): return false
     data.economy.equipped = skin
+    return true
+
+# Base soundtrack (0..4) is free. Only bonus tracks 5 and 6 cost earned leaves.
+static func music_price(track: int) -> int:
+    return int(MUSIC_PRICES.get(track, 0))
+
+static func music_unlocked(data: Dictionary, track: int) -> bool:
+    ensure(data)
+    if track >= 0 and track <= 4: return true
+    return track in [5, 6] and data.economy.owned_music.has(track)
+
+static func buy_music(data: Dictionary, track: int) -> bool:
+    ensure(data)
+    if not track in [5, 6] or data.economy.owned_music.has(track): return false
+    var price: int = music_price(track)
+    if price <= 0 or int(data.economy.leaves) < price: return false
+    data.economy.leaves -= price
+    data.economy.owned_music.append(track)
+    data.economy.owned_music.sort()
     return true

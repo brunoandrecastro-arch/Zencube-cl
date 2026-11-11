@@ -60,6 +60,11 @@ jobs:
         run: python3 tests/test_quality_audio_9_6_1.py
       - name: Verify 1.0 audio tracks, store assets and Play metadata
         run: python3 tests/test_release_candidate_1_0.py
+      - name: Verify Zen Music Shop and seven original tracks (static)
+        run: python3 tests/test_music_shop_1_0_rc2.py
+      - name: Verify Zen Music Shop purchases on real Godot scene (headless)
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_music_shop_1_0_rc2.gd
       - name: Verify five sound tracks on real Godot scene (headless)
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_release_candidate_1_0.gd
@@ -112,7 +117,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in zen_ambient_music.pcm zen_bamboo_music.pcm zen_moon_music.pcm zen_flute_music.pcm zen_koto_music.pcm; do
+          for file in zen_ambient_music.pcm zen_bamboo_music.pcm zen_moon_music.pcm zen_flute_music.pcm zen_koto_music.pcm zen_regentropfen_music.pcm zen_sternenlicht_music.pcm; do
             unzip -Z1 build/ZenCube-3D.apk | grep -F "$file"
           done
       - uses: actions/upload-artifact@v4

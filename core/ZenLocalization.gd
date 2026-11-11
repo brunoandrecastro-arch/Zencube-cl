@@ -3,6 +3,16 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Nebelpfad": "Misty Path",
+    "Stein und Wasser": "Stone and Water",
+    "Regentropfen im Zen-Garten": "Raindrops in the Zen Garden",
+    "Sternenlicht am Tempel": "Starlight by the Temple",
+    "Freischaltbare Musik": "Unlockable Music",
+    "Zwei zusätzliche Melodien – einmal mit Zen-Blättern freischalten, dauerhaft behalten.": "Two extra melodies – unlock once with Zen Leaves and keep forever.",
+    "Musik auswählen": "Choose track",
+    "Musik freischalten für 🍃 %d": "Unlock music for 🍃 %d",
+    "Ausgewählt": "Selected",
+    "Schalte diesen Musiktitel zuerst im Zen-Shop frei.": "Unlock this track in the Zen Shop first.",
     "Shakuhachi – Nebelpfad": "Shakuhachi – Misty Path",
     "Koto – Sternengarten": "Koto – Star Garden",
     "Rätsel gelöst!": "Challenge solved!",
@@ -289,6 +299,16 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Nebelpfad": "Caminho de Neblina",
+    "Stein und Wasser": "Pedra e Água",
+    "Regentropfen im Zen-Garten": "Gotas de Chuva no Jardim Zen",
+    "Sternenlicht am Tempel": "Luz das Estrelas no Templo",
+    "Freischaltbare Musik": "Música para desbloquear",
+    "Zwei zusätzliche Melodien – einmal mit Zen-Blättern freischalten, dauerhaft behalten.": "Duas melodias extra – desbloqueia uma vez com Folhas Zen e guarda para sempre.",
+    "Musik auswählen": "Escolher música",
+    "Musik freischalten für 🍃 %d": "Desbloquear música por 🍃 %d",
+    "Ausgewählt": "Selecionado",
+    "Schalte diesen Musiktitel zuerst im Zen-Shop frei.": "Desbloqueia primeiro esta música na Loja Zen.",
     "Shakuhachi – Nebelpfad": "Shakuhachi – Caminho da Névoa",
     "Koto – Sternengarten": "Koto – Jardim das Estrelas",
     "Rätsel gelöst!": "Desafio resolvido!",

@@ -30,3 +30,6 @@ All 20 512×512 procedural surface textures (`assets/skins/skin_00.webp`…`skin
 - `zen_koto_music.pcm`: original synthesized koto/temple-garden composition. No third-party recording or copyrighted melody used.
 - `icons/*` and `icon.svg`: custom minimalist cube mark made for ZenCube.
 - Store listing artwork uses the same original icon design; no third-party brand assets.
+
+## ZenCube 1.0 RC2 – vier vom Nutzer ausgewählte Originalkompositionen
+Die originalen Musikvorschläge 01 (Nebelpfad), 04 (Stein und Wasser), 03 (Regentropfen im Zen-Garten) und 05 (Sternenlicht am Tempel) wurden im ZenCube-Projekt generiert und vom Nutzer für das Spiel ausgewählt. Die gelieferten MP3-Hörproben wurden technisch zu Mono-PCM16 mit 16 kHz für die Godot-Android-Wiedergabe konvertiert. Dateinamen `zen_flute_music.pcm` und `zen_koto_music.pcm` übernehmen dabei die zwei neuen kostenlosen Stücke, die neuen Bonusstücke liegen in `zen_regentropfen_music.pcm` und `zen_sternenlicht_music.pcm`. Die ersten drei bisher verfügbaren Titel bleiben unverändert.

@@ -53,7 +53,9 @@ jobs:
           python3 tests/test_108_rules.py
           python3 tests/test_challenges_data.py
           python3 tests/test_quality_audio_9_6_1.py
+          python3 tests/test_music_shop_1_0_rc2.py
           timeout 65 "$GODOT" --headless --path . --script tests/test_release_candidate_1_0.gd
+          timeout 55 "$GODOT" --headless --path . --script tests/test_music_shop_1_0_rc2.gd
           timeout 50 "$GODOT" --headless --path . --script tests/test_scene_load.gd
       - name: Prepare a signed AAB only when explicitly requested and secrets exist
         if: ${{ inputs.build_signed_aab }}

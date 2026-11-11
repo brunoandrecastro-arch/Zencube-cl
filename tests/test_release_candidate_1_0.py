@@ -5,14 +5,14 @@ import struct, wave, math, re, array, hashlib
 R=Path(__file__).resolve().parents[1]
 ui=(R/'ui/GameController.gd').read_text();loc=(R/'core/ZenLocalization.gd').read_text();exp=(R/'export_presets.cfg').read_text()
 assert 'package/unique_name="com.zencube.game"' in exp, 'Never change app ID'
-assert 'version/code=20' in exp and 'version/name="1.0.0-rc1"' in exp
+assert 'version/code=21' in exp and 'version/name="1.0.0-rc2-music-shop"' in exp
 assert 'name="Android Play"' in exp and 'gradle_build/target_sdk=36' in exp
 assert 'gradle_build/export_format=1' in exp and 'gradle_build/use_gradle_build=true' in exp
 assert 'config/icon="res://icon.svg"' in (R/'project.godot').read_text()
 assert 'config/name="ZenCube 3D"' in (R/'project.godot').read_text()
-assert 'clampi(index, 0, 4)' in ui
-assert 'clampi(int(data.settings.get("music_track", 0)), 0, 4)' in ui
-for track,name in enumerate(['zen_ambient_music.pcm','zen_bamboo_music.pcm','zen_moon_music.pcm','zen_flute_music.pcm','zen_koto_music.pcm']):
+assert 'clampi(index, 0, 6)' in ui
+assert 'clampi(int(data.settings.get("music_track", 0)), 0, 6)' in ui
+for track,name in enumerate(['zen_ambient_music.pcm','zen_bamboo_music.pcm','zen_moon_music.pcm','zen_flute_music.pcm','zen_koto_music.pcm','zen_regentropfen_music.pcm','zen_sternenlicht_music.pcm']):
  path=R/'assets'/name
  b=path.read_bytes()
  assert len(b)>=300_000 and len(b)%2==0,(track,name,len(b))
@@ -32,4 +32,4 @@ assert 'ZenCube 3D: Calm Strategy' in (R/'play_store/STORE_LISTING_EN_DE.md').re
 assert len('ZenCube 3D: Calm Strategy')<=30
 assert (R/'play_store/zencube_store_icon_512.png').exists()
 assert (R/'play_store/zencube_feature_1024x500.png').exists()
-print('OK: 5 selectable original music tracks, minimal launcher/adaptive icons, Play version, bilingual listing & API36 export preset')
+print('OK: 7 selectable original music tracks, minimal launcher/adaptive icons, Play version, bilingual listing & API36 export preset')
