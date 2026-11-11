@@ -43,6 +43,15 @@ func run() -> void:
     var data: Dictionary = SaveManager.defaults()
     ZenAscend.ensure(data)
     check(ZenAscend.TEST_UNLOCKED and ZenAscend.unlocked(data), "test build unlock")
+    check(not ZenAscend.unlocked_for_release(data), "production: beginner locked")
+    data.ascension.rank = 2
+    check(not ZenAscend.unlocked_for_release(data), "production: Zen Adept still locked")
+    data.ascension.rank = 3
+    check(ZenAscend.unlocked_for_release(data), "production: Zen Master unlocks 4x4")
+    data.economy.leaves = 800
+    check(not ZenAscend.buy(data) and int(data.economy.leaves)==800, "no store charge after Zen Master")
+    data.ascension.rank = 0
+    data.economy.leaves = 0
     check(not ZenAscend.buy(data), "insufficient currency")
     data.economy.leaves = 800
     check(ZenAscend.buy(data), "shop buy")

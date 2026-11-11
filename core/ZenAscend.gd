@@ -13,12 +13,13 @@ const WORDS: Dictionary = {
     "Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).": ["New mode: six 4×4 faces (96 cells).", "Novo modo: seis faces 4×4 (96 casas)."],
     "Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).": ["Win with four X or O in a row: horizontally, vertically or diagonally on one face OR straight across a cube edge (1+3, 2+2, 3+1).", "Ganha com quatro X ou O em linha: horizontal, vertical ou diagonal numa face OU em linha reta através de uma aresta (1+3, 2+2, 3+1)."],
     "204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.": ["204 possible winning lines. Classic 3×3 remains unchanged.", "204 linhas de vitória possíveis. O Clássico 3×3 não muda."],
-    "Freischalten durch Zen-Wächter (höchster Rang) oder für 750 Zen-Blätter im Shop.": ["Unlock by reaching Zen Guardian (highest rank) or spend 750 Zen Leaves in the shop.", "Desbloqueia ao atingir Guardião Zen (nível máximo) ou por 750 Folhas Zen na loja."],
+    "Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.": ["Unlock at Zen Master rank or for 750 Zen Leaves in the shop.", "Desbloqueia ao alcançar Mestre Zen ou por 750 Folhas Zen na loja."],
+    "Zen Ascend freigeschaltet!": ["Zen Ascend unlocked!", "Zen Ascend desbloqueado!"],
     "Zen Ascend ausprobieren": ["Try Zen Ascend", "Experimentar Zen Ascend"],
     "Zen Ascend freischalten": ["Unlock Zen Ascend", "Desbloquear Zen Ascend"],
     "Zen Ascend kaufen · 🍃 750": ["Buy Zen Ascend · 🍃 750", "Comprar Zen Ascend · 🍃 750"],
     "Modus freigeschaltet!": ["Mode unlocked!", "Modo desbloqueado!"],
-    "Du brauchst 750 Zen-Blätter oder den höchsten Rang.": ["You need 750 Zen Leaves or the highest rank.", "Precisas de 750 Folhas Zen ou do nível máximo."],
+    "Du brauchst 750 Zen-Blätter oder den Rang Zen-Meister.": ["You need 750 Zen Leaves or the Zen Master rank.", "Precisas de 750 Folhas Zen ou do nível Mestre Zen."],
     "Regeln ansehen": ["View rules", "Ver regras"],
     "Gegen Zen-Bot": ["Play Zen-Bot", "Jogar contra o Zen-Bot"],
     "Zu zweit spielen": ["Two players", "Dois jogadores"],
@@ -61,12 +62,16 @@ static func t(source: String, language: String) -> String:
         if language == "pt": return str(phrase[1])
     return source
 
+# Production entitlement, independent from the temporary test override.
+static func unlocked_for_release(data: Dictionary) -> bool:
+    return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 3
+
 static func unlocked(data: Dictionary) -> bool:
-    if TEST_UNLOCKED: return true
-    return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 5
+    return TEST_UNLOCKED or unlocked_for_release(data)
 
 static func buy(data: Dictionary) -> bool:
-    if bool(data.get("economy",{}).get("ascend_owned",false)): return false
+    # Do not charge anyone who already unlocked the mode through Zen-Meister.
+    if unlocked_for_release(data): return false
     if int(data.get("economy",{}).get("leaves",0)) < PRICE: return false
     data.economy.leaves -= PRICE
     data.economy["ascend_owned"] = true

@@ -600,7 +600,7 @@ const NEW_MUSIC_STREAMS = [
     preload("res://assets/music/zen_of_nature.mp3"),
     preload("res://assets/music/sitar_story.mp3"),
 ]
-const NEW_MUSIC_TITLES = ["Cyberwave Orchestra – Asiatischer Wald", "Marlowe Music – Zen Piano", "Velario Music – Zen Music", "Sonican – Nature Wonder", "Sonican – Calm Spirit", "Sonican – Zen of Nature", "Sonican – Sitar Story"]
+const NEW_MUSIC_TITLES = ["Whispers of the Ancient Forest", "Echoes of a Forgotten Dream", "The Path of Serenity", "Where the Waters Sleep", "Spirit of the Jade River", "A Thousand Silent Skies", "Tales Beneath the Golden Sun"]
 func modal(title: String) -> VBoxContainer:
     close_modal()
     popup = PanelContainer.new()
@@ -678,7 +678,7 @@ func open_store() -> void:
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
     label(ZMode.t("Zen Ascend 4×4",language_code()),box,20,Color("526943"))
-    label(ZMode.t("Freischalten durch Zen-Wächter (höchster Rang) oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
     else:
@@ -845,6 +845,7 @@ func open_play_menu() -> void:
     Asc.ensure(data)
     var box = modal("Spielmodus")
     label("Gegen wen möchtest du spielen?", box, 16)
+    label(T("Überarbeitete Bot-Stufen: Mittel fairer, Meister anspruchsvoll und schlagbar."), box, 13)
     for i in range(5):
         var lvl: int = i
         var source: String = "Zen-Bot · " + Asc.LEVELS[i]
@@ -892,7 +893,7 @@ func open_ascension() -> void:
         progress_bar.add_theme_stylebox_override("fill",fill)
         box.add_child(progress_bar)
     label("Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.",box,13)
-    label(ZMode.t("Freischalten durch Zen-Wächter (höchster Rang) oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
     button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro,true)
     button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
@@ -997,6 +998,8 @@ func show_result_screen() -> void:
                 label(T("Neue Welt freigeschaltet: %s") % T(Asc.WORLDS[rank_after]),box,15,Color("e7d3aa"))
             else:
                 label("Zen-Wächter erreicht – höchste Rangstufe!",box,15,Color("e7d3aa"))
+            if rank_after == 3:
+                label(ZMode.t("Zen Ascend freigeschaltet!",language_code()),box,15,Color("d3e5b6"))
     elif board.winner in [1, 2]:
         var winning_symbol: String = "X" if board.winner == 1 else "O"
         var summary: String = ""
@@ -1095,7 +1098,7 @@ func open_ascend_intro() -> void:
     label(ZMode.t("Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).",language_code()),box,16)
     label(ZMode.t("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).",language_code()),box,15)
     label(ZMode.t("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.",language_code()),box,14)
-    label(ZMode.t("Freischalten durch Zen-Wächter (höchster Rang) oder für 750 Zen-Blätter im Shop.",language_code()),box,14)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,14)
     if ZMode.TEST_UNLOCKED:
         label(ZMode.t("Testversion: direkt spielbar",language_code()),box,15,Color("526943"))
     if ZMode.unlocked(data):

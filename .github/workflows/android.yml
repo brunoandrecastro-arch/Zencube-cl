@@ -64,6 +64,11 @@ jobs:
         run: python3 tests/test_ascend_4x4.py
       - name: RC4 shop tabs and supplied soundtrack (static)
         run: python3 tests/test_rc4_music_tabs.py
+      - name: RC5 titles, Zen Meister unlock and bot difficulty (static)
+        run: python3 tests/test_rc5_titles_unlock.py
+      - name: RC5 fair bot difficulty and tactical checks (headless)
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_rc5_bot_balance.gd
       - name: RC4 shop tabs and music purchases (headless)
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_rc4_music_tabs.gd

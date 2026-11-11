@@ -30,8 +30,8 @@ assert 'store_select_music(track_id)' in ui
 for lang in ('EN','PT'):
     sub=l.split(f'const {lang}: Dictionary = {{',1)[1].split('\n}',1)[0]
     translations=ast.literal_eval('{'+sub+'\n}')
-    for key in ['Skins','Musik','▶ Probe hören (12 Sek.)','Hauptmusik · Kostenlos','Cyberwave Orchestra – Asiatischer Wald','Sonican – Sitar Story']:
-        assert key in translations and translations[key] != key,(lang,key)
+    for key in ['Skins','Musik','▶ Probe hören (12 Sek.)','Hauptmusik · Kostenlos','Whispers of the Ancient Forest','Tales Beneath the Golden Sun']:
+        assert key in translations and (translations[key] == key if key in {'Whispers of the Ancient Forest','Tales Beneath the Golden Sun'} else translations[key] != key),(lang,key)
     # A GDScript parse error would occur on duplicate localization keys.
     raw_keys=re.findall(r'^\s*"([^"\n]+)"\s*:',sub,re.M)
     assert len(raw_keys)==len(set(raw_keys)),(lang,'duplicate keys')

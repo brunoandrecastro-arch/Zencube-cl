@@ -1,0 +1,139 @@
+name: Android debug APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        shell: bash
+        run: |
+          set -e
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platform-tools" "build-tools;35.0.0" "platforms;android-35"
+      - name: Godot and matching templates
+        shell: bash
+        run: |
+          curl -fsSL --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.5.1-stable_linux.x86_64
+          echo "GODOT=/tmp/godot/Godot_v4.5.1-stable_linux.x86_64" >> "$GITHUB_ENV"
+          curl -fsSL --retry 3 -o /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.5.1.stable"
+          unzip -jq /tmp/templates.tpz 'templates/android_debug.apk' 'templates/android_release.apk' 'templates/version.txt' -d "$HOME/.local/share/godot/export_templates/4.5.1.stable"
+      - name: Import project and check GDScript
+        run: |
+          "$GODOT" --headless --editor --import --quit
+      - name: Verify 108 lines and simulated games
+        run: python3 tests/test_108_rules.py
+      - name: Verify German/English strings and music WAV
+        run: python3 tests/test_language_audio.py
+      - name: Verify 100 Zen Challenges with forced lines and defense proofs
+        run: python3 tests/test_challenges_data.py
+      - name: Verify full German, English, Portuguese localization
+        run: python3 tests/test_i18n_3_languages.py
+      - name: Verify natural game copy in three languages
+        run: python3 tests/test_natural_copy.py
+      - name: Verify premium home menu, result screen and Android haptics
+        run: python3 tests/test_premium_ui_9_3.py
+      - name: Verify five Zen ranks, bot difficulties and new worlds
+        run: python3 tests/test_zen_ascension.py
+      - name: Verify premium world artwork and selection menu
+        run: python3 tests/test_world_visuals_9_4_2.py
+      - name: Check HD worlds, unlock hints, O visibility and result copy
+        run: python3 tests/test_design_clarity_9_4_3.py
+      - name: ZenCube 9.5 earned currency and 20 skins (static)
+        run: python3 tests/test_zen_collection_9_5.py
+      - name: Verify five new crisp worlds and 20 surface material maps
+        run: python3 tests/test_premium_materials_9_6.py
+      - name: Verify 9.6.1 high-resolution surfaces, touch shop and new audio loops
+        run: python3 tests/test_quality_audio_9_6_1.py
+      - name: Verify 1.0 audio tracks, store assets and Play metadata
+        run: python3 tests/test_release_candidate_1_0.py
+      - name: Verify new standalone Zen Ascend 4x4 rules, profiles and unlock logic (static)
+        run: python3 tests/test_ascend_4x4.py
+      - name: RC4 shop tabs and supplied soundtrack (static)
+        run: python3 tests/test_rc4_music_tabs.py
+      - name: RC4 shop tabs and music purchases (headless)
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_rc4_music_tabs.gd
+      - name: Verify Zen Music Shop and seven original tracks (static)
+        run: python3 tests/test_music_shop_1_0_rc2.py
+      - name: Verify Zen Music Shop purchases on real Godot scene (headless)
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_music_shop_1_0_rc2.gd
+      - name: Verify five sound tracks on real Godot scene (headless)
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_release_candidate_1_0.gd
+      - name: Test new paging and visual clarity on actual Godot scene (headless)
+        run: |
+          timeout 60 "$GODOT" --headless --path . --script tests/test_quality_audio_9_6_1.gd
+      - name: Test actual material texture rendering (headless)
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_premium_materials_9_6.gd
+      - name: ZenCube 9.5 economy, 3 tracks and shop on the real cube (headless)
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_zen_collection_9_5.gd
+      - name: Verify premium world switching on the real cube (headless)
+        run: |
+          timeout 45 "$GODOT" --headless --path . --script tests/test_world_visuals_9_4_2.gd
+      - name: World unlock explanation and high-density cube render (headless)
+        run: |
+          timeout 50 "$GODOT" --headless --path . --script tests/test_design_clarity_9_4_3.gd
+      - name: Zen Ascension progression and five bot levels (headless)
+        run: |
+          timeout 75 "$GODOT" --headless --path . --script tests/test_zen_ascension.gd
+      - name: Test 96-cell Zen Ascend cube, 204 win lines and unlock logic (headless)
+        run: |
+          timeout 40 "$GODOT" --headless --path . --script tests/test_ascend_4x4.gd
+      - name: Godot engine tests
+        run: |
+          "$GODOT" --headless --path . --script tests/test_engine.gd
+      - name: Verify main scene and GameController script
+        run: |
+          timeout 35 "$GODOT" --headless --path . --script tests/test_scene_load.gd
+      - name: Verify 100 tactical challenges on the 3D cube
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
+      - name: Verify PCM music stream and playback controls
+        run: |
+          timeout 35 "$GODOT" --headless --path . --script tests/test_music_stream.gd
+      - name: Godot UI and menu tests (headless)
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_ui.gd
+      - name: Language switch and music playback smoke test
+        run: |
+          timeout 45 "$GODOT" --headless --path . --script tests/test_localized_ui.gd
+      - name: Premium result screen and simplified main menu (headless)
+        run: |
+          timeout 60 "$GODOT" --headless --path . --script tests/test_result_screen.gd
+      - name: Tactical simulations
+        run: |
+          g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim
+          /tmp/zencube-sim reports/lines.json > reports/simulation.json
+      - name: Build signed debug APK
+        run: bash scripts/build_android.sh
+      - name: Verify music PCM included in APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in zen_ambient_music.pcm zen_bamboo_music.pcm zen_moon_music.pcm zen_flute_music.pcm zen_koto_music.pcm zen_regentropfen_music.pcm zen_sternenlicht_music.pcm; do
+            unzip -Z1 build/ZenCube-3D.apk | grep -F "$file"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-debug
+          path: |
+            build/ZenCube-3D.apk
+            reports/*.json
+            reports/*.png
