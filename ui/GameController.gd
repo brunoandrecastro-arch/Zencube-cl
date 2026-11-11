@@ -748,17 +748,11 @@ func change_shop_tab(index: int) -> void:
 func store_music_section(parent: VBoxContainer) -> void:
     # Music and skins are separate scrollable tabs, not a mixed catalog.
     var titles: Array = ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Nebelpfad", "Stein und Wasser", "Regentropfen im Zen-Garten", "Sternenlicht am Tempel"] + NEW_MUSIC_TITLES
-    var display_order: Array = [7, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13]
+    # Shop offers only purchasable or purchased tracks. Base/world songs remain bundled.
+    var display_order: Array = [5, 6, 8, 9, 10, 11, 12, 13]
+    label("Freischaltbare Musik", parent, 17, Color("526943"))
     for track in display_order:
         var track_id: int = int(track)
-        if track_id == 7:
-            label("Hauptmusik · Kostenlos", parent, 17, Color("526943"))
-        elif track_id == 0:
-            label("Weitere kostenlose Musik", parent, 17, Color("526943"))
-        elif track_id == 5:
-            label("Bisherige Bonusmusik", parent, 17, Color("526943"))
-        elif track_id == 8:
-            label("Neue Musik zum Freischalten", parent, 17, Color("526943"))
         var owned: bool = Collection.music_unlocked(data, track_id)
         var chosen: bool = MusicPolicy.mode(data) == "manual" and int(data.settings.get("music_track", 7)) == track_id
         var card: PanelContainer = PanelContainer.new()
@@ -1009,7 +1003,8 @@ func show_result_screen() -> void:
             headline = "Verloren"
     var box = modal(headline)
     # Let the actual 3D winning line stay visible above the results panel.
-    popup.anchor_top = 0.51
+    popup.anchor_top = 0.55
+    popup.anchor_bottom = 0.96
     popup.offset_top = 0
     popup.add_theme_stylebox_override("panel", theme_style(Color("342820", 0.985), 25))
     var heading: Label = box.get_child(0) as Label
@@ -1018,7 +1013,7 @@ func show_result_screen() -> void:
     heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     if special:
         var unlocked_rank: String = T(Asc.RANKS[int(data.ascension.rank)])
-        var award: Label = label(unlocked_rank,box,23,Color("edd18e"))
+        var award: Label = label(unlocked_rank,box,21,Color("edd18e"))
         award.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         if bool(last_rank_up.get("rank_up",false)):
             label("Neuer Zen-Rang freigeschaltet!",box,15,Color("fff1d6"))
@@ -1037,10 +1032,10 @@ func show_result_screen() -> void:
         else:
             var winner_owner: int = int(board.owners[board.winner - 1])
             summary = T("%s gewinnt mit %s.") % [player_name(winner_owner), winning_symbol]
-        var symbol_label: Label = label(summary, box, 18, Color("ead3aa"))
+        var symbol_label: Label = label(summary, box, 17, Color("ead3aa"))
         symbol_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     if versus_bot and last_leaf_reward > 0:
-        var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 18, Color("d3e5b6"))
+        var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var detail_label: Label = label("Vier in einer Reihe. Über die Kante." if board.winner != 3 else "Noch eine Runde?", box, 15, Color("e7d6b9"))
     detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1577,19 +1572,36 @@ func open_settings() -> void:
     var tracks: OptionButton = OptionButton.new()
     tracks.add_item(MusicPolicy.base_label(language_code()))
     var music_names: Array = ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Nebelpfad", "Stein und Wasser", "Regentropfen im Zen-Garten", "Sternenlicht am Tempel"] + NEW_MUSIC_TITLES
-    for i in range(music_names.size()):
-        var display: String = T(str(music_names[i]))
+    # Hide Misty Path (3), Stone and Water (4), Whispers (7) from manual selection.
+    # Other free classics remain available; paid songs appear here only after purchase.
+    var track_choices: Array[int] = [0, 1, 2, 5, 6, 8, 9, 10, 11, 12, 13]
+    for i in track_choices:
         if not Collection.music_unlocked(data, i):
-            display += "  🔒 🍃 %d" % Collection.music_price(i)
-        tracks.add_item(display)
-        tracks.set_item_disabled(i + 1, not Collection.music_unlocked(data, i))
-    tracks.select(0 if MusicPolicy.mode(data) == "base" else clampi(int(data.settings.get("music_track", 7)), 0, 13) + 1)
+            continue
+        var display: String = T(str(music_names[i]))
+        tracks.add_item(display, i)
+    var chosen_music: int = clampi(int(data.settings.get("music_track", 7)), 0, 13)
+    var base_selected: bool = MusicPolicy.mode(data) == "base"
+    # A manually chosen title now hidden from the menu safely reverts to Base.
+    # The saved numeric track ID, purchases and original MP3 files are untouched.
+    if not base_selected and chosen_music in [3, 4, 7]:
+        data.settings["music_mode"] = "base"
+        sync_music()
+        persist()
+        base_selected = true
+    var selected_option: int = 0
+    if not base_selected:
+        for i in range(1, tracks.item_count):
+            if tracks.get_item_id(i) == chosen_music:
+                selected_option = i
+                break
+    tracks.select(selected_option)
     tracks.custom_minimum_size.y = 48
     tracks.item_selected.connect(func(index):
         if index == 0:
             select_base_music()
         else:
-            select_music_track(index - 1)
+            select_music_track(tracks.get_item_id(index))
     )
     box.add_child(tracks)
     var sounds = CheckButton.new()

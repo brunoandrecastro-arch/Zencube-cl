@@ -19,7 +19,7 @@ expected = [
 m = re.search(r'^const NEW_MUSIC_TITLES = (\[.*\])$', ui, re.M)
 assert m is not None, 'missing music title array'
 assert ast.literal_eval(m.group(1)) == expected, 'unexpected song order; old purchases depend on numeric IDs'
-assert '[7, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13]' in ui
+assert 'var display_order: Array = [5, 6, 8, 9, 10, 11, 12, 13]' in ui, 'shop must list only paid/owned tracks'
 assert '"music_track":7' in (ROOT/'core/SaveManager.gd').read_text(), 'Cyberwave track ID 7 must remain default'
 assert 'if shop_tab == 1:' in ui and 'store_music_section(box)' in ui
 for code in ('EN', 'PT'):

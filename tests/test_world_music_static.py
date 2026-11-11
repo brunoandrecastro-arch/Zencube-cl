@@ -13,7 +13,9 @@ assert '"music_mode":"base"' in save
 assert 'base.settings["music_mode"] = "manual"' in save
 assert 'if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)' in save
 assert 'MusicPolicy.base_label(language_code())' in main
-assert 'tracks.set_item_disabled(i + 1, not Collection.music_unlocked(data, i))' in main, 'shop selector indexes must shift after Base'
+assert 'tracks.add_item(display, i)' in main and 'select_music_track(tracks.get_item_id(index))' in main, 'settings selector must retain real numeric track IDs'
+assert 'var track_choices: Array[int] = [0, 1, 2, 5, 6, 8, 9, 10, 11, 12, 13]' in main
+assert 'var display_order: Array = [5, 6, 8, 9, 10, 11, 12, 13]' in main, 'only payable tracks belong in the shop'
 assert 'MusicPolicy.selected_track(data)' in main and 'sync_music() # Auto-World theme' in main
 assert 'data.settings["music_mode"] = "base"' in main
 assert 'data.settings["music_mode"] = "manual"' in main
