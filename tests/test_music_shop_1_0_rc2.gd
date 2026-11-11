@@ -26,6 +26,12 @@ func run() -> void:
     if json_data is Dictionary:
         ZenCollection.ensure(json_data)
         check(ZenCollection.music_unlocked(json_data, 5) and ZenCollection.music_unlocked(json_data, 6), "wallet survives JSON reload")
+    # Shop actions save to user://; preserve the pre-test file so other tests
+    # cannot accidentally inherit purchases made by this test.
+    var had_save: bool = FileAccess.file_exists(SaveManager.PATH)
+    var original_save: PackedByteArray = PackedByteArray()
+    if had_save:
+        original_save = FileAccess.get_file_as_bytes(SaveManager.PATH)
     var scene: PackedScene = load("res://Main.tscn") as PackedScene
     check(scene != null, "Main scene")
     if scene == null:
@@ -49,5 +55,14 @@ func run() -> void:
         check(stream != null and stream.data.size() > 500000, "music stream %d" % i)
     game.queue_free()
     await process_frame
+    if had_save:
+        var restore_file: FileAccess = FileAccess.open(SaveManager.PATH, FileAccess.WRITE)
+        check(restore_file != null, "restore saved game after shop test")
+        if restore_file != null:
+            restore_file.store_buffer(original_save)
+            restore_file.close()
+    elif FileAccess.file_exists(SaveManager.PATH):
+        var remove_error: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.PATH))
+        check(remove_error == OK, "delete temporary shop test save")
     print("ZEN MUSIC SHOP 1.0 RC2 FAILURES=",fails)
     quit(0 if fails == 0 else 1)
