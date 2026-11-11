@@ -43,7 +43,7 @@ func run() -> void:
     game.data = SaveManager.defaults()
     ZenCollection.ensure(game.data)
     game.select_music_track(5)
-    check(int(game.data.settings.music_track) == 0, "locked track cannot be selected")
+    check(int(game.data.settings.music_track) == 7, "locked track cannot be selected")
     game.data.economy.leaves = 350
     game.store_select_music(5)
     check(int(game.data.settings.music_track) == 5 and ZenCollection.music_unlocked(game.data, 5), "shop purchase also selects")

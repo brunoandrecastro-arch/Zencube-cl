@@ -3,6 +3,21 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Skins": "Cube Skins",
+    "Musik": "Music",
+    "Höre neue Musik an und schalte sie dauerhaft mit Zen-Blättern frei.": "Listen to new music and unlock it permanently with Zen Leaves.",
+    "Hauptmusik · Kostenlos": "Main theme · Free",
+    "Weitere kostenlose Musik": "More free music",
+    "Bisherige Bonusmusik": "Previous bonus music",
+    "Neue Musik zum Freischalten": "New music to unlock",
+    "▶ Probe hören (12 Sek.)": "▶ Preview (12 sec)",
+    "Cyberwave Orchestra – Asiatischer Wald": "Cyberwave Orchestra – Asian Forest",
+    "Marlowe Music – Zen Piano": "Marlowe Music – Zen Piano",
+    "Velario Music – Zen Music": "Velario Music – Zen Music",
+    "Sonican – Nature Wonder": "Sonican – Nature Wonder",
+    "Sonican – Calm Spirit": "Sonican – Calm Spirit",
+    "Sonican – Zen of Nature": "Sonican – Zen of Nature",
+    "Sonican – Sitar Story": "Sonican – The Sitar Story",
     "Nebelpfad": "Misty Path",
     "Stein und Wasser": "Stone and Water",
     "Regentropfen im Zen-Garten": "Raindrops in the Zen Garden",
@@ -298,6 +313,21 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Skins": "Aparências",
+    "Musik": "Música",
+    "Höre neue Musik an und schalte sie dauerhaft mit Zen-Blättern frei.": "Ouve novas músicas e desbloqueia-as para sempre com Folhas Zen.",
+    "Hauptmusik · Kostenlos": "Música principal · Grátis",
+    "Weitere kostenlose Musik": "Mais música gratuita",
+    "Bisherige Bonusmusik": "Músicas bónus anteriores",
+    "Neue Musik zum Freischalten": "Nova música para desbloquear",
+    "▶ Probe hören (12 Sek.)": "▶ Ouvir amostra (12 s)",
+    "Cyberwave Orchestra – Asiatischer Wald": "Cyberwave Orchestra – Floresta Asiática",
+    "Marlowe Music – Zen Piano": "Marlowe Music – Piano Zen",
+    "Velario Music – Zen Music": "Velario Music – Música Zen",
+    "Sonican – Nature Wonder": "Sonican – Maravilhas da Natureza",
+    "Sonican – Calm Spirit": "Sonican – Espírito Calmo",
+    "Sonican – Zen of Nature": "Sonican – Zen da Natureza",
+    "Sonican – Sitar Story": "Sonican – História de Sitar",
     "Nebelpfad": "Caminho de Neblina",
     "Stein und Wasser": "Pedra e Água",
     "Regentropfen im Zen-Garten": "Gotas de Chuva no Jardim Zen",

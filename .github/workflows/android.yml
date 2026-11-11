@@ -62,6 +62,11 @@ jobs:
         run: python3 tests/test_release_candidate_1_0.py
       - name: Verify new standalone Zen Ascend 4x4 rules, profiles and unlock logic (static)
         run: python3 tests/test_ascend_4x4.py
+      - name: RC4 shop tabs and supplied soundtrack (static)
+        run: python3 tests/test_rc4_music_tabs.py
+      - name: RC4 shop tabs and music purchases (headless)
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_rc4_music_tabs.gd
       - name: Verify Zen Music Shop and seven original tracks (static)
         run: python3 tests/test_music_shop_1_0_rc2.py
       - name: Verify Zen Music Shop purchases on real Godot scene (headless)

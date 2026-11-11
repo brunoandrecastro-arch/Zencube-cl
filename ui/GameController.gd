@@ -588,6 +588,19 @@ func _process(_delta: float) -> void:
 func _exit_tree() -> void:
     if worker != null: worker.wait_to_finish()
 var shop_page: int = 0
+var shop_tab: int = 0 # 0 = Skins, 1 = Musik
+var music_preview_player: AudioStreamPlayer
+var music_preview_generation: int = 0
+const NEW_MUSIC_STREAMS = [
+    preload("res://assets/music/cyberwave_main.mp3"),
+    preload("res://assets/music/zen_piano.mp3"),
+    preload("res://assets/music/velario_zen.mp3"),
+    preload("res://assets/music/nature_wonder.mp3"),
+    preload("res://assets/music/calm_spirit.mp3"),
+    preload("res://assets/music/zen_of_nature.mp3"),
+    preload("res://assets/music/sitar_story.mp3"),
+]
+const NEW_MUSIC_TITLES = ["Cyberwave Orchestra – Asiatischer Wald", "Marlowe Music – Zen Piano", "Velario Music – Zen Music", "Sonican – Nature Wonder", "Sonican – Calm Spirit", "Sonican – Zen of Nature", "Sonican – Sitar Story"]
 func modal(title: String) -> VBoxContainer:
     close_modal()
     popup = PanelContainer.new()
@@ -616,6 +629,7 @@ func modal(title: String) -> VBoxContainer:
     button("Zurück zum Spiel",box,close_modal,true)
     return box
 func close_modal() -> void:
+    stop_shop_preview()
     net_active = false
     net_buttons.clear()
     if popup != null:
@@ -646,6 +660,16 @@ func open_store() -> void:
     Collection.ensure(data)
     var box = modal("Zen-Shop")
     label(T("Deine Zen-Blätter: 🍃 %d") % int(data.economy.leaves), box, 20, Color("50663e"))
+    var tab_bar: HBoxContainer = row(box)
+    var skins_tab: Button = button(T("Skins"), tab_bar, func(): change_shop_tab(0), true, shop_tab == 0)
+    var music_tab: Button = button(T("Musik"), tab_bar, func(): change_shop_tab(1), true, shop_tab == 1)
+    skins_tab.disabled = shop_tab == 0
+    music_tab.disabled = shop_tab == 1
+    if shop_tab == 1:
+        label("Höre neue Musik an und schalte sie dauerhaft mit Zen-Blättern frei.", box, 13)
+        store_music_section(box)
+        button("Zum Hauptmenü", box, open_menu, true)
+        return
     label("Gewinne gegen den Zen-Bot oder löse neue Challenges. Stärkere Bots geben mehr Blätter.", box, 13)
     var rewards: String = ""
     for i in range(5):
@@ -660,7 +684,6 @@ func open_store() -> void:
     else:
         var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 750",language_code()),box,buy_ascend,true)
         unlock_button.disabled = int(data.economy.leaves) < ZMode.PRICE
-    store_music_section(box)
     shop_page = clampi(shop_page, 0, 3)
     store_page_buttons(box)
     for i in range(shop_page * 5, mini((shop_page + 1) * 5, Collection.SKINS.size())):
@@ -707,35 +730,74 @@ func open_store() -> void:
     store_page_buttons(box)
     button("Zum Hauptmenü", box, open_menu, true)
 
+func change_shop_tab(index: int) -> void:
+    shop_tab = clampi(index, 0, 1)
+    open_store()
+
 func store_music_section(parent: VBoxContainer) -> void:
-    label("Freischaltbare Musik", parent, 18, Color("4b3428"))
-    label("Zwei zusätzliche Melodien – einmal mit Zen-Blättern freischalten, dauerhaft behalten.", parent, 12, Color("6f5940"))
-    for track in [5, 6]:
-        var track_id: int = track
-        var title: String = "Regentropfen im Zen-Garten" if track == 5 else "Sternenlicht am Tempel"
-        var cost: int = Collection.music_price(track)
-        var owned: bool = Collection.music_unlocked(data, track)
-        var chosen: bool = int(data.settings.get("music_track", 0)) == track
+    # Music and skins are separate scrollable tabs, not a mixed catalog.
+    var titles: Array = ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Nebelpfad", "Stein und Wasser", "Regentropfen im Zen-Garten", "Sternenlicht am Tempel"] + NEW_MUSIC_TITLES
+    var display_order: Array = [7, 0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13]
+    for track in display_order:
+        var track_id: int = int(track)
+        if track_id == 7:
+            label("Hauptmusik · Kostenlos", parent, 17, Color("526943"))
+        elif track_id == 0:
+            label("Weitere kostenlose Musik", parent, 17, Color("526943"))
+        elif track_id == 5:
+            label("Bisherige Bonusmusik", parent, 17, Color("526943"))
+        elif track_id == 8:
+            label("Neue Musik zum Freischalten", parent, 17, Color("526943"))
+        var owned: bool = Collection.music_unlocked(data, track_id)
+        var chosen: bool = int(data.settings.get("music_track", 7)) == track_id
         var card: PanelContainer = PanelContainer.new()
         card.mouse_filter = Control.MOUSE_FILTER_PASS
-        card.add_theme_stylebox_override("panel", theme_style(Color("fff0d9", 0.96), 12))
+        card.add_theme_stylebox_override("panel", theme_style(Color("fff0d9",0.96),12))
         parent.add_child(card)
         var inner: VBoxContainer = VBoxContainer.new()
         inner.mouse_filter = Control.MOUSE_FILTER_PASS
         card.add_child(inner)
-        label(title, inner, 16, Color("4b3428"))
+        label(T(str(titles[track_id])), inner, 16, Color("4b3428"))
+        # Stack buttons so long localized labels fit narrow Android screens.
+        var listen: Button = button(T("▶ Probe hören (12 Sek.)"), inner, func(): preview_shop_music(track_id), true)
+        listen.mouse_filter = Control.MOUSE_FILTER_PASS
         var caption: String = ""
         if chosen:
             caption = "✓ " + T("Ausgewählt")
         elif owned:
             caption = T("Musik auswählen")
         else:
-            caption = T("Musik freischalten für 🍃 %d") % cost
+            caption = T("Musik freischalten für 🍃 %d") % Collection.music_price(track_id)
         var action: Button = button(caption, inner, func(): store_select_music(track_id), true, chosen)
         action.mouse_filter = Control.MOUSE_FILTER_PASS
-        action.disabled = chosen or (not owned and int(data.economy.leaves) < cost)
-        action.add_theme_color_override("font_disabled_color", Color("42372d"))
-        action.add_theme_stylebox_override("disabled", theme_style(Color("e7dfd0"), 12))
+        action.disabled = chosen or (not owned and int(data.economy.leaves) < Collection.music_price(track_id))
+        action.add_theme_color_override("font_disabled_color",Color("42372d"))
+        action.add_theme_stylebox_override("disabled", theme_style(Color("e7dfd0"),12))
+
+func stop_shop_preview() -> void:
+    music_preview_generation += 1
+    if music_preview_player != null:
+        music_preview_player.stop()
+    if music_player != null:
+        music_player.stream_paused = false
+
+func preview_shop_music(track: int) -> void:
+    # A 12-second preview does NOT purchase or unlock the track.
+    stop_shop_preview()
+    if music_preview_player == null:
+        return
+    music_preview_player.stream = music_stream(track)
+    if music_preview_player.stream == null:
+        notify_user("Musik konnte nicht geladen werden.")
+        return
+    if music_player != null:
+        music_player.stream_paused = true
+    music_preview_player.play()
+    var token: int = music_preview_generation
+    get_tree().create_timer(12.0).timeout.connect(func():
+        if token == music_preview_generation:
+            stop_shop_preview()
+    )
 
 func store_select_music(track: int) -> void:
     Collection.ensure(data)
@@ -743,6 +805,7 @@ func store_select_music(track: int) -> void:
         if not Collection.buy_music(data, track):
             notify_user("Nicht genug Zen-Blätter.")
             return
+    stop_shop_preview()
     data.settings.music = true
     select_music_track(track)
     open_store()
@@ -1482,14 +1545,14 @@ func open_settings() -> void:
     box.add_child(music)
     label("Musiktitel", box, 15)
     var tracks: OptionButton = OptionButton.new()
-    var music_names: Array = ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Nebelpfad", "Stein und Wasser", "Regentropfen im Zen-Garten", "Sternenlicht am Tempel"]
+    var music_names: Array = ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Nebelpfad", "Stein und Wasser", "Regentropfen im Zen-Garten", "Sternenlicht am Tempel"] + NEW_MUSIC_TITLES
     for i in range(music_names.size()):
         var display: String = T(str(music_names[i]))
         if not Collection.music_unlocked(data, i):
             display += "  🔒 🍃 %d" % Collection.music_price(i)
         tracks.add_item(display)
         tracks.set_item_disabled(i, not Collection.music_unlocked(data, i))
-    tracks.select(clampi(int(data.settings.get("music_track", 0)), 0, 6))
+    tracks.select(clampi(int(data.settings.get("music_track", 7)), 0, 13))
     tracks.custom_minimum_size.y = 48
     tracks.item_selected.connect(func(index): select_music_track(index))
     box.add_child(tracks)
@@ -1556,8 +1619,12 @@ func build_sound() -> void:
     add_child(music_player)
     # Use explicit signed PCM16 instead of Godot's WAV import/remap path.
     # This makes Android music decoding use the same engine format as working SFX.
-    music_player.stream = make_zen_music_stream()
+    music_player.stream = music_stream(int(data.settings.get("music_track", 7)))
     music_player.volume_db = -2.0
+    music_preview_player = AudioStreamPlayer.new()
+    music_preview_player.name = "ZenShopPreview"
+    music_preview_player.volume_db = -4.5
+    add_child(music_preview_player)
     sync_music()
 func make_zen_music_stream(track: int = 0) -> AudioStreamWAV:
     var pcm: PackedByteArray = FileAccess.get_file_as_bytes("res://assets/zen_ambient_music.pcm")
@@ -1592,14 +1659,22 @@ func make_zen_music_stream(track: int = 0) -> AudioStreamWAV:
     ambient.loop_end = int(pcm.size() / 2)
     ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
     return ambient
+func music_stream(track: int) -> AudioStream:
+    if track >= 7 and track <= 13:
+        var imported: AudioStreamMP3 = NEW_MUSIC_STREAMS[track - 7] as AudioStreamMP3
+        if imported != null:
+            imported.loop = true
+            return imported
+    return make_zen_music_stream(track)
+
 func select_music_track(index: int) -> void:
     Collection.ensure(data)
     if not Collection.music_unlocked(data, index):
         notify_user("Schalte diesen Musiktitel zuerst im Zen-Shop frei.")
         return
-    data.settings.music_track = clampi(index, 0, 6)
+    data.settings.music_track = clampi(index, 0, 13)
     if music_player != null:
-        music_player.stream = make_zen_music_stream(int(data.settings.music_track))
+        music_player.stream = music_stream(int(data.settings.music_track))
         music_player.set_meta("track", int(data.settings.music_track))
     sync_music()
     persist()
@@ -1615,12 +1690,12 @@ func music_preview() -> void:
         )
 func sync_music() -> void:
     if music_player == null: return
-    var chosen: int = clampi(int(data.settings.get("music_track", 0)), 0, 6)
+    var chosen: int = clampi(int(data.settings.get("music_track", 7)), 0, 13)
     if data != null and not Collection.music_unlocked(data, chosen):
-        chosen = 0
-        data.settings.music_track = 0
+        chosen = 7
+        data.settings.music_track = 7
     if not music_player.has_meta("track") or int(music_player.get_meta("track")) != chosen:
-        music_player.stream = make_zen_music_stream(chosen)
+        music_player.stream = music_stream(chosen)
         music_player.set_meta("track", chosen)
     if music_player.stream == null: return
     if bool(data.settings.get("music",false)):

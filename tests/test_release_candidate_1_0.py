@@ -10,8 +10,8 @@ assert 'name="Android Play"' in exp and 'gradle_build/target_sdk=36' in exp
 assert 'gradle_build/export_format=1' in exp and 'gradle_build/use_gradle_build=true' in exp
 assert 'config/icon="res://icon.svg"' in (R/'project.godot').read_text()
 assert 'config/name="ZenCube 3D"' in (R/'project.godot').read_text()
-assert 'clampi(index, 0, 6)' in ui
-assert 'clampi(int(data.settings.get("music_track", 0)), 0, 6)' in ui
+assert 'clampi(index, 0, 13)' in ui
+assert 'clampi(int(data.settings.get("music_track", 7)), 0, 13)' in ui
 for track,name in enumerate(['zen_ambient_music.pcm','zen_bamboo_music.pcm','zen_moon_music.pcm','zen_flute_music.pcm','zen_koto_music.pcm','zen_regentropfen_music.pcm','zen_sternenlicht_music.pcm']):
  path=R/'assets'/name
  b=path.read_bytes()

@@ -14,12 +14,12 @@ for key in ['music_price(', 'music_unlocked(', 'buy_music(', 'owned_music', 'wal
 assert 'if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)' in save
 assert 'var music_names: Array' in ui and 'tracks.set_item_disabled(i, not Collection.music_unlocked' in ui
 assert 'func store_music_section(' in ui and 'func store_select_music(' in ui
-assert 'store_music_section(box)' in ui
+assert 'store_music_section(box)' in ui and 'change_shop_tab(1)' in ui
 assert 'if not Collection.music_unlocked(data, index):' in ui
 assert 'Collection.buy_music(data, track)' in ui
 assert 'data.settings.music = true' in ui
-assert 'clampi(index, 0, 6)' in ui
-assert 'clampi(int(data.settings.get("music_track", 0)), 0, 6)' in ui
+assert 'clampi(index, 0, 13)' in ui
+assert 'clampi(int(data.settings.get("music_track", 7)), 0, 13)' in ui
 assert 'version/code=21' in (R/'export_presets.cfg').read_text()
 assert 'test_music_shop_1_0_rc2.gd' in flow
 for lang in ['EN','PT']:
