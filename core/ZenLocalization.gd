@@ -64,7 +64,6 @@ const EN: Dictionary = {
     "Tempel im Abendlicht": "Temple in the evening light",
     "Mondlicht und stilles Wasser": "Moonlight and still water",
     "Licht über den Wolken": "Light above the clouds",
-    "Ausgewählt": "Selected",
 
     "Jeder Rang hat eine eigene Prüfung. Siege in Folge zählen nur beim gleichen Bot.": "Each rank has its own challenge. Only wins against the same bot count towards a streak.",
     "%d/%d Siege": "%d/%d wins",
@@ -360,7 +359,6 @@ const PT: Dictionary = {
     "Tempel im Abendlicht": "Templo à luz do entardecer",
     "Mondlicht und stilles Wasser": "Luar e águas tranquilas",
     "Licht über den Wolken": "Luz acima das nuvens",
-    "Ausgewählt": "Selecionado",
 
     "Jeder Rang hat eine eigene Prüfung. Siege in Folge zählen nur beim gleichen Bot.": "Cada nível tem um desafio próprio. Só as vitórias contra o mesmo bot contam para a série.",
     "%d/%d Siege": "%d/%d vitórias",

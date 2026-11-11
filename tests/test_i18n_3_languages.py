@@ -3,6 +3,7 @@
 Does not replace a Godot on-device UI test.
 """
 from pathlib import Path
+from collections import Counter
 import ast, json, re
 ROOT=Path(__file__).resolve().parents[1]
 locale=(ROOT/'core/ZenLocalization.gd').read_text(encoding='utf-8')
@@ -12,7 +13,11 @@ def table(name):
     # GDScript constant literal dictionary contains only string pairs.
     tail=locale.split(f'const {name}: Dictionary = {{',1)[1]
     body=tail.split('\n}',1)[0]
-    return ast.literal_eval('{'+body+'\n}')
+    parsed = ast.parse('{'+body+'\n}', mode='eval')
+    literal_keys = [ast.literal_eval(key) for key in parsed.body.keys]
+    repeated = sorted(key for key, count in Counter(literal_keys).items() if count > 1)
+    assert not repeated, f'Duplicate translation keys in {name}: {repeated}'
+    return ast.literal_eval(parsed)
 EN=table('EN')
 PT=table('PT')
 assert EN and PT
