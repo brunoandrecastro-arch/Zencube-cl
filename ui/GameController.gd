@@ -43,6 +43,8 @@ var world_background: TextureRect
 var rank_label: Label
 var current_world: int = -1
 var last_rank_up: Dictionary = {"rank_up": false, "new_rank": 0}
+var ceremony_done_for_match: bool = false
+var ceremony_active: bool = false
 var last_leaf_reward: int = 0
 const Collection = preload("res://core/ZenCollection.gd")
 
@@ -55,6 +57,7 @@ var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
 const Asc = preload("res://core/ZenAscension.gd")
 const ZMode = preload("res://core/ZenAscend.gd")
+const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
 func language_code() -> String:
@@ -465,7 +468,7 @@ func notify_user(message: String) -> void:
     toast_until = Time.get_ticks_msec()+4000
     if help_text != null: help_text.text = toast
 func on_cell(cell: int) -> void:
-    if cell < 0 or (popup != null and not net_active): return
+    if cell < 0 or ceremony_active or (popup != null and not net_active): return
     if challenge_active:
         challenge_try_cell(cell)
         return
@@ -477,6 +480,7 @@ func on_cell(cell: int) -> void:
             return
     place(cell)
 func place(cell: int) -> void:
+    if ceremony_active: return
     if challenge_active:
         challenge_try_cell(cell)
         return
@@ -500,6 +504,7 @@ func record_result() -> void:
     last_rank_up = {"rank_up": false, "new_rank": int(data.ascension.rank)}
     last_leaf_reward = 0
     board.result_recorded = true
+    ceremony_done_for_match = false
     data.stats.played += 1
     if bool(data.settings.alternate): data.settings.next_start = 1-board.starter_owner
     if board.winner == 3:
@@ -525,6 +530,7 @@ func resolve_swap(accept: bool) -> void:
         generation += 1
         refresh()
 func new_game() -> void:
+    ceremony_done_for_match = false
     if challenge_active:
         leave_challenges()
     generation += 1
@@ -972,6 +978,20 @@ func show_result_screen() -> void:
     if challenge_active or tutorial != null or board.winner == 0 or popup != null:
         return
     if int(data.settings.mode) == 2:
+        return
+    # Rank-up is already persisted by record_result(); this is visual only.
+    # Never replay the ceremony on reopening results or loading a previous rank.
+    if bool(last_rank_up.get("rank_up",false)) and not ceremony_done_for_match:
+        ceremony_done_for_match = true
+        ceremony_active = true
+        var celebration: ZenRankCeremony = RANK_CEREMONY.new()
+        add_child(celebration)
+        celebration.finished.connect(func():
+            ceremony_active = false
+            if is_inside_tree():
+                call_deferred("show_result_screen")
+        )
+        celebration.present(int(data.ascension.rank),language_code(),bool(data.settings.sound),[music_player,music_fade_player])
         return
     var human_win: bool = false
     if board.winner in [1, 2]:

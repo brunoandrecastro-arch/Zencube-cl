@@ -105,6 +105,11 @@ jobs:
       - name: Zen Ascension progression and five bot levels (headless)
         run: |
           timeout 75 "$GODOT" --headless --path . --script tests/test_zen_ascension.gd
+      - name: Zen rank-up audiovisual ceremony assets and gating (static)
+        run: python3 tests/test_zen_ceremony.py
+      - name: Zen rank-up audiovisual ceremony (Godot headless)
+        run: |
+          timeout 45 "$GODOT" --headless --path . --script tests/test_zen_ceremony.gd
       - name: Test 96-cell Zen Ascend cube, 204 win lines and unlock logic (headless)
         run: |
           timeout 40 "$GODOT" --headless --path . --script tests/test_ascend_4x4.gd
