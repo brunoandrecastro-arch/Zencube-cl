@@ -2,11 +2,11 @@
 This is NOT a replacement for an on-device audio test.
 """
 from pathlib import Path
-import json, wave, math, struct
+import json, wave, math, struct, ast
 BASE=Path(__file__).resolve().parents[1]
 controller=(BASE/'ui/GameController.gd').read_text()
 localize=(BASE/'core/ZenLocalization.gd').read_text()
-dictionary=json.loads(localize.split('const EN: Dictionary = ',1)[1].split('\nstatic func english',1)[0])
+dictionary=ast.literal_eval('{' + localize.split('const EN: Dictionary = {',1)[1].split('\n}',1)[0] + '\n}')
 assert len(dictionary)>=95, 'Translations missing'
 for key in ('Willkommen im Zen-Garten', 'Einstellungen', 'Neue Partie','Zurück zum Spiel', 'Direkt gegen Zen-Bot spielen','Ruhige Zen-Garten-Musik','Musikprobe abspielen','SEITE A','Du bist am Zug  ·  ', '3+1 · Drei X auf einer Seite und eines auf der Nachbarseite. Setze das letzte X!'):
     assert key in dictionary and dictionary[key]!=key, f'Missing: {key}'
