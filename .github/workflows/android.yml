@@ -50,6 +50,8 @@ jobs:
         run: python3 tests/test_zen_ascension.py
       - name: Verify premium world artwork and selection menu
         run: python3 tests/test_world_visuals_9_4_2.py
+      - name: Verify one Zen quote per World in DE, EN and PT-PT
+        run: python3 tests/test_zen_world_quotes.py
       - name: Check HD worlds, unlock hints, O visibility and result copy
         run: python3 tests/test_design_clarity_9_4_3.py
       - name: ZenCube 9.5 earned currency and 20 skins (static)
@@ -146,6 +148,9 @@ jobs:
       - name: Language switch and music playback smoke test
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_localized_ui.gd
+      - name: Verify live world header, quote and language switching (headless)
+        run: |
+          timeout 50 "$GODOT" --headless --path . --script tests/test_zen_world_quotes.gd
       - name: Premium result screen and simplified main menu (headless)
         run: |
           timeout 60 "$GODOT" --headless --path . --script tests/test_result_screen.gd

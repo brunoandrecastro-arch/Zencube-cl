@@ -3,6 +3,12 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    # One fixed Zen quote for each Classic World.
+    "„Jeder große Weg beginnt mit einem stillen Schritt.“": "“Every great journey begins with a quiet step.”",
+    "„Der Bambus biegt sich im Wind, doch verliert nie seine Wurzeln.“": "“Bamboo bends in the wind but never loses its roots.”",
+    "„Nicht der Gipfel schenkt dir Klarheit, sondern der Weg dorthin.“": "“Clarity comes not from the summit, but from the path to it.”",
+    "„Erst wenn das Wasser still wird, spiegelt es den Mond.“": "“Only when the water is still can it reflect the moon.”",
+    "„Wer nichts mehr festhalten muss, findet die Freiheit.“": "“Those who no longer need to hold on find freedom.”",
     "Überarbeitete Bot-Stufen: Mittel fairer, Meister anspruchsvoll und schlagbar.": "Rebalanced bots: Medium is fairer, Master is challenging but beatable.",
     "Skins": "Cube Skins",
     "Musik": "Music",
@@ -314,6 +320,12 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    # One fixed Zen quote for each Classic World.
+    "„Jeder große Weg beginnt mit einem stillen Schritt.“": "«Cada grande caminho começa com um passo sereno.»",
+    "„Der Bambus biegt sich im Wind, doch verliert nie seine Wurzeln.“": "«O bambu dobra-se ao vento, mas nunca perde as raízes.»",
+    "„Nicht der Gipfel schenkt dir Klarheit, sondern der Weg dorthin.“": "«Não é o cume que te dá clareza, mas o caminho até lá.»",
+    "„Erst wenn das Wasser still wird, spiegelt es den Mond.“": "«Só quando a água está serena é que reflete a lua.»",
+    "„Wer nichts mehr festhalten muss, findet die Freiheit.“": "«Quem já não precisa de se agarrar a nada encontra a liberdade.»",
     "Überarbeitete Bot-Stufen: Mittel fairer, Meister anspruchsvoll und schlagbar.": "Bots equilibrados: Médio é mais justo, Mestre desafiante mas possível de vencer.",
     "Skins": "Aparências",
     "Musik": "Música",

@@ -41,6 +41,8 @@ var challenge_message: String = ""
 var classic_backup: Dictionary = {}
 var world_background: TextureRect
 var rank_label: Label
+var world_title_label: Label
+var world_quote_label: Label
 var current_world: int = -1
 var last_rank_up: Dictionary = {"rank_up": false, "new_rank": 0}
 var ceremony_done_for_match: bool = false
@@ -57,6 +59,14 @@ var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
 const Asc = preload("res://core/ZenAscension.gd")
+# One original quote per Classic World (DE source; translated in ZenLocalization).
+const WORLD_QUOTES: Array[String] = [
+    "„Jeder große Weg beginnt mit einem stillen Schritt.“",
+    "„Der Bambus biegt sich im Wind, doch verliert nie seine Wurzeln.“",
+    "„Nicht der Gipfel schenkt dir Klarheit, sondern der Weg dorthin.“",
+    "„Erst wenn das Wasser still wird, spiegelt es den Mond.“",
+    "„Wer nichts mehr festhalten muss, findet die Freiheit.“"
+]
 const BotAuto = preload("res://core/ZenBotAutoLevel.gd")
 const ZMode = preload("res://core/ZenAscend.gd")
 const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
@@ -244,9 +254,10 @@ func build_ui() -> void:
     brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     brand.add_theme_constant_override("separation",1)
     title_row.add_child(brand)
-    var title_text = label("ZenCube 3D",brand,27,Color("f9e5b8"))
-    title_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    var sub = label("— Zen-Garten-Edition —",brand,12,Color("e6c99d"))
+    # In-game header foregrounds the CURRENT World; brand remains visible below.
+    world_title_label = label("Zen-Garten",brand,27,Color("f9e5b8"))
+    world_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var sub = label("ZenCube 3D",brand,12,Color("e6c99d"))
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var menu = button("☰",title_row,open_menu,true)
     menu.custom_minimum_size.x = 46
@@ -343,8 +354,10 @@ func build_ui() -> void:
     legend_style.content_margin_bottom = 5
     legend_panel.add_theme_stylebox_override("panel",legend_style)
     column.add_child(legend_panel)
-    var meta = label("6 SEITEN · 54 FELDER · 108 VIERERLINIEN",legend_panel,12,Color("fff3df"))
-    meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    # Technical line counts remain in Rules; the footer belongs to the World.
+    world_quote_label = label(WORLD_QUOTES[0],legend_panel,12,Color("fff3df"))
+    world_quote_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    world_quote_label.custom_minimum_size.y = 27.0
 # Transform actual phone taps into the 960x960 picking coordinates.
 # Drags keep physical pixel deltas so cube rotation feels the same as before.
 func _on_cube_surface_input(event: InputEvent, surface: TextureRect) -> void:
@@ -394,11 +407,20 @@ func apply_world() -> void:
     # A gentle fade keeps transitions calm and avoids flicker on mobile.
     world_background.modulate.a = 0.86
     create_tween().tween_property(world_background, "modulate:a", 1.0, 0.28)
+    if world_title_label != null and world_quote_label != null:
+        world_title_label.modulate.a = 0.55
+        world_quote_label.modulate.a = 0.55
+        create_tween().tween_property(world_title_label, "modulate:a", 1.0, 0.45)
+        create_tween().tween_property(world_quote_label, "modulate:a", 1.0, 0.45)
     sync_music() # Auto-World theme follows the selected World.
 
 func refresh(animate: int = -1) -> void:
     Collection.ensure(data)
     apply_world()
+    # Refresh both whenever the World OR the interface language changes.
+    var active_world: int = clampi(int(data.ascension.get("world",0)),0,4)
+    world_title_label.text = T(Asc.WORLDS[active_world])
+    world_quote_label.text = T(WORLD_QUOTES[active_world])
     rank_label.visible = not challenge_active
     if not challenge_active:
         rank_label.text = T("Zen-Rang") + ": " + T(Asc.RANKS[int(data.ascension.rank)]) + "  ·  " + T(Asc.WORLDS[int(data.ascension.world)])
