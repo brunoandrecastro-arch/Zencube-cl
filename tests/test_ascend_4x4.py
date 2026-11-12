@@ -21,7 +21,7 @@ assert 'name_field.max_length = 24' in controller
 assert '"ascend":{}' in save and 'base.ascend.merge(data.ascend, true)' in save
 assert 'func set_skin(index: int)' in renderer
 assert 'for c in range(ZenAscend.CELLS)' in renderer
-assert 'ZenCollection.reward_bot(data,0)' in ui
+assert 'ZenCollection.reward_bot(data,bot_level)' in ui
 assert (ROOT/'Ascend.tscn').is_file()
 # Prove the intended 96-cell topology independently from the Godot implementation.
 N=[(0,0,1),(0,0,-1),(-1,0,0),(1,0,0),(0,1,0),(0,-1,0)]
