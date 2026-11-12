@@ -45,6 +45,8 @@ keys.update(['Anfänger','Fortgeschritten','Experte','Zen-Meister','Großmeister
 exempt={'','ZenCube 3D','☰','◀','▶','🌐','Deutsch','English','Português',
         'Deutsch  ·  English  ·  Português','%s: %d / %d'}
 keys-=exempt
+keys.discard("Zen-Bot · ")  # Eigenname, kein zu übersetzender Text
+
 assert not (keys-set(EN)), 'Missing EN entries: '+repr(sorted(keys-set(EN)))
 assert not (keys-set(PT)), 'Missing PT entries: '+repr(sorted(keys-set(PT)))
 for key in keys:
