@@ -268,7 +268,7 @@ func draw() -> void:
             for c in line:
                 if not wins.has(c): wins.append(c)
     cube.repaint(cells,wins)
-    rank_label.text = Realms.REALM_NAMES[realm_index()] + " · " + Realms.current_title(data,realm_index())
+    rank_label.text = Realms.realm_name(realm_index(),lang()) + " · " + Realms.title_for_realm(data,realm_index(),lang())
     if result == 3:
         status_label.text = Z("Unentschieden!")
     elif result > 0:
@@ -470,7 +470,7 @@ func show_mode_picker() -> void:
     var dialog: AcceptDialog = parts.dialog
     var body: VBoxContainer = parts.box
     text(body,L("choose_level"),15)
-    text(body,Realms.REALM_NAMES[realm_index()] + " · " + Realms.current_title(data,realm_index()),15,Color("e5ca93"))
+    text(body,Realms.realm_name(realm_index(),lang()) + " · " + Realms.title_for_realm(data,realm_index(),lang()),15,Color("e5ca93"))
     var bot_names: Array[String] = ["Leicht", "Mittel", "Schwer", "Meister", "Großmeister"]
     for i in range(5):
         var diff: int = i
@@ -539,7 +539,7 @@ func show_realms() -> void:
     var ui_parts: Dictionary = _realm_dialog("Zen Ascend · " + L("realms"))
     var body: VBoxContainer = ui_parts.box
     text(body,L("subtitle"),15,Color("567b72"))
-    text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title(data),16,Color("bf9d65"))
+    text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -549,7 +549,7 @@ func show_realms() -> void:
         var column: VBoxContainer = VBoxContainer.new()
         column.add_theme_constant_override("separation",5)
         card.add_child(column)
-        text(column,Realms.REALM_NAMES[i] + ("  🔒" if not allowed else ""),20,Color("f7dfaa"))
+        text(column,Realms.realm_name(i,lang()) + ("  🔒" if not allowed else ""),20,Color("f7dfaa"))
         var thumb: TextureRect = TextureRect.new()
         thumb.texture = load(Realms.REALM_ART[i])
         thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -559,7 +559,7 @@ func show_realms() -> void:
         column.add_child(thumb)
         var amount: int = Realms.count(data,i)
         text(column,L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
-        var rank_name: String = Realms.current_title(data,i)
+        var rank_name: String = Realms.title_for_realm(data,i,lang())
         if rank_name != "—": text(column,rank_name,14,Color("e2ca8c"))
         if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
         if not allowed: text(column,L("locked") + ": " + _realm_unlocked_hint(i),13)
@@ -586,8 +586,8 @@ func select_realm(number: int) -> bool:
 func _challenge_items(list: VBoxContainer, realm: int) -> void:
     for node in list.get_children(): node.queue_free()
     var free: bool = Realms.unlocked(data,realm)
-    text(list,Realms.REALM_NAMES[realm] + (" · 🔒" if not free else ""),21,Color("ecd19d"))
-    text(list,L("progress") + ": %d/8 · " % Realms.count(data,realm) + Realms.current_title(data,realm),14)
+    text(list,Realms.realm_name(realm,lang()) + (" · 🔒" if not free else ""),21,Color("ecd19d"))
+    text(list,L("progress") + ": %d/8 · " % Realms.count(data,realm) + Realms.title_for_realm(data,realm,lang()),14)
     if not free: text(list,L("locked") + ": " + _realm_unlocked_hint(realm),13)
     var done: Dictionary = Realms.state(data).completed
     for task in Realms.TASKS[realm]:
@@ -597,7 +597,7 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
         list.add_child(card)
         var inner: VBoxContainer = VBoxContainer.new()
         card.add_child(inner)
-        text(inner,("✓ " if earned else "○ ")+str(task.title),16,Color("e5d29d"))
+        text(inner,("✓ " if earned else "○ ")+Realms.task_title(task,lang()),16,Color("e5d29d"))
         text(inner,Realms.task_description(task,lang()),13)
         text(inner,(L("earned") if earned else L("reward")) + " · 🍃 %d" % int(task.leaves),12,Color("b9d5a8"))
     text(list,L("bot_only"),13,Color("d5ba85"))
@@ -607,7 +607,7 @@ func show_challenges() -> void:
     var body: VBoxContainer = parts.box
     var tabs: OptionButton = OptionButton.new()
     tabs.custom_minimum_size.y = 54
-    for number in range(4): tabs.add_item(Realms.REALM_NAMES[number],number)
+    for number in range(4): tabs.add_item(Realms.realm_name(number,lang()),number)
     tabs.select(realm_index())
     body.add_child(tabs)
     var tasks_box: VBoxContainer = VBoxContainer.new()
@@ -620,14 +620,14 @@ func show_challenges() -> void:
 func show_realm_titles() -> void:
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + L("titles"))
     var body: VBoxContainer = parts.box
-    text(body,L("total_titles") + ": " + Realms.overall_title(data),20,Color("eccd8d"))
+    text(body,L("total_titles") + ": " + Realms.overall_title_local(data,lang()),20,Color("eccd8d"))
     text(body,L("total") + ": %d/32" % Realms.total_count(data),15)
     for realm in range(4):
-        text(body,Realms.REALM_NAMES[realm] + " · %d/8" % Realms.count(data,realm),18,Color("dfc99a"))
+        text(body,Realms.realm_name(realm,lang()) + " · %d/8" % Realms.count(data,realm),18,Color("dfc99a"))
         var finished: int = Realms.count(data,realm)
         for i in range(5):
             var earned: bool = finished >= Realms.TITLE_MILESTONES[i]
-            text(body,("✓ " if earned else "🔒 ") + str(Realms.REALM_TITLES[realm][i]) + " · %d/8" % int(Realms.TITLE_MILESTONES[i]),13,Color("c9dbb8" if earned else "998d7f"))
+            text(body,("✓ " if earned else "🔒 ") + Realms.localized_name(str(Realms.REALM_TITLES[realm][i]),lang()) + " · %d/8" % int(Realms.TITLE_MILESTONES[i]),13,Color("c9dbb8" if earned else "998d7f"))
     _open_realm_dialog(parts)
 
 func show_realm_rewards(awards: Dictionary) -> void:
@@ -638,8 +638,8 @@ func show_realm_rewards(awards: Dictionary) -> void:
     text(body,"🍃 +%d " % int(awards.leaves) + L("leaves"),21,Color("dce7ae"))
     for task_id in awards.get("new_tasks",[]):
         for task in Realms.TASKS[clampi(match_realm,0,3)]:
-            if str(task.id) == str(task_id): text(body,"✓ "+str(task.title),15)
+            if str(task.id) == str(task_id): text(body,"✓ "+Realms.task_title(task,lang()),15)
     if bool(awards.get("realm_completed",false)):
         text(body,L("realm_complete") + "  🍃 +250",18,Color("efcc86"))
-    text(body,L("rank") + ": " + Realms.current_title(data,match_realm),15)
+    text(body,L("rank") + ": " + Realms.title_for_realm(data,match_realm,lang()),15)
     _open_realm_dialog(parts)

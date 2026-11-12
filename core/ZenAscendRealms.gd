@@ -76,9 +76,9 @@ const COPY: Dictionary = {
     "leaves": ["Zen Leaves", "Folhas Zen"],
     "total": ["Total progress", "Progresso total"],
     "return": ["Back", "Voltar"],
-    "ember_unlock": ["5 Shadow wins OR 4 Shadow challenges", "5 vitórias Shadow OU 4 desafios Shadow"],
-    "celestial_unlock": ["7 Ember wins OR 5 Ember challenges", "7 vitórias Ember OU 5 desafios Ember"],
-    "satori_unlock": ["10 wins in Celestial Realm AND 12 realm challenges overall", "10 vitórias no Celestial Realm E 12 desafios de reinos no total"],
+    "ember_unlock": ["5 Shadow wins OR 4 Shadow challenges", "5 vitórias no Reino das Sombras OU 4 desafios desse reino"],
+    "celestial_unlock": ["7 Ember wins OR 5 Ember challenges", "7 vitórias no Templo das Chamas OU 5 desafios desse templo"],
+    "satori_unlock": ["10 wins in Celestial Realm AND 12 realm challenges overall", "10 vitórias no Reino Celestial E 12 desafios dos reinos no total"],
     "play_finish": ["Finish the current match before switching realms.", "Termina a partida atual antes de mudares de reino."],
     "bot_only": ["Realm challenges only count Zen-Bot matches.", "Os desafios dos reinos contam apenas partidas contra o Zen-Bot."],
     "music_later": ["Realm music is coming soon.", "A música dos reinos chega em breve."],
@@ -94,12 +94,12 @@ const COPY: Dictionary = {
     "continue": ["Continue", "Continuar"]
 }
 const DE_COPY: Dictionary = {
-    "realm":"Realm", "realms":"Realms", "challenges":"Challenges", "titles":"Titel", "locked":"Gesperrt",
+    "realm":"Reich", "realms":"Reiche", "challenges":"Herausforderungen", "titles":"Titel", "locked":"Gesperrt",
     "unlocked":"Freigeschaltet", "select":"Realm wählen", "selected":"Aktives Realm", "earned":"Abgeschlossen",
     "progress":"Fortschritt", "leaves":"Zen-Blätter", "total":"Gesamtfortschritt", "return":"Zurück",
-    "ember_unlock":"5 Siege in Shadow Realm ODER 4 Shadow-Challenges",
-    "celestial_unlock":"7 Siege in Ember Temple ODER 5 Ember-Challenges",
-    "satori_unlock":"10 Siege in Celestial Realm UND 12 Realm-Challenges insgesamt",
+    "ember_unlock":"5 Siege im Schattenreich ODER 4 Schattenreich-Herausforderungen",
+    "celestial_unlock":"7 Siege im Feuertempel ODER 5 Feuertempel-Herausforderungen",
+    "satori_unlock":"10 Siege im Himmelsreich UND 12 Reich-Herausforderungen insgesamt",
     "play_finish":"Beende zuerst die aktuelle Partie, bevor du das Realm wechselst.",
     "bot_only":"Realm-Challenges zählen nur gegen den Zen-Bot.",
     "music_later":"Eigene Realm-Musik folgt später.", "reward":"Belohnung", "total_titles":"Gesamttitel", "rank":"Realm-Titel",
@@ -109,6 +109,88 @@ const DE_COPY: Dictionary = {
     "matches":"Realm-Siege", "continue":"Weiter"
 }
 
+const ZEN_DISPLAY_NAMES: Dictionary = {
+    "Shadow Realm": ["Schattenreich", "Reino das Sombras"],
+    "Ember Temple": ["Feuertempel", "Templo das Chamas"],
+    "Celestial Realm": ["Himmelsreich", "Reino Celestial"],
+    "Satori Realm": ["Satori-Reich", "Reino de Satori"],
+    "Shadow Walker": ["Schattenwanderer", "Caminhante das Sombras"],
+    "Keeper of Silence": ["Hüter der Stille", "Guardião do Silêncio"],
+    "Moon Disciple": ["Schüler des Mondes", "Discípulo da Lua"],
+    "Veil Breaker": ["Schleierbrecher", "Quebra-Véus"],
+    "Master of Shadows": ["Meister der Schatten", "Mestre das Sombras"],
+    "Ember Initiate": ["Feuer-Novize", "Iniciado das Chamas"],
+    "Flame Disciple": ["Schüler der Flammen", "Discípulo das Chamas"],
+    "Temple Challenger": ["Tempel-Herausforderer", "Desafiante do Templo"],
+    "Fire-Bound Strategist": ["Stratege des Feuers", "Estratega do Fogo"],
+    "Ember Master": ["Meister der Glut", "Mestre das Brasas"],
+    "Sky Seeker": ["Himmelssucher", "Explorador dos Céus"],
+    "Cloud Disciple": ["Schüler der Wolken", "Discípulo das Nuvens"],
+    "Light Weaver": ["Lichtweber", "Tecelão da Luz"],
+    "Celestial Adept": ["Himmelsadept", "Adepto Celestial"],
+    "Celestial Master": ["Meister des Himmels", "Mestre Celestial"],
+    "Mind Awakened": ["Erwachter Geist", "Mente Desperta"],
+    "Stillness Walker": ["Wanderer der Stille", "Caminhante da Serenidade"],
+    "Satori Adept": ["Satori-Adept", "Adepto de Satori"],
+    "Keeper of Awareness": ["Hüter der Achtsamkeit", "Guardião da Consciência"],
+    "Fully Aware": ["Vollkommene Klarheit", "Consciência Plena"],
+    "Ascend Initiate": ["Aufstiegs-Novize", "Iniciado da Ascensão"],
+    "Realm Wanderer": ["Wanderer der Reiche", "Viajante dos Reinos"],
+    "Temple Conqueror": ["Tempelbezwinger", "Conquistador do Templo"],
+    "Celestial Strategist": ["Himmelsstratege", "Estratega Celestial"],
+    "Satori Master": ["Satori-Meister", "Mestre de Satori"],
+    "First Step into Shadow": ["Erster Schritt im Schatten", "Primeiro Passo nas Sombras"],
+    "Quiet Focus": ["Stille Konzentration", "Concentração Serena"],
+    "Across the Edge": ["Über die Kante", "Para Lá da Aresta"],
+    "No Hesitation": ["Ohne Zögern", "Sem Hesitar"],
+    "Threefold Silence": ["Dreifache Stille", "Silêncio Triplo"],
+    "Shadow Streak": ["Schatten-Siegesserie", "Série de Vitórias das Sombras"],
+    "Veil Tactician": ["Taktiker des Schleiers", "Tático do Véu"],
+    "Master of the Dark Path": ["Meister des dunklen Pfades", "Mestre do Caminho Sombrio"],
+    "Trial by Flame": ["Feuerprobe", "Prova de Fogo"],
+    "Heat of Focus": ["Brennender Fokus", "Foco Ardente"],
+    "Burning Momentum": ["Brennende Siegesserie", "Ímpeto Ardente"],
+    "Four Fires": ["Vier Flammen", "Quatro Chamas"],
+    "Unbroken Will": ["Ungebrochener Wille", "Vontade Inabalável"],
+    "Temple Pressure": ["Druck im Tempel", "Pressão no Templo"],
+    "Edge of Fire": ["Feuerkante", "Aresta de Fogo"],
+    "Ember Mastery": ["Beherrschung der Glut", "Domínio das Brasas"],
+    "Open Sky": ["Offener Himmel", "Céu Aberto"],
+    "Breath of Clarity": ["Atem der Klarheit", "Sopro de Clareza"],
+    "Heaven’s Balance": ["Himmlisches Gleichgewicht", "Equilíbrio Celestial"],
+    "Winged Mind": ["Beflügelter Geist", "Mente Alada"],
+    "Light Through Form": ["Licht durch Form", "Luz na Forma"],
+    "Still Above the Clouds": ["Stille über den Wolken", "Serenidade sobre as Nuvens"],
+    "Celestial Discipline": ["Himmlische Disziplin", "Disciplina Celestial"],
+    "Crown of Light": ["Krone des Lichts", "Coroa de Luz"],
+    "Enter Satori": ["Eintritt ins Satori", "Entrada em Satori"],
+    "Perfect Presence": ["Vollkommene Präsenz", "Presença Plena"],
+    "Unclouded Mind": ["Klarer Geist", "Mente Límpida"],
+    "Beyond Thought": ["Jenseits der Gedanken", "Além do Pensamento"],
+    "Line of Insight": ["Linie der Erkenntnis", "Linha de Perceção"],
+    "Flow State": ["Im Fluss", "Estado de Fluxo"],
+    "No Distraction": ["Ohne Ablenkung", "Sem Distrações"],
+}
+
+static func localized_name(source: String, language: String) -> String:
+    if language != "de" and language != "pt": return source
+    var item: Variant = ZEN_DISPLAY_NAMES.get(source, [])
+    if item is Array and item.size() == 2:
+        return str(item[0] if language == "de" else item[1])
+    return source
+
+static func realm_name(idx: int, language: String) -> String:
+    return localized_name(REALM_NAMES[clampi(idx, 0, 3)], language)
+
+static func task_title(task: Dictionary, language: String) -> String:
+    return localized_name(str(task.title), language)
+
+static func title_for_realm(data: Dictionary, idx: int, language: String) -> String:
+    return localized_name(current_title(data, idx), language)
+
+static func overall_title_local(data: Dictionary, language: String) -> String:
+    return localized_name(overall_title(data), language)
+
 static func t(key: String, language: String) -> String:
     if language != "en" and language != "pt": return str(DE_COPY.get(key,key))
     var value: Variant = COPY.get(key, [])
@@ -117,7 +199,11 @@ static func t(key: String, language: String) -> String:
     return key
 
 static func task_description(task: Dictionary, language: String) -> String:
-    return str(task.get(language if language in ["en","pt"] else "de", ""))
+    var description: String = str(task.get(language if language in ["en","pt"] else "de", ""))
+    if language in ["de", "pt"]:
+        for index in range(REALM_NAMES.size()):
+            description = description.replace(REALM_NAMES[index], realm_name(index, language))
+    return description
 
 static func blank_stats() -> Dictionary:
     return {"played":0,"wins":0,"draws":0,"losses":0,"streak":0,"best_streak":0,
@@ -197,7 +283,7 @@ static func missing_reason(data: Dictionary, realm: int, language: String) -> St
     if realm == 0: return ""
     if realm == 1:
         if language == "en": return "5 Shadow wins OR 4 Shadow challenges"
-        if language == "pt": return "5 vitórias Shadow OU 4 desafios Shadow"
+        if language == "pt": return "5 vitórias no Reino das Sombras OU 4 desafios desse reino"
         return str(DE_COPY.ember_unlock)
     if realm == 2:
         return t("celestial_unlock",language)

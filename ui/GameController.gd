@@ -50,6 +50,7 @@ var ceremony_active: bool = false
 var last_leaf_reward: int = 0
 var completed_bot_level: int = -1 # Difficulty of the finished match; rank-up changes NEXT match.
 const Collection = preload("res://core/ZenCollection.gd")
+const Backdrops = preload("res://core/ZenBackdrops.gd")
 
 var challenge_row: HBoxContainer
 var classic_views: HBoxContainer
@@ -400,9 +401,11 @@ func player_name(owner: int) -> String:
 func apply_world() -> void:
     if world_background == null or data == null: return
     var chosen: int = clampi(int(data.ascension.get("world",0)), 0, 4)
-    if chosen == current_world: return
-    current_world = chosen
-    world_background.texture = Asc.WORLD_TEXTURES[chosen]
+    var backdrop: int = Backdrops.selected(data)
+    var background_key: int = chosen if backdrop == -1 else 100 + backdrop
+    if background_key == current_world: return
+    current_world = background_key
+    world_background.texture = Asc.WORLD_TEXTURES[chosen] if backdrop == -1 else load(str(Backdrops.ITEMS[backdrop].path))
     # The world changes without touching the real 3D gameplay viewport.
     # A gentle fade keeps transitions calm and avoids flicker on mobile.
     world_background.modulate.a = 0.86
@@ -633,7 +636,7 @@ func _process(_delta: float) -> void:
 func _exit_tree() -> void:
     if worker != null: worker.wait_to_finish()
 var shop_page: int = 0
-var shop_tab: int = 0 # 0 = Skins, 1 = Musik
+var shop_tab: int = 0 # 0 = Skins, 1 = Musik, 2 = Kulissen
 var music_preview_player: AudioStreamPlayer
 var music_preview_generation: int = 0
 const NEW_MUSIC_STREAMS = [
@@ -686,7 +689,7 @@ func open_menu() -> void:
     var heading: Label = box.get_child(0) as Label
     heading.add_theme_color_override("font_color", Color("fce5b7"))
     heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    var subtitle: Label = label("Vier in einer Reihe. Über die Kante.", box, 17, Color("e7d0a7"))
+    var subtitle: Label = label("Denke über die Kanten hinaus.", box, 17, Color("e7d0a7"))
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Spielen", box, open_play_menu, true)
     premium_button("Zen-Rätsel · 100 Aufgaben", box, begin_challenges)
@@ -707,9 +710,17 @@ func open_store() -> void:
     label(T("Deine Zen-Blätter: 🍃 %d") % int(data.economy.leaves), box, 20, Color("50663e"))
     var tab_bar: HBoxContainer = row(box)
     var skins_tab: Button = button(T("Skins"), tab_bar, func(): change_shop_tab(0), true, shop_tab == 0)
-    var music_tab: Button = button(T("Musik"), tab_bar, func(): change_shop_tab(1), true, shop_tab == 1)
+    var music_tab: Button = button("Musik", tab_bar, func(): change_shop_tab(1), true, shop_tab == 1)
+    var backdrops_tab: Button = button("Kulissen", tab_bar, func(): change_shop_tab(2), true, shop_tab == 2)
+    for tab in [skins_tab, music_tab, backdrops_tab]:
+        tab.add_theme_font_size_override("font_size", 12)
     skins_tab.disabled = shop_tab == 0
     music_tab.disabled = shop_tab == 1
+    backdrops_tab.disabled = shop_tab == 2
+    if shop_tab == 2:
+        store_background_section(box)
+        button("Zum Hauptmenü", box, open_menu, true)
+        return
     if shop_tab == 1:
         label("Höre neue Musik an und schalte sie dauerhaft mit Zen-Blättern frei.", box, 13)
         store_music_section(box)
@@ -776,7 +787,56 @@ func open_store() -> void:
     button("Zum Hauptmenü", box, open_menu, true)
 
 func change_shop_tab(index: int) -> void:
-    shop_tab = clampi(index, 0, 1)
+    shop_tab = clampi(index, 0, 2)
+    open_store()
+
+func store_background_section(parent: VBoxContainer) -> void:
+    Backdrops.ensure(data)
+    label("Wähle einen Hintergrund für deine Zen-Welt. Die aktuelle Welt und der Bot bleiben unverändert.", parent, 13)
+    var chosen: int = Backdrops.selected(data)
+    var world_button: Button = button("✓ Welt-Hintergrund aktiv" if chosen == -1 else "Welt-Hintergrund verwenden", parent, use_world_background, true)
+    world_button.disabled = chosen == -1
+    for i in range(Backdrops.ITEMS.size()):
+        var idx: int = i
+        var item: Dictionary = Backdrops.ITEMS[i]
+        var card: PanelContainer = PanelContainer.new()
+        card.mouse_filter = Control.MOUSE_FILTER_PASS
+        card.add_theme_stylebox_override("panel",theme_style(Color("fff0d9",0.96),12))
+        parent.add_child(card)
+        var inner: VBoxContainer = VBoxContainer.new()
+        inner.mouse_filter = Control.MOUSE_FILTER_PASS
+        card.add_child(inner)
+        label(str(item.name),inner,17,Color("4b3428"))
+        var art: TextureRect = TextureRect.new()
+        art.texture = load(str(item.path))
+        art.custom_minimum_size = Vector2(0,152)
+        art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        inner.add_child(art)
+        var owned: bool = Backdrops.is_owned(data,idx)
+        var selected: bool = chosen == idx
+        var caption: String = "✓ Aktiv" if selected else "Hintergrund verwenden" if owned else "Hintergrund freischalten für 🍃 %d"
+        var action_text: String = T(caption) % int(item.price) if not owned else T(caption)
+        var buy_button: Button = button(action_text,inner,func(): store_select_background(idx),true,selected)
+        buy_button.mouse_filter = Control.MOUSE_FILTER_PASS
+        buy_button.disabled = selected or (not owned and int(data.economy.leaves) < int(item.price))
+
+func use_world_background() -> void:
+    if not Backdrops.equip(data,-1): return
+    refresh()
+    persist()
+    open_store()
+
+func store_select_background(idx: int) -> void:
+    Backdrops.ensure(data)
+    if not Backdrops.is_owned(data,idx) and not Backdrops.purchase(data,idx):
+        notify_user("Nicht genug Zen-Blätter.")
+        return
+    if not Backdrops.equip(data,idx): return
+    refresh()
+    persist()
     open_store()
 
 func store_music_section(parent: VBoxContainer) -> void:
@@ -982,8 +1042,8 @@ func open_worlds() -> void:
         info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         info.add_theme_constant_override("separation", 1)
         card_row.add_child(info)
-        label(Asc.WORLD_SUBTITLES[i], info, 12, Color("6f5940"))
-        var b: Button = button(Asc.WORLDS[i], info, func(): select_world(number), true, i == int(data.ascension.world))
+        label(T(Asc.WORLD_SUBTITLES[i]), info, 12, Color("6f5940"))
+        var b: Button = button(T(Asc.WORLDS[i]), info, func(): select_world(number), true, i == int(data.ascension.world))
         b.disabled = not Asc.world_unlocked(data, i)
         if b.disabled:
             b.text += "  🔒"
@@ -1095,7 +1155,7 @@ func show_result_screen() -> void:
     if versus_bot and last_leaf_reward > 0:
         var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    var detail_label: Label = label("Vier in einer Reihe. Über die Kante." if board.winner != 3 else "Noch eine Runde?", box, 15, Color("e7d6b9"))
+    var detail_label: Label = label("Entdecke neue Wege." if board.winner != 3 else "Noch eine Runde?", box, 15, Color("e7d6b9"))
     detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Noch eine Partie", box, play_again_after_result, true)
     premium_button("Hauptmenü", box, open_menu)
