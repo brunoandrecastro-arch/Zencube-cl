@@ -22,7 +22,9 @@ assert 'data.settings["music_mode"] = "manual"' in main
 assert 'var chosen: bool = MusicPolicy.mode(data) == "manual"' in main
 assert 'var music_fade_player: AudioStreamPlayer' in main
 assert 'music_transition.tween_property(music_fade_player, "volume_db", -54.0, 1.8)' in main
-assert 'start_world_music()' in ascend and 'WorldMusic.stream_for(selected)' in ascend
+assert 'start_world_music()' in ascend
+assert 'WorldMusic.stream_for(selected)' in ascend and 'RealmMusic.stream_for(realm_index())' in ascend
+assert 'sync_realm_music()' in ascend and 'MusicPolicy.mode(data) == "base"' in ascend
 assert 'if not Mode.unlocked(data):' in ascend
 assert 'if not Collection.music_unlocked(data, index):' in main
 assert 'return make_zen_music_stream(track)' in main

@@ -5,6 +5,8 @@ const BotAuto = preload("res://core/ZenBotAutoLevel.gd")
 const Locale = preload("res://core/ZenLocalization.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const WorldMusic = preload("res://core/ZenWorldMusic.gd")
+const RealmMusic = preload("res://core/ZenRealmMusic.gd")
+const FullyAware = preload("res://ui/ZenFullyAwareCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
@@ -27,6 +29,8 @@ var instructions: Label
 var layer: Control
 var menu_dialog: ConfirmationDialog
 var world_music: AudioStreamPlayer
+var realm_music_fade: AudioStreamPlayer
+var realm_music_tween: Tween
 var realm_backdrop: TextureRect
 var match_realm: int = 0
 var match_blocked_threat: bool = false
@@ -81,21 +85,62 @@ func _ready() -> void:
     else:
         call_deferred("show_mode_picker")
 
-func start_world_music() -> void:
-    if not bool(data.settings.get("music", false)):
-        return
+# Existing shop IDs 0..13 always remain unchanged. In Base mode 4x4 uses
+# its own realm soundtrack; a manually owned track overrides it everywhere.
+func desired_realm_stream() -> AudioStream:
+    if MusicPolicy.mode(data) == "base":
+        return RealmMusic.stream_for(realm_index())
     var selected: int = MusicPolicy.selected_track(data)
-    var song: AudioStream = WorldMusic.stream_for(selected)
-    if song == null:
-        push_warning("Zen Ascend: missing soundtrack for track " + str(selected))
+    return WorldMusic.stream_for(selected)
+
+func start_world_music() -> void:
+    sync_realm_music(true)
+
+func sync_realm_music(initial: bool = false) -> void:
+    if not bool(data.settings.get("music", false)):
+        if realm_music_tween != null and realm_music_tween.is_running():
+            realm_music_tween.kill()
+        if is_instance_valid(world_music): world_music.stop()
+        if is_instance_valid(realm_music_fade): realm_music_fade.stop()
         return
-    world_music = AudioStreamPlayer.new()
-    world_music.name = "ZenAscendWorldMusic"
-    world_music.volume_db = -54.0
-    world_music.stream = song
-    add_child(world_music)
-    world_music.play()
-    create_tween().tween_property(world_music, "volume_db", -2.0, 1.2)
+    var song: AudioStream = desired_realm_stream()
+    if song == null:
+        push_warning("Zen Ascend: realm soundtrack missing")
+        return
+    if world_music != null and world_music.stream == song:
+        if not world_music.playing: world_music.play()
+        return
+    if realm_music_tween != null and realm_music_tween.is_running():
+        realm_music_tween.kill()
+    if is_instance_valid(realm_music_fade):
+        realm_music_fade.stop()
+        realm_music_fade.queue_free()
+        realm_music_fade = null
+    var incoming: AudioStreamPlayer = AudioStreamPlayer.new()
+    incoming.name = "ZenAscendRealmMusic"
+    incoming.stream = song
+    incoming.volume_db = -48.0
+    add_child(incoming)
+    incoming.play()
+    if world_music != null and world_music.playing and not initial:
+        var outgoing: AudioStreamPlayer = world_music
+        world_music = incoming
+        realm_music_fade = outgoing
+        realm_music_tween = create_tween().set_parallel(true)
+        realm_music_tween.tween_property(incoming, "volume_db", -2.0, 1.8)
+        realm_music_tween.tween_property(outgoing, "volume_db", -48.0, 1.8)
+        realm_music_tween.finished.connect(func():
+            if is_instance_valid(outgoing):
+                outgoing.stop()
+                outgoing.queue_free()
+            if realm_music_fade == outgoing: realm_music_fade = null
+        )
+    else:
+        if is_instance_valid(world_music):
+            world_music.stop()
+            world_music.queue_free()
+        world_music = incoming
+        incoming.volume_db = -2.0
 
 func style(color: Color, radius: int = 17) -> StyleBoxFlat:
     var box: StyleBoxFlat = StyleBoxFlat.new()
@@ -370,15 +415,37 @@ func finish() -> void:
                 data.ascend.current_streak = 0
         else:
             data.ascend.current_streak = 0
+    var celebrate_fully_aware: bool = false
     if against_bot:
         var outcome: int = 0
         if result != 3: outcome = 1 if int(owners[result-1]) == 0 else -1
         var lines_won: Array = Mode.winning_lines(cells,lines,result) if outcome == 1 else []
         last_realm_awards = Realms.record_bot_match(data,match_realm,outcome,bot_level,move_count(),lines_won,match_blocked_threat)
-        if int(last_realm_awards.get("leaves",0)) > 0:
-            call_deferred("show_realm_rewards",last_realm_awards.duplicate(true))
+        # The achievement can only be awarded once. Persist the ceremony flag
+        # before it plays so restarting the app never triggers it repeatedly.
+        var realm_state: Dictionary = Realms.state(data)
+        # The challenge named 'Fully Aware' may complete at 7/8; the actual
+        # highest TITLE is earned only at 8/8 challenges and realm completion.
+        if match_realm == 3 and bool(last_realm_awards.get("realm_completed", false)) and Realms.current_title(data,3) == "Fully Aware" and not bool(realm_state.get("fully_aware_ceremony_seen", false)):
+            realm_state["fully_aware_ceremony_seen"] = true
+            celebrate_fully_aware = true
     if not against_bot: data.ascend.next_start = 1-int(data.ascend.next_start)
     SaveManager.save_data(data)
+    if celebrate_fully_aware:
+        call_deferred("show_fully_aware",last_realm_awards.duplicate(true))
+    elif int(last_realm_awards.get("leaves",0)) > 0:
+        call_deferred("show_realm_rewards",last_realm_awards.duplicate(true))
+
+func show_fully_aware(awards: Dictionary) -> void:
+    if not is_inside_tree(): return
+    var celebration: ZenFullyAwareCeremony = FullyAware.new()
+    add_child(celebration)
+    celebration.finished.connect(func():
+        if is_inside_tree():
+            if int(awards.get("leaves",0)) > 0:
+                call_deferred("show_realm_rewards",awards)
+    )
+    celebration.present(lang(),bool(data.settings.get("sound",true)),[world_music])
 
 func _dialog(title: String, message: String) -> AcceptDialog:
     var dialog: AcceptDialog = AcceptDialog.new()
@@ -511,6 +578,7 @@ func select_realm(number: int) -> bool:
     match_realm = number
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[number])
+    sync_realm_music()
     SaveManager.save_data(data)
     draw()
     return true

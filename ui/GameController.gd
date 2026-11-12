@@ -979,6 +979,27 @@ func select_world(number: int) -> void:
     close_modal()
     refresh()
 
+# The newly selected world track may still be at -54 dB at the moment of promotion.
+# Freeze its crossfade BEFORE the gong; don't capture an unfinished fade level.
+func prepare_rank_music() -> void:
+    if music_transition != null and music_transition.is_running():
+        music_transition.kill()
+    if music_fade_player != null and music_fade_player.playing:
+        music_fade_player.stop()
+
+func restore_rank_music() -> void:
+    if not bool(data.settings.get("music", false)):
+        return
+    if music_transition != null and music_transition.is_running():
+        music_transition.kill()
+    if music_fade_player != null and music_fade_player.playing:
+        music_fade_player.stop()
+    if music_player != null:
+        music_player.stream_paused = false
+        music_player.volume_db = -2.0
+        if not music_player.playing:
+            sync_music()
+
 func show_result_screen() -> void:
     # Called deferred after a real Classic match finishes. A new match cancels it.
     if challenge_active or tutorial != null or board.winner == 0 or popup != null:
@@ -995,8 +1016,10 @@ func show_result_screen() -> void:
         celebration.finished.connect(func():
             ceremony_active = false
             if is_inside_tree():
+                restore_rank_music()
                 call_deferred("show_result_screen")
         )
+        prepare_rank_music()
         celebration.present(int(data.ascension.rank),language_code(),bool(data.settings.sound),[music_player,music_fade_player])
         return
     var human_win: bool = false

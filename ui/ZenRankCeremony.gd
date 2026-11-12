@@ -191,7 +191,11 @@ func _build(rank: int, language: String) -> void:
 func _duck_music(music_sources: Array) -> void:
     for source in music_sources:
         if source is AudioStreamPlayer and is_instance_valid(source) and source.playing:
-            _music_levels.append({"player": source, "volume": source.volume_db})
+            # First playing source is the active new World song. Its instantaneous
+            # volume might be -54 dB due to the crossfade at rank promotion.
+            # Return to the intended normal playing volume, not that temporary value.
+            var target_db: float = -2.0 if _music_levels.is_empty() else source.volume_db
+            _music_levels.append({"player": source, "volume": target_db})
             source.create_tween().tween_property(source, "volume_db", minf(-16.0, source.volume_db), 0.6)
 
 func skip() -> void:
