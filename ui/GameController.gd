@@ -46,6 +46,7 @@ var last_rank_up: Dictionary = {"rank_up": false, "new_rank": 0}
 var ceremony_done_for_match: bool = false
 var ceremony_active: bool = false
 var last_leaf_reward: int = 0
+var completed_bot_level: int = -1 # Difficulty of the finished match; rank-up changes NEXT match.
 const Collection = preload("res://core/ZenCollection.gd")
 
 var challenge_row: HBoxContainer
@@ -56,6 +57,7 @@ var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
 const Asc = preload("res://core/ZenAscension.gd")
+const BotAuto = preload("res://core/ZenBotAutoLevel.gd")
 const ZMode = preload("res://core/ZenAscend.gd")
 const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
@@ -369,7 +371,12 @@ func _on_cube_surface_input(event: InputEvent, surface: TextureRect) -> void:
 
 func mode_name() -> String:
     var mode = int(data.settings.mode)
-    if mode == 1: return T("Du gegen Zen-Bot · ")+T(Asc.LEVELS[clampi(int(data.settings.level),0,4)])
+    if mode == 1:
+        # Don't relabel a just-finished match as the newly unlocked difficulty.
+        var displayed_level: int = clampi(int(data.settings.level),0,4)
+        if board != null and board.winner != 0 and completed_bot_level >= 0:
+            displayed_level = completed_bot_level
+        return T("Du gegen Zen-Bot · ")+T(Asc.LEVELS[displayed_level])
     if mode == 2: return T("Lernmodus")
     return T("Zwei Spieler lokal")
 func player_name(owner: int) -> String:
@@ -503,6 +510,7 @@ func record_result() -> void:
     if board.result_recorded: return
     last_rank_up = {"rank_up": false, "new_rank": int(data.ascension.rank)}
     last_leaf_reward = 0
+    completed_bot_level = clampi(int(data.settings.level),0,4) if int(data.settings.mode) == 1 else -1
     board.result_recorded = true
     ceremony_done_for_match = false
     data.stats.played += 1
@@ -525,12 +533,16 @@ func record_result() -> void:
             data.stats["ai_wins" if owner == 0 else "ai_losses"][difficulty] += 1
             if owner == 0:
                 last_leaf_reward = Collection.reward_bot(data, difficulty)
+    # Change the next default opponent only if an actual new Zen rank was earned.
+    # Older manually chosen levels remain selectable at any time.
+    BotAuto.apply_after_rank_up(data,last_rank_up)
 func resolve_swap(accept: bool) -> void:
     if rules.swap(board,accept):
         generation += 1
         refresh()
 func new_game() -> void:
     ceremony_done_for_match = false
+    completed_bot_level = -1
     if challenge_active:
         leave_challenges()
     generation += 1
@@ -991,7 +1003,7 @@ func show_result_screen() -> void:
     if board.winner in [1, 2]:
         human_win = int(board.owners[board.winner-1]) == 0
     var versus_bot: bool = int(data.settings.mode) == 1
-    var level: int = int(data.settings.level)
+    var level: int = completed_bot_level if completed_bot_level >= 0 else int(data.settings.level)
     var special: bool = versus_bot and human_win and (bool(last_rank_up.get("rank_up",false)) or level == 4)
     var headline: String = "Unentschieden"
     if board.winner != 3:
@@ -1003,7 +1015,8 @@ func show_result_screen() -> void:
             headline = "Verloren"
     var box = modal(headline)
     # Let the actual 3D winning line stay visible above the results panel.
-    popup.anchor_top = 0.55
+    # ~20% less height for normal results; preserve extra text room on rank-up.
+    popup.anchor_top = 0.58 if special else 0.63
     popup.anchor_bottom = 0.96
     popup.offset_top = 0
     popup.add_theme_stylebox_override("panel", theme_style(Color("342820", 0.985), 25))

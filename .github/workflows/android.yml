@@ -110,6 +110,11 @@ jobs:
       - name: Zen rank-up audiovisual ceremony (Godot headless)
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_zen_ceremony.gd
+      - name: Check HD Realm backgrounds and bot rank defaults (static)
+        run: python3 tests/test_zen_bot_auto.py
+      - name: Test Zen bot rank defaults (headless)
+        run: |
+          timeout 40 "$GODOT" --headless --path . --script tests/test_zen_bot_auto.gd
       - name: Check Zen Ascend Realms assets, progression and interface (static)
         run: python3 tests/test_zen_ascend_realms.py
       - name: Verify 32 Zen Ascend Realm challenges in Godot (headless)

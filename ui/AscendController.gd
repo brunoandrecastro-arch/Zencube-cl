@@ -1,6 +1,7 @@
 extends Node3D
 # Standalone 4x4 scene so no Classic board, AI or rules are replaced.
 const Mode = preload("res://core/ZenAscend.gd")
+const BotAuto = preload("res://core/ZenBotAutoLevel.gd")
 const Locale = preload("res://core/ZenLocalization.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const WorldMusic = preload("res://core/ZenWorldMusic.gd")
@@ -297,9 +298,11 @@ func cube_input(event: InputEvent) -> void:
         if event.position.distance_to(touch_down) > 12.0: dragged = true
         if dragged: cube.rotate_cube(event.relative)
 
-func start_game(bot: bool, level: int = 1) -> void:
+func start_game(bot: bool, level: int = -1) -> void:
     against_bot = bot
-    bot_level = clampi(level,0,4)
+    # -1 means the difficulty unlocked by the current Classic Zen rank.
+    # Explicit selections remain fully respected.
+    bot_level = clampi(level if level >= 0 else BotAuto.level_for_rank(int(data.ascension.rank)),0,4)
     match_realm = realm_index()
     match_blocked_threat = false
     last_realm_awards = {}
@@ -405,7 +408,7 @@ func show_mode_picker() -> void:
     for i in range(5):
         var diff: int = i
         var label_name: String = Locale.translate(bot_names[i],lang())
-        action(body,Z("Gegen Zen-Bot") + " · " + label_name,_start_realm_match.bind(true,diff,dialog),i==1)
+        action(body,Z("Gegen Zen-Bot") + " · " + label_name,_start_realm_match.bind(true,diff,dialog),i==BotAuto.level_for_rank(int(data.ascension.rank)))
     action(body,Z("Zu zweit spielen"),_start_realm_match.bind(false,0,dialog))
     _open_realm_dialog(parts)
 
