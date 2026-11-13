@@ -7,6 +7,8 @@ const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const WorldMusic = preload("res://core/ZenWorldMusic.gd")
 const RealmMusic = preload("res://core/ZenRealmMusic.gd")
 const FullyAware = preload("res://ui/ZenFullyAwareCeremony.gd")
+const Achievements = preload("res://core/ZenAscendAchievements.gd")
+const UnlockCeremony = preload("res://ui/ZenUnlockCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
@@ -37,6 +39,8 @@ var match_blocked_threat: bool = false
 var bot_level: int = 1
 var last_realm_awards: Dictionary = {}
 var last_match_leaf_reward: int = 0
+var queued_unlocks: Array = []
+var pending_fully_aware: bool = false
 var move_sound: AudioStreamPlayer
 var win_sound: AudioStreamPlayer
 var active_realm_dialog: Control
@@ -58,6 +62,7 @@ func _ready() -> void:
     ZenCollection.ensure(data)
     Mode.ensure(data)
     Realms.ensure(data)
+    Achievements.ensure(data)
     match_realm = int(data.ascend.realm_state.selected)
     if not Mode.unlocked(data):
         get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
@@ -313,7 +318,7 @@ func build_interface() -> void:
     column.add_child(realm_actions)
     action(realm_actions,L("realms"),show_realms)
     action(realm_actions,L("challenges"),show_challenges,true)
-    action(realm_actions,L("titles"),show_realm_titles)
+    action(realm_actions,_achievements_label(),show_realm_titles)
 
 func pname(owner: int) -> String:
     if against_bot and owner == 1: return "Zen-Bot"
@@ -329,7 +334,7 @@ func draw() -> void:
             for c in line:
                 if not wins.has(c): wins.append(c)
     cube.repaint(cells,wins)
-    rank_label.text = Realms.realm_name(realm_index(),lang()) + " · " + Realms.title_for_realm(data,realm_index(),lang())
+    rank_label.text = Realms.realm_name(realm_index(),lang()) + " · " + Achievements.main_title(data,realm_index())
     if result == 3:
         status_label.text = Z("Unentschieden!")
     elif result > 0:
@@ -481,25 +486,57 @@ func finish() -> void:
         else:
             data.ascend.current_streak = 0
     var celebrate_fully_aware: bool = false
+    pending_fully_aware = false
+    queued_unlocks.clear()
     if against_bot:
+        var previously_open: Array = []
+        for realm_id in range(1,4):
+            previously_open.append(Realms.unlocked(data,realm_id))
         var outcome: int = 0
         if result != 3: outcome = 1 if int(owners[result-1]) == 0 else -1
         var lines_won: Array = Mode.winning_lines(cells,lines,result) if outcome == 1 else []
         last_realm_awards = Realms.record_bot_match(data,match_realm,outcome,bot_level,move_count(),lines_won,match_blocked_threat)
-        # The achievement can only be awarded once. Persist the ceremony flag
-        # before it plays so restarting the app never triggers it repeatedly.
+        for secret in Achievements.claim_after_match(data,match_realm):
+            queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":str(secret.name),"quote":str(secret.quote)})
+        if bool(last_realm_awards.get("realm_completed",false)):
+            queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":Achievements.MAIN_TITLES[match_realm],"quote":Achievements.main_quote(match_realm)})
+        for realm_id in range(1,4):
+            if not bool(previously_open[realm_id-1]) and Realms.unlocked(data,realm_id):
+                queued_unlocks.push_front({"kind":"realm","realm":realm_id,"name":Realms.REALM_NAMES[realm_id],"quote":"A new path opens beyond the known world."})
+                # The newly reached Realm becomes the next match's default.
+                Realms.state(data)["selected"] = realm_id
+                if realm_backdrop != null: realm_backdrop.texture = load(Realms.REALM_ART[realm_id])
         var realm_state: Dictionary = Realms.state(data)
-        # The challenge named 'Fully Aware' may complete at 7/8; the actual
-        # highest TITLE is earned only at 8/8 challenges and realm completion.
         if match_realm == 3 and bool(last_realm_awards.get("realm_completed", false)) and Realms.current_title(data,3) == "Fully Aware" and not bool(realm_state.get("fully_aware_ceremony_seen", false)):
             realm_state["fully_aware_ceremony_seen"] = true
             celebrate_fully_aware = true
     if not against_bot: data.ascend.next_start = 1-int(data.ascend.next_start)
+    pending_fully_aware = celebrate_fully_aware
     SaveManager.save_data(data)
-    if celebrate_fully_aware:
+    if not queued_unlocks.is_empty():
+        call_deferred("_show_next_unlock")
+    elif celebrate_fully_aware:
         call_deferred("show_fully_aware",last_realm_awards.duplicate(true))
     else:
         call_deferred("show_match_result")
+
+func _show_next_unlock() -> void:
+    if not is_inside_tree(): return
+    if queued_unlocks.is_empty():
+        sync_realm_music()
+        if pending_fully_aware:
+            pending_fully_aware = false
+            call_deferred("show_fully_aware",last_realm_awards.duplicate(true))
+        else:
+            call_deferred("show_match_result")
+        return
+    var item: Dictionary = queued_unlocks.pop_front()
+    var unlock: ZenUnlockCeremony = UnlockCeremony.new()
+    add_child(unlock)
+    unlock.finished.connect(func():
+        if is_inside_tree(): call_deferred("_show_next_unlock")
+    )
+    unlock.present(str(item.kind),str(Realms.REALM_ART[int(item.realm)]),str(item.name),str(item.quote),bool(data.settings.get("sound",true)),[world_music])
 
 func show_fully_aware(awards: Dictionary) -> void:
     if not is_inside_tree(): return
@@ -525,16 +562,32 @@ func _dialog(title: String, message: String) -> AcceptDialog:
     return dialog
 
 func show_rules() -> void:
-    var msg: String = Z("Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).")+"\n\n"+Z("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).")+"\n\n"+Z("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.")
-    var dialog: AcceptDialog = _dialog(Z("Zen Ascend 4×4"),msg)
-    dialog.confirmed.connect(show_mode_picker)
+    # Exactly the same premium controls used by the bot-selection dialog.
+    var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),570)
+    var body: VBoxContainer = parts.box
+    var hero: TextureRect = TextureRect.new()
+    hero.texture = load(Realms.REALM_ART[realm_index()])
+    hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    hero.custom_minimum_size.y = 180
+    hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(hero)
+    text(body,Z("Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder)."),18,Color("f9e4b0"))
+    text(body,Z("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1)."),15)
+    text(body,Z("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert."),15)
+    action(body,Z("Neue Partie"),_start_picker_after_rules.bind(parts.dialog),true)
+    _open_realm_dialog(parts)
+
+func _start_picker_after_rules(dialog: Control) -> void:
+    _close_realm_dialog(dialog)
+    show_mode_picker()
 
 func show_mode_picker() -> void:
     var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
     var dialog: Control = parts.dialog
     var body: VBoxContainer = parts.box
     text(body,L("choose_level"),15)
-    text(body,Realms.realm_name(realm_index(),lang()) + " · " + Realms.title_for_realm(data,realm_index(),lang()),15,Color("e5ca93"))
+    text(body,Realms.realm_name(realm_index(),lang()) + " · " + Achievements.main_title(data,realm_index()),15,Color("e5ca93"))
     var bot_names: Array[String] = ["Leicht", "Mittel", "Schwer", "Meister", "Großmeister"]
     for i in range(5):
         var diff: int = i
@@ -548,19 +601,35 @@ func _start_realm_match(bot: bool, level: int, dialog: Control) -> void:
     start_game(bot,level)
 
 func show_statistics() -> void:
+    # Prestige card instead of a native gray Godot AcceptDialog.
     Mode.ensure(data)
     var s: Dictionary = data.ascend
     var total: int = int(s.played)
     var rate: float = 100.0*float(s.bot_wins)/float(maxi(1,int(s.bot_played)))
-    var avg: float = float(s.moves)/float(maxi(1,total))
-    var message: String = "%s: %s\n\n%s: %d   ·   %s: %d   ·   %s: %d\n%s: %d   ·   %s: %d\n%s: %.1f%%   ·   %s: %d\n%s: %d   ·   %s: %d\n%s: %.1f   ·   %s: %d" % [
-        Z("Zen-Rang"),Locale.translate(str(ZenAscension.RANKS[int(data.ascension.rank)]),lang()),
-        Z("Partien"),total,Z("Siege"),int(s.p1),Z("Unentschieden"),int(s.draw),
-        Z("4×4 gegen Bot"),int(s.bot_played),Z("4×4 zu zweit"),int(s.local_played),
-        Z("Siegquote"),rate,Z("Beste Siegesserie"),int(s.best_streak),
-        Z("Aktuelle Siegesserie"),int(s.current_streak),Z("Züge gesamt"),int(s.moves),
-        Z("Züge pro Partie"),avg,Z("Schnellster Sieg"),int(s.fastest_win)]
-    _dialog(Z("Statistik & Rang"),message)
+    var rank: int = clampi(int(data.ascension.rank),0,5)
+    var parts: Dictionary = _realm_dialog(Z("Statistik & Rang"),700)
+    var body: VBoxContainer = parts.box
+    var illustration: TextureRect = TextureRect.new()
+    illustration.texture = ZenAscension.WORLD_TEXTURES[mini(rank,4)]
+    illustration.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    illustration.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    illustration.custom_minimum_size.y = 220
+    illustration.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(illustration)
+    text(body,Locale.translate(str(ZenAscension.RANKS[rank]),lang()),25,Color("ffe3a2"))
+    text(body,Achievements.main_title(data,realm_index()),20,Color("c8e4b8"))
+    text(body,Realms.realm_name(realm_index(),lang()),15,Color("e4cb97"))
+    if rank < 5:
+        var progress: int = ZenAscension.progress(data,rank)
+        var goal: int = ZenAscension.target(rank)
+        text(body,"Next rank  ·  %d / %d" % [progress,goal],16)
+        _progress_meter(body,progress,goal)
+    text(body,"Matches %d   ·   Wins %d   ·   Draws %d" % [total,int(s.p1),int(s.draw)],15)
+    text(body,"Win rate %.1f%%   ·   Best streak %d" % [rate,int(s.best_streak)],15)
+    text(body,"Current streak %d   ·   Total moves %d" % [int(s.current_streak),int(s.moves)],15)
+    text(body,"Fastest win %d   ·   Average moves %.1f" % [int(s.fastest_win),float(s.moves)/float(maxi(1,total))],15)
+    action(body,_achievements_label(),show_realm_titles,true)
+    _open_realm_dialog(parts)
 
 func return_home() -> void:
     if get_tree() != null: get_tree().change_scene_to_file("res://Main.tscn")
@@ -568,6 +637,20 @@ func return_home() -> void:
 # ---- Standalone 4x4 Realms UI; all original Classic screens remain untouched. ----
 func L(key: String) -> String:
     return Realms.t(key,lang())
+
+func _achievements_label() -> String:
+    return "Erfolge" if lang() == "de" else ("Conquistas" if lang() == "pt" else "Achievements")
+
+func _progress_meter(parent: Node, current: int, goal: int) -> void:
+    var bar: ProgressBar = ProgressBar.new()
+    bar.max_value = float(maxi(1,goal))
+    bar.value = float(current)
+    bar.show_percentage = false
+    bar.custom_minimum_size.y = 15
+    bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    bar.add_theme_stylebox_override("background",style(Color("142825"),8))
+    bar.add_theme_stylebox_override("fill",style(Color("829e76"),8))
+    parent.add_child(bar)
 
 func realm_index() -> int:
     return int(Realms.state(data).selected)
@@ -668,10 +751,44 @@ func show_realms() -> void:
         if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
         if not allowed: text(column,L("locked") + ": " + _realm_unlocked_hint(i),13)
         var selected: bool = i == realm_index()
-        var choose: Button = action(column,L("selected") if selected else L("select"),_choose_realm_from_dialog.bind(number,ui_parts.dialog),true)
-        choose.disabled = not allowed or selected or (move_count() > 0 and result == 0)
+        var choose: Button
+        if not allowed:
+            choose = action(column,"🔒  " + ("Freischaltung ansehen" if lang() == "de" else "View unlock requirements"),_show_realm_requirements.bind(number),false)
+        else:
+            choose = action(column,L("selected") if selected else L("select"),_choose_realm_from_dialog.bind(number,ui_parts.dialog),true)
+            choose.disabled = selected or (move_count() > 0 and result == 0)
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
+
+func _show_realm_requirements(realm: int) -> void:
+    var parts: Dictionary = _realm_dialog(Realms.realm_name(realm,lang()),620)
+    var body: VBoxContainer = parts.box
+    var hero: TextureRect = TextureRect.new()
+    hero.texture = load(Realms.REALM_ART[realm])
+    hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    hero.custom_minimum_size.y = 200
+    hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(hero)
+    text(body,"🔒  " + Realms.missing_reason(data,realm,lang()),17,Color("f6daa0"))
+    var st: Dictionary = Realms.state(data)
+    if realm == 1:
+        text(body,"Shadow victories  %d/5" % int(st.stats[0].wins),16)
+        _progress_meter(body,int(st.stats[0].wins),5)
+        text(body,"OR Shadow challenges  %d/4" % Realms.count(data,0),16)
+        _progress_meter(body,Realms.count(data,0),4)
+    elif realm == 2:
+        text(body,"Ember victories  %d/7" % int(st.stats[1].wins),16)
+        _progress_meter(body,int(st.stats[1].wins),7)
+        text(body,"OR Ember challenges  %d/5" % Realms.count(data,1),16)
+        _progress_meter(body,Realms.count(data,1),5)
+    elif realm == 3:
+        text(body,"Celestial victories  %d/10" % int(st.stats[2].wins),16)
+        _progress_meter(body,int(st.stats[2].wins),10)
+        text(body,"AND total Realm challenges  %d/12" % Realms.total_count(data),16)
+        _progress_meter(body,Realms.total_count(data),12)
+    action(body,L("realms"),show_realms,true)
+    _open_realm_dialog(parts)
 
 func _choose_realm_from_dialog(number: int, dialog: Control) -> void:
     if select_realm(number): dialog.queue_free()
@@ -695,8 +812,16 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
     list.add_child(heading)
     var head_box: VBoxContainer = VBoxContainer.new()
     heading.add_child(head_box)
+    var hero: TextureRect = TextureRect.new()
+    hero.texture = load(Realms.REALM_ART[realm])
+    hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    hero.custom_minimum_size.y = 160
+    hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    head_box.add_child(hero)
     text(head_box,Realms.REALM_NAMES[realm] + ("  🔒" if not unlocked else ""),20,Color("f5dca8"))
     text(head_box,L("progress") + ": %d/8" % Realms.count(data,realm),14)
+    _progress_meter(head_box,Realms.count(data,realm),8)
     if not unlocked:
         text(head_box,L("locked") + ": " + _realm_unlocked_hint(realm),13)
     var done: Dictionary = Realms.state(data).completed
@@ -716,50 +841,63 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
     text(list,L("bot_only"),13,Color("cdbd9d"))
 
 func show_challenges() -> void:
+    # The Realm is chosen in Realms, not again in Challenges. More space for cards.
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + L("challenges"))
     var body: VBoxContainer = parts.box
-    # Four elegant themed choices replace the intrusive default black dropdown.
-    var choices: GridContainer = GridContainer.new()
-    choices.columns = 2
-    choices.add_theme_constant_override("h_separation",7)
-    choices.add_theme_constant_override("v_separation",7)
-    body.add_child(choices)
     var tasks_box: VBoxContainer = VBoxContainer.new()
-    tasks_box.add_theme_constant_override("separation",12)
+    tasks_box.add_theme_constant_override("separation",14)
     body.add_child(tasks_box)
-    for number in range(4):
-        var realm_number: int = number
-        var pick: Button = action(choices,Realms.REALM_NAMES[number],func(): _challenge_items(tasks_box,realm_number),number==realm_index())
-        pick.add_theme_font_size_override("font_size",13)
     _challenge_items(tasks_box,realm_index())
     _open_realm_dialog(parts)
 
 func show_realm_titles() -> void:
-    var parts: Dictionary = _realm_dialog("Zen Ascend · " + L("titles"))
+    # Achievements are independent of the Realm Challenges. Only one main
+    # title can be earned per Realm, through full Realm mastery (8/8).
+    var parts: Dictionary = _realm_dialog("Zen Ascend · " + _achievements_label())
     var body: VBoxContainer = parts.box
-    text(body,L("total_titles") + ": " + Realms.overall_title(data),21,Color("efd49b"))
-    text(body,L("total") + ": %d/32" % Realms.total_count(data),15)
+    text(body,"Secret Achievements   ·   %d / %d" % [Achievements.secret_count(data),Achievements.SECRETS.size()],18,Color("f3dca4"))
     for realm in range(4):
-        var card: PanelContainer = PanelContainer.new()
-        card.add_theme_stylebox_override("panel",style(_realm_tone(realm),18))
-        card.mouse_filter = Control.MOUSE_FILTER_PASS
-        body.add_child(card)
+        var group: PanelContainer = PanelContainer.new()
+        group.add_theme_stylebox_override("panel",style(_realm_tone(realm),18))
+        group.mouse_filter = Control.MOUSE_FILTER_PASS
+        body.add_child(group)
         var inside: VBoxContainer = VBoxContainer.new()
-        inside.add_theme_constant_override("separation",10)
-        card.add_child(inside)
-        var finished: int = Realms.count(data,realm)
-        text(inside,Realms.REALM_NAMES[realm] + "  ·  %d/8" % finished,19,Color("f5dea8"))
-        var bar: ProgressBar = ProgressBar.new()
-        bar.max_value = 8.0
-        bar.value = float(finished)
-        bar.show_percentage = false
-        bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        bar.custom_minimum_size.y = 10
-        inside.add_child(bar)
-        for i in range(5):
-            var earned: bool = finished >= Realms.TITLE_MILESTONES[i]
-            var badge: Label = text(inside,("✦ " if earned else "🔒 ") + str(Realms.REALM_TITLES[realm][i]) + " · %d/8" % int(Realms.TITLE_MILESTONES[i]),14,Color("cde9b7") if earned else Color("c0b5a7"))
-            badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        inside.add_theme_constant_override("separation",9)
+        group.add_child(inside)
+        text(inside,Realms.realm_name(realm,lang()),21,Color("f7dda5"))
+        var picture: TextureRect = TextureRect.new()
+        picture.texture = load(Realms.REALM_ART[realm])
+        picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        picture.custom_minimum_size.y = 160
+        picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        inside.add_child(picture)
+        var master: String = Achievements.MAIN_TITLES[realm]
+        var title_earned: bool = Realms.count(data,realm) == 8
+        text(inside,("✦ " if title_earned else "🔒 ") + master + ("  ·  8/8" if title_earned else "  ·  Locked"),18,Color("d1eabd") if title_earned else Color("d9c8ac"))
+        action(inside,"View Realm Title",_show_achievement_details.bind(realm,{"id":"main","name":master,"condition":"Complete all 8 Realm Challenges.","quote":Achievements.main_quote(realm)},title_earned),false)
+        for secret in Achievements.SECRETS:
+            if int(secret.realm) != realm: continue
+            var unlocked: bool = Achievements.earned(data,str(secret.id))
+            var display: String = ("✦  " + str(secret.name)) if unlocked else "◇  ???  ·  Secret Achievement"
+            action(inside,display,_show_achievement_details.bind(realm,secret,unlocked),unlocked)
+    _open_realm_dialog(parts)
+
+func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -> void:
+    var parts: Dictionary = _realm_dialog(str(secret.name),610)
+    var body: VBoxContainer = parts.box
+    var picture: TextureRect = TextureRect.new()
+    picture.texture = load(Realms.REALM_ART[realm])
+    picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    picture.custom_minimum_size.y = 250
+    picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(picture)
+    text(body,("✦  Achievement Unlocked" if unlocked else "🔒  Secret Achievement"),18,Color("f4dcaa"))
+    text(body,str(secret.name),23,Color("f7e4b9"))
+    text(body,"“" + str(secret.quote) + "”",17,Color("d8e7d4"))
+    text(body,"How to unlock: " + str(secret.condition),15,Color("f1d29b"))
+    action(body,_achievements_label(),show_realm_titles,true)
     _open_realm_dialog(parts)
 
 func show_match_result() -> void:
@@ -785,7 +923,8 @@ func show_match_result() -> void:
     if bool(last_realm_awards.get("realm_completed",false)):
         text(info,"✦  " + L("realm_complete"),17,Color("ffe6a4"))
     if not last_realm_awards.get("new_tasks",[]).is_empty():
-        text(info,L("rank") + ": " + Realms.current_title(data,match_realm),15)
+        if Achievements.main_title(data,match_realm) != "—":
+            text(info,L("rank") + ": " + Achievements.main_title(data,match_realm),15)
     action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog),true)
     action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)

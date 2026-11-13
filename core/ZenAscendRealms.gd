@@ -266,11 +266,11 @@ static func select(data: Dictionary, realm: int) -> bool:
     return true
 
 static func current_title(data: Dictionary, realm: int) -> String:
-    var done: int = count(data,realm)
-    var title: String = "—"
-    for i in range(5):
-        if done >= TITLE_MILESTONES[i]: title = str(REALM_TITLES[clampi(realm,0,3)][i])
-    return title
+    # Only one prestige title per realm. The other old title names became
+    # independently earned secret achievements in ZenAscendAchievements.
+    if realm < 0 or realm > 3: return "—"
+    if count(data,realm) < 8: return "—"
+    return str(REALM_TITLES[realm][4])
 
 static func overall_title(data: Dictionary) -> String:
     var done: int = total_count(data)

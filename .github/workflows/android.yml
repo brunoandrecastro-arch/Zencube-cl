@@ -2,7 +2,7 @@ name: Android debug APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, 'fix/**']
+    branches: [main, master]
   pull_request:
 permissions:
   contents: read
@@ -124,6 +124,9 @@ jobs:
       - name: Verify 32 Zen Ascend Realm challenges in Godot (headless)
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_zen_ascend_realms.gd
+      - name: Zen Ascend independent achievements and choir (Godot headless)
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_zen_achievements_choir.gd
       - name: Check four Realm songs, Satori ceremony and post-Gong audio recovery
         run: python3 tests/test_realm_audio_ceremony.py
       - name: Four looping Realm songs and one-time Satori ceremony (Godot headless)
