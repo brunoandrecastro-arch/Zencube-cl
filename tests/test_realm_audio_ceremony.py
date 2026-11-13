@@ -40,7 +40,7 @@ assert 'const WORLD_TRACKS: Array[int] = [7, 9, 11, 8, 12]' in old_policy
 assert 'const VERSION = 3' in save
 assert 'test_realm_audio_ceremony.py' in ci and 'test_realm_audio_ceremony.gd' in ci
 assert 'const CELLS: int = 96' in (root/'core/ZenAscend.gd').read_text(encoding='utf8')
-assert 'const PRICE: int = 750' in (root/'core/ZenAscend.gd').read_text(encoding='utf8')
+assert 'const PRICE: int = 850' in (root/'core/ZenAscend.gd').read_text(encoding='utf8')
 for name in ('shadow_realm','ember_temple','celestial_realm','satori_realm'):
     f=root/'assets'/'realm_music'/f'{name}.ogg'
     assert f.is_file() and f.stat().st_size > 1_000_000, f

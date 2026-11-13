@@ -32,7 +32,7 @@ for name in ('shadow_realm','ember_temple','celestial_realm','satori_realm'):
 classic=(R/'core/RulesEngine.gd').read_text()
 assert '108' in classic or 'generate_lines' in classic or 'lines' in classic
 assert 'const CELLS: int = 96' in (R/'core/ZenAscend.gd').read_text()
-assert 'const PRICE: int = 750' in (R/'core/ZenAscend.gd').read_text()
+assert 'const PRICE: int = 850' in (R/'core/ZenAscend.gd').read_text()
 assert 'const VERSION = 3' in (R/'core/SaveManager.gd').read_text()
 assert 'res://assets/music/' not in model, 'realm audio must await supplied Suno songs'
 print('PASS: 4 realms, 32 unique challenges, stable saves and unlocks, 4 independent original backgrounds, five bot tiers')
