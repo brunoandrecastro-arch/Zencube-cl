@@ -30,7 +30,13 @@ assert 'Realms.current_title(data,3) == "Fully Aware"' in ascend
 assert 'fully_aware_ceremony_seen' in ascend
 assert 'SaveManager.save_data(data)' in ascend
 assert 'call_deferred("show_fully_aware",last_realm_awards.duplicate(true))' in ascend
-assert 'if int(awards.get("leaves",0)) > 0' in ascend, 'do not lose Satori award dialog'
+# Rewards now appear in the premium result after the Satori ceremony.
+ceremony = ascend.split('func show_fully_aware(awards: Dictionary) -> void:',1)[1].split('func _dialog(',1)[0]
+assert 'celebration.finished.connect(func():' in ceremony
+assert 'call_deferred("show_match_result")' in ceremony
+result = ascend.split('func show_match_result() -> void:',1)[1].split('func _replay_after_result(',1)[0]
+assert 'last_match_leaf_reward + int(last_realm_awards.get("leaves",0))' in result
+assert 'last_realm_awards.get("new_tasks",[])' in result
 assert 'class_name ZenFullyAwareCeremony' in fully
 assert 'if _closed: return' in fully and 'signal finished' in fully
 assert 'DISPLAY_SECONDS: float = 7.5' in fully

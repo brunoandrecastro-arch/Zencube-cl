@@ -24,7 +24,8 @@ func run() -> void:
     var preexisting_classic: Dictionary = data.stats.duplicate(true)
     Realms.ensure(data)
     check(int(Realms.state(data).selected)==0,"shadow selected by default")
-    check(not Realms.unlocked(data,0),"4x4 is gated")
+    check(Realms.unlocked(data,0) == ZenAscend.test_access_enabled(),"free Shadow Realm only in debug")
+    check(not ZenAscend.unlocked_for_release(data),"release keeps its unlock requirement")
     data.ascension.rank = 3
     check(Realms.unlocked(data,0),"shadow entry after Zen Master")
     check(not Realms.unlocked(data,1),"ember initially locked")
