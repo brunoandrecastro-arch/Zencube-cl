@@ -4,6 +4,19 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Denke über die Kanten hinaus.": "Think beyond the edges.",
+    "Entdecke neue Wege.": "Discover new possibilities.",
+    "Kulissen": "Backgrounds",
+    "Wähle einen Hintergrund für deine Zen-Welt. Die aktuelle Welt und der Bot bleiben unverändert.": "Choose a background for your Zen world. Your current world and bot stay unchanged.",
+    "Welt-Hintergrund verwenden": "Use world background",
+    "✓ Welt-Hintergrund aktiv": "✓ World background active",
+    "✓ Aktiv": "✓ Active",
+    "Hintergrund verwenden": "Use background",
+    "Hintergrund freischalten für 🍃 %d": "Unlock background for 🍃 %d",
+    "Kirschgarten": "Cherry Blossom Garden",
+    "Bergtempel-Kulisse": "Mountain Temple",
+    "Mondgarten-Kulisse": "Moon Garden",
+    "Himmelsgarten-Kulisse": "Sky Garden",
     # One fixed Zen quote for each Classic World.
     "„Jeder große Weg beginnt mit einem stillen Schritt.“": "“Every great journey begins with a quiet step.”",
     "„Der Bambus biegt sich im Wind, doch verliert nie seine Wurzeln.“": "“Bamboo bends in the wind but never loses its roots.”",
@@ -321,6 +334,19 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Denke über die Kanten hinaus.": "Pensa para lá das arestas.",
+    "Entdecke neue Wege.": "Descobre novas possibilidades.",
+    "Kulissen": "Cenários",
+    "Wähle einen Hintergrund für deine Zen-Welt. Die aktuelle Welt und der Bot bleiben unverändert.": "Escolhe um cenário para o teu mundo Zen. O mundo atual e o bot mantêm-se iguais.",
+    "Welt-Hintergrund verwenden": "Usar cenário do mundo",
+    "✓ Welt-Hintergrund aktiv": "✓ Cenário do mundo ativo",
+    "✓ Aktiv": "✓ Ativo",
+    "Hintergrund verwenden": "Usar cenário",
+    "Hintergrund freischalten für 🍃 %d": "Desbloquear cenário por 🍃 %d",
+    "Kirschgarten": "Jardim das Cerejeiras",
+    "Bergtempel-Kulisse": "Templo da Montanha",
+    "Mondgarten-Kulisse": "Jardim da Lua",
+    "Himmelsgarten-Kulisse": "Jardim Celestial",
     # One fixed Zen quote for each Classic World.
     "„Jeder große Weg beginnt mit einem stillen Schritt.“": "«Cada grande caminho começa com um passo sereno.»",
     "„Der Bambus biegt sich im Wind, doch verliert nie seine Wurzeln.“": "«O bambu dobra-se ao vento, mas nunca perde as raízes.»",
