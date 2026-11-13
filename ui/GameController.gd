@@ -263,8 +263,6 @@ func build_ui() -> void:
     var menu = button("☰",title_row,open_menu,true)
     menu.custom_minimum_size.x = 46
     menu.size_flags_horizontal = Control.SIZE_SHRINK_END
-    var tagline = label("Ein ruhiges Strategiespiel für Balance, Raumgefühl und Konzentration.",column,11,Color("4a3423"))
-    tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
     var ribbon = PanelContainer.new()
     ribbon.add_theme_stylebox_override("panel",theme_style(Color("fff1d7",0.91),18))
@@ -1121,9 +1119,10 @@ func show_result_screen() -> void:
     var box = modal(headline)
     # Let the actual 3D winning line stay visible above the results panel.
     # ~20% less height for normal results; preserve extra text room on rank-up.
-    popup.anchor_top = 0.58 if special else 0.63
-    popup.anchor_bottom = 0.96
+    popup.anchor_top = 0.52 if special else 0.56
+    popup.anchor_bottom = 0.97
     popup.offset_top = 0
+    box.add_theme_constant_override("separation",7)
     popup.add_theme_stylebox_override("panel", theme_style(Color("342820", 0.985), 25))
     var heading: Label = box.get_child(0) as Label
     box.get_child(1).hide()
@@ -1155,8 +1154,6 @@ func show_result_screen() -> void:
     if versus_bot and last_leaf_reward > 0:
         var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    var detail_label: Label = label("Entdecke neue Wege." if board.winner != 3 else "Noch eine Runde?", box, 15, Color("e7d6b9"))
-    detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Noch eine Partie", box, play_again_after_result, true)
     premium_button("Hauptmenü", box, open_menu)
 
@@ -1584,6 +1581,19 @@ func start_mode(mode: int, level: int = 0, from_welcome: bool = false) -> void:
         data.settings.swap = false
     new_game()
 
+# ZENCUBE_ONBOARDING_RESULT_HARD_FIX_2026_11_13
+func allow_welcome_scroll(node: Node) -> void:
+    # Decorative panels and labels must not swallow Android swipe gestures.
+    # Buttons still receive taps, but let a drag pass up to ScrollContainer.
+    var control: Control = node as Control
+    if control != null:
+        if control is PanelContainer or control is Label:
+            control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        else:
+            control.mouse_filter = Control.MOUSE_FILTER_PASS
+    for child in node.get_children():
+        allow_welcome_scroll(child)
+
 func open_welcome() -> void:
     welcome_open = true
     var box = modal("Willkommen im Zen-Garten")
@@ -1591,13 +1601,20 @@ func open_welcome() -> void:
     popup.offset_top = 0
     box.get_child(1).hide()
     label("Atme durch. Drehe den Würfel. Entdecke neue Wege zu gewinnen.",box,15,Color("6d6550"))
+    # First-screen actions must be visible WITHOUT scrolling.
+    button("Mini-Tutorial starten",box,func(): start_tutorial(true),false,true)
+    button("Direkt gegen Zen-Bot spielen",box,func(): start_mode(1,0,true))
+    label("Dein erster Gegner ist Zen-Bot auf Leicht. Lokale Zwei-Spieler-Partien sind später im Menü verfügbar.",box,13,Color("78644c"))
+    # Optional explanatory diagrams remain below and are now swipeable.
     label("VIER STEINE  ·  ZWEI WÜRFELSEITEN",box,13,Color("8a755b"))
     add_rule_example(box,"3 + 1",3)
     add_rule_example(box,"2 + 2",2)
     label("Ein Finger zieht den Würfel. Ein kurzes Tippen setzt deinen Stein. Erreiche vier verbundene Felder über zwei benachbarte Würfelseiten.",box,14)
-    button("Mini-Tutorial starten",box,func(): start_tutorial(true),false,true)
-    button("Direkt gegen Zen-Bot spielen",box,func(): start_mode(1,0,true))
-    label("Dein erster Gegner ist Zen-Bot auf Leicht. Lokale Zwei-Spieler-Partien sind später im Menü verfügbar.",box,13,Color("78644c"))
+    var welcome_scroll: ScrollContainer = popup.get_child(0) as ScrollContainer
+    if welcome_scroll != null:
+        welcome_scroll.scroll_deadzone = 0
+        welcome_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+    allow_welcome_scroll(box)
 
 func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> void:
     var panel = PanelContainer.new()

@@ -8,7 +8,7 @@ save=(p/'core/SaveManager.gd').read_text()
 loc=(p/'core/ZenLocalization.gd').read_text()
 exp=(p/'export_presets.cfg').read_text()
 for phrase in ('func premium_button(', 'func open_play_menu()', 'func show_result_screen()',
-    'popup.anchor_top = 0.58 if special else 0.63', 'func vibrate_on_move()', 'Input.vibrate_handheld(22)',
+    'popup.anchor_top = 0.52 if special else 0.56', 'func vibrate_on_move()', 'Input.vibrate_handheld(22)',
     'call_deferred("show_result_screen")', 'premium_button("Spielen", box, open_play_menu',
     'premium_button("Noch eine Partie", box,', 'premium_button("Hauptmenü", box, open_menu)'):
     assert phrase in ui, phrase
