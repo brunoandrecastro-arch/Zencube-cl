@@ -23,7 +23,14 @@ assert 'if against_bot:' in ui and 'Realms.record_bot_match(' in ui
 assert 'RealmBot.next_move(cells,lines,2,bot_level)' in ui
 assert 'match_blocked_threat' in ui and 'Realms.prevents_immediate_win' in ui
 assert 'show_realms()' in ui and 'show_challenges()' in ui and 'show_realm_titles()' in ui
-assert 'ZenAscension.WORLD_TEXTURES' not in ui, '4x4 must have its own visual realm assets'
+# Gameplay uses independent Realm artwork.
+assert 'backdrop.texture = load(Realms.REALM_ART[realm_index()])' in ui
+assert 'realm_backdrop.texture = load(Realms.REALM_ART[realm_id])' in ui
+assert 'realm_backdrop.texture = load(Realms.REALM_ART[number])' in ui
+
+# Classic world art is allowed only as rank illustration.
+stats_ui = ui.split('func show_statistics() -> void:', 1)[1].split('func return_home() -> void:', 1)[0]
+assert 'illustration.texture = ZenAscension.WORLD_TEXTURES[mini(rank,4)]' in stats_ui
 for name in ('shadow_realm','ember_temple','celestial_realm','satori_realm'):
     p=R/'assets/realms'/f'{name}.webp'
     assert p.exists() and p.stat().st_size > 20_000
