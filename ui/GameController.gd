@@ -556,6 +556,8 @@ func record_result() -> void:
             data.stats["ai_wins" if owner == 0 else "ai_losses"][difficulty] += 1
             if owner == 0:
                 last_leaf_reward = Collection.reward_bot(data, difficulty)
+            else:
+                last_leaf_reward = Collection.reward_loss(data)
     # Change the next default opponent only if an actual new Zen rank was earned.
     # Older manually chosen levels remain selectable at any time.
     BotAuto.apply_after_rank_up(data,last_rank_up)
@@ -732,11 +734,11 @@ func open_store() -> void:
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
     label(ZMode.t("Zen Ascend 4×4",language_code()),box,20,Color("526943"))
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
     else:
-        var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 750",language_code()),box,buy_ascend,true)
+        var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true)
         unlock_button.disabled = int(data.economy.leaves) < ZMode.PRICE
     shop_page = clampi(shop_page, 0, 3)
     store_page_buttons(box)
@@ -994,7 +996,7 @@ func open_ascension() -> void:
         progress_bar.add_theme_stylebox_override("fill",fill)
         box.add_child(progress_bar)
     label("Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.",box,13)
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
     button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro,true)
     button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
@@ -1237,11 +1239,11 @@ func open_ascend_intro() -> void:
     label(ZMode.t("Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).",language_code()),box,16)
     label(ZMode.t("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).",language_code()),box,15)
     label(ZMode.t("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.",language_code()),box,14)
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,14)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,14)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,start_ascend,true,true)
     else:
-        var buy_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 750",language_code()),box,buy_ascend,true,true)
+        var buy_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true,true)
         buy_button.disabled = int(data.economy.leaves) < ZMode.PRICE
         button("Zen-Shop",box,open_store,true)
 

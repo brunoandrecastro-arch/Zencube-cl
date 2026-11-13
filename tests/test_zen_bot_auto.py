@@ -24,9 +24,10 @@ assert 'return clampi(rank, 0, 4)' in helper
 assert 'BotAuto.level_for_rank(int(data.ascension.rank))' in ascend
 assert 'i==BotAuto.level_for_rank(int(data.ascension.rank))' in ascend
 assert 'ZenCollection.reward_bot(data,bot_level)' in ascend
+assert 'ZenCollection.reward_loss(data)' in ascend
 assert 'const TARGETS = [3, 5, 7, 3, 5]' in rank
 assert 'const VERSION = 3' in save
-assert 'const CELLS: int = 96' in mode and 'const PRICE: int = 750' in mode
+assert 'const CELLS: int = 96' in mode and 'const PRICE: int = 850' in mode
 assert 'const TEST_UNLOCKED: bool = false' in mode
 assert 'return unlocked_for_release(data)' in mode
 assert 'res://assets/realms/shadow_realm.webp' in (ROOT/'core/ZenAscendRealms.gd').read_text()

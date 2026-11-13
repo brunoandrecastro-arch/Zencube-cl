@@ -36,6 +36,11 @@ var match_realm: int = 0
 var match_blocked_threat: bool = false
 var bot_level: int = 1
 var last_realm_awards: Dictionary = {}
+var last_match_leaf_reward: int = 0
+var move_sound: AudioStreamPlayer
+var win_sound: AudioStreamPlayer
+var active_realm_dialog: Control
+var active_realm_scroll: ScrollContainer
 var touch_positions: Dictionary = {}
 var touch_down: Vector2 = Vector2.ZERO
 var touched_cell: int = -1
@@ -74,6 +79,7 @@ func _ready() -> void:
     cube = AscendRenderer.new()
     vp.add_child(cube)
     build_interface()
+    build_feedback_audio()
     cube.set_skin(int(data.economy.get("equipped",0)))
     start_world_music()
     draw()
@@ -157,6 +163,7 @@ func text(parent: Node, value: String, size: int = 16, color: Color = Color("ead
     label_node.add_theme_font_size_override("font_size",size)
     label_node.add_theme_color_override("font_color",color)
     label_node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    label_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
     parent.add_child(label_node)
     return label_node
 func action(parent: Node, value: String, fn: Callable, primary: bool = false) -> Button:
@@ -170,9 +177,63 @@ func action(parent: Node, value: String, fn: Callable, primary: bool = false) ->
     var fc: Color = Color("fff9e7") if primary else Color("3d3028")
     for kind in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
         b.add_theme_color_override(kind, fc)
+    b.mouse_filter = Control.MOUSE_FILTER_PASS
     b.pressed.connect(fn)
     parent.add_child(b)
     return b
+
+# Soft original placement tone and a calm victory chime, same settings as Classic.
+func _feedback_stream(frequency: float, seconds: float, volume: float) -> AudioStreamWAV:
+    var sound: AudioStreamWAV = AudioStreamWAV.new()
+    sound.format = AudioStreamWAV.FORMAT_16_BITS
+    sound.mix_rate = 22050
+    var frames: int = int(22050.0 * seconds)
+    var bytes: PackedByteArray = PackedByteArray()
+    bytes.resize(frames * 2)
+    for n in range(frames):
+        var t: float = float(n) / 22050.0
+        var envelope: float = minf(1.0, t * 90.0) * exp(-t * 18.0)
+        var sample: int = int(sin(t * TAU * frequency) * envelope * volume)
+        bytes.encode_s16(n * 2, sample)
+    sound.data = bytes
+    return sound
+
+func build_feedback_audio() -> void:
+    move_sound = AudioStreamPlayer.new()
+    move_sound.stream = _feedback_stream(520.0, 0.19, 7000.0)
+    move_sound.volume_db = -4.5
+    add_child(move_sound)
+    win_sound = AudioStreamPlayer.new()
+    win_sound.stream = _feedback_stream(784.0, 0.30, 6800.0)
+    win_sound.volume_db = -3.0
+    add_child(win_sound)
+
+func feedback_on_place(human_move: bool, won: bool) -> void:
+    if bool(data.settings.get("sound", true)):
+        if move_sound != null:
+            move_sound.stop()
+            move_sound.play()
+        if won and win_sound != null:
+            win_sound.stop()
+            win_sound.play()
+    if human_move and bool(data.settings.get("haptics", true)) and OS.get_name() == "Android":
+        Input.vibrate_handheld(80 if won else 28)
+
+# Scroll touch events from inside custom realm cards reliably on Android.
+func _input(event: InputEvent) -> void:
+    if active_realm_scroll == null or not is_instance_valid(active_realm_scroll): return
+    if event is InputEventScreenDrag and active_realm_scroll.get_global_rect().has_point(event.position):
+        active_realm_scroll.scroll_vertical = maxi(0, active_realm_scroll.scroll_vertical - int(event.relative.y))
+
+func _close_realm_dialog(dialog: Control) -> void:
+    if active_realm_dialog == dialog:
+        active_realm_dialog = null
+        active_realm_scroll = null
+    if is_instance_valid(dialog): dialog.queue_free()
+
+func _realm_tone(index: int) -> Color:
+    var colors: Array[Color] = [Color("1b2a3a"), Color("362421"), Color("192f3f"), Color("19352d")]
+    return colors[clampi(index,0,3)]
 
 func build_interface() -> void:
     var canvas: CanvasLayer = CanvasLayer.new()
@@ -351,6 +412,7 @@ func start_game(bot: bool, level: int = -1) -> void:
     match_realm = realm_index()
     match_blocked_threat = false
     last_realm_awards = {}
+    last_match_leaf_reward = 0
     cells.fill(0)
     result = 0
     recorded = false
@@ -371,10 +433,12 @@ func play(cell: int) -> void:
 func _commit(cell: int) -> void:
     if against_bot and turn == 1 and Realms.prevents_immediate_win(cells,lines,turn,cell):
         match_blocked_threat = true
+    var human_move: bool = not against_bot or turn == 1
     cells[cell] = turn
     var complete: Array = Mode.winning_lines(cells,lines,turn)
     if not complete.is_empty(): result = turn
     elif not cells.has(0): result = 3
+    feedback_on_place(human_move, result in [1,2])
     if result == 0: turn = 3-turn
     else: finish()
     draw()
@@ -409,10 +473,11 @@ func finish() -> void:
                 data.ascend.best_streak = maxi(int(data.ascend.best_streak),int(data.ascend.current_streak))
                 if int(data.ascend.fastest_win) == 0 or move_count() < int(data.ascend.fastest_win):
                     data.ascend.fastest_win = move_count()
-                ZenCollection.reward_bot(data,bot_level)
+                last_match_leaf_reward = ZenCollection.reward_bot(data,bot_level)
             else:
                 data.ascend.bot_losses += 1
                 data.ascend.current_streak = 0
+                last_match_leaf_reward = ZenCollection.reward_loss(data)
         else:
             data.ascend.current_streak = 0
     var celebrate_fully_aware: bool = false
@@ -433,8 +498,8 @@ func finish() -> void:
     SaveManager.save_data(data)
     if celebrate_fully_aware:
         call_deferred("show_fully_aware",last_realm_awards.duplicate(true))
-    elif int(last_realm_awards.get("leaves",0)) > 0:
-        call_deferred("show_realm_rewards",last_realm_awards.duplicate(true))
+    else:
+        call_deferred("show_match_result")
 
 func show_fully_aware(awards: Dictionary) -> void:
     if not is_inside_tree(): return
@@ -442,8 +507,7 @@ func show_fully_aware(awards: Dictionary) -> void:
     add_child(celebration)
     celebration.finished.connect(func():
         if is_inside_tree():
-            if int(awards.get("leaves",0)) > 0:
-                call_deferred("show_realm_rewards",awards)
+            call_deferred("show_match_result")
     )
     celebration.present(lang(),bool(data.settings.get("sound",true)),[world_music])
 
@@ -467,7 +531,7 @@ func show_rules() -> void:
 
 func show_mode_picker() -> void:
     var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
-    var dialog: AcceptDialog = parts.dialog
+    var dialog: Control = parts.dialog
     var body: VBoxContainer = parts.box
     text(body,L("choose_level"),15)
     text(body,Realms.realm_name(realm_index(),lang()) + " · " + Realms.title_for_realm(data,realm_index(),lang()),15,Color("e5ca93"))
@@ -479,7 +543,7 @@ func show_mode_picker() -> void:
     action(body,Z("Zu zweit spielen"),_start_realm_match.bind(false,0,dialog))
     _open_realm_dialog(parts)
 
-func _start_realm_match(bot: bool, level: int, dialog: AcceptDialog) -> void:
+func _start_realm_match(bot: bool, level: int, dialog: Control) -> void:
     dialog.queue_free()
     start_game(bot,level)
 
@@ -509,27 +573,67 @@ func realm_index() -> int:
     return int(Realms.state(data).selected)
 
 func _realm_dialog(title: String, height: int = 660) -> Dictionary:
-    var dlg: AcceptDialog = AcceptDialog.new()
-    dlg.title = title
-    dlg.min_size = Vector2i(410,320)
-    dlg.get_ok_button().text = L("return")
-    layer.add_child(dlg)
-    dlg.confirmed.connect(dlg.queue_free)
-    dlg.canceled.connect(dlg.queue_free)
-    var scroller: ScrollContainer = ScrollContainer.new()
-    scroller.custom_minimum_size = Vector2(390,mini(height,680))
-    scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    scroller.mouse_filter = Control.MOUSE_FILTER_STOP
-    dlg.add_child(scroller)
+    # Draw custom premium overlay directly within the game, not Godot's gray Window.
+    if is_instance_valid(active_realm_dialog): active_realm_dialog.queue_free()
+    var root: Control = Control.new()
+    root.name = "ZenRealmPremiumOverlay"
+    root.mouse_filter = Control.MOUSE_FILTER_STOP
+    layer.add_child(root)
+    root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var tint: ColorRect = ColorRect.new()
+    tint.color = Color("101b21",0.73)
+    tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(tint)
+    tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var frame: PanelContainer = PanelContainer.new()
+    frame.add_theme_stylebox_override("panel",style(Color("1b302d",0.985),24))
+    root.add_child(frame)
+    frame.anchor_left = 0.045
+    frame.anchor_right = 0.955
+    frame.anchor_top = 0.23 if height <= 430 else 0.105
+    frame.anchor_bottom = 0.77 if height <= 430 else 0.885
+    frame.offset_left = 0
+    frame.offset_right = 0
+    frame.offset_top = 0
+    frame.offset_bottom = 0
+    var stack: VBoxContainer = VBoxContainer.new()
+    stack.add_theme_constant_override("separation",12)
+    frame.add_child(stack)
+    var heading: HBoxContainer = HBoxContainer.new()
+    heading.add_theme_constant_override("separation",8)
+    stack.add_child(heading)
+    var heading_text: Label = text(heading,title,19,Color("f1d8a3"))
+    heading_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    heading_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var close_btn: Button = action(heading,"✕",_close_realm_dialog.bind(root))
+    close_btn.custom_minimum_size = Vector2(48,48)
+    close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
+    var golden_rule: ColorRect = ColorRect.new()
+    golden_rule.color = Color("c39d61",0.73)
+    golden_rule.custom_minimum_size.y = 2
+    golden_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    stack.add_child(golden_rule)
+    var scroll: ScrollContainer = ScrollContainer.new()
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+    stack.add_child(scroll)
     var content: VBoxContainer = VBoxContainer.new()
     content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    content.add_theme_constant_override("separation",10)
-    scroller.add_child(content)
-    return {"dialog":dlg,"box":content}
+    content.add_theme_constant_override("separation",13)
+    content.mouse_filter = Control.MOUSE_FILTER_PASS
+    scroll.add_child(content)
+    var back: Button = action(stack,L("return"),_close_realm_dialog.bind(root),true)
+    back.custom_minimum_size.y = 53
+    active_realm_dialog = root
+    active_realm_scroll = scroll
+    return {"dialog":root,"box":content,"scroller":scroll}
 
 func _open_realm_dialog(items: Dictionary) -> void:
-    var dialog: AcceptDialog = items.dialog
-    dialog.popup_centered(Vector2i(430,740))
+    # An in-scene overlay is immediately visible, already sized to the viewport.
+    var dialog: Control = items.dialog
+    dialog.visible = true
 
 func _realm_unlocked_hint(realm: int) -> String:
     return Realms.missing_reason(data,realm,lang())
@@ -544,7 +648,7 @@ func show_realms() -> void:
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
         var card: PanelContainer = PanelContainer.new()
-        card.add_theme_stylebox_override("panel",style(Color("263432",0.96),18))
+        card.add_theme_stylebox_override("panel",style(_realm_tone(i),18))
         body.add_child(card)
         var column: VBoxContainer = VBoxContainer.new()
         column.add_theme_constant_override("separation",5)
@@ -569,7 +673,7 @@ func show_realms() -> void:
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
 
-func _choose_realm_from_dialog(number: int, dialog: AcceptDialog) -> void:
+func _choose_realm_from_dialog(number: int, dialog: Control) -> void:
     if select_realm(number): dialog.queue_free()
 
 func select_realm(number: int) -> bool:
@@ -585,61 +689,111 @@ func select_realm(number: int) -> bool:
 
 func _challenge_items(list: VBoxContainer, realm: int) -> void:
     for node in list.get_children(): node.queue_free()
-    var free: bool = Realms.unlocked(data,realm)
-    text(list,Realms.realm_name(realm,lang()) + (" · 🔒" if not free else ""),21,Color("ecd19d"))
-    text(list,L("progress") + ": %d/8 · " % Realms.count(data,realm) + Realms.title_for_realm(data,realm,lang()),14)
-    if not free: text(list,L("locked") + ": " + _realm_unlocked_hint(realm),13)
+    var unlocked: bool = Realms.unlocked(data,realm)
+    var heading: PanelContainer = PanelContainer.new()
+    heading.add_theme_stylebox_override("panel",style(_realm_tone(realm),18))
+    list.add_child(heading)
+    var head_box: VBoxContainer = VBoxContainer.new()
+    heading.add_child(head_box)
+    text(head_box,Realms.REALM_NAMES[realm] + ("  🔒" if not unlocked else ""),20,Color("f5dca8"))
+    text(head_box,L("progress") + ": %d/8" % Realms.count(data,realm),14)
+    if not unlocked:
+        text(head_box,L("locked") + ": " + _realm_unlocked_hint(realm),13)
     var done: Dictionary = Realms.state(data).completed
     for task in Realms.TASKS[realm]:
         var earned: bool = bool(done.get(str(task.id),false))
         var card: PanelContainer = PanelContainer.new()
-        card.add_theme_stylebox_override("panel",style(Color("334d46",0.98) if earned else Color("322b28",0.95),14))
+        card.add_theme_stylebox_override("panel",style(Color("294a3c") if earned else _realm_tone(realm),16))
+        card.mouse_filter = Control.MOUSE_FILTER_PASS
         list.add_child(card)
-        var inner: VBoxContainer = VBoxContainer.new()
-        card.add_child(inner)
-        text(inner,("✓ " if earned else "○ ")+Realms.task_title(task,lang()),16,Color("e5d29d"))
-        text(inner,Realms.task_description(task,lang()),13)
-        text(inner,(L("earned") if earned else L("reward")) + " · 🍃 %d" % int(task.leaves),12,Color("b9d5a8"))
-    text(list,L("bot_only"),13,Color("d5ba85"))
+        var inside: VBoxContainer = VBoxContainer.new()
+        inside.add_theme_constant_override("separation",8)
+        inside.mouse_filter = Control.MOUSE_FILTER_PASS
+        card.add_child(inside)
+        text(inside,("✓  " if earned else "◇  ") + str(task.title),18,Color("f3ddb2"))
+        text(inside,Realms.task_description(task,lang()),14,Color("d7d5c9"))
+        text(inside,(L("earned") if earned else L("reward")) + "  ·  🍃 %d" % int(task.leaves),14,Color("bce3af"))
+    text(list,L("bot_only"),13,Color("cdbd9d"))
 
 func show_challenges() -> void:
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + L("challenges"))
     var body: VBoxContainer = parts.box
-    var tabs: OptionButton = OptionButton.new()
-    tabs.custom_minimum_size.y = 54
-    for number in range(4): tabs.add_item(Realms.realm_name(number,lang()),number)
-    tabs.select(realm_index())
-    body.add_child(tabs)
+    # Four elegant themed choices replace the intrusive default black dropdown.
+    var choices: GridContainer = GridContainer.new()
+    choices.columns = 2
+    choices.add_theme_constant_override("h_separation",7)
+    choices.add_theme_constant_override("v_separation",7)
+    body.add_child(choices)
     var tasks_box: VBoxContainer = VBoxContainer.new()
-    tasks_box.add_theme_constant_override("separation",7)
+    tasks_box.add_theme_constant_override("separation",12)
     body.add_child(tasks_box)
+    for number in range(4):
+        var realm_number: int = number
+        var pick: Button = action(choices,Realms.REALM_NAMES[number],func(): _challenge_items(tasks_box,realm_number),number==realm_index())
+        pick.add_theme_font_size_override("font_size",13)
     _challenge_items(tasks_box,realm_index())
-    tabs.item_selected.connect(func(index): _challenge_items(tasks_box,index))
     _open_realm_dialog(parts)
 
 func show_realm_titles() -> void:
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + L("titles"))
     var body: VBoxContainer = parts.box
-    text(body,L("total_titles") + ": " + Realms.overall_title_local(data,lang()),20,Color("eccd8d"))
+    text(body,L("total_titles") + ": " + Realms.overall_title(data),21,Color("efd49b"))
     text(body,L("total") + ": %d/32" % Realms.total_count(data),15)
     for realm in range(4):
-        text(body,Realms.realm_name(realm,lang()) + " · %d/8" % Realms.count(data,realm),18,Color("dfc99a"))
+        var card: PanelContainer = PanelContainer.new()
+        card.add_theme_stylebox_override("panel",style(_realm_tone(realm),18))
+        card.mouse_filter = Control.MOUSE_FILTER_PASS
+        body.add_child(card)
+        var inside: VBoxContainer = VBoxContainer.new()
+        inside.add_theme_constant_override("separation",10)
+        card.add_child(inside)
         var finished: int = Realms.count(data,realm)
+        text(inside,Realms.REALM_NAMES[realm] + "  ·  %d/8" % finished,19,Color("f5dea8"))
+        var bar: ProgressBar = ProgressBar.new()
+        bar.max_value = 8.0
+        bar.value = float(finished)
+        bar.show_percentage = false
+        bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        bar.custom_minimum_size.y = 10
+        inside.add_child(bar)
         for i in range(5):
             var earned: bool = finished >= Realms.TITLE_MILESTONES[i]
-            text(body,("✓ " if earned else "🔒 ") + Realms.localized_name(str(Realms.REALM_TITLES[realm][i]),lang()) + " · %d/8" % int(Realms.TITLE_MILESTONES[i]),13,Color("c9dbb8" if earned else "998d7f"))
+            var badge: Label = text(inside,("✦ " if earned else "🔒 ") + str(Realms.REALM_TITLES[realm][i]) + " · %d/8" % int(Realms.TITLE_MILESTONES[i]),14,Color("cde9b7") if earned else Color("c0b5a7"))
+            badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
     _open_realm_dialog(parts)
 
-func show_realm_rewards(awards: Dictionary) -> void:
-    if awards.is_empty() or not is_inside_tree(): return
-    if int(awards.get("leaves",0)) <= 0: return
-    var parts: Dictionary = _realm_dialog(L("new_awards"),400)
+func show_match_result() -> void:
+    if not is_inside_tree(): return
+    var human_won: bool = result in [1,2] and int(owners[result-1]) == 0
+    var title: String = Z("Unentschieden!") if result == 3 else (Z("Gewonnen!") if human_won else Z("Zen-Bot hat gewonnen!"))
+    if not against_bot and result in [1,2]: title = pname(int(owners[result-1])) + " " + Z("hat gewonnen!")
+    var parts: Dictionary = _realm_dialog(title,410)
     var body: VBoxContainer = parts.box
-    text(body,"🍃 +%d " % int(awards.leaves) + L("leaves"),21,Color("dce7ae"))
-    for task_id in awards.get("new_tasks",[]):
+    var medal: PanelContainer = PanelContainer.new()
+    medal.add_theme_stylebox_override("panel",style(Color("274b3c") if human_won else Color("2b3540"),20))
+    body.add_child(medal)
+    var info: VBoxContainer = VBoxContainer.new()
+    info.add_theme_constant_override("separation",11)
+    medal.add_child(info)
+    text(info,("✦  " if human_won else "◇  ") + title,24,Color("ffe4a5"))
+    var leaves_total: int = last_match_leaf_reward + int(last_realm_awards.get("leaves",0))
+    if leaves_total > 0:
+        text(info,"🍃 +%d " % leaves_total + L("leaves"),21,Color("c4edac"))
+    for task_id in last_realm_awards.get("new_tasks",[]):
         for task in Realms.TASKS[clampi(match_realm,0,3)]:
-            if str(task.id) == str(task_id): text(body,"✓ "+Realms.task_title(task,lang()),15)
-    if bool(awards.get("realm_completed",false)):
-        text(body,L("realm_complete") + "  🍃 +250",18,Color("efcc86"))
-    text(body,L("rank") + ": " + Realms.title_for_realm(data,match_realm,lang()),15)
+            if str(task.id) == str(task_id): text(info,"✓  " + str(task.title),15,Color("f0dba7"))
+    if bool(last_realm_awards.get("realm_completed",false)):
+        text(info,"✦  " + L("realm_complete"),17,Color("ffe6a4"))
+    if not last_realm_awards.get("new_tasks",[]).is_empty():
+        text(info,L("rank") + ": " + Realms.current_title(data,match_realm),15)
+    action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog),true)
+    action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
+
+func _replay_after_result(dialog: Control) -> void:
+    _close_realm_dialog(dialog)
+    start_game(against_bot,bot_level)
+
+func show_realm_rewards(_awards: Dictionary) -> void:
+    # Compatibility: rewards are part of the single themed match result now.
+    show_match_result()
