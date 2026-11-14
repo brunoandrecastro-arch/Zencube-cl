@@ -4,6 +4,14 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "A purchased hint stays with you. Achievements must still be earned in battle.": "Purchased hints are permanent. Achievements must still be earned through play.",
+    "Buy a hint · 🍃 %d": "Unlock a hint · 🍃 %d",
+    "Hints": "Achievement Hints",
+    "Not enough Zen Leaves, or hint already owned.": "Not enough Zen Leaves, or you already own this hint.",
+    "Secret Achievement Hints": "Hints for Secret Achievements",
+    "Zen Leaves: 🍃 %d": "Available Zen Leaves: 🍃 %d",
+    "✓ Achievement unlocked": "✓ Achievement earned",
+    "🍃 Hint: ": "🍃 Clue: ",
     "Denke über die Kanten hinaus.": "Think beyond the edges.",
     "Entdecke neue Wege.": "Discover new possibilities.",
     "Kulissen": "Backgrounds",
@@ -334,6 +342,14 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "A purchased hint stays with you. Achievements must still be earned in battle.": "As dicas compradas ficam para sempre. As conquistas têm de ser alcançadas a jogar.",
+    "Buy a hint · 🍃 %d": "Comprar uma dica · 🍃 %d",
+    "Hints": "Dicas",
+    "Not enough Zen Leaves, or hint already owned.": "Não tens Folhas Zen suficientes ou já compraste esta dica.",
+    "Secret Achievement Hints": "Dicas para conquistas secretas",
+    "Zen Leaves: 🍃 %d": "Folhas Zen disponíveis: 🍃 %d",
+    "✓ Achievement unlocked": "✓ Conquista desbloqueada",
+    "🍃 Hint: ": "🍃 Dica: ",
     "Denke über die Kanten hinaus.": "Pensa para lá das arestas.",
     "Entdecke neue Wege.": "Descobre novas possibilidades.",
     "Kulissen": "Cenários",
@@ -693,6 +709,14 @@ const NATURAL_COPY: Dictionary = {
 }
 
 const ZEN_PATCH: Dictionary = {
+    "A purchased hint stays with you. Achievements must still be earned in battle.": ["Ein gekaufter Hinweis bleibt erhalten. Erfolge musst du weiterhin erspielen.", "Purchased hints are permanent. Achievements must still be earned through play.", "As dicas compradas ficam para sempre. As conquistas têm de ser alcançadas a jogar."],
+    "Buy a hint · 🍃 %d": ["Hinweis kaufen · 🍃 %d", "Unlock a hint · 🍃 %d", "Comprar uma dica · 🍃 %d"],
+    "Hints": ["Hinweise", "Achievement Hints", "Dicas"],
+    "Not enough Zen Leaves, or hint already owned.": ["Nicht genug Zen-Blätter oder Hinweis bereits gekauft.", "Not enough Zen Leaves, or you already own this hint.", "Não tens Folhas Zen suficientes ou já compraste esta dica."],
+    "Secret Achievement Hints": ["Hinweise auf geheime Erfolge", "Hints for Secret Achievements", "Dicas para conquistas secretas"],
+    "Zen Leaves: 🍃 %d": ["Zen-Blätter: 🍃 %d", "Available Zen Leaves: 🍃 %d", "Folhas Zen disponíveis: 🍃 %d"],
+    "✓ Achievement unlocked": ["✓ Erfolg freigeschaltet", "✓ Achievement earned", "✓ Conquista desbloqueada"],
+    "🍃 Hint: ": ["🍃 Hinweis: ", "🍃 Clue: ", "🍃 Dica: "],
     "Denke über die Kanten hinaus.": ["Denke über die Kanten hinaus.", "Think beyond the edges.", "Pensa para lá das arestas."],
     "Entdecke neue Wege.": ["Entdecke neue Wege.", "Discover new possibilities.", "Descobre novas possibilidades."],
     "Kulissen": ["Kulissen", "Backgrounds", "Cenários"],

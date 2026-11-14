@@ -27,6 +27,7 @@ var cube_surface: TextureRect
 var status_label: Label
 var details_label: Label
 var rank_label: Label
+var quote_label: Label
 var instructions: Label
 var layer: Control
 var menu_dialog: ConfirmationDialog
@@ -273,8 +274,16 @@ func build_interface() -> void:
     var header: PanelContainer = PanelContainer.new()
     header.add_theme_stylebox_override("panel",style(Color("392a25",0.96),22))
     column.add_child(header)
+    var header_row: HBoxContainer = HBoxContainer.new()
+    header_row.add_theme_constant_override("separation",8)
+    header.add_child(header_row)
+    var menu_button: Button = action(header_row,"☰",show_ascend_menu)
+    menu_button.custom_minimum_size = Vector2(50,54)
+    menu_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+    menu_button.tooltip_text = "Zen Ascend menu"
     var title_box: VBoxContainer = VBoxContainer.new()
-    header.add_child(title_box)
+    title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    header_row.add_child(title_box)
     text(title_box,Z("Zen Ascend 4×4"),25,Color("f9e7b7"))
     text(title_box,L("subtitle"),12,Color("d6bfa4"))
     rank_label = text(title_box,"",13,Color("c5d6bd"))
@@ -308,20 +317,61 @@ func build_interface() -> void:
     column.add_child(row)
     action(row,Z("Neue Partie"),show_mode_picker)
     action(row,Z("Regeln ansehen"),show_rules)
-    var footer: HBoxContainer = HBoxContainer.new()
-    footer.add_theme_constant_override("separation",6)
-    column.add_child(footer)
-    action(footer,Z("Statistik & Rang"),show_statistics)
-    action(footer,Z("Hauptmenü"),return_home,true)
     var realm_actions: HBoxContainer = HBoxContainer.new()
     realm_actions.add_theme_constant_override("separation",6)
     column.add_child(realm_actions)
     action(realm_actions,L("realms"),show_realms)
     action(realm_actions,L("challenges"),show_challenges,true)
     action(realm_actions,_achievements_label(),show_realm_titles)
+    var quote_box: PanelContainer = PanelContainer.new()
+    quote_box.add_theme_stylebox_override("panel",style(Color("302820",0.94),13))
+    column.add_child(quote_box)
+    quote_label = text(quote_box,"",12,Color("f4dfbd"))
+
+func realm_quote() -> String:
+    var index: int = realm_index()
+    var en: Array[String] = [
+        "Even the deepest shadow can reveal a path.",
+        "A steady mind outlasts the brightest flame.",
+        "Above the clouds, calm opens the way forward.",
+        "In stillness, every move finds its meaning."
+    ]
+    var de: Array[String] = [
+        "Auch der tiefste Schatten kann einen Weg zeigen.",
+        "Ein ruhiger Geist überdauert jede Flamme.",
+        "Über den Wolken öffnet Gelassenheit neue Wege.",
+        "In der Stille erhält jeder Zug Bedeutung."
+    ]
+    var pt: Array[String] = [
+        "Até a sombra mais profunda pode revelar um caminho.",
+        "Uma mente serena resiste à chama mais forte.",
+        "Acima das nuvens, a calma abre o caminho.",
+        "Na quietude, cada jogada ganha sentido."
+    ]
+    var pool: Array[String] = de if lang() == "de" else (pt if lang() == "pt" else en)
+    return "“" + pool[index] + "”"
+
+func _bot_difficulty_name() -> String:
+    var levels: Array[String] = ["Leicht", "Mittel", "Schwer", "Meister", "Großmeister"]
+    return Locale.translate(levels[clampi(bot_level,0,4)],lang())
+
+func zen_ascend_bot_name() -> String:
+    return "Zen Ascend Bot · " + _bot_difficulty_name()
+
+func show_ascend_menu() -> void:
+    var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",520)
+    var body: VBoxContainer = parts.box
+    action(body,Z("Neue Partie"),show_mode_picker,true)
+    action(body,Z("Statistik & Rang"),show_statistics)
+    action(body,Z("Regeln ansehen"),show_rules)
+    action(body,L("realms"),show_realms)
+    action(body,L("challenges"),show_challenges)
+    action(body,_achievements_label(),show_realm_titles)
+    action(body,Z("Hauptmenü"),return_home)
+    _open_realm_dialog(parts)
 
 func pname(owner: int) -> String:
-    if against_bot and owner == 1: return "Zen-Bot"
+    if against_bot and owner == 1: return zen_ascend_bot_name()
     var names: Array = data.settings.names
     return str(names[clampi(owner,0,1)])
 func move_count() -> int:
@@ -335,15 +385,16 @@ func draw() -> void:
                 if not wins.has(c): wins.append(c)
     cube.repaint(cells,wins)
     rank_label.text = Realms.realm_name(realm_index(),lang()) + " · " + Achievements.main_title(data,realm_index())
+    if quote_label != null: quote_label.text = realm_quote()
     if result == 3:
         status_label.text = Z("Unentschieden!")
     elif result > 0:
         if against_bot and result == 2:
-            status_label.text = Z("Zen-Bot hat gewonnen!")
+            status_label.text = zen_ascend_bot_name() + " · " + Z("hat gewonnen!")
         else:
             status_label.text = pname(int(owners[result-1]))+" "+Z("hat gewonnen!")
     elif busy:
-        status_label.text = Z("Zen-Bot überlegt …")
+        status_label.text = zen_ascend_bot_name() + " · " + Z("überlegt …")
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
@@ -411,10 +462,9 @@ func cube_input(event: InputEvent) -> void:
 
 func start_game(bot: bool, level: int = -1) -> void:
     against_bot = bot
-    # -1 means the difficulty unlocked by the current Classic Zen rank.
-    # Explicit selections remain fully respected.
-    bot_level = clampi(level if level >= 0 else BotAuto.level_for_rank(int(data.ascension.rank)),0,4)
+    # Explicit level choices never override fixed Realm difficulty.
     match_realm = realm_index()
+    bot_level = Realms.fixed_bot_level(match_realm)
     match_blocked_threat = false
     last_realm_awards = {}
     last_match_leaf_reward = 0
@@ -489,9 +539,6 @@ func finish() -> void:
     pending_fully_aware = false
     queued_unlocks.clear()
     if against_bot:
-        var previously_open: Array = []
-        for realm_id in range(1,4):
-            previously_open.append(Realms.unlocked(data,realm_id))
         var outcome: int = 0
         if result != 3: outcome = 1 if int(owners[result-1]) == 0 else -1
         var lines_won: Array = Mode.winning_lines(cells,lines,result) if outcome == 1 else []
@@ -500,12 +547,18 @@ func finish() -> void:
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":str(secret.name),"quote":str(secret.quote)})
         if bool(last_realm_awards.get("realm_completed",false)):
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":Achievements.MAIN_TITLES[match_realm],"quote":Achievements.main_quote(match_realm)})
-        for realm_id in range(1,4):
-            if not bool(previously_open[realm_id-1]) and Realms.unlocked(data,realm_id):
-                queued_unlocks.push_front({"kind":"realm","realm":realm_id,"name":Realms.REALM_NAMES[realm_id],"quote":"A new path opens beyond the known world."})
-                # The newly reached Realm becomes the next match's default.
-                Realms.state(data)["selected"] = realm_id
-                if realm_backdrop != null: realm_backdrop.texture = load(Realms.REALM_ART[realm_id])
+        # Realm access may unlock earlier, but AUTOMATIC travel requires all 8
+        # challenges completed in the current Realm. Once-only persisted gate.
+        if match_realm < 3 and Realms.count(data,match_realm) == 8 and Realms.unlocked(data,match_realm+1):
+            var journey: Dictionary = Realms.state(data)
+            if not journey.get("auto_transitions") is Dictionary:
+                journey["auto_transitions"] = {}
+            if not bool(journey.auto_transitions.get(str(match_realm),false)):
+                journey.auto_transitions[str(match_realm)] = true
+                var destination: int = match_realm + 1
+                queued_unlocks.push_front({"kind":"realm","realm":destination,"name":Realms.REALM_NAMES[destination],"quote":"A new path opens beyond the known world."})
+                journey["selected"] = destination
+                if realm_backdrop != null: realm_backdrop.texture = load(Realms.REALM_ART[destination])
         var realm_state: Dictionary = Realms.state(data)
         if match_realm == 3 and bool(last_realm_awards.get("realm_completed", false)) and Realms.current_title(data,3) == "Fully Aware" and not bool(realm_state.get("fully_aware_ceremony_seen", false)):
             realm_state["fully_aware_ceremony_seen"] = true
@@ -586,13 +639,12 @@ func show_mode_picker() -> void:
     var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
     var dialog: Control = parts.dialog
     var body: VBoxContainer = parts.box
-    text(body,L("choose_level"),15)
+    text(body,"This Realm has a fixed Zen Ascend Bot difficulty.",15)
     text(body,Realms.realm_name(realm_index(),lang()) + " · " + Achievements.main_title(data,realm_index()),15,Color("e5ca93"))
-    var bot_names: Array[String] = ["Leicht", "Mittel", "Schwer", "Meister", "Großmeister"]
-    for i in range(5):
-        var diff: int = i
-        var label_name: String = Locale.translate(bot_names[i],lang())
-        action(body,Z("Gegen Zen-Bot") + " · " + label_name,_start_realm_match.bind(true,diff,dialog),i==BotAuto.level_for_rank(int(data.ascension.rank)))
+    var fixed_level: int = Realms.fixed_bot_level(realm_index())
+    var labels: Array[String] = ["Leicht", "Mittel", "Schwer", "Meister", "Großmeister"]
+    text(body,"Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),18,Color("f4dfbd"))
+    action(body,"Play Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),_start_realm_match.bind(true,fixed_level,dialog),true)
     action(body,Z("Zu zweit spielen"),_start_realm_match.bind(false,0,dialog))
     _open_realm_dialog(parts)
 
@@ -884,7 +936,10 @@ func show_realm_titles() -> void:
     _open_realm_dialog(parts)
 
 func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -> void:
-    var parts: Dictionary = _realm_dialog(str(secret.name),610)
+    var is_main_title: bool = str(secret.id) == "main"
+    var revealed: bool = unlocked or is_main_title
+    var title_text: String = str(secret.name) if revealed else "???"
+    var parts: Dictionary = _realm_dialog(title_text,610)
     var body: VBoxContainer = parts.box
     var picture: TextureRect = TextureRect.new()
     picture.texture = load(Realms.REALM_ART[realm])
@@ -894,16 +949,23 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body.add_child(picture)
     text(body,("✦  Achievement Unlocked" if unlocked else "🔒  Secret Achievement"),18,Color("f4dcaa"))
-    text(body,str(secret.name),23,Color("f7e4b9"))
-    text(body,"“" + str(secret.quote) + "”",17,Color("d8e7d4"))
-    text(body,"How to unlock: " + str(secret.condition),15,Color("f1d29b"))
+    text(body,title_text,23,Color("f7e4b9"))
+    if revealed:
+        text(body,"“" + str(secret.quote) + "”",17,Color("d8e7d4"))
+        text(body,"How to unlock: " + str(secret.condition),15,Color("f1d29b"))
+    else:
+        text(body,"Unlock condition hidden. Discover the secret in play.",15,Color("d8e7d4"))
+        if Achievements.hint_owned(data,str(secret.id)):
+            text(body,"🍃  Hint: " + Achievements.hint_text(str(secret.id)),16,Color("f1d29b"))
+        else:
+            text(body,"Get a hint in Main menu → Zen Shop → Hints (🍃 %d)." % Achievements.HINT_PRICE,14,Color("edcfa2"))
     action(body,_achievements_label(),show_realm_titles,true)
     _open_realm_dialog(parts)
 
 func show_match_result() -> void:
     if not is_inside_tree(): return
     var human_won: bool = result in [1,2] and int(owners[result-1]) == 0
-    var title: String = Z("Unentschieden!") if result == 3 else (Z("Gewonnen!") if human_won else Z("Zen-Bot hat gewonnen!"))
+    var title: String = Z("Unentschieden!") if result == 3 else (Z("Gewonnen!") if human_won else zen_ascend_bot_name() + " · " + Z("hat gewonnen!"))
     if not against_bot and result in [1,2]: title = pname(int(owners[result-1])) + " " + Z("hat gewonnen!")
     var parts: Dictionary = _realm_dialog(title,410)
     var body: VBoxContainer = parts.box

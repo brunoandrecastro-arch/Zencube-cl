@@ -2,6 +2,11 @@ class_name ZenAscendRealms
 extends RefCounted
 # Isolated 4x4 progression. Never changes Classic 3x3, legacy stats, music IDs or save version.
 const REALM_NAMES: Array[String] = ["Shadow Realm", "Ember Temple", "Celestial Realm", "Satori Realm"]
+# Fixed Zen Ascend bot tiers; Classic bot progression is separate and unchanged.
+const REALM_BOT_LEVELS: Array[int] = [1, 2, 3, 4] # Medium, Hard, Master, Grandmaster
+
+static func fixed_bot_level(realm: int) -> int:
+    return REALM_BOT_LEVELS[clampi(realm,0,3)]
 const REALM_ART: Array[String] = [
     "res://assets/realms/shadow_realm.webp",
     "res://assets/realms/ember_temple.webp",

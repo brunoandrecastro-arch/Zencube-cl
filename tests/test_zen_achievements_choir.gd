@@ -20,6 +20,17 @@ func run() -> void:
     check(first.size() == 1 and str(first[0].id) == "shadow_walker","first secret from own statistic")
     check(ZenAscendAchievements.claim_after_match(data,0).is_empty(),"achievement cannot be awarded twice")
     check(ZenAscendAchievements.secret_count(data) == 1,"secret progress persisted")
+    var hint_data: Dictionary = SaveManager.defaults()
+    ZenCollection.ensure(hint_data)
+    hint_data.economy.leaves = 100
+    check(ZenAscendAchievements.buy_hint(hint_data,"moon_disciple"),"valid hint purchase")
+    check(ZenAscendAchievements.hint_owned(hint_data,"moon_disciple"),"hint unlocked, not achievement")
+    check(not ZenAscendAchievements.earned(hint_data,"moon_disciple"),"hint must not award achievement")
+    check(int(hint_data.economy.leaves) == 50,"exactly 50 leaves deducted")
+    check(not ZenAscendAchievements.buy_hint(hint_data,"moon_disciple"),"hint cannot be paid twice")
+    var hint_loaded: Variant = JSON.parse_string(JSON.stringify(hint_data))
+    if hint_loaded is Dictionary:
+        check(ZenAscendAchievements.hint_owned(hint_loaded,"moon_disciple"),"hint survives reload")
     for item in ZenAscendRealms.TASKS[0]:
         state.completed[str(item.id)] = true
     check(ZenAscendAchievements.main_title(data,0) == "Master of Shadows","one title at full Realm mastery")

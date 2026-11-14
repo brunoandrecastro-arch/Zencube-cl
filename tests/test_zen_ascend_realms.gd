@@ -20,6 +20,8 @@ func run() -> void:
             keys[str(task.id)] = true
             check(str(task.de).length()>5 and str(task.en).length()>5 and str(task.pt).length()>5,"DE/EN/PT task copy")
     check(count_all==32,"32 challenges")
+    for realm_id in range(4):
+        check(Realms.fixed_bot_level(realm_id) == realm_id + 1,"fixed Realm difficulty %d" % realm_id)
     var data: Dictionary = SaveManager.defaults()
     var preexisting_classic: Dictionary = data.stats.duplicate(true)
     Realms.ensure(data)

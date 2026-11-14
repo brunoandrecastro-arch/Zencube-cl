@@ -21,8 +21,11 @@ assert 'BotAuto.apply_after_rank_up(data,last_rank_up)' in ui
 assert 'if not bool(result.get("rank_up", false)):' in helper
 assert 'data.settings["level"] = level_for_rank(rank)' in helper
 assert 'return clampi(rank, 0, 4)' in helper
-assert 'BotAuto.level_for_rank(int(data.ascension.rank))' in ascend
-assert 'i==BotAuto.level_for_rank(int(data.ascension.rank))' in ascend
+realms=(ROOT/'core/ZenAscendRealms.gd').read_text(encoding='utf-8')
+assert 'const REALM_BOT_LEVELS: Array[int] = [1, 2, 3, 4]' in realms
+assert 'bot_level = Realms.fixed_bot_level(match_realm)' in ascend
+assert 'var fixed_level: int = Realms.fixed_bot_level(realm_index())' in ascend
+assert 'BotAuto.level_for_rank(int(data.ascension.rank))' not in ascend
 assert 'ZenCollection.reward_bot(data,bot_level)' in ascend
 assert 'ZenCollection.reward_loss(data)' in ascend
 assert 'const TARGETS = [3, 5, 7, 3, 5]' in rank
@@ -47,4 +50,4 @@ for name in ('shadow_realm','ember_temple','celestial_realm','satori_realm'):
     assert path.is_file(),path
     assert webp_dimensions(path)==(1440,2560),(name,webp_dimensions(path))
     assert path.stat().st_size>100_000,name
-print('PASS: 20% smaller win modal, post-rank bot default, manual override, unchanged unlocks/stats, 4 HD Realm assets 1440x2560')
+print('PASS: Classic rank defaults and fixed 4x4 realm bot tiers; unlocks/stats and HD Realm assets preserved')

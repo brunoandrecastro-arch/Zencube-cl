@@ -2,6 +2,27 @@ class_name ZenAscendAchievements
 extends RefCounted
 # Independent secret accomplishments. Realm Challenges keep their original
 # eight-task logic; titles are now earned only at full Realm mastery.
+const HINT_PRICE: int = 50
+# Hints are poetic nudges, never exact achievement conditions.
+const HINTS: Dictionary = {
+    "shadow_walker":"The darkness remembers those who return.",
+    "keeper_silence":"Quiet strength grows from consecutive triumphs.",
+    "moon_disciple":"The edge of the cube holds a hidden path.",
+    "veil_breaker":"Defend against danger before seeking glory.",
+    "ember_initiate":"The temple welcomes the persistent.",
+    "flame_disciple":"Brave a stronger fire to find your worth.",
+    "temple_challenger":"Sometimes the winning path stays on one face.",
+    "fire_strategist":"Let hard-won momentum guide your flame.",
+    "sky_seeker":"Look skyward more than once.",
+    "cloud_disciple":"Keep your victorious rhythm among the clouds.",
+    "light_weaver":"Light can cross an unexpected edge.",
+    "celestial_adept":"A true master tests the heavens.",
+    "mind_awakened":"Your first glimpses of awareness are only the beginning.",
+    "stillness_walker":"Find unbroken stillness against a formidable foe.",
+    "satori_adept":"Sometimes the wisest answer is a defense.",
+    "keeper_awareness":"Only the highest guardian can test complete awareness."
+}
+
 const MAIN_TITLES: Array[String] = [
     "Master of Shadows", "Ember Master", "Celestial Master", "Fully Aware"
 ]
@@ -37,10 +58,35 @@ static func ensure(data: Dictionary) -> void:
     var st: Dictionary = ZenAscendRealms.state(data)
     if not st.get("secret_achievements") is Dictionary:
         st["secret_achievements"] = {}
+    if not st.get("purchased_hints") is Dictionary:
+        st["purchased_hints"] = {}
 
 static func earned(data: Dictionary, key: String) -> bool:
     ensure(data)
     return bool(ZenAscendRealms.state(data).secret_achievements.get(key, false))
+
+static func hint_owned(data: Dictionary, key: String) -> bool:
+    ensure(data)
+    return bool(ZenAscendRealms.state(data).purchased_hints.get(key,false))
+
+static func hint_text(key: String) -> String:
+    return str(HINTS.get(key,"A gentle clue is waiting to be discovered."))
+
+static func buy_hint(data: Dictionary, key: String) -> bool:
+    ensure(data)
+    var exists: bool = false
+    for item in SECRETS:
+        if str(item.id) == key:
+            exists = true
+            break
+    if not exists or earned(data,key) or hint_owned(data,key): return false
+    ZenCollection.ensure(data)
+    if int(data.economy.leaves) < HINT_PRICE: return false
+    data.economy.leaves -= HINT_PRICE
+    var state: Dictionary = ZenAscendRealms.state(data)
+    var hints: Dictionary = state.purchased_hints
+    hints[key] = true
+    return true
 
 static func claim_after_match(data: Dictionary, realm: int) -> Array:
     ensure(data)

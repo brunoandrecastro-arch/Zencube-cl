@@ -636,7 +636,7 @@ func _process(_delta: float) -> void:
 func _exit_tree() -> void:
     if worker != null: worker.wait_to_finish()
 var shop_page: int = 0
-var shop_tab: int = 0 # 0 = Skins, 1 = Musik, 2 = Kulissen
+var shop_tab: int = 0 # 0 = Skins, 1 = Musik, 2 = Kulissen, 3 = Hints
 var music_preview_player: AudioStreamPlayer
 var music_preview_generation: int = 0
 const NEW_MUSIC_STREAMS = [
@@ -712,11 +712,17 @@ func open_store() -> void:
     var skins_tab: Button = button(T("Skins"), tab_bar, func(): change_shop_tab(0), true, shop_tab == 0)
     var music_tab: Button = button("Musik", tab_bar, func(): change_shop_tab(1), true, shop_tab == 1)
     var backdrops_tab: Button = button("Kulissen", tab_bar, func(): change_shop_tab(2), true, shop_tab == 2)
-    for tab in [skins_tab, music_tab, backdrops_tab]:
+    var hints_tab: Button = button("Hints", tab_bar, func(): change_shop_tab(3), true, shop_tab == 3)
+    for tab in [skins_tab, music_tab, backdrops_tab, hints_tab]:
         tab.add_theme_font_size_override("font_size", 12)
     skins_tab.disabled = shop_tab == 0
     music_tab.disabled = shop_tab == 1
     backdrops_tab.disabled = shop_tab == 2
+    hints_tab.disabled = shop_tab == 3
+    if shop_tab == 3:
+        store_hint_section(box)
+        button("Zum Hauptmenü", box, open_menu, true)
+        return
     if shop_tab == 2:
         store_background_section(box)
         button("Zum Hauptmenü", box, open_menu, true)
@@ -787,7 +793,40 @@ func open_store() -> void:
     button("Zum Hauptmenü", box, open_menu, true)
 
 func change_shop_tab(index: int) -> void:
-    shop_tab = clampi(index, 0, 2)
+    shop_tab = clampi(index, 0, 3)
+    open_store()
+
+func store_hint_section(parent: VBoxContainer) -> void:
+    ZenAscendAchievements.ensure(data)
+    label("Secret Achievement Hints",parent,19,Color("526943"))
+    label("A purchased hint stays with you. Achievements must still be earned in battle.",parent,13)
+    label("Zen Leaves: 🍃 %d" % int(data.economy.leaves),parent,14)
+    for secret in ZenAscendAchievements.SECRETS:
+        var key: String = str(secret.id)
+        var earned: bool = ZenAscendAchievements.earned(data,key)
+        var hint_bought: bool = ZenAscendAchievements.hint_owned(data,key)
+        var card: PanelContainer = PanelContainer.new()
+        card.add_theme_stylebox_override("panel",theme_style(Color("fff0d9",0.96),12))
+        card.mouse_filter = Control.MOUSE_FILTER_PASS
+        parent.add_child(card)
+        var inside: VBoxContainer = VBoxContainer.new()
+        inside.add_theme_constant_override("separation",6)
+        card.add_child(inside)
+        label(str(secret.name) if earned else "??? · " + str(ZenAscendRealms.REALM_NAMES[int(secret.realm)]),inside,16,Color("4b3428"))
+        if earned:
+            label("✓ Achievement unlocked",inside,13,Color("4b7848"))
+        elif hint_bought:
+            label("🍃 Hint: " + ZenAscendAchievements.hint_text(key),inside,14,Color("596b46"))
+        else:
+            var buy_button: Button = button("Buy a hint · 🍃 %d" % ZenAscendAchievements.HINT_PRICE,inside,func(): store_buy_hint(key),true)
+            buy_button.mouse_filter = Control.MOUSE_FILTER_PASS
+            buy_button.disabled = int(data.economy.leaves) < ZenAscendAchievements.HINT_PRICE
+
+func store_buy_hint(key: String) -> void:
+    if not ZenAscendAchievements.buy_hint(data,key):
+        notify_user("Not enough Zen Leaves, or hint already owned.")
+        return
+    persist()
     open_store()
 
 func store_background_section(parent: VBoxContainer) -> void:

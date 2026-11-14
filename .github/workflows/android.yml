@@ -121,6 +121,8 @@ jobs:
           timeout 40 "$GODOT" --headless --path . --script tests/test_zen_bot_auto.gd
       - name: Check Zen Ascend Realms assets, progression and interface (static)
         run: python3 tests/test_zen_ascend_realms.py
+      - name: Verify fixed Realm bots, 8/8 transition and secret hint shop (static)
+        run: python3 tests/test_ascend_fixed_realms_and_hints.py
       - name: Verify 32 Zen Ascend Realm challenges in Godot (headless)
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_zen_ascend_realms.gd
