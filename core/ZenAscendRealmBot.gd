@@ -61,19 +61,22 @@ static func _fork_score(cells: Array, lines: Array, player: int, candidate: int)
     if threats == 1: return 25.0
     return 0.0
 
-static func next_move(cells: Array, lines: Array, player: int, difficulty: int) -> int:
+static func next_move(cells: Array, lines: Array, player: int, difficulty: int, shadow_boost: bool = false) -> int:
     if player not in [1,2]: return -1
     var level: int = clampi(difficulty,0,4)
+    # A subtle Shadow-only Medium upgrade. No change to Classic, Hard or higher.
+    var shadow_medium: bool = shadow_boost and level == 1
+    var medium_noise: float = 10.0 if shadow_medium else 12.0
     var wins: Array = _immediate_moves(cells,lines,player)
     if not wins.is_empty():
-        if randf() <= WIN_CHANCE[level]: return int(wins[0])
+        if randf() <= (0.96 if shadow_medium else WIN_CHANCE[level]): return int(wins[0])
         # For Easy / Medium a genuine missed win should not be recovered by the heuristic.
         if level <= 1: return _random_empty(cells,wins)
     var blocks: Array = _immediate_moves(cells,lines,3-player)
     if not blocks.is_empty():
-        if randf() <= BLOCK_CHANCE[level]: return int(blocks[0])
+        if randf() <= (0.84 if shadow_medium else BLOCK_CHANCE[level]): return int(blocks[0])
         if level <= 1: return _random_empty(cells,blocks)
-    if randf() < NOISE_CHANCE[level]: return _random_empty(cells)
+    if randf() < (0.09 if shadow_medium else NOISE_CHANCE[level]): return _random_empty(cells)
     var best: float = -1e20
     var options: Array[int] = []
     var grand_defense: Array = []
@@ -89,7 +92,7 @@ static func next_move(cells: Array, lines: Array, player: int, difficulty: int) 
         if level >= 3: value += _fork_score(cells,lines,player,c)
         if level == 4 and grand_defense.has(c): value += 300.0
         if level == 0: value += randf_range(-35.0,35.0)
-        elif level == 1: value += randf_range(-12.0,12.0)
+        elif level == 1: value += randf_range(-medium_noise,medium_noise)
         elif level == 2: value += randf_range(-3.0,3.0)
         if value > best + 0.0001:
             best = value

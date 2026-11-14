@@ -16,9 +16,9 @@ func run() -> void:
         check(not ZenCollection.buy_music(data, t), "no purchase without leaves %d" % t)
     data.economy.leaves = 400
     check(ZenCollection.buy_music(data, 8), "buy Zen Piano")
-    check(int(data.economy.leaves) == 250, "price 150 leaves")
+    check(int(data.economy.leaves) == 225, "price 175 leaves")
     check(not ZenCollection.buy_music(data, 8), "duplicate purchase blocked")
-    check(int(data.economy.leaves) == 250, "duplicate purchase free")
+    check(int(data.economy.leaves) == 225, "duplicate purchase free")
     var parsed: Variant = JSON.parse_string(JSON.stringify(data))
     check(parsed is Dictionary, "save JSON survives")
     if parsed is Dictionary:
@@ -52,7 +52,7 @@ func run() -> void:
     game.data.economy.leaves = 350
     game.store_select_music(8)
     check(int(game.data.settings.music_track)==8, "purchase selects")
-    check(int(game.data.economy.leaves)==200, "only 150 leaves deducted")
+    check(int(game.data.economy.leaves)==175, "only 175 leaves deducted")
     game.change_shop_tab(0)
     check(game.shop_tab==0, "skins tab opens")
     game.close_modal()

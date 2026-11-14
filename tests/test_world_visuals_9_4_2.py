@@ -15,7 +15,9 @@ assert 'thumbnail.texture = Asc.WORLD_TEXTURES[i]' in ui
 assert 'thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED' in ui
 assert 'world_background.texture = Asc.WORLD_TEXTURES[chosen]' in ui
 assert 'func select_world(number: int)' in ui
-assert 'current_world = chosen' in ui
+assert 'var backdrop: int = Backdrops.selected(data)' in ui
+assert 'current_world = background_key' in ui
+assert 'world_background.texture = Asc.WORLD_TEXTURES[chosen] if backdrop == -1 else load(str(Backdrops.ITEMS[backdrop].path))' in ui
 names=['zen_garden_scene.webp','zen_world_bamboo.webp','zen_world_temple.webp','zen_world_moon.webp','zen_world_heaven.webp']
 sigs=[]
 for name in names:

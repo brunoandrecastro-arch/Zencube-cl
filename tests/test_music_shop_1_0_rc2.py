@@ -8,7 +8,7 @@ coll=(R/'core/ZenCollection.gd').read_text()
 loc=(R/'core/ZenLocalization.gd').read_text()
 flow=(R/'.github/workflows/android.yml').read_text()
 save=(R/'core/SaveManager.gd').read_text()
-assert 'const MUSIC_PRICES: Dictionary = {5: 120, 6: 180}' in coll
+assert 'const MUSIC_PRICES: Dictionary = {5: 140, 6: 210}' in coll
 for key in ['music_price(', 'music_unlocked(', 'buy_music(', 'owned_music', 'wallet["owned_music"] = music_owned', 'if price <= 0 or int(data.economy.leaves) < price: return false']:
  assert key in coll, key
 assert 'if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)' in save

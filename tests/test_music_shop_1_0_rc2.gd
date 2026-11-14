@@ -16,11 +16,11 @@ func run() -> void:
     check(not ZenCollection.buy_music(data, 5), "insufficient balance rejected")
     data.economy.leaves = 400
     check(ZenCollection.buy_music(data, 5), "buy first bonus")
-    check(int(data.economy.leaves) == 280, "first purchase deduct 120")
+    check(int(data.economy.leaves) == 260, "first purchase deduct 140")
     check(not ZenCollection.buy_music(data, 5), "no duplicate purchase")
-    check(int(data.economy.leaves) == 280, "duplicate has no cost")
+    check(int(data.economy.leaves) == 260, "duplicate has no cost")
     check(ZenCollection.buy_music(data, 6), "buy second bonus")
-    check(int(data.economy.leaves) == 100, "second purchase deduct 180")
+    check(int(data.economy.leaves) == 50, "second purchase deduct 210")
     var json_data: Variant = JSON.parse_string(JSON.stringify(data))
     check(json_data is Dictionary, "wallet serialized")
     if json_data is Dictionary:
@@ -47,9 +47,9 @@ func run() -> void:
     game.data.economy.leaves = 350
     game.store_select_music(5)
     check(int(game.data.settings.music_track) == 5 and ZenCollection.music_unlocked(game.data, 5), "shop purchase also selects")
-    check(int(game.data.economy.leaves) == 230, "shop purchase costs 120")
+    check(int(game.data.economy.leaves) == 210, "shop purchase costs 140")
     game.store_select_music(5)
-    check(int(game.data.economy.leaves) == 230, "select again costs nothing")
+    check(int(game.data.economy.leaves) == 210, "select again costs nothing")
     for i in range(7):
         var stream: AudioStreamWAV = game.make_zen_music_stream(i)
         check(stream != null and stream.data.size() > 500000, "music stream %d" % i)

@@ -35,7 +35,7 @@ assert 'static func unlocked_for_release(data: Dictionary)' in mode
 assert 'get("rank",0)) >= 3' in mode, 'production unlock must start at Zen Meister rank (3)'
 assert 'if unlocked_for_release(data): return false' in mode, 'already earned mode must not charge leaves'
 assert 'rank_after == 3' in ui and 'Zen Ascend freigeschaltet!' in ui
-assert 'var block_probability: float = [0.70, 0.66, 0.88, 0.91, 1.0][level]' in ai
+assert 'var block_probability: float = [0.70, 0.66, 0.80, 0.91, 1.0][level]' in ai
 assert 'level == 1 and rng.randf() < 0.62' in ai
 assert 'level == 3 and rng.randf() < 0.24' in ai
 assert 'if placed <= 3 or rng.randf() < block_probability: return blocks[0]' in ai

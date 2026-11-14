@@ -25,6 +25,6 @@ func run() -> void:
         check(ZenBotAutoLevel.apply_after_rank_up(data,{"rank_up":true,"new_rank":rank}),"rank promotion")
         check(int(data.settings.level)==mini(rank,4),"expected rank default %d" % rank)
     check(SaveManager.VERSION == 3,"save format unchanged")
-    check(ZenAscend.CELLS == 96 and ZenAscend.PRICE == 750,"4x4 mechanics unchanged")
+    check(ZenAscend.CELLS == 96 and ZenAscend.PRICE == 850,"4x4 dimensions and current shop price")
     print("ZEN BOT AUTO FAILURES=",failed)
     quit(0 if failed==0 else 1)

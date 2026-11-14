@@ -19,3 +19,6 @@ environment/defaults/default_clear_color=Color(0.953,0.922,0.867,1)
 textures/default_filters/use_nearest_mipmap_filter=false
 [input_devices]
 pointing/emulate_mouse_from_touch=true
+
+[autoload]
+ZenChronicles="*res://story/ZenChronicles.gd"

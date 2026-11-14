@@ -10,7 +10,7 @@ renderer=(ROOT/'ui/AscendRenderer.gd').read_text()
 save=(ROOT/'core/SaveManager.gd').read_text()
 assert 'const TEST_UNLOCKED: bool = false' in new
 assert 'return unlocked_for_release(data)' in new
-assert 'const PRICE: int = 750' in new
+assert 'const PRICE: int = 850' in new
 assert 'func generate_lines()' in new and 'func next_move(' in new
 assert 'res://Ascend.tscn' in controller
 assert 'if ZMode.unlocked(data):' in controller

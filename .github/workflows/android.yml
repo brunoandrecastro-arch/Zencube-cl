@@ -42,10 +42,14 @@ jobs:
         run: python3 tests/test_challenges_data.py
       - name: Verify full German, English, Portuguese localization
         run: python3 tests/test_i18n_3_languages.py
+      - name: Verify five localized Chronicles chapters and their artwork
+        run: python3 tests/test_zen_chronicles_i18n.py
       - name: Verify natural game copy in three languages
         run: python3 tests/test_natural_copy.py
       - name: Verify premium home menu, result screen and Android haptics
         run: python3 tests/test_premium_ui_9_3.py
+      - name: Verify welcome scroll, result controls and fairer Classic Hard
+        run: python3 tests/test_welcome_result_hard_2026.py
       - name: Verify five Zen ranks, bot difficulties and new worlds
         run: python3 tests/test_zen_ascension.py
       - name: Verify premium world artwork and selection menu
@@ -119,9 +123,21 @@ jobs:
           timeout 40 "$GODOT" --headless --path . --script tests/test_zen_bot_auto.gd
       - name: Check Zen Ascend Realms assets, progression and interface (static)
         run: python3 tests/test_zen_ascend_realms.py
+      - name: Verify fixed Realm bots, 8/8 transition and secret hint shop (static)
+        run: python3 tests/test_ascend_fixed_realms_and_hints.py
+      - name: Verify Ember bot syncing and Shadow Medium tuning (static)
+        run: python3 tests/test_shadow_ember_bot_levels.py
+      - name: Check strict Realm progression, possible challenges and portal scene
+        run: python3 tests/test_zen_realm_portal.py
+      - name: Test Realm Portal animation scene (headless)
+        run: |
+          timeout 40 "$GODOT" --headless --path . --script tests/test_zen_realm_portal.gd
       - name: Verify 32 Zen Ascend Realm challenges in Godot (headless)
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_zen_ascend_realms.gd
+      - name: Zen Ascend independent achievements and choir (Godot headless)
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_zen_achievements_choir.gd
       - name: Check four Realm songs, Satori ceremony and post-Gong audio recovery
         run: python3 tests/test_realm_audio_ceremony.py
       - name: Four looping Realm songs and one-time Satori ceremony (Godot headless)
@@ -160,12 +176,16 @@ jobs:
           /tmp/zencube-sim reports/lines.json > reports/simulation.json
       - name: Build signed debug APK
         run: bash scripts/build_android.sh
-      - name: Verify music PCM included in APK
+      - name: Verify music and Chronicles data included in APK
         shell: bash
         run: |
           set -euo pipefail
+          apk_contents=$(unzip -Z1 build/ZenCube-3D.apk)
           for file in zen_ambient_music.pcm zen_bamboo_music.pcm zen_moon_music.pcm zen_flute_music.pcm zen_koto_music.pcm zen_regentropfen_music.pcm zen_sternenlicht_music.pcm; do
-            unzip -Z1 build/ZenCube-3D.apk | grep -F "$file"
+            grep -Fx "assets/assets/$file" <<< "$apk_contents"
+          done
+          for file in chronicles.json localization.json settings.json; do
+            grep -Fx "assets/story/$file" <<< "$apk_contents"
           done
       - uses: actions/upload-artifact@v4
         with:

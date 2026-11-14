@@ -64,7 +64,7 @@ func choose(cells_in: Array, player: int, level: int, budget_ms: int = 220) -> i
 		# Keep canonical 3-mark tactics intact for regression tests. During a
 		# genuine match, give Medium and even Master occasional human-like gaps.
 		var placed: int = cells.size() - moves.size()
-		var block_probability: float = [0.70, 0.66, 0.88, 0.91, 1.0][level]
+		var block_probability: float = [0.70, 0.66, 0.80, 0.91, 1.0][level]
 		if placed <= 3 or rng.randf() < block_probability: return blocks[0]
 		var relaxed: int = soft_choice(ranked(cells,player), blocks, 9)
 		if relaxed >= 0: return relaxed
@@ -79,6 +79,10 @@ func choose(cells_in: Array, player: int, level: int, budget_ms: int = 220) -> i
 			return soft_choice(order, [], 8)
 		var tied = order.filter(func(x): return x[1] == order[0][1])
 		return tied[rng.randi_range(0,tied.size()-1)][0]
+	# Hard retains its two-ply search, but occasionally chooses from
+	# strong alternatives; Easy, Medium, Master, Grandmaster are unchanged.
+	if level == 2 and rng.randf() < 0.18:
+		return soft_choice(order, [], 5)
 	# Master plays strategically, but not like a flawless solver.
 	if level == 3 and rng.randf() < 0.24:
 		return soft_choice(order, [], 5)

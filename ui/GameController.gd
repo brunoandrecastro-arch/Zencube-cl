@@ -50,6 +50,7 @@ var ceremony_active: bool = false
 var last_leaf_reward: int = 0
 var completed_bot_level: int = -1 # Difficulty of the finished match; rank-up changes NEXT match.
 const Collection = preload("res://core/ZenCollection.gd")
+const Backdrops = preload("res://core/ZenBackdrops.gd")
 
 var challenge_row: HBoxContainer
 var classic_views: HBoxContainer
@@ -262,8 +263,6 @@ func build_ui() -> void:
     var menu = button("☰",title_row,open_menu,true)
     menu.custom_minimum_size.x = 46
     menu.size_flags_horizontal = Control.SIZE_SHRINK_END
-    var tagline = label("Ein ruhiges Strategiespiel für Balance, Raumgefühl und Konzentration.",column,11,Color("4a3423"))
-    tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
     var ribbon = PanelContainer.new()
     ribbon.add_theme_stylebox_override("panel",theme_style(Color("fff1d7",0.91),18))
@@ -400,9 +399,11 @@ func player_name(owner: int) -> String:
 func apply_world() -> void:
     if world_background == null or data == null: return
     var chosen: int = clampi(int(data.ascension.get("world",0)), 0, 4)
-    if chosen == current_world: return
-    current_world = chosen
-    world_background.texture = Asc.WORLD_TEXTURES[chosen]
+    var backdrop: int = Backdrops.selected(data)
+    var background_key: int = chosen if backdrop == -1 else 100 + backdrop
+    if background_key == current_world: return
+    current_world = background_key
+    world_background.texture = Asc.WORLD_TEXTURES[chosen] if backdrop == -1 else load(str(Backdrops.ITEMS[backdrop].path))
     # The world changes without touching the real 3D gameplay viewport.
     # A gentle fade keeps transitions calm and avoids flicker on mobile.
     world_background.modulate.a = 0.86
@@ -555,6 +556,8 @@ func record_result() -> void:
             data.stats["ai_wins" if owner == 0 else "ai_losses"][difficulty] += 1
             if owner == 0:
                 last_leaf_reward = Collection.reward_bot(data, difficulty)
+            else:
+                last_leaf_reward = Collection.reward_loss(data)
     # Change the next default opponent only if an actual new Zen rank was earned.
     # Older manually chosen levels remain selectable at any time.
     BotAuto.apply_after_rank_up(data,last_rank_up)
@@ -633,7 +636,7 @@ func _process(_delta: float) -> void:
 func _exit_tree() -> void:
     if worker != null: worker.wait_to_finish()
 var shop_page: int = 0
-var shop_tab: int = 0 # 0 = Skins, 1 = Musik
+var shop_tab: int = 0 # 0 = Skins, 1 = Musik, 2 = Kulissen, 3 = Hints
 var music_preview_player: AudioStreamPlayer
 var music_preview_generation: int = 0
 const NEW_MUSIC_STREAMS = [
@@ -686,13 +689,14 @@ func open_menu() -> void:
     var heading: Label = box.get_child(0) as Label
     heading.add_theme_color_override("font_color", Color("fce5b7"))
     heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    var subtitle: Label = label("Vier in einer Reihe. Über die Kante.", box, 17, Color("e7d0a7"))
+    var subtitle: Label = label("Denke über die Kanten hinaus.", box, 17, Color("e7d0a7"))
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Spielen", box, open_play_menu, true)
     premium_button("Zen-Rätsel · 100 Aufgaben", box, begin_challenges)
     premium_button("Zen-Aufstieg", box, open_ascension)
     premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
     premium_button("Welten", box, open_worlds)
+    premium_button("Zen-Chroniken 📖", box, func(): get_node("/root/ZenChronicles").open_library())
     premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
     premium_button("Einstellungen", box, open_settings)
@@ -707,9 +711,23 @@ func open_store() -> void:
     label(T("Deine Zen-Blätter: 🍃 %d") % int(data.economy.leaves), box, 20, Color("50663e"))
     var tab_bar: HBoxContainer = row(box)
     var skins_tab: Button = button(T("Skins"), tab_bar, func(): change_shop_tab(0), true, shop_tab == 0)
-    var music_tab: Button = button(T("Musik"), tab_bar, func(): change_shop_tab(1), true, shop_tab == 1)
+    var music_tab: Button = button("Musik", tab_bar, func(): change_shop_tab(1), true, shop_tab == 1)
+    var backdrops_tab: Button = button("Kulissen", tab_bar, func(): change_shop_tab(2), true, shop_tab == 2)
+    var hints_tab: Button = button("Hints", tab_bar, func(): change_shop_tab(3), true, shop_tab == 3)
+    for tab in [skins_tab, music_tab, backdrops_tab, hints_tab]:
+        tab.add_theme_font_size_override("font_size", 12)
     skins_tab.disabled = shop_tab == 0
     music_tab.disabled = shop_tab == 1
+    backdrops_tab.disabled = shop_tab == 2
+    hints_tab.disabled = shop_tab == 3
+    if shop_tab == 3:
+        store_hint_section(box)
+        button("Zum Hauptmenü", box, open_menu, true)
+        return
+    if shop_tab == 2:
+        store_background_section(box)
+        button("Zum Hauptmenü", box, open_menu, true)
+        return
     if shop_tab == 1:
         label("Höre neue Musik an und schalte sie dauerhaft mit Zen-Blättern frei.", box, 13)
         store_music_section(box)
@@ -723,11 +741,11 @@ func open_store() -> void:
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
     label(ZMode.t("Zen Ascend 4×4",language_code()),box,20,Color("526943"))
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
     else:
-        var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 750",language_code()),box,buy_ascend,true)
+        var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true)
         unlock_button.disabled = int(data.economy.leaves) < ZMode.PRICE
     shop_page = clampi(shop_page, 0, 3)
     store_page_buttons(box)
@@ -776,7 +794,89 @@ func open_store() -> void:
     button("Zum Hauptmenü", box, open_menu, true)
 
 func change_shop_tab(index: int) -> void:
-    shop_tab = clampi(index, 0, 1)
+    shop_tab = clampi(index, 0, 3)
+    open_store()
+
+func store_hint_section(parent: VBoxContainer) -> void:
+    ZenAscendAchievements.ensure(data)
+    label("Secret Achievement Hints",parent,19,Color("526943"))
+    label("A purchased hint stays with you. Achievements must still be earned in battle.",parent,13)
+    label("Zen Leaves: 🍃 %d" % int(data.economy.leaves),parent,14)
+    for secret in ZenAscendAchievements.SECRETS:
+        var key: String = str(secret.id)
+        var earned: bool = ZenAscendAchievements.earned(data,key)
+        var hint_bought: bool = ZenAscendAchievements.hint_owned(data,key)
+        var card: PanelContainer = PanelContainer.new()
+        card.add_theme_stylebox_override("panel",theme_style(Color("fff0d9",0.96),12))
+        card.mouse_filter = Control.MOUSE_FILTER_PASS
+        parent.add_child(card)
+        var inside: VBoxContainer = VBoxContainer.new()
+        inside.add_theme_constant_override("separation",6)
+        card.add_child(inside)
+        label(str(secret.name) if earned else "??? · " + str(ZenAscendRealms.REALM_NAMES[int(secret.realm)]),inside,16,Color("4b3428"))
+        if earned:
+            label("✓ Achievement unlocked",inside,13,Color("4b7848"))
+        elif hint_bought:
+            label("🍃 Hint: " + ZenAscendAchievements.hint_text(key),inside,14,Color("596b46"))
+        else:
+            var buy_button: Button = button("Buy a hint · 🍃 %d" % ZenAscendAchievements.HINT_PRICE,inside,func(): store_buy_hint(key),true)
+            buy_button.mouse_filter = Control.MOUSE_FILTER_PASS
+            buy_button.disabled = int(data.economy.leaves) < ZenAscendAchievements.HINT_PRICE
+
+func store_buy_hint(key: String) -> void:
+    if not ZenAscendAchievements.buy_hint(data,key):
+        notify_user("Not enough Zen Leaves, or hint already owned.")
+        return
+    persist()
+    open_store()
+
+func store_background_section(parent: VBoxContainer) -> void:
+    Backdrops.ensure(data)
+    label("Wähle einen Hintergrund für deine Zen-Welt. Die aktuelle Welt und der Bot bleiben unverändert.", parent, 13)
+    var chosen: int = Backdrops.selected(data)
+    var world_button: Button = button("✓ Welt-Hintergrund aktiv" if chosen == -1 else "Welt-Hintergrund verwenden", parent, use_world_background, true)
+    world_button.disabled = chosen == -1
+    for i in range(Backdrops.ITEMS.size()):
+        var idx: int = i
+        var item: Dictionary = Backdrops.ITEMS[i]
+        var card: PanelContainer = PanelContainer.new()
+        card.mouse_filter = Control.MOUSE_FILTER_PASS
+        card.add_theme_stylebox_override("panel",theme_style(Color("fff0d9",0.96),12))
+        parent.add_child(card)
+        var inner: VBoxContainer = VBoxContainer.new()
+        inner.mouse_filter = Control.MOUSE_FILTER_PASS
+        card.add_child(inner)
+        label(str(item.name),inner,17,Color("4b3428"))
+        var art: TextureRect = TextureRect.new()
+        art.texture = load(str(item.path))
+        art.custom_minimum_size = Vector2(0,152)
+        art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        inner.add_child(art)
+        var owned: bool = Backdrops.is_owned(data,idx)
+        var selected: bool = chosen == idx
+        var caption: String = "✓ Aktiv" if selected else "Hintergrund verwenden" if owned else "Hintergrund freischalten für 🍃 %d"
+        var action_text: String = T(caption) % int(item.price) if not owned else T(caption)
+        var buy_button: Button = button(action_text,inner,func(): store_select_background(idx),true,selected)
+        buy_button.mouse_filter = Control.MOUSE_FILTER_PASS
+        buy_button.disabled = selected or (not owned and int(data.economy.leaves) < int(item.price))
+
+func use_world_background() -> void:
+    if not Backdrops.equip(data,-1): return
+    refresh()
+    persist()
+    open_store()
+
+func store_select_background(idx: int) -> void:
+    Backdrops.ensure(data)
+    if not Backdrops.is_owned(data,idx) and not Backdrops.purchase(data,idx):
+        notify_user("Nicht genug Zen-Blätter.")
+        return
+    if not Backdrops.equip(data,idx): return
+    refresh()
+    persist()
     open_store()
 
 func store_music_section(parent: VBoxContainer) -> void:
@@ -936,7 +1036,7 @@ func open_ascension() -> void:
         progress_bar.add_theme_stylebox_override("fill",fill)
         box.add_child(progress_bar)
     label("Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.",box,13)
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,13)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
     button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro,true)
     button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
@@ -982,8 +1082,8 @@ func open_worlds() -> void:
         info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         info.add_theme_constant_override("separation", 1)
         card_row.add_child(info)
-        label(Asc.WORLD_SUBTITLES[i], info, 12, Color("6f5940"))
-        var b: Button = button(Asc.WORLDS[i], info, func(): select_world(number), true, i == int(data.ascension.world))
+        label(T(Asc.WORLD_SUBTITLES[i]), info, 12, Color("6f5940"))
+        var b: Button = button(T(Asc.WORLDS[i]), info, func(): select_world(number), true, i == int(data.ascension.world))
         b.disabled = not Asc.world_unlocked(data, i)
         if b.disabled:
             b.text += "  🔒"
@@ -1061,9 +1161,10 @@ func show_result_screen() -> void:
     var box = modal(headline)
     # Let the actual 3D winning line stay visible above the results panel.
     # ~20% less height for normal results; preserve extra text room on rank-up.
-    popup.anchor_top = 0.58 if special else 0.63
-    popup.anchor_bottom = 0.96
+    popup.anchor_top = 0.52 if special else 0.56
+    popup.anchor_bottom = 0.97
     popup.offset_top = 0
+    box.add_theme_constant_override("separation",7)
     popup.add_theme_stylebox_override("panel", theme_style(Color("342820", 0.985), 25))
     var heading: Label = box.get_child(0) as Label
     box.get_child(1).hide()
@@ -1095,8 +1196,6 @@ func show_result_screen() -> void:
     if versus_bot and last_leaf_reward > 0:
         var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    var detail_label: Label = label("Vier in einer Reihe. Über die Kante." if board.winner != 3 else "Noch eine Runde?", box, 15, Color("e7d6b9"))
-    detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Noch eine Partie", box, play_again_after_result, true)
     premium_button("Hauptmenü", box, open_menu)
 
@@ -1180,11 +1279,11 @@ func open_ascend_intro() -> void:
     label(ZMode.t("Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).",language_code()),box,16)
     label(ZMode.t("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).",language_code()),box,15)
     label(ZMode.t("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.",language_code()),box,14)
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 750 Zen-Blätter im Shop.",language_code()),box,14)
+    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,14)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,start_ascend,true,true)
     else:
-        var buy_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 750",language_code()),box,buy_ascend,true,true)
+        var buy_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true,true)
         buy_button.disabled = int(data.economy.leaves) < ZMode.PRICE
         button("Zen-Shop",box,open_store,true)
 
@@ -1524,6 +1623,19 @@ func start_mode(mode: int, level: int = 0, from_welcome: bool = false) -> void:
         data.settings.swap = false
     new_game()
 
+# ZENCUBE_ONBOARDING_RESULT_HARD_FIX_2026_11_13
+func allow_welcome_scroll(node: Node) -> void:
+    # Decorative panels and labels must not swallow Android swipe gestures.
+    # Buttons still receive taps, but let a drag pass up to ScrollContainer.
+    var control: Control = node as Control
+    if control != null:
+        if control is PanelContainer or control is Label:
+            control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        else:
+            control.mouse_filter = Control.MOUSE_FILTER_PASS
+    for child in node.get_children():
+        allow_welcome_scroll(child)
+
 func open_welcome() -> void:
     welcome_open = true
     var box = modal("Willkommen im Zen-Garten")
@@ -1531,13 +1643,20 @@ func open_welcome() -> void:
     popup.offset_top = 0
     box.get_child(1).hide()
     label("Atme durch. Drehe den Würfel. Entdecke neue Wege zu gewinnen.",box,15,Color("6d6550"))
+    # First-screen actions must be visible WITHOUT scrolling.
+    button("Mini-Tutorial starten",box,func(): start_tutorial(true),false,true)
+    button("Direkt gegen Zen-Bot spielen",box,func(): start_mode(1,0,true))
+    label("Dein erster Gegner ist Zen-Bot auf Leicht. Lokale Zwei-Spieler-Partien sind später im Menü verfügbar.",box,13,Color("78644c"))
+    # Optional explanatory diagrams remain below and are now swipeable.
     label("VIER STEINE  ·  ZWEI WÜRFELSEITEN",box,13,Color("8a755b"))
     add_rule_example(box,"3 + 1",3)
     add_rule_example(box,"2 + 2",2)
     label("Ein Finger zieht den Würfel. Ein kurzes Tippen setzt deinen Stein. Erreiche vier verbundene Felder über zwei benachbarte Würfelseiten.",box,14)
-    button("Mini-Tutorial starten",box,func(): start_tutorial(true),false,true)
-    button("Direkt gegen Zen-Bot spielen",box,func(): start_mode(1,0,true))
-    label("Dein erster Gegner ist Zen-Bot auf Leicht. Lokale Zwei-Spieler-Partien sind später im Menü verfügbar.",box,13,Color("78644c"))
+    var welcome_scroll: ScrollContainer = popup.get_child(0) as ScrollContainer
+    if welcome_scroll != null:
+        welcome_scroll.scroll_deadzone = 0
+        welcome_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+    allow_welcome_scroll(box)
 
 func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> void:
     var panel = PanelContainer.new()

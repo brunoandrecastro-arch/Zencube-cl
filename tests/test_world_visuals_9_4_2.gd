@@ -24,7 +24,9 @@ func run() -> void:
     check(game.renderer.tiles.size() == 54, "original cube has 54 tiles")
     var original_lines: int = game.rules.lines.size()
     check(original_lines == 108,"108 original win lines")
-    var old_music = game.music_player
+    var music_players: Array = [game.music_player, game.music_fade_player]
+    game.data.settings.music = true
+    game.data.settings.music_mode = "base"
     var prior_board = game.board.snapshot()
     game.data.ascension.completed = [true,true,true,true,true]
     ZenAscension.ensure(game.data)
@@ -41,7 +43,8 @@ func run() -> void:
     game.select_world(2)
     check(int(game.data.ascension.world) == 2,"player chose mountain temple")
     check(game.world_background.texture == ZenAscension.WORLD_TEXTURES[2],"mountain temple background active")
-    check(game.music_player == old_music,"music player preserved")
+    check(game.music_player in music_players and game.music_player.playing, "world music plays on an existing audio player")
+    check(game.music_player.get_meta("track", -1) == ZenMusicPolicy.WORLD_TRACKS[2], "mountain temple soundtrack active")
     check(game.board.snapshot() == prior_board,"world switch does not change game state")
     game.queue_free()
     await process_frame

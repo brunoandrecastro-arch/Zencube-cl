@@ -6,7 +6,7 @@ R=Path(__file__).resolve().parents[1]
 ui=(R/'ui/GameController.gd').read_text();loc=(R/'core/ZenLocalization.gd').read_text();exp=(R/'export_presets.cfg').read_text()
 assert 'package/unique_name="com.zencube.game"' in exp, 'Never change app ID'
 assert 'version/code=21' in exp and 'version/name="1.0.0-rc2-music-shop"' in exp
-assert 'name="Android Play"' in exp and 'gradle_build/target_sdk=36' in exp
+assert 'name="Android Play"' in exp and 'gradle_build/target_sdk="36"' in exp
 assert 'gradle_build/export_format=1' in exp and 'gradle_build/use_gradle_build=true' in exp
 assert 'config/icon="res://icon.svg"' in (R/'project.godot').read_text()
 assert 'config/name="ZenCube 3D"' in (R/'project.godot').read_text()
