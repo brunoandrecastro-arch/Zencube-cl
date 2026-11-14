@@ -44,7 +44,9 @@ assert 'var x_main: Color' in r and 'var o_main: Color' in r and 'border_ring.ma
 assert '"economy":{"leaves":0,"owned":[0],"equipped":0,"migrated":false}' in save
 assert 'const VERSION = 3' in save, 'Migration must preserve existing saves'
 assert 'if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)' in save
-assert 'include_filter="assets/*.pcm,challenges/*.json"' in (R/'export_presets.cfg').read_text()
+export_filters = re.findall(r'^include_filter="([^"]+)"', (R/'export_presets.cfg').read_text(), re.M)
+assert len(export_filters) == 2
+assert all({'assets/*.pcm', 'challenges/*.json'} <= set(patterns.split(',')) for patterns in export_filters)
 assert 'version/code=21' in (R/'export_presets.cfg').read_text()
 assert 'ZenCube 9.5 earned currency and 20 skins' in workflow
 for name in ['zen_ambient_music.pcm','zen_bamboo_music.pcm','zen_moon_music.pcm']:
