@@ -4,6 +4,7 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Zen-Chroniken 📖": "Zen Chronicles 📖",
     "A purchased hint stays with you. Achievements must still be earned in battle.": "Purchased hints are permanent. Achievements must still be earned through play.",
     "Buy a hint · 🍃 %d": "Unlock a hint · 🍃 %d",
     "Hints": "Achievement Hints",
@@ -342,6 +343,7 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Zen-Chroniken 📖": "Crónicas Zen 📖",
     "A purchased hint stays with you. Achievements must still be earned in battle.": "As dicas compradas ficam para sempre. As conquistas têm de ser alcançadas a jogar.",
     "Buy a hint · 🍃 %d": "Comprar uma dica · 🍃 %d",
     "Hints": "Dicas",
