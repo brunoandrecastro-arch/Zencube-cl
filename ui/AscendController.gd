@@ -74,6 +74,8 @@ func _ready() -> void:
     if previous_selection != match_realm:
         Realms.state(data)["selected"] = match_realm
         SaveManager.save_data(data)
+    # Restore the correct fixed bot after the legacy selection is validated.
+    bot_level = Realms.fixed_bot_level(match_realm)
     if not Mode.unlocked(data):
         get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
         return
@@ -510,7 +512,7 @@ func _commit(cell: int) -> void:
 func bot_turn() -> void:
     await get_tree().create_timer(0.26).timeout
     if not is_inside_tree() or result != 0 or not against_bot: return
-    var cell: int = RealmBot.next_move(cells,lines,2,bot_level)
+    var cell: int = RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)
     busy = false
     if cell >= 0: _commit(cell)
     draw()
@@ -862,6 +864,8 @@ func select_realm(number: int) -> bool:
     var from_realm: int = realm_index()
     if not Realms.select(data,number): return false
     match_realm = number
+    # Prevent stale Medium UI/AI after switching from Shadow to Ember.
+    bot_level = Realms.fixed_bot_level(number)
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[number])
     SaveManager.save_data(data)

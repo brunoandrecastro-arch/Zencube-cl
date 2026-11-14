@@ -20,7 +20,7 @@ assert 'ZenAscend.unlocked(data)' in model
 assert 'for realm in range(4):' in model
 assert 'match_realm = realm_index()' in ui
 assert 'if against_bot:' in ui and 'Realms.record_bot_match(' in ui
-assert 'RealmBot.next_move(cells,lines,2,bot_level)' in ui
+assert 'RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)' in ui
 assert 'match_blocked_threat' in ui and 'Realms.prevents_immediate_win' in ui
 assert 'show_realms()' in ui and 'show_challenges()' in ui and 'show_realm_titles()' in ui
 # Gameplay uses independent Realm artwork.
