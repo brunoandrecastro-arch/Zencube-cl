@@ -51,6 +51,6 @@ ZenCube 3D – A Calm Strategy Puzzle.
 Kategorie: **Spiele / Denkspiele (Puzzle)** (vorläufig in Play Console bestätigen)
 Monetarisierung: keine Werbung, keine Echtgeldkäufe, nur erspielbare Blätter
 Standardlisting-Sprachen: Deutsch und Englisch (vorhandene portugiesische Spieltexte bleiben aus Kompatibilitätsgründen im Projekt)
-App-ID: `com.zencube.game` (unverändert)
+Google-Play-Paket `com.zencube.game.play`
 
 **Nicht enthalten:** Online-Multiplayer, Ranglisten im Internet oder Echtgeld-Shop. Diese Funktionen dürfen nicht in den Release-Screenshots/Store-Texten beworben werden.

@@ -1,6 +1,14 @@
 name: Google Play unsigned AAB
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/play-release-candidate.yml'
+      - 'export_presets.cfg'
+      - 'scripts/build_play_aab.sh'
+      - 'scripts/verify_play_bundle.py'
+      - 'tests/test_release_candidate_1_0.py'
 permissions:
   contents: read
 jobs:
@@ -41,8 +49,9 @@ jobs:
           unzip -joq templates.tpz 'templates/android_source.zip' 'templates/version.txt' -d "$templates_dir"
           printf 'GODOT=%s/Godot_v4.5.1-stable_linux.x86_64\nBUNDLETOOL_JAR=%s/bundletool.jar\n' \
             "$download_dir" "$download_dir" >> "$GITHUB_ENV"
-      - name: Check Chronicles and export the unsigned release bundle
+      - name: Check Play metadata and Chronicles, then export the unsigned release bundle
         run: |
+          python3 tests/test_release_candidate_1_0.py
           python3 tests/test_zen_chronicles_i18n.py
           bash scripts/build_play_aab.sh
       - uses: actions/upload-artifact@v4

@@ -1,7 +1,7 @@
 # ZenCube 3D – Play Console Checkliste (11/2026)
 
 ## Bereits vorbereitet
-- [x] Play-Exportprofil mit `com.zencube.game` gemäß Projektauftrag, Version `2.3`, Versionscode `23`
+- [x] Play-Exportprofil mit `com.zencube.game.play`, Version `2.3`, Versionscode `23`
 - [x] Build ohne Signatur über **Actions → Google Play unsigned AAB** oder `bash scripts/build_play_aab.sh`
 - [x] Deutsche und englische Store-Texte und Versionshinweise
 - [x] Minimalistisches Icon 512×512 RGBA und Android-Launcher-/Adaptive-Icons
@@ -12,9 +12,9 @@
 
 ## Geschlossener Test
 
-Der vorhandene Alpha-Track in Google Play gehört zu `com.zencube.game.play`. Sein letzter veröffentlichter Versionscode ist `4` (Version `2.2`). Google Play verlangt für Updates eine exakte Übereinstimmung des Paketnamens. Vor einem Alpha-Upload ist die Freigabe für `com.zencube.game.play` im **Play-Exportprofil** erforderlich. Der Debug-Build verwendet `com.zencube.game`.
+Der vorhandene Alpha-Track in Google Play gehört zu `com.zencube.game.play`. Sein letzter veröffentlichter Versionscode ist `4` (Version `2.2`). Das Exportprofil **Android Play** verwendet die Paket-ID dieses Eintrags. Der Debug-Build verwendet `com.zencube.game`.
 
-- [ ] Nach Freigabe `package/unique_name` im Abschnitt `[preset.1.options]` auf `com.zencube.game.play` setzen und den manuellen AAB-Build ausführen
+- [x] Paket-ID des bestehenden Alpha-Tracks im Play-Exportprofil hinterlegt
 - [ ] Höchsten in der Play Console hinterlegten Versionscode prüfen und `version/code` bei Bedarf erhöhen
 - [ ] Auf dem eigenen Rechner das AAB mit dem aktiven Upload-Schlüssel signieren, siehe [Lokale Signierung](#lokale-signierung)
 - [ ] Im bestehenden Track **Testen und veröffentlichen → Test → Geschlossener Test → Alpha → Neuen Release erstellen** das signierte AAB hochladen, Versionshinweise einfügen und den Release zur Prüfung einreichen

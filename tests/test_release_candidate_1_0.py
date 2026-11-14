@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """Release candidate static checks: Play metadata, icon, 5 loops, language availability."""
+from configparser import ConfigParser
 from pathlib import Path
 import struct, wave, math, re, array, hashlib
 R=Path(__file__).resolve().parents[1]
 ui=(R/'ui/GameController.gd').read_text();loc=(R/'core/ZenLocalization.gd').read_text();exp=(R/'export_presets.cfg').read_text()
-assert 'package/unique_name="com.zencube.game"' in exp, 'Never change app ID'
-assert 'version/code=21' in exp and 'version/name="1.0.0-rc2-music-shop"' in exp
-assert 'name="Android Play"' in exp and 'gradle_build/target_sdk="36"' in exp
-assert 'gradle_build/export_format=1' in exp and 'gradle_build/use_gradle_build=true' in exp
+presets = ConfigParser(interpolation=None)
+presets.read_string(exp)
+debug = presets['preset.0.options']
+play = presets['preset.1.options']
+assert debug['package/unique_name'] == '"com.zencube.game"'
+assert debug['version/code'] == '21' and debug['version/name'] == '"1.0.0-rc2-music-shop"'
+assert presets['preset.1']['name'] == '"Android Play"'
+assert play['package/unique_name'] == '"com.zencube.game.play"', 'Play updates must match the existing app ID'
+assert play['gradle_build/target_sdk'] == '"36"'
+assert play['gradle_build/export_format'] == '1' and play['gradle_build/use_gradle_build'] == 'true'
+assert play['package/signed'] == 'false', 'Release CI must export an unsigned app bundle'
 assert 'config/icon="res://icon.svg"' in (R/'project.godot').read_text()
 assert 'config/name="ZenCube 3D"' in (R/'project.godot').read_text()
 assert 'clampi(index, 0, 13)' in ui
