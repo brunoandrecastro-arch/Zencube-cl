@@ -48,10 +48,14 @@ func run() -> void:
     check(game.popup != null, "main menu opens")
     if game.popup != null:
         check(find_button(game.popup, game.T("Spielen")) != null, "play entry")
+    game.data.ascension.completed = [false, false, false, false, false]
+    game.data.stats.ai_wins = [0, 0, 0, 0, 0]
     game.open_play_menu()
-    check(find_button(game.popup, game.T("Zen-Bot · Leicht")) != null, "easy bot")
-    check(find_button(game.popup, game.T("Zen-Bot · Mittel")) != null, "medium bot")
-    check(find_button(game.popup, game.T("Zen-Bot · Schwer")) != null, "hard bot")
+    for level in range(ZenAscension.LEVELS.size()):
+        var locked: bool = level > 0
+        var caption: String = game.T("Zen-Bot · " + ZenAscension.LEVELS[level])
+        var bot_button := find_button(game.popup, caption + ("  🔒" if locked else ""))
+        check(bot_button != null and bot_button.disabled == locked, caption + " rank gate")
     game.close_modal()
     game.queue_free()
     await process_frame

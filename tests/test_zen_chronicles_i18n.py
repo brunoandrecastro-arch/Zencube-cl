@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Validation: 5x4 illustrations and complete German/English/PT-PT chapter text."""
-import sys,json,re
+import json
+import sys
 from pathlib import Path
-root=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else Path(__file__).resolve().parent
+root=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else Path(__file__).resolve().parents[1]
 reader=(root/'story/ZenChronicles.gd').read_text(encoding='utf8')
 source=json.loads((root/'story/chronicles.json').read_text(encoding='utf8'))
 locales=json.loads((root/'story/localization.json').read_text(encoding='utf8'))
@@ -27,7 +28,16 @@ assert 'SaveManager.load_data()' in reader
 for field in ['_t("library_header")','_t("locked")','_t("read")','_chapter_field(i, "world")','_chapter_field(i, "title")','_page_field(_active_chapter, _active_page, "body")','_page_field(_active_chapter, _active_page, "quote")']:
     assert field in reader,field
 assert 'STORY_LANG_FILE = "res://story/localization.json"' in reader
-assert 'ASC.world_unlocked(saved, i)' in reader
+assert 'ascension.world_unlocked(saved, i)' in reader
+illustrations = set()
+for chapter in source['chapters']:
+    for page in chapter['pages']:
+        art = page['image'].removeprefix('res://')
+        with (root / art).open('rb') as image:
+            header = image.read(12)
+        assert header[:4] == b'RIFF' and header[8:] == b'WEBP', art
+        illustrations.add(art)
+assert len(illustrations) == 20
 assert 'func _sync_language() -> void:' in reader
 assert '_sync_language()\n    _active_chapter = -1' in reader
 assert 'func open_chapter(i: int) -> void:\n    _sync_language()' in reader

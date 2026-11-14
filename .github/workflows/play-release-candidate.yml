@@ -1,96 +1,52 @@
-name: Play release candidate (manual, gated)
+name: Google Play unsigned AAB
 on:
   workflow_dispatch:
-    inputs:
-      build_signed_aab:
-        description: "Build a signed AAB (requires four private repository secrets)"
-        type: boolean
-        default: false
 permissions:
   contents: read
 jobs:
-  verify-and-build:
+  export:
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install Android 16 SDK and Godot 4.7.2
+      - name: Install Android SDK Platform 36 and build tools
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            'platform-tools' 'platforms;android-36' 'build-tools;35.0.0' 'build-tools;36.0.0' 'ndk;28.1.13356709'
+      - name: Install Godot 4.5.1 and bundletool
         shell: bash
         run: |
           set -euo pipefail
-          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0'
-          curl -fsSL --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
-          mkdir -p /tmp/godot
-          unzip -q /tmp/godot.zip -d /tmp/godot
-          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          echo "GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64" >> "$GITHUB_ENV"
-          curl -fsSL --retry 3 -o /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
-          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable"
-          unzip -jq /tmp/templates.tpz 'templates/android_debug.apk' 'templates/android_release.apk' 'templates/android_source.zip' 'templates/version.txt' -d "$HOME/.local/share/godot/export_templates/4.7.2.stable"
-      - name: Set Android build paths
-        shell: bash
+          download_dir=$(mktemp -d "$RUNNER_TEMP/zencube.XXXXXXXX")
+          cd "$download_dir"
+          godot_release=https://github.com/godotengine/godot/releases/download/4.5.1-stable
+          curl -fsSL --retry 3 "$godot_release/Godot_v4.5.1-stable_linux.x86_64.zip" -o godot.zip
+          curl -fsSL --retry 3 "$godot_release/Godot_v4.5.1-stable_export_templates.tpz" -o templates.tpz
+          curl -fsSL --retry 3 https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar -o bundletool.jar
+          sha256sum -c <<'CHECKSUMS'
+          02ec53d1cc7dbb9cc6355393c61b9ab43d1244751a124f10248a4802830788cd  godot.zip
+          1998af37f1387684e2c211cdb483daf492fc64dc6b12096bddcdca25b6910c86  templates.tpz
+          a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29  bundletool.jar
+          CHECKSUMS
+          unzip -q godot.zip
+          chmod +x Godot_v4.5.1-stable_linux.x86_64
+          templates_dir="$HOME/.local/share/godot/export_templates/4.5.1.stable"
+          mkdir -p "$templates_dir"
+          unzip -joq templates.tpz 'templates/android_source.zip' 'templates/version.txt' -d "$templates_dir"
+          printf 'GODOT=%s/Godot_v4.5.1-stable_linux.x86_64\nBUNDLETOOL_JAR=%s/bundletool.jar\n' \
+            "$download_dir" "$download_dir" >> "$GITHUB_ENV"
+      - name: Check Chronicles and export the unsigned release bundle
         run: |
-          set -euo pipefail
-          export XDG_CONFIG_HOME="$GITHUB_WORKSPACE/build/editor-config"
-          mkdir -p "$XDG_CONFIG_HOME/godot"
-          cat > "$XDG_CONFIG_HOME/godot/editor_settings-4.7.tres" <<SETTINGS
-          [gd_resource type="EditorSettings" format=3]
-          [resource]
-          export/android/android_sdk_path = "$ANDROID_HOME"
-          export/android/java_sdk_path = "$JAVA_HOME"
-          SETTINGS
-          echo "XDG_CONFIG_HOME=$XDG_CONFIG_HOME" >> "$GITHUB_ENV"
-      - name: Import, static release checks and GDScript verification
-        shell: bash
-        run: |
-          set -euo pipefail
-          "$GODOT" --headless --editor --import --quit
-          python3 tests/test_release_candidate_1_0.py
-          python3 tests/test_108_rules.py
-          python3 tests/test_challenges_data.py
-          python3 tests/test_quality_audio_9_6_1.py
-          python3 tests/test_music_shop_1_0_rc2.py
-          timeout 65 "$GODOT" --headless --path . --script tests/test_release_candidate_1_0.gd
-          timeout 55 "$GODOT" --headless --path . --script tests/test_music_shop_1_0_rc2.gd
-          timeout 50 "$GODOT" --headless --path . --script tests/test_scene_load.gd
-      - name: Prepare a signed AAB only when explicitly requested and secrets exist
-        if: ${{ inputs.build_signed_aab }}
-        shell: bash
-        env:
-          UPLOAD_KEYSTORE_B64: ${{ secrets.ZENCUBE_UPLOAD_KEYSTORE_B64 }}
-          UPLOAD_KEY_ALIAS: ${{ secrets.ZENCUBE_UPLOAD_KEY_ALIAS }}
-          UPLOAD_KEY_PASSWORD: ${{ secrets.ZENCUBE_UPLOAD_KEY_PASSWORD }}
-          UPLOAD_STORE_PASSWORD: ${{ secrets.ZENCUBE_UPLOAD_STORE_PASSWORD }}
-        run: |
-          set -euo pipefail
-          for field in UPLOAD_KEYSTORE_B64 UPLOAD_KEY_ALIAS UPLOAD_KEY_PASSWORD UPLOAD_STORE_PASSWORD; do
-            if [[ -z "${!field:-}" ]]; then echo "Missing release secret: $field"; exit 1; fi
-          done
-          mkdir -p build android
-          printf '%s' "$UPLOAD_KEYSTORE_B64" | base64 -d > build/zencube-upload.keystore
-          chmod 600 build/zencube-upload.keystore
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$GITHUB_WORKSPACE/build/zencube-upload.keystore"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_USER="$UPLOAD_KEY_ALIAS"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$UPLOAD_KEY_PASSWORD"
-          # Godot's Gradle template is required for an AAB. Check the extracted layout.
-          unzip -qo "$HOME/.local/share/godot/export_templates/4.7.2.stable/android_source.zip" -d android
-          if [[ ! -f android/build/gradlew ]]; then
-            echo "Android Gradle project not found at android/build; verify Godot 4.7.2 template layout before release."
-            exit 1
-          fi
-          "$GODOT" --headless --editor --import --quit
-          "$GODOT" --headless --path . --export-release 'Android Play' build/ZenCube-1.0.aab
-          unzip -t build/ZenCube-1.0.aab >/dev/null
-          echo "AAB generated; verify signed bundle and API36 using Play Console pre-launch report before submission."
-          rm -f build/zencube-upload.keystore
+          python3 tests/test_zen_chronicles_i18n.py
+          bash scripts/build_play_aab.sh
       - uses: actions/upload-artifact@v4
-        if: ${{ inputs.build_signed_aab }}
         with:
-          name: ZenCube-1.0-release-candidate-AAB
-          path: build/ZenCube-1.0.aab
+          name: ZenCube-3D-unsigned-${{ github.sha }}
+          path: build/ZenCube-3D-unsigned.aab
           if-no-files-found: error
-          retention-days: 7

@@ -2,7 +2,6 @@ extends CanvasLayer
 ## ZenCube 3D – 3x3 Chronicles reader. Does not change gameplay, bot or saves.
 ## Install as autoload 'ZenChronicles'. Godot 4.5 compatible.
 
-const ASC = preload("res://core/ZenAscension.gd")
 const STORY_FILE = "res://story/chronicles.json"
 const SETTINGS_FILE = "res://story/settings.json"
 const STORY_LANG_FILE = "res://story/localization.json"
@@ -209,8 +208,9 @@ func _chapter_accessible(i: int) -> bool:
     if i == 0 or _preview_all:
         return true
     # Same world lock rule as the existing in-game "Welten" screen.
+    var ascension := load("res://core/ZenAscension.gd") as GDScript
     var saved: Dictionary = SaveManager.load_data()
-    return ASC.world_unlocked(saved, i)
+    return ascension.world_unlocked(saved, i)
 
 func open_library() -> void:
     _sync_language()
