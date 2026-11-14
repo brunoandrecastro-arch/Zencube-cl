@@ -1,0 +1,204 @@
+{
+  "series": "ZenCube 3D – Die Reise zum inneren Gleichgewicht",
+  "version": 1,
+  "arc": "Zen-Garten 3×3",
+  "language": "de",
+  "chapters": [
+    {
+      "number": 1,
+      "world": "Zen-Garten",
+      "title": "Der Ruf des Gleichgewichts",
+      "reward": "Der Suchende",
+      "next": "Bambuspfad",
+      "required_world_index": 0,
+      "pages": [
+        {
+          "number": 1,
+          "image": "res://story/chapters/01/page_01.webp",
+          "title": "Der erste Zweifel",
+          "body": "Im Zen-Garten, zwischen Kirschblüten und stillen Wasserläufen, sucht ein junger Mann nach innerem Gleichgewicht. Doch selbst im Frieden seiner Heimat spürt er eine leise Unruhe.",
+          "quote": "Warum finde ich keine Ruhe, obwohl alles um mich herum friedlich ist?"
+        },
+        {
+          "number": 2,
+          "image": "res://story/chapters/01/page_02.webp",
+          "title": "Der verborgene Pfad",
+          "body": "Eines Morgens erklingt ein Gong. Der Wanderer folgt ihm durch den Garten zu einer alten Treppe, die ihm bisher verborgen geblieben war.",
+          "quote": "Vielleicht beginnt die Antwort dort, wo mein vertrauter Weg endet."
+        },
+        {
+          "number": 3,
+          "image": "res://story/chapters/01/page_03.webp",
+          "title": "Die Lehre des Meisters",
+          "body": "Ein alter Meister zeigt ihm einen schimmernden Würfel. Jede seiner sechs Seiten steht sinnbildlich für einen Teil seines inneren Weges.",
+          "quote": "Gewinnen ist nicht alles. Wer auch aus Fehlern lernt, kommt dem Gleichgewicht näher."
+        },
+        {
+          "number": 4,
+          "image": "res://story/chapters/01/page_04.webp",
+          "title": "Der Suchende",
+          "body": "Der junge Mann nimmt die erste Lehre an. Er ist noch weit von echter Klarheit entfernt – aber nun hat er den Mut, nach ihr zu suchen. Sein nächster Weg führt zum Bambuspfad.",
+          "quote": "Ich muss nicht schon angekommen sein. Ich muss nur weitergehen."
+        }
+      ],
+      "image_type": "clean_art"
+    },
+    {
+      "number": 2,
+      "world": "Bambuspfad",
+      "title": "Die Kunst der Geduld",
+      "reward": "Der Geduldige",
+      "next": "Bergtempel",
+      "required_world_index": 1,
+      "pages": [
+        {
+          "number": 1,
+          "image": "res://story/chapters/02/page_01.webp",
+          "title": "Der Weg durch den Bambus",
+          "body": "Nach dem Zen-Garten erreicht der Suchende einen Wald aus hohen Bambushalmen. Er bemerkt, dass manche Antworten nur entstehen, wenn er langsam genug geht.",
+          "quote": "Vielleicht ist Geduld keine Schwäche, sondern eine Form von Stärke."
+        },
+        {
+          "number": 2,
+          "image": "res://story/chapters/02/page_02.webp",
+          "title": "Die Steine im Wasser",
+          "body": "Ein schmaler Pfad führt ihn über einen ruhigen Teich. Sobald er eilt, verliert er das Gleichgewicht. Er hält inne, lauscht dem Wasser und erkennt den nächsten Schritt.",
+          "quote": "Wenn ich eile, verliere ich den Tritt. Wenn ich lausche, zeigt mir der Weg den nächsten Schritt."
+        },
+        {
+          "number": 3,
+          "image": "res://story/chapters/02/page_03.webp",
+          "title": "Wenn der Wind kommt",
+          "body": "Ein Windstoß lässt die Halme und den Wanderer schwanken. Diesmal kämpft er nicht dagegen an. Er bleibt ruhig, bis der Weg wieder sichtbar wird.",
+          "quote": "Nicht alles muss bezwungen werden. Manches wird klar, wenn man einfach bleibt."
+        },
+        {
+          "number": 4,
+          "image": "res://story/chapters/02/page_04.webp",
+          "title": "Der Geduldige",
+          "body": "An einem stillen Heiligtum versteht er: Geduld ist kein Stillstand, sondern das Vertrauen in den richtigen Augenblick. Vor ihm liegt der Bergtempel.",
+          "quote": "Ich muss den Weg nicht erzwingen. Mit Ruhe öffnet er sich von selbst."
+        }
+      ],
+      "image_type": "baked_de_text"
+    },
+    {
+      "number": 3,
+      "world": "Bergtempel",
+      "title": "Der Mut, weiterzugehen",
+      "reward": "Der Standhafte",
+      "next": "Mondgarten",
+      "required_world_index": 2,
+      "pages": [
+        {
+          "number": 1,
+          "image": "res://story/chapters/03/page_01.webp",
+          "title": "Der Aufstieg",
+          "body": "Hoch über den Wolken erhebt sich der Bergtempel. Der junge Wanderer glaubt, mit Geduld sei jeder Weg zu meistern. Doch die endlosen Stufen und der kalte Wind bringen ihn an seine Grenzen.",
+          "quote": "Wie weit muss ich noch gehen?\""
+        },
+        {
+          "number": 2,
+          "image": "res://story/chapters/03/page_02.webp",
+          "title": "Die Worte des Meisters",
+          "body": "Erschöpft erreicht er einen alten Tempel. Dort erwartet ihn der Meister, der seine Zweifel erkennt, noch bevor er ein Wort spricht.",
+          "quote": "Mut bedeutet nicht, niemals zu fallen. Mut bedeutet, immer wieder aufzustehen.\""
+        },
+        {
+          "number": 3,
+          "image": "res://story/chapters/03/page_03.webp",
+          "title": "Die Prüfung des Würfels",
+          "body": "Der Würfel erwacht. Immer wieder verfehlt der Wanderer sein Ziel. Zweifel steigen auf. Fast gibt er auf. Dann erinnert er sich an den Bambuspfad, atmet tief durch – und wagt einen neuen Versuch.",
+          "quote": "Ein verlorener Zug ist nicht das Ende meines Weges.\""
+        },
+        {
+          "number": 4,
+          "image": "res://story/chapters/03/page_04.webp",
+          "title": "Der Standhafte",
+          "body": "Im Licht der Abendsonne versteht er endlich die Lektion des Bergtempels: Der Weg ist nicht leichter geworden. Aber er selbst ist stärker.",
+          "quote": "Ich muss nicht ohne Zweifel sein. Ich muss nur weitergehen.\""
+        }
+      ],
+      "image_type": "baked_de_text"
+    },
+    {
+      "number": 4,
+      "world": "Mondgarten",
+      "title": "Die Stille der Gedanken",
+      "reward": "Der Klare",
+      "next": "Himmelsgarten",
+      "required_world_index": 3,
+      "pages": [
+        {
+          "number": 1,
+          "image": "res://story/chapters/04/page_01.webp",
+          "title": "Der Garten im Mondlicht",
+          "body": "Nach dem Bergtempel betritt der Wanderer den Mondgarten. Die Stille ist wohltuend – bis alte Gedanken in ihm erwachen. Er fragt sich, ob seine neue Stärke wirklich Bestand hat.",
+          "quote": "Warum ist es so schwer, einfach ruhig zu sein?“"
+        },
+        {
+          "number": 2,
+          "image": "res://story/chapters/04/page_02.webp",
+          "title": "Die Stimme der Stille",
+          "body": "Am stillen See begegnet er einem sanften Mondgeist. Sie fordert ihn nicht auf, seine Sorgen zu vergessen. Stattdessen soll er lernen, ihnen zuzuhören, ohne sich in ihnen zu verlieren.",
+          "quote": "Frieden beginnt, wenn du deine Gedanken annimmst.“"
+        },
+        {
+          "number": 3,
+          "image": "res://story/chapters/04/page_03.webp",
+          "title": "Die Prüfung der Klarheit",
+          "body": "Ein leuchtender Würfel erhebt sich über dem Wasser. Der Wanderer erkennt: Nicht der schnellste Zug bringt ihn weiter, sondern ein ruhiger Blick auf das Ganze. Er wählt mit Bedacht.",
+          "quote": "Ich muss nicht jeden Gedanken zu Ende denken.“"
+        },
+        {
+          "number": 4,
+          "image": "res://story/chapters/04/page_04.webp",
+          "title": "Der Klare",
+          "body": "Als der Mondgarten hinter ihm erwacht, fühlt er seine Gedanken leichter werden. Die Zweifel sind nicht verschwunden. Doch sie bestimmen seinen Weg nicht länger. Vor ihm liegt der Himmelsgarten.",
+          "quote": "In der Stille finde ich Raum für Klarheit.“"
+        }
+      ],
+      "image_type": "baked_de_text"
+    },
+    {
+      "number": 5,
+      "world": "Himmelsgarten",
+      "title": "Jenseits der Wolken",
+      "reward": "Der Erwachende",
+      "next": "Shadow Realm",
+      "required_world_index": 4,
+      "pages": [
+        {
+          "number": 1,
+          "image": "res://story/chapters/05/page_01.webp",
+          "title": "Der Garten über den Wolken",
+          "body": "Hoch über den Wolken erreicht der Wanderer den Himmelsgarten. Die Luft ist klar, die Tempel leuchten im Morgenlicht. Er glaubt, am Ziel zu sein – doch die letzte Prüfung steht noch bevor.",
+          "quote": "So weit bin ich gekommen. Aber bedeutet das, dass ich das Gleichgewicht gefunden habe?"
+        },
+        {
+          "number": 2,
+          "image": "res://story/chapters/05/page_02.webp",
+          "title": "Die letzte Prüfung",
+          "body": "Im höchsten Tempel wartet der alte Meister. Vor ihnen schwebt ein goldener Würfel. Nicht jeder Zug führt zum Sieg; nicht jede Niederlage ist ein Scheitern.",
+          "quote": "Der Meister: Wer nur gewinnen will, wird vom Verlieren beherrscht. Zeige mir, was du wirklich gelernt hast."
+        },
+        {
+          "number": 3,
+          "image": "res://story/chapters/05/page_03.webp",
+          "title": "Der freie Zug",
+          "body": "Der Wanderer sucht nicht länger nach dem perfekten Zug. Er betrachtet den Würfel, erkennt seine Möglichkeiten und entscheidet sich mit ruhigem Geist. Ein sanftes Leuchten erfüllt den Tempel.",
+          "quote": "Ich kann nicht jeden Ausgang bestimmen. Aber ich kann entscheiden, wie ich meinen Weg gehe."
+        },
+        {
+          "number": 4,
+          "image": "res://story/chapters/05/page_04.webp",
+          "title": "Der Erwachende",
+          "body": "Der Himmel öffnet sich. Der Wanderer erhält den Titel „Der Erwachende“. Geduld, Mut und Klarheit sind nun Teil von ihm. Doch in der Ferne erscheint ein fremder Schatten. Seine Reise ist noch nicht zu Ende.",
+          "quote": "Der Meister: Du hast gelernt, dem Licht zu folgen. Bald wirst du lernen, deinen Schatten zu verstehen."
+        }
+      ],
+      "image_type": "clean_art"
+    }
+  ],
+  "notes": "20 Swipe-Seiten in fünf Kapiteln; nur Zen-Garten 3×3; Shadow Realm ist NICHT enthalten. Story-Titel sind keine Gameplay-Ränge."
+}

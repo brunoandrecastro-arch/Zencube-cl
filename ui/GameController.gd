@@ -696,6 +696,7 @@ func open_menu() -> void:
     premium_button("Zen-Aufstieg", box, open_ascension)
     premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
     premium_button("Welten", box, open_worlds)
+    premium_button("Zen-Chroniken 📖", box, func(): get_node("/root/ZenChronicles").open_library())
     premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
     premium_button("Einstellungen", box, open_settings)
