@@ -14,6 +14,7 @@ assert debug['version/code'] == '21' and debug['version/name'] == '"1.0.0-rc2-mu
 assert presets['preset.1']['name'] == '"Android Play"'
 assert play['package/unique_name'] == '"com.zencube.game.play"', 'Play updates must match the existing app ID'
 assert play['gradle_build/target_sdk'] == '"36"'
+assert play['gradle_build/min_sdk'] == '"24"', 'Preserve Android 7 support from the active test release'
 assert play['gradle_build/export_format'] == '1' and play['gradle_build/use_gradle_build'] == 'true'
 assert play['package/signed'] == 'false', 'Release CI must export an unsigned app bundle'
 assert 'config/icon="res://icon.svg"' in (R/'project.godot').read_text()

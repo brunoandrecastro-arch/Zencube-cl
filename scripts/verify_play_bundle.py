@@ -47,12 +47,12 @@ def check_manifest(bundle):
         require(manifest.get(key) == value, f"Unexpected manifest value for {key}")
     sdk = manifest.find("uses-sdk")
     require(sdk is not None and sdk.get(ANDROID + "targetSdkVersion") == "36", "Expected target SDK 36")
-    require(sdk.get(ANDROID + "minSdkVersion") == "26", "Expected minimum SDK 26")
+    require(sdk.get(ANDROID + "minSdkVersion") == "24", "Expected minimum SDK 24")
     app = manifest.find("application")
     require(app is not None and app.get(ANDROID + "debuggable", "false") == "false", "App is debuggable")
     config = bundletool("dump", "config", f"--bundle={bundle}")
     require("PAGE_ALIGNMENT_16K" in config, "Bundle misses 16 KB page alignment")
-    print(f"{expected['package']} {expected[ANDROID + 'versionName']} ({expected[ANDROID + 'versionCode']}), target SDK 36, 16 KB.")
+    print(f"{expected['package']} {expected[ANDROID + 'versionName']} ({expected[ANDROID + 'versionCode']}), min SDK 24, target SDK 36, 16 KB.")
 
 
 def check_native_libraries(archive, entries):

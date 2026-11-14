@@ -8,7 +8,7 @@
 - [x] Feature Graphic 1024×500 RGB
 - [x] Fünf Originaltracks im Quellcode; Musikumschaltung
 - [x] Fünf Bot-Stufen, 100 Challenges, 20 Skins, Welten, Zen Ascension und Offline-Modus bleiben erhalten
-- [x] Separates Exportprofil `Android Play` mit Godot 4.5.1, Gradle, minSdk 26 und targetSdk 36
+- [x] Separates Exportprofil `Android Play` mit Godot 4.5.1, Gradle, minSdk 24 und targetSdk 36
 
 ## Geschlossener Test
 
