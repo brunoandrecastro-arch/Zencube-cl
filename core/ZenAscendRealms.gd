@@ -33,7 +33,7 @@ const TASKS: Array = [
         {"id":"shadow_three","title":"Threefold Silence","metric":"wins","need":3,"leaves":75,"de":"Gewinne insgesamt 3 Partien in diesem Realm.","en":"Win 3 matches in this realm.","pt":"Ganha 3 partidas neste reino."},
         {"id":"shadow_streak","title":"Shadow Streak","metric":"best_streak","need":2,"leaves":75,"de":"Gewinne 2 Realm-Partien in Folge.","en":"Win 2 realm matches in a row.","pt":"Ganha 2 partidas seguidas neste reino."},
         {"id":"shadow_block","title":"Veil Tactician","metric":"block_wins","need":1,"leaves":120,"de":"Blockiere eine direkte Gewinnchance des Bots und gewinne dieselbe Partie.","en":"Block an immediate bot win and win that match.","pt":"Bloqueia uma vitória imediata do bot e ganha essa partida."},
-        {"id":"shadow_hard","title":"Master of the Dark Path","metric":"hard_win","need":1,"leaves":120,"de":"Besiege den Zen-Bot auf Schwer oder höher.","en":"Beat the Zen-Bot on Hard or higher.","pt":"Vence o Zen-Bot em Difícil ou superior."}
+        {"id":"shadow_hard","title":"Master of the Dark Path","metric":"face_wins","need":1,"leaves":120,"de":"Gewinne mit vier Zeichen auf einer Würfelfläche gegen Mittel.","en":"Win with four marks on one cube face against Medium.","pt":"Vence com quatro símbolos numa face do cubo contra Médio."}
     ],
     [
         {"id":"ember_first","title":"Trial by Flame","metric":"wins","need":1,"leaves":40,"de":"Gewinne 1 Partie im Ember Temple.","en":"Win one match in Ember Temple.","pt":"Ganha uma partida no Ember Temple."},
@@ -43,7 +43,7 @@ const TASKS: Array = [
         {"id":"ember_will","title":"Unbroken Will","metric":"wins_without_draw","need":2,"leaves":75,"de":"Gewinne zweimal, ohne dazwischen ein Unentschieden zu erzielen.","en":"Win twice without a draw between those wins.","pt":"Ganha duas vezes sem um empate pelo meio."},
         {"id":"ember_fast","title":"Temple Pressure","metric":"fast16","need":1,"leaves":120,"de":"Gewinne in höchstens 16 Gesamtzügen.","en":"Win in at most 16 total moves.","pt":"Vence em, no máximo, 16 jogadas no total."},
         {"id":"ember_edge","title":"Edge of Fire","metric":"edge_wins","need":1,"leaves":75,"de":"Gewinne mit einer Gewinnlinie über eine Würfelkante.","en":"Win with a line across a cube edge.","pt":"Vence com uma linha através de uma aresta do cubo."},
-        {"id":"ember_master","title":"Ember Mastery","metric":"master_win","need":1,"leaves":120,"de":"Besiege den Zen-Bot auf Meister oder höher.","en":"Beat the Zen-Bot on Master or higher.","pt":"Vence o Zen-Bot em Mestre ou superior."}
+        {"id":"ember_master","title":"Ember Mastery","metric":"block_wins","need":1,"leaves":120,"de":"Blockiere einen direkten Gewinnzug des Hard-Bots und gewinne die Partie.","en":"Block an immediate Hard bot victory and win that match.","pt":"Bloqueia uma vitória imediata do bot Difícil e ganha a partida."}
     ],
     [
         {"id":"celestial_first","title":"Open Sky","metric":"wins","need":1,"leaves":40,"de":"Gewinne 1 Partie im Celestial Realm.","en":"Win one match in Celestial Realm.","pt":"Ganha uma partida no Celestial Realm."},
@@ -53,7 +53,7 @@ const TASKS: Array = [
         {"id":"celestial_face","title":"Light Through Form","metric":"face_wins","need":1,"leaves":75,"de":"Gewinne mit vier Zeichen auf derselben Würfelseite.","en":"Win with four marks on one cube face.","pt":"Vence com quatro símbolos na mesma face do cubo."},
         {"id":"celestial_streak","title":"Still Above the Clouds","metric":"best_hard_streak","need":2,"leaves":120,"de":"Gewinne 2 Partien in Folge gegen Schwer oder höher.","en":"Win 2 consecutive games against Hard or higher.","pt":"Ganha 2 partidas seguidas contra Difícil ou superior."},
         {"id":"celestial_fast","title":"Celestial Discipline","metric":"fast15","need":1,"leaves":120,"de":"Gewinne in höchstens 15 Gesamtzügen.","en":"Win in at most 15 total moves.","pt":"Vence em, no máximo, 15 jogadas no total."},
-        {"id":"celestial_grand","title":"Crown of Light","metric":"grand_win","need":1,"leaves":120,"de":"Besiege den Zen-Bot auf Großmeister.","en":"Beat the Zen-Bot on Grandmaster.","pt":"Vence o Zen-Bot em Grande Mestre."}
+        {"id":"celestial_grand","title":"Crown of Light","metric":"edge_wins","need":2,"leaves":120,"de":"Gewinne 2 Partien mit einer Viererlinie über die Würfelkante gegen Meister.","en":"Win 2 games across a cube edge against Master.","pt":"Ganha 2 partidas com uma linha pela aresta do cubo contra Mestre."}
     ],
     [
         {"id":"satori_first","title":"Enter Satori","metric":"wins","need":1,"leaves":40,"de":"Gewinne 1 Partie im Satori Realm.","en":"Win one match in Satori Realm.","pt":"Ganha uma partida no Satori Realm."},
@@ -81,9 +81,9 @@ const COPY: Dictionary = {
     "leaves": ["Zen Leaves", "Folhas Zen"],
     "total": ["Total progress", "Progresso total"],
     "return": ["Back", "Voltar"],
-    "ember_unlock": ["5 Shadow wins OR 4 Shadow challenges", "5 vitórias no Reino das Sombras OU 4 desafios desse reino"],
-    "celestial_unlock": ["7 Ember wins OR 5 Ember challenges", "7 vitórias no Templo das Chamas OU 5 desafios desse templo"],
-    "satori_unlock": ["10 wins in Celestial Realm AND 12 realm challenges overall", "10 vitórias no Reino Celestial E 12 desafios dos reinos no total"],
+    "ember_unlock": ["Complete all 8 Shadow Realm challenges", "Conclui todos os 8 desafios do Reino das Sombras"],
+    "celestial_unlock": ["Complete all 8 Ember Temple challenges", "Conclui todos os 8 desafios do Templo das Chamas"],
+    "satori_unlock": ["Complete all 8 Celestial Realm challenges", "Conclui todos os 8 desafios do Reino Celestial"],
     "play_finish": ["Finish the current match before switching realms.", "Termina a partida atual antes de mudares de reino."],
     "bot_only": ["Realm challenges only count Zen-Bot matches.", "Os desafios dos reinos contam apenas partidas contra o Zen-Bot."],
     "music_later": ["Realm music is coming soon.", "A música dos reinos chega em breve."],
@@ -102,9 +102,9 @@ const DE_COPY: Dictionary = {
     "realm":"Reich", "realms":"Reiche", "challenges":"Herausforderungen", "titles":"Titel", "locked":"Gesperrt",
     "unlocked":"Freigeschaltet", "select":"Realm wählen", "selected":"Aktives Realm", "earned":"Abgeschlossen",
     "progress":"Fortschritt", "leaves":"Zen-Blätter", "total":"Gesamtfortschritt", "return":"Zurück",
-    "ember_unlock":"5 Siege im Schattenreich ODER 4 Schattenreich-Herausforderungen",
-    "celestial_unlock":"7 Siege im Feuertempel ODER 5 Feuertempel-Herausforderungen",
-    "satori_unlock":"10 Siege im Himmelsreich UND 12 Reich-Herausforderungen insgesamt",
+    "ember_unlock":"Schließe alle 8 Herausforderungen im Schattenreich ab",
+    "celestial_unlock":"Schließe alle 8 Herausforderungen im Feuertempel ab",
+    "satori_unlock":"Schließe alle 8 Herausforderungen im Himmelsreich ab",
     "play_finish":"Beende zuerst die aktuelle Partie, bevor du das Realm wechselst.",
     "bot_only":"Realm-Challenges zählen nur gegen den Zen-Bot.",
     "music_later":"Eigene Realm-Musik folgt später.", "reward":"Belohnung", "total_titles":"Gesamttitel", "rank":"Realm-Titel",
@@ -260,9 +260,11 @@ static func unlocked(data: Dictionary, realm: int) -> bool:
     if realm < 0 or realm >= 4 or not ZenAscend.unlocked(data): return false
     var st: Dictionary = state(data)
     if realm == 0: return true
-    if realm == 1: return int(st.stats[0].wins) >= 5 or count(data,0) >= 4
-    if realm == 2: return int(st.stats[1].wins) >= 7 or count(data,1) >= 5
-    return int(st.stats[2].wins) >= 10 and total_count(data) >= 12
+    # A following Realm becomes accessible ONLY after all eight challenges
+    # in the preceding Realm. Previous early-unlock shortcuts are removed.
+    for required_realm in range(realm):
+        if count(data,required_realm) < 8: return false
+    return true
 
 static func select(data: Dictionary, realm: int) -> bool:
     if not unlocked(data,realm): return false
@@ -285,14 +287,14 @@ static func overall_title(data: Dictionary) -> String:
     return title
 
 static func missing_reason(data: Dictionary, realm: int, language: String) -> String:
-    if realm == 0: return ""
-    if realm == 1:
-        if language == "en": return "5 Shadow wins OR 4 Shadow challenges"
-        if language == "pt": return "5 vitórias no Reino das Sombras OU 4 desafios desse reino"
-        return str(DE_COPY.ember_unlock)
-    if realm == 2:
-        return t("celestial_unlock",language)
-    return t("satori_unlock",language)
+    if realm <= 0 or realm >= 4: return ""
+    var first_missing: int = realm - 1
+    for earlier in range(realm):
+        if count(data,earlier) < 8:
+            first_missing = earlier
+            break
+    var key: String = ["ember_unlock", "celestial_unlock", "satori_unlock"][first_missing]
+    return t(key, language)
 
 # Does placing at this cell block an opponent's immediate four-in-a-row?
 static func prevents_immediate_win(cells: Array, lines: Array, human_turn: int, cell: int) -> bool:

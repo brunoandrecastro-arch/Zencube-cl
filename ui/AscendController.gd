@@ -9,6 +9,7 @@ const RealmMusic = preload("res://core/ZenRealmMusic.gd")
 const FullyAware = preload("res://ui/ZenFullyAwareCeremony.gd")
 const Achievements = preload("res://core/ZenAscendAchievements.gd")
 const UnlockCeremony = preload("res://ui/ZenUnlockCeremony.gd")
+const RealmPortal = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
@@ -65,6 +66,14 @@ func _ready() -> void:
     Realms.ensure(data)
     Achievements.ensure(data)
     match_realm = int(data.ascend.realm_state.selected)
+    # Older versions unlocked later Realms early. Restore a legal selection
+    # without deleting statistics, achievements, bought hints or Zen Leaves.
+    var previous_selection: int = match_realm
+    while match_realm > 0 and not Realms.unlocked(data,match_realm):
+        match_realm -= 1
+    if previous_selection != match_realm:
+        Realms.state(data)["selected"] = match_realm
+        SaveManager.save_data(data)
     if not Mode.unlocked(data):
         get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
         return
@@ -584,6 +593,16 @@ func _show_next_unlock() -> void:
             call_deferred("show_match_result")
         return
     var item: Dictionary = queued_unlocks.pop_front()
+    if str(item.kind) == "realm":
+        var journey: ZenRealmTravelCeremony = RealmPortal.new()
+        add_child(journey)
+        journey.finished.connect(func():
+            if is_inside_tree(): call_deferred("_show_next_unlock")
+        )
+        journey.present(Realms.REALM_ART[match_realm],
+            Realms.REALM_ART[int(item.realm)], Realms.realm_name(int(item.realm),lang()),
+            true, bool(data.settings.get("sound",true)), [world_music], lang())
+        return
     var unlock: ZenUnlockCeremony = UnlockCeremony.new()
     add_child(unlock)
     unlock.finished.connect(func():
@@ -823,22 +842,15 @@ func _show_realm_requirements(realm: int) -> void:
     hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body.add_child(hero)
     text(body,"🔒  " + Realms.missing_reason(data,realm,lang()),17,Color("f6daa0"))
-    var st: Dictionary = Realms.state(data)
-    if realm == 1:
-        text(body,"Shadow victories  %d/5" % int(st.stats[0].wins),16)
-        _progress_meter(body,int(st.stats[0].wins),5)
-        text(body,"OR Shadow challenges  %d/4" % Realms.count(data,0),16)
-        _progress_meter(body,Realms.count(data,0),4)
-    elif realm == 2:
-        text(body,"Ember victories  %d/7" % int(st.stats[1].wins),16)
-        _progress_meter(body,int(st.stats[1].wins),7)
-        text(body,"OR Ember challenges  %d/5" % Realms.count(data,1),16)
-        _progress_meter(body,Realms.count(data,1),5)
-    elif realm == 3:
-        text(body,"Celestial victories  %d/10" % int(st.stats[2].wins),16)
-        _progress_meter(body,int(st.stats[2].wins),10)
-        text(body,"AND total Realm challenges  %d/12" % Realms.total_count(data),16)
-        _progress_meter(body,Realms.total_count(data),12)
+    var source_realm: int = realm - 1
+    for previous in range(realm):
+        if Realms.count(data,previous) < 8:
+            source_realm = previous
+            break
+    if source_realm >= 0:
+        var done: int = Realms.count(data,source_realm)
+        text(body,Realms.realm_name(source_realm,lang()) + " · %d/8 " % done + L("challenges"),16)
+        _progress_meter(body,done,8)
     action(body,L("realms"),show_realms,true)
     _open_realm_dialog(parts)
 
@@ -847,14 +859,29 @@ func _choose_realm_from_dialog(number: int, dialog: Control) -> void:
 
 func select_realm(number: int) -> bool:
     if move_count() > 0 and result == 0: return false
+    var from_realm: int = realm_index()
     if not Realms.select(data,number): return false
     match_realm = number
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[number])
-    sync_realm_music()
     SaveManager.save_data(data)
     draw()
+    if from_realm != number:
+        call_deferred("_show_manual_realm_journey",from_realm,number)
+    else:
+        sync_realm_music()
     return true
+
+func _show_manual_realm_journey(from_realm: int, to_realm: int) -> void:
+    if not is_inside_tree(): return
+    var journey: ZenRealmTravelCeremony = RealmPortal.new()
+    add_child(journey)
+    journey.finished.connect(func():
+        if is_inside_tree(): sync_realm_music()
+    )
+    journey.present(Realms.REALM_ART[from_realm],Realms.REALM_ART[to_realm],
+        Realms.realm_name(to_realm,lang()),false,
+        bool(data.settings.get("sound",true)),[world_music],lang())
 
 func _challenge_items(list: VBoxContainer, realm: int) -> void:
     for node in list.get_children(): node.queue_free()

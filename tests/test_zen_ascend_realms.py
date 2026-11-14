@@ -11,9 +11,9 @@ ids=re.findall(r'"id":"([a-z_]+)"',model)
 assert len(set(ids))==32, 'challenge IDs unique'
 assert 'var state: Dictionary' in model
 assert 'realm_state' in model and 'realm_rewards' in model
-assert '>= 5 or count(data,0) >= 4' in model
-assert '>= 7 or count(data,1) >= 5' in model
-assert '>= 10 and total_count(data) >= 12' in model
+assert 'for required_realm in range(realm):' in model
+assert 'for required_realm in range(realm):' in model
+assert 'for required_realm in range(realm):' in model
 assert '"satori_aware"' in model and '"satori_six"' in model
 assert 'bool(earned.get(id,false))' in model and 'realm_rewards.get(str(realm),false)' in model
 assert 'ZenAscend.unlocked(data)' in model
