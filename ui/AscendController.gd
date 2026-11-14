@@ -293,9 +293,9 @@ func build_interface() -> void:
     var title_box: VBoxContainer = VBoxContainer.new()
     title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header_row.add_child(title_box)
-    text(title_box,Z("Zen Ascend 4×4"),25,Color("f9e7b7"))
+    rank_label = text(title_box,"",27,Color("f9e7b7"))
+    text(title_box,Z("Zen Ascend 4×4"),18,Color("e8d1a9"))
     text(title_box,L("subtitle"),12,Color("d6bfa4"))
-    rank_label = text(title_box,"",13,Color("c5d6bd"))
     var scoreboard: PanelContainer = PanelContainer.new()
     scoreboard.add_theme_stylebox_override("panel",style(Color("fff1d9",0.95)))
     column.add_child(scoreboard)
@@ -393,7 +393,7 @@ func draw() -> void:
             for c in line:
                 if not wins.has(c): wins.append(c)
     cube.repaint(cells,wins)
-    rank_label.text = Realms.realm_name(realm_index(),lang()) + " · " + Achievements.main_title(data,realm_index())
+    rank_label.text = Realms.realm_name(realm_index(),lang())
     if quote_label != null: quote_label.text = realm_quote()
     if result == 3:
         status_label.text = Z("Unentschieden!")
