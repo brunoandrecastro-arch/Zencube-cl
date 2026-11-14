@@ -30,7 +30,13 @@ assert 'Realms.current_title(data,3) == "Fully Aware"' in ascend
 assert 'fully_aware_ceremony_seen' in ascend
 assert 'SaveManager.save_data(data)' in ascend
 assert 'call_deferred("show_fully_aware",last_realm_awards.duplicate(true))' in ascend
-assert 'if int(awards.get("leaves",0)) > 0' in ascend, 'do not lose Satori award dialog'
+# Rewards now appear in the premium result after the Satori ceremony.
+ceremony = ascend.split('func show_fully_aware(awards: Dictionary) -> void:',1)[1].split('func _dialog(',1)[0]
+assert 'celebration.finished.connect(func():' in ceremony
+assert 'call_deferred("show_match_result")' in ceremony
+result = ascend.split('func show_match_result() -> void:',1)[1].split('func _replay_after_result(',1)[0]
+assert 'last_match_leaf_reward + int(last_realm_awards.get("leaves",0))' in result
+assert 'last_realm_awards.get("new_tasks",[])' in result
 assert 'class_name ZenFullyAwareCeremony' in fully
 assert 'if _closed: return' in fully and 'signal finished' in fully
 assert 'DISPLAY_SECONDS: float = 7.5' in fully
@@ -40,7 +46,7 @@ assert 'const WORLD_TRACKS: Array[int] = [7, 9, 11, 8, 12]' in old_policy
 assert 'const VERSION = 3' in save
 assert 'test_realm_audio_ceremony.py' in ci and 'test_realm_audio_ceremony.gd' in ci
 assert 'const CELLS: int = 96' in (root/'core/ZenAscend.gd').read_text(encoding='utf8')
-assert 'const PRICE: int = 750' in (root/'core/ZenAscend.gd').read_text(encoding='utf8')
+assert 'const PRICE: int = 850' in (root/'core/ZenAscend.gd').read_text(encoding='utf8')
 for name in ('shadow_realm','ember_temple','celestial_realm','satori_realm'):
     f=root/'assets'/'realm_music'/f'{name}.ogg'
     assert f.is_file() and f.stat().st_size > 1_000_000, f

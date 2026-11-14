@@ -42,23 +42,23 @@ func run() -> void:
     check(ZenAscend.next_move(cells,lines,2) == int(lines[0][3]), "bot blocks immediate loss")
     var data: Dictionary = SaveManager.defaults()
     ZenAscend.ensure(data)
-    # The debug APK must enforce precisely the same gate as the Play AAB.
+    # Debug APK grants free testing, but Play AAB still enforces progression.
     check(not ZenAscend.TEST_UNLOCKED, "free debug access disabled")
-    check(not ZenAscend.test_access_enabled(), "test override never active")
-    check(not ZenAscend.unlocked(data), "new player locked")
+    check(ZenAscend.test_access_enabled() == OS.has_feature("debug"), "test override only during debug")
+    check(ZenAscend.unlocked(data) == OS.has_feature("debug"), "beginner free only in debug")
     check(not ZenAscend.unlocked_for_release(data), "production beginner locked")
     data.ascension.rank = 2
-    check(not ZenAscend.unlocked(data), "rank 2 still locked")
+    check(ZenAscend.unlocked(data) == OS.has_feature("debug"), "rank 2 free only in debug")
     check(not ZenAscend.unlocked_for_release(data), "production rank 2 still locked")
     data.ascension.rank = 3
     check(ZenAscend.unlocked_for_release(data), "production: Zen Master unlocks 4x4")
     check(ZenAscend.unlocked(data), "Zen Master unlocks even without test flag")
-    data.economy.leaves = 800
-    check(not ZenAscend.buy(data) and int(data.economy.leaves)==800, "no store charge after Zen Master")
+    data.economy.leaves = 900
+    check(not ZenAscend.buy(data) and int(data.economy.leaves)==900, "no store charge after Zen Master")
     data.ascension.rank = 0
     data.economy.leaves = 0
     check(not ZenAscend.buy(data), "insufficient currency")
-    data.economy.leaves = 800
+    data.economy.leaves = 900
     check(ZenAscend.buy(data), "shop buy")
     check(int(data.economy.leaves)==50 and bool(data.economy.ascend_owned),"shop deducts once")
     check(ZenAscend.unlocked_for_release(data), "purchase unlocks release")

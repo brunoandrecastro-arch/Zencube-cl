@@ -20,11 +20,14 @@ func run() -> void:
             keys[str(task.id)] = true
             check(str(task.de).length()>5 and str(task.en).length()>5 and str(task.pt).length()>5,"DE/EN/PT task copy")
     check(count_all==32,"32 challenges")
+    for realm_id in range(4):
+        check(Realms.fixed_bot_level(realm_id) == realm_id + 1,"fixed Realm difficulty %d" % realm_id)
     var data: Dictionary = SaveManager.defaults()
     var preexisting_classic: Dictionary = data.stats.duplicate(true)
     Realms.ensure(data)
     check(int(Realms.state(data).selected)==0,"shadow selected by default")
-    check(not Realms.unlocked(data,0),"4x4 is gated")
+    check(Realms.unlocked(data,0) == ZenAscend.test_access_enabled(),"free Shadow Realm only in debug")
+    check(not ZenAscend.unlocked_for_release(data),"release keeps its unlock requirement")
     data.ascension.rank = 3
     check(Realms.unlocked(data,0),"shadow entry after Zen Master")
     check(not Realms.unlocked(data,1),"ember initially locked")
@@ -55,28 +58,34 @@ func run() -> void:
     check(int(second.leaves)<first_reward,"no re-award of already claimed tasks")
     for id in finished_ids:
         check(not second.new_tasks.has(id),"individual task never paid twice")
-    for i in range(3): Realms.record_bot_match(data,0,1,0,20,[geometry[0]],false)
-    check(Realms.unlocked(data,1),"ember unlocks after 5 Shadow wins")
-    check(not Realms.unlocked(data,2),"celestial remains locked")
-    check(Realms.select(data,1),"select unlocked Ember Temple")
-    check(int(Realms.state(data).selected)==1,"selected realm saved in data")
-    for i in range(7): Realms.record_bot_match(data,1,1,0,23,[geometry[0]],false)
-    check(Realms.unlocked(data,2),"Celestial opens after 7 Ember wins")
-    check(not Realms.unlocked(data,3),"Satori requires both gates")
-    # One prerequisite alone is insufficient for Satori.
-    var realm_data: Dictionary = Realms.state(data)
-    realm_data.stats[2]["wins"] = 10
-    check(not Realms.unlocked(data,3) or Realms.total_count(data)>=12,"Satori AND condition")
-    # Grant 12 legitimate completed challenges to satisfy the second condition.
-    var earned: Dictionary = Realms.state(data).completed
-    var needed: int = maxi(0,12-Realms.total_count(data))
-    for task in Realms.TASKS[2]:
-        if needed <= 0: break
-        if not bool(earned.get(str(task.id),false)):
-            earned[str(task.id)] = true
-            needed -= 1
-    check(Realms.unlocked(data,3),"Satori unlock requires 10 Celestial wins and 12 challenges")
-    check(Realms.total_count(data)>=12,"overall completion count")
+    # A high win count alone cannot skip a Realm. Every previous
+    # Realm must have exactly eight challenges completed.
+    var gate_data: Dictionary = SaveManager.defaults()
+    gate_data.ascension.rank = 3
+    Realms.ensure(gate_data)
+    Realms.state(gate_data).stats[0]["wins"] = 99
+    check(not Realms.unlocked(gate_data,1),"winning many Shadow matches does not unlock Ember early")
+    var earned: Dictionary = Realms.state(gate_data).completed
+    for i in range(7):
+        earned[str(Realms.TASKS[0][i].id)] = true
+    check(not Realms.unlocked(gate_data,1),"Shadow 7/8 stays locked")
+    earned[str(Realms.TASKS[0][7].id)] = true
+    check(Realms.unlocked(gate_data,1),"Ember unlocks at Shadow 8/8")
+    check(Realms.select(gate_data,1),"select unlocked Ember Temple")
+    check(int(Realms.state(gate_data).selected)==1,"Ember selection persisted")
+    for i in range(7): earned[str(Realms.TASKS[1][i].id)] = true
+    Realms.state(gate_data).stats[1]["wins"] = 30
+    check(not Realms.unlocked(gate_data,2),"Ember 7/8 stays locked even after many wins")
+    earned[str(Realms.TASKS[1][7].id)] = true
+    check(Realms.unlocked(gate_data,2),"Celestial unlocks at Ember 8/8")
+    for i in range(7): earned[str(Realms.TASKS[2][i].id)] = true
+    Realms.state(gate_data).stats[2]["wins"] = 30
+    check(not Realms.unlocked(gate_data,3),"Celestial 7/8 stays locked regardless of wins")
+    earned[str(Realms.TASKS[2][7].id)] = true
+    check(Realms.unlocked(gate_data,3),"Satori unlocks at Celestial 8/8")
+    for task in Realms.TASKS[0]:
+        Realms.state(data).completed[str(task.id)] = true
+    check(Realms.select(data,1),"original save can still select completed Shadow destination")
     check(data.stats==preexisting_classic,"Classic stats untouched")
     var json: String = JSON.stringify(data)
     var loaded: Variant = JSON.parse_string(json)

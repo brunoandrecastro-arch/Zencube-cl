@@ -20,22 +20,26 @@ func run() -> void:
     ZenAscendRealms.ensure(data)
     data.ascension.rank = 3
     var state: Dictionary = ZenAscendRealms.state(data)
-    state.stats[2].wins = 10
-    for realm in range(2):
-        for i in range(6):
-            state.completed[str(ZenAscendRealms.TASKS[realm][i].id)] = true
+    # Complete all previous Realms before testing Satori.
+    check(not ZenAscendRealms.unlocked(data,3),
+          "Satori locked before Realm completion")
+    for realm in range(3):
+        for task in ZenAscendRealms.TASKS[realm]:
+            state.completed[str(task.id)] = true
+    check(ZenAscendRealms.unlocked(data,3),
+          "Satori unlocked after three completed Realms")
     for i in range(6):
         state.completed[str(ZenAscendRealms.TASKS[3][i].id)] = true
     check(ZenAscendRealms.unlocked(data,3),"Satori unlock remains attainable")
-    var last: Dictionary = ZenAscendRealms.record_bot_match(data,3,1,2,19,[],false)
+    var last: Dictionary = ZenAscendRealms.record_bot_match(data,3,1,ZenAscendRealms.fixed_bot_level(3),19,[],false)
     check(last.new_tasks.has("satori_aware"),"Fully Aware achievement awarded on six Satori challenges")
     check(ZenAscendRealms.current_title(data,3) != "Fully Aware","highest title not awarded too early")
     # Completing the remaining first-seven Satori task makes all eight complete.
     state.completed[str(ZenAscendRealms.TASKS[3][6].id)] = true
-    var final_award: Dictionary = ZenAscendRealms.record_bot_match(data,3,1,2,19,[],false)
+    var final_award: Dictionary = ZenAscendRealms.record_bot_match(data,3,1,ZenAscendRealms.fixed_bot_level(3),19,[],false)
     check(bool(final_award.get("realm_completed", false)),"final Satori realm bonus awarded")
     check(ZenAscendRealms.current_title(data,3) == "Fully Aware","highest title reached at 8/8")
-    var repeated: Dictionary = ZenAscendRealms.record_bot_match(data,3,1,2,19,[],false)
+    var repeated: Dictionary = ZenAscendRealms.record_bot_match(data,3,1,ZenAscendRealms.fixed_bot_level(3),19,[],false)
     check(not bool(repeated.get("realm_completed", false)),"highest title and realm bonus cannot be awarded twice")
     state["fully_aware_ceremony_seen"] = true
     var loaded: Variant = JSON.parse_string(JSON.stringify(data))

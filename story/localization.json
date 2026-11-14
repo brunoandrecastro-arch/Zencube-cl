@@ -1,0 +1,312 @@
+{
+  "en": {
+    "ui": {
+      "library_tip": "Zen Chronicles",
+      "library_header": "ZEN CHRONICLES",
+      "tagline": "A Journey Towards Inner Balance",
+      "summary": "5 chapters · 4 illustrations each · Zen Garden (3×3)",
+      "chapter_row": "Chapter %d · %s",
+      "read": "Read ›",
+      "locked": "🔒 Locked",
+      "unlock_hint": "New chapters become available as you unlock new worlds.",
+      "reader_row": "%s · Chapter %d",
+      "previous": "‹ Back",
+      "next": "Next ›",
+      "chapters": "Chapter list",
+      "swipe_help": "← Swipe → · Story titles do not change your in-game rank",
+      "reward": "✦ Title: "
+    },
+    "chapters": [
+      {
+        "world": "Zen Garden",
+        "title": "The Call of Balance",
+        "reward": "The Seeker",
+        "pages": [
+          {
+            "title": "The First Doubt",
+            "body": "In the Zen Garden, among cherry blossoms and quiet streams, a young man searches for inner balance. Yet even in the peace of his home, he feels a faint restlessness.",
+            "quote": "Why can I find no peace when everything around me is so peaceful?"
+          },
+          {
+            "title": "The Hidden Path",
+            "body": "One morning, a gong rings out. The wanderer follows its sound through the garden to an ancient stairway he has never noticed before.",
+            "quote": "Perhaps the answer begins where the path I know comes to an end."
+          },
+          {
+            "title": "The Master’s Lesson",
+            "body": "An old master shows him a shimmering cube. Each of its six faces represents a part of his inner journey.",
+            "quote": "Winning is not everything. Whoever learns from mistakes draws closer to balance."
+          },
+          {
+            "title": "The Seeker",
+            "body": "The young man accepts his first lesson. He is still far from true clarity, but now he has the courage to search for it. His next path leads to the Bamboo Path.",
+            "quote": "I do not need to have arrived already. I only need to keep going."
+          }
+        ]
+      },
+      {
+        "world": "Bamboo Path",
+        "title": "The Art of Patience",
+        "reward": "The Patient One",
+        "pages": [
+          {
+            "title": "Through the Bamboo",
+            "body": "Leaving the Zen Garden behind, the Seeker enters a forest of towering bamboo. He begins to see that some answers appear only when he slows down enough.",
+            "quote": "Perhaps patience is not weakness, but a kind of strength."
+          },
+          {
+            "title": "Stones Across the Water",
+            "body": "A narrow trail takes him across a still pond. Whenever he hurries, he loses his balance. He pauses, listens to the water, and sees where to step next.",
+            "quote": "When I rush, I lose my footing. When I listen, the path shows me the next step."
+          },
+          {
+            "title": "When the Wind Rises",
+            "body": "A gust of wind makes the bamboo sway and throws the wanderer off balance. This time he does not fight it. He stays calm until the way ahead becomes clear again.",
+            "quote": "Not everything must be conquered. Some things grow clear when we simply stay present."
+          },
+          {
+            "title": "The Patient One",
+            "body": "At a quiet sanctuary, he understands: patience is not standing still, but trusting the right moment. The Mountain Temple lies ahead.",
+            "quote": "I do not have to force the path. With patience, it opens on its own."
+          }
+        ]
+      },
+      {
+        "world": "Mountain Temple",
+        "title": "The Courage to Carry On",
+        "reward": "The Steadfast",
+        "pages": [
+          {
+            "title": "The Ascent",
+            "body": "High above the clouds rises the Mountain Temple. The wanderer believes patience can master any path. But the endless steps and icy wind push him to his limits.",
+            "quote": "How much farther must I go?"
+          },
+          {
+            "title": "The Master’s Words",
+            "body": "Exhausted, he reaches an ancient temple. There the master awaits him, recognizing his doubts before he speaks a word.",
+            "quote": "Courage does not mean never falling. Courage means getting up again, every time."
+          },
+          {
+            "title": "The Trial of the Cube",
+            "body": "The cube awakens. Again and again, the wanderer misses his goal. Doubt rises within him, and he nearly gives up. Then he remembers the Bamboo Path, takes a deep breath, and tries once more.",
+            "quote": "A lost move is not the end of my journey."
+          },
+          {
+            "title": "The Steadfast",
+            "body": "In the evening sunlight, he finally understands the Mountain Temple’s lesson: the path has not grown easier. He has grown stronger.",
+            "quote": "I do not have to be free of doubt. I only have to keep going."
+          }
+        ]
+      },
+      {
+        "world": "Moon Garden",
+        "title": "The Silence of Thoughts",
+        "reward": "The Clear-Minded",
+        "pages": [
+          {
+            "title": "The Moonlit Garden",
+            "body": "After the Mountain Temple, the wanderer enters the Moon Garden. The silence is soothing—until old thoughts awaken within him. He wonders whether his new strength will truly last.",
+            "quote": "Why is it so difficult to simply be still?"
+          },
+          {
+            "title": "The Voice of Silence",
+            "body": "Beside the quiet lake, he meets a gentle moon spirit. She does not ask him to forget his worries. Instead, she invites him to listen without becoming lost in them.",
+            "quote": "Peace begins when you accept your thoughts."
+          },
+          {
+            "title": "The Trial of Clarity",
+            "body": "A luminous cube rises above the water. The wanderer realizes that the quickest move will not take him forward; he needs a calm view of the whole. He chooses carefully.",
+            "quote": "I do not need to follow every thought to its end."
+          },
+          {
+            "title": "The Clear-Minded",
+            "body": "As the Moon Garden stirs behind him, his thoughts feel lighter. His doubts have not vanished, but they no longer decide his path. The Sky Garden awaits.",
+            "quote": "In silence, I find room for clarity."
+          }
+        ]
+      },
+      {
+        "world": "Sky Garden",
+        "title": "Beyond the Clouds",
+        "reward": "The Awakening One",
+        "pages": [
+          {
+            "title": "The Garden Above the Clouds",
+            "body": "High above the clouds, the wanderer reaches the Sky Garden. The air is clear, the temples glow in the morning light. He believes his journey is over—but one final trial remains.",
+            "quote": "I have come so far. But does that mean I have found balance?"
+          },
+          {
+            "title": "The Final Trial",
+            "body": "In the highest temple, the old master waits. A golden cube hovers before them. Not every move leads to victory; not every loss means failure.",
+            "quote": "The Master: Whoever seeks only victory will always be ruled by defeat. Show me what you have truly learned."
+          },
+          {
+            "title": "The Unburdened Move",
+            "body": "The wanderer no longer searches for a perfect move. He studies the cube, sees his options, and decides with a peaceful mind. A gentle light fills the temple.",
+            "quote": "I cannot control every outcome. But I can choose how I walk my path."
+          },
+          {
+            "title": "The Awakening One",
+            "body": "The sky opens. The wanderer receives the title “The Awakening One.” Patience, courage, and clarity have become part of him. Yet a strange shadow appears in the distance. His journey is not over.",
+            "quote": "The Master: You have learned to follow the light. Soon you must learn to face your own shadow."
+          }
+        ]
+      }
+    ]
+  },
+  "pt": {
+    "ui": {
+      "library_tip": "Crónicas Zen",
+      "library_header": "CRÓNICAS ZEN",
+      "tagline": "A Viagem até ao Equilíbrio Interior",
+      "summary": "5 capítulos · 4 imagens cada · Jardim Zen (3×3)",
+      "chapter_row": "Capítulo %d · %s",
+      "read": "Ler ›",
+      "locked": "🔒 Bloqueado",
+      "unlock_hint": "Os novos capítulos ficam disponíveis à medida que desbloqueias novos mundos.",
+      "reader_row": "%s · Capítulo %d",
+      "previous": "‹ Voltar",
+      "next": "Seguinte ›",
+      "chapters": "Lista de capítulos",
+      "swipe_help": "← Deslizar → · Os títulos da história não alteram a classificação no jogo",
+      "reward": "✦ Título: "
+    },
+    "chapters": [
+      {
+        "world": "Jardim Zen",
+        "title": "O Chamamento do Equilíbrio",
+        "reward": "O Buscador",
+        "pages": [
+          {
+            "title": "A Primeira Dúvida",
+            "body": "No Jardim Zen, entre cerejeiras em flor e riachos tranquilos, um jovem procura o equilíbrio interior. No entanto, mesmo na paz da sua terra, sente uma inquietação subtil.",
+            "quote": "Porque não encontro paz, se tudo à minha volta é tão tranquilo?"
+          },
+          {
+            "title": "O Caminho Escondido",
+            "body": "Numa manhã, ouve-se um gongo. O viajante segue o som pelo jardim até uma escadaria antiga que nunca tinha reparado existir.",
+            "quote": "Talvez a resposta comece onde termina o caminho que conheço."
+          },
+          {
+            "title": "A Lição do Mestre",
+            "body": "Um velho mestre mostra-lhe um cubo cintilante. Cada uma das suas seis faces representa uma parte da sua viagem interior.",
+            "quote": "Ganhar não é tudo. Quem aprende com os erros aproxima-se do equilíbrio."
+          },
+          {
+            "title": "O Buscador",
+            "body": "O jovem aceita a sua primeira lição. Ainda está longe da verdadeira clareza, mas agora tem coragem para a procurar. O próximo destino é o Caminho do Bambu.",
+            "quote": "Não preciso de já ter chegado. Só preciso de continuar."
+          }
+        ]
+      },
+      {
+        "world": "Caminho do Bambu",
+        "title": "A Arte da Paciência",
+        "reward": "O Paciente",
+        "pages": [
+          {
+            "title": "Pelo Bosque de Bambu",
+            "body": "Depois do Jardim Zen, o Buscador entra num bosque de bambus altos. Começa a perceber que algumas respostas só surgem quando abranda o suficiente.",
+            "quote": "Talvez a paciência não seja uma fraqueza, mas uma forma de força."
+          },
+          {
+            "title": "As Pedras na Água",
+            "body": "Um trilho estreito leva-o através de um lago sereno. Sempre que se apressa, perde o equilíbrio. Faz uma pausa, escuta a água e descobre o próximo passo.",
+            "quote": "Quando me apresso, perco o pé. Quando escuto, o caminho mostra-me onde pisar."
+          },
+          {
+            "title": "Quando o Vento Sopra",
+            "body": "Uma rajada faz oscilar os bambus e desequilibra o viajante. Desta vez, não luta contra o vento. Mantém-se tranquilo até o caminho voltar a revelar-se.",
+            "quote": "Nem tudo precisa de ser vencido. Algumas coisas tornam-se claras quando simplesmente permanecemos presentes."
+          },
+          {
+            "title": "O Paciente",
+            "body": "Num santuário silencioso, compreende que a paciência não é ficar parado, mas confiar no momento certo. À sua frente ergue-se o Templo da Montanha.",
+            "quote": "Não preciso de forçar o caminho. Com calma, ele abre-se por si."
+          }
+        ]
+      },
+      {
+        "world": "Templo da Montanha",
+        "title": "A Coragem de Prosseguir",
+        "reward": "O Perseverante",
+        "pages": [
+          {
+            "title": "A Subida",
+            "body": "Muito acima das nuvens ergue-se o Templo da Montanha. O jovem acredita que, com paciência, consegue superar qualquer caminho. Mas os degraus intermináveis e o vento gelado levam-no ao limite.",
+            "quote": "Quanto mais terei de subir?"
+          },
+          {
+            "title": "As Palavras do Mestre",
+            "body": "Exausto, chega a um templo antigo. Ali espera-o o mestre, que reconhece as suas dúvidas antes mesmo de ele dizer uma palavra.",
+            "quote": "Coragem não significa nunca cair. Significa levantar-se, vezes sem conta."
+          },
+          {
+            "title": "A Prova do Cubo",
+            "body": "O cubo desperta. Uma e outra vez, o viajante falha o objetivo. As dúvidas crescem e está quase a desistir. Então recorda-se do Caminho do Bambu, respira fundo e tenta novamente.",
+            "quote": "Uma jogada perdida não é o fim da minha viagem."
+          },
+          {
+            "title": "O Perseverante",
+            "body": "À luz do entardecer, compreende finalmente a lição do Templo da Montanha: o caminho não se tornou mais fácil. Foi ele que se tornou mais forte.",
+            "quote": "Não preciso de viver sem dúvidas. Só preciso de continuar."
+          }
+        ]
+      },
+      {
+        "world": "Jardim da Lua",
+        "title": "O Silêncio dos Pensamentos",
+        "reward": "O Lúcido",
+        "pages": [
+          {
+            "title": "O Jardim ao Luar",
+            "body": "Depois do Templo da Montanha, o viajante entra no Jardim da Lua. O silêncio reconforta-o, até que pensamentos antigos despertam. Pergunta-se se a força que conquistou irá durar.",
+            "quote": "Porque é tão difícil simplesmente estar em paz?"
+          },
+          {
+            "title": "A Voz do Silêncio",
+            "body": "Junto ao lago tranquilo, encontra um delicado espírito lunar. Ela não lhe pede que esqueça as preocupações. Convida-o antes a escutá-las sem se perder nelas.",
+            "quote": "A paz começa quando aceitas os teus pensamentos."
+          },
+          {
+            "title": "A Prova da Clareza",
+            "body": "Um cubo luminoso eleva-se acima da água. O viajante percebe que não é a jogada mais rápida que o fará avançar, mas sim uma visão serena do todo. Escolhe com atenção.",
+            "quote": "Não preciso de seguir todos os pensamentos até ao fim."
+          },
+          {
+            "title": "O Lúcido",
+            "body": "Enquanto o Jardim da Lua desperta atrás de si, sente os pensamentos mais leves. As dúvidas não desapareceram, mas já não decidem o seu caminho. À sua frente está o Jardim Celestial.",
+            "quote": "No silêncio, encontro espaço para a clareza."
+          }
+        ]
+      },
+      {
+        "world": "Jardim Celestial",
+        "title": "Para Além das Nuvens",
+        "reward": "O Desperto",
+        "pages": [
+          {
+            "title": "O Jardim Acima das Nuvens",
+            "body": "Muito acima das nuvens, o viajante chega ao Jardim Celestial. O ar é límpido e os templos brilham à luz da manhã. Julga ter chegado ao destino, mas ainda o espera uma última prova.",
+            "quote": "Cheguei tão longe. Mas será que isso significa que encontrei o equilíbrio?"
+          },
+          {
+            "title": "A Última Prova",
+            "body": "No templo mais alto, o velho mestre espera por ele. Entre ambos flutua um cubo dourado. Nem todas as jogadas levam à vitória; nem todas as derrotas são fracassos.",
+            "quote": "O Mestre: Quem procura apenas vencer acaba por viver dominado pela derrota. Mostra-me o que realmente aprendeste."
+          },
+          {
+            "title": "A Jogada Livre",
+            "body": "O viajante deixa de procurar a jogada perfeita. Observa o cubo, reconhece as possibilidades e decide com serenidade. Uma luz suave ilumina o templo.",
+            "quote": "Não posso controlar todos os resultados. Mas posso escolher como percorro o meu caminho."
+          },
+          {
+            "title": "O Desperto",
+            "body": "O céu abre-se. O viajante recebe o título de «O Desperto». A paciência, a coragem e a clareza fazem agora parte de si. Mas, ao longe, surge uma sombra desconhecida. A viagem ainda não terminou.",
+            "quote": "O Mestre: Aprendeste a seguir a luz. Em breve, terás de aprender a enfrentar a tua própria sombra."
+          }
+        ]
+      }
+    ]
+  }
+}

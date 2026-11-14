@@ -25,5 +25,5 @@ assert 'world_quote_label.text = T(WORLD_QUOTES[active_world])' in ui
 assert '"6 SEITEN · 54 FELDER · 108 VIERERLINIEN",legend_panel' not in ui
 assert 'apply_world()' in ui and 'func select_world(number: int)' in ui
 assert 'const VERSION = 3' in (ROOT/'core/SaveManager.gd').read_text()
-assert 'const PRICE: int = 750' in (ROOT/'core/ZenAscend.gd').read_text()
+assert 'const PRICE: int = 850' in (ROOT/'core/ZenAscend.gd').read_text()
 print('PASS: five fixed Zen quotes; live world heading; DE/EN/PT-PT; Classic saves and 4x4 gate preserved')

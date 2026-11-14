@@ -26,6 +26,7 @@ func run() -> void:
     check(ZenCollection.migrate_previous_rewards(wallet,historical)==0, "migration cannot double-reward")
     check(ZenCollection.reward_bot(wallet,4)==65, "grandmaster reward")
     check(ZenCollection.reward_bot(wallet,0)==8, "easy reward")
+    check(ZenCollection.reward_loss(wallet)==1, "one leaf on defeat")
     check(ZenCollection.reward_challenge(wallet,5)==40, "grandmaster puzzle reward")
     var balance: int = int(wallet.economy.leaves)
     check(not ZenCollection.buy(wallet,19), "expensive skin cannot be bought without funds")

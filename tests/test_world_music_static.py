@@ -36,5 +36,5 @@ for name in ['cyberwave_main', 'zen_piano', 'velario_zen', 'nature_wonder', 'cal
 assert 'func select_base_music() -> void' in main
 assert 'clampi(index, 0, 13)' in main
 assert '"ascend":{}' in save
-assert 'const PRICE: int = 750' in (R/'core/ZenAscend.gd').read_text()
+assert 'const PRICE: int = 850' in (R/'core/ZenAscend.gd').read_text()
 print('PASS: Base/manual policy, 5 World tracks, seven stable IDs, 2-player fades, Ascend, purchases and save migration')

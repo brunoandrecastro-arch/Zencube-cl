@@ -1,8 +1,31 @@
+# ZENCUBE_TRILINGUAL_SHOP_PATCH_2026_11_12
 extends RefCounted
 # All user-visible strings have German source keys. English and European
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Zen-Chroniken 📖": "Zen Chronicles 📖",
+    "A purchased hint stays with you. Achievements must still be earned in battle.": "Purchased hints are permanent. Achievements must still be earned through play.",
+    "Buy a hint · 🍃 %d": "Unlock a hint · 🍃 %d",
+    "Hints": "Achievement Hints",
+    "Not enough Zen Leaves, or hint already owned.": "Not enough Zen Leaves, or you already own this hint.",
+    "Secret Achievement Hints": "Hints for Secret Achievements",
+    "Zen Leaves: 🍃 %d": "Available Zen Leaves: 🍃 %d",
+    "✓ Achievement unlocked": "✓ Achievement earned",
+    "🍃 Hint: ": "🍃 Clue: ",
+    "Denke über die Kanten hinaus.": "Think beyond the edges.",
+    "Entdecke neue Wege.": "Discover new possibilities.",
+    "Kulissen": "Backgrounds",
+    "Wähle einen Hintergrund für deine Zen-Welt. Die aktuelle Welt und der Bot bleiben unverändert.": "Choose a background for your Zen world. Your current world and bot stay unchanged.",
+    "Welt-Hintergrund verwenden": "Use world background",
+    "✓ Welt-Hintergrund aktiv": "✓ World background active",
+    "✓ Aktiv": "✓ Active",
+    "Hintergrund verwenden": "Use background",
+    "Hintergrund freischalten für 🍃 %d": "Unlock background for 🍃 %d",
+    "Kirschgarten": "Cherry Blossom Garden",
+    "Bergtempel-Kulisse": "Mountain Temple",
+    "Mondgarten-Kulisse": "Moon Garden",
+    "Himmelsgarten-Kulisse": "Sky Garden",
     # One fixed Zen quote for each Classic World.
     "„Jeder große Weg beginnt mit einem stillen Schritt.“": "“Every great journey begins with a quiet step.”",
     "„Der Bambus biegt sich im Wind, doch verliert nie seine Wurzeln.“": "“Bamboo bends in the wind but never loses its roots.”",
@@ -320,6 +343,28 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Zen-Chroniken 📖": "Crónicas Zen 📖",
+    "A purchased hint stays with you. Achievements must still be earned in battle.": "As dicas compradas ficam para sempre. As conquistas têm de ser alcançadas a jogar.",
+    "Buy a hint · 🍃 %d": "Comprar uma dica · 🍃 %d",
+    "Hints": "Dicas",
+    "Not enough Zen Leaves, or hint already owned.": "Não tens Folhas Zen suficientes ou já compraste esta dica.",
+    "Secret Achievement Hints": "Dicas para conquistas secretas",
+    "Zen Leaves: 🍃 %d": "Folhas Zen disponíveis: 🍃 %d",
+    "✓ Achievement unlocked": "✓ Conquista desbloqueada",
+    "🍃 Hint: ": "🍃 Dica: ",
+    "Denke über die Kanten hinaus.": "Pensa para lá das arestas.",
+    "Entdecke neue Wege.": "Descobre novas possibilidades.",
+    "Kulissen": "Cenários",
+    "Wähle einen Hintergrund für deine Zen-Welt. Die aktuelle Welt und der Bot bleiben unverändert.": "Escolhe um cenário para o teu mundo Zen. O mundo atual e o bot mantêm-se iguais.",
+    "Welt-Hintergrund verwenden": "Usar cenário do mundo",
+    "✓ Welt-Hintergrund aktiv": "✓ Cenário do mundo ativo",
+    "✓ Aktiv": "✓ Ativo",
+    "Hintergrund verwenden": "Usar cenário",
+    "Hintergrund freischalten für 🍃 %d": "Desbloquear cenário por 🍃 %d",
+    "Kirschgarten": "Jardim das Cerejeiras",
+    "Bergtempel-Kulisse": "Templo da Montanha",
+    "Mondgarten-Kulisse": "Jardim da Lua",
+    "Himmelsgarten-Kulisse": "Jardim Celestial",
     # One fixed Zen quote for each Classic World.
     "„Jeder große Weg beginnt mit einem stillen Schritt.“": "«Cada grande caminho começa com um passo sereno.»",
     "„Der Bambus biegt sich im Wind, doch verliert nie seine Wurzeln.“": "«O bambu dobra-se ao vento, mas nunca perde as raízes.»",
@@ -665,7 +710,47 @@ const NATURAL_COPY: Dictionary = {
     "Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.": ["Nur beendete Partien zählen. Training und Tutorial zählen nicht. Beim Farbtausch bleiben Siege dem richtigen Spieler zugeordnet.", "Only finished matches count. Practice and tutorial games do not. Wins still count for the correct player after a symbol swap.", "Só contam partidas terminadas. O treino e o tutorial não contam. Se trocarmos os símbolos, a vitória continua atribuída ao jogador certo."],
 }
 
+const ZEN_PATCH: Dictionary = {
+    "A purchased hint stays with you. Achievements must still be earned in battle.": ["Ein gekaufter Hinweis bleibt erhalten. Erfolge musst du weiterhin erspielen.", "Purchased hints are permanent. Achievements must still be earned through play.", "As dicas compradas ficam para sempre. As conquistas têm de ser alcançadas a jogar."],
+    "Buy a hint · 🍃 %d": ["Hinweis kaufen · 🍃 %d", "Unlock a hint · 🍃 %d", "Comprar uma dica · 🍃 %d"],
+    "Hints": ["Hinweise", "Achievement Hints", "Dicas"],
+    "Not enough Zen Leaves, or hint already owned.": ["Nicht genug Zen-Blätter oder Hinweis bereits gekauft.", "Not enough Zen Leaves, or you already own this hint.", "Não tens Folhas Zen suficientes ou já compraste esta dica."],
+    "Secret Achievement Hints": ["Hinweise auf geheime Erfolge", "Hints for Secret Achievements", "Dicas para conquistas secretas"],
+    "Zen Leaves: 🍃 %d": ["Zen-Blätter: 🍃 %d", "Available Zen Leaves: 🍃 %d", "Folhas Zen disponíveis: 🍃 %d"],
+    "✓ Achievement unlocked": ["✓ Erfolg freigeschaltet", "✓ Achievement earned", "✓ Conquista desbloqueada"],
+    "🍃 Hint: ": ["🍃 Hinweis: ", "🍃 Clue: ", "🍃 Dica: "],
+    "Denke über die Kanten hinaus.": ["Denke über die Kanten hinaus.", "Think beyond the edges.", "Pensa para lá das arestas."],
+    "Entdecke neue Wege.": ["Entdecke neue Wege.", "Discover new possibilities.", "Descobre novas possibilidades."],
+    "Kulissen": ["Kulissen", "Backgrounds", "Cenários"],
+    "Wähle einen Hintergrund für deine Zen-Welt. Die aktuelle Welt und der Bot bleiben unverändert.": ["Wähle einen Hintergrund für deine Zen-Welt. Die aktuelle Welt und der Bot bleiben unverändert.", "Choose a background for your Zen world. Your current world and bot stay unchanged.", "Escolhe um cenário para o teu mundo Zen. O mundo atual e o bot mantêm-se iguais."],
+    "Welt-Hintergrund verwenden": ["Welt-Hintergrund verwenden", "Use world background", "Usar cenário do mundo"],
+    "✓ Welt-Hintergrund aktiv": ["✓ Welt-Hintergrund aktiv", "✓ World background active", "✓ Cenário do mundo ativo"],
+    "✓ Aktiv": ["✓ Aktiv", "✓ Active", "✓ Ativo"],
+    "Hintergrund verwenden": ["Hintergrund verwenden", "Use background", "Usar cenário"],
+    "Hintergrund freischalten für 🍃 %d": ["Hintergrund freischalten für 🍃 %d", "Unlock background for 🍃 %d", "Desbloquear cenário por 🍃 %d"],
+    "Kirschgarten": ["Kirschgarten", "Cherry Blossom Garden", "Jardim das Cerejeiras"],
+    "Bergtempel-Kulisse": ["Bergtempel", "Mountain Temple", "Templo da Montanha"],
+    "Mondgarten-Kulisse": ["Mondgarten", "Moon Garden", "Jardim da Lua"],
+    "Himmelsgarten-Kulisse": ["Himmelsgarten", "Sky Garden", "Jardim Celestial"],
+    "Zen-Garten": ["Zen-Garten", "Zen Garden", "Jardim Zen"],
+    "Bambuspfad": ["Bambuspfad", "Bamboo Path", "Caminho de Bambu"],
+    "Bergtempel": ["Bergtempel", "Mountain Temple", "Templo da Montanha"],
+    "Mondgarten": ["Mondgarten", "Moon Garden", "Jardim da Lua"],
+    "Himmelsgarten": ["Himmelsgarten", "Sky Garden", "Jardim Celestial"],
+    "Kirschblüten und Steingarten": ["Kirschblüten und Steingarten", "Cherry blossoms and stone garden", "Cerejeiras em flor e jardim de pedra"],
+    "Bambuswald und Steinpfade": ["Bambuswald und Steinpfade", "Bamboo forest and stone paths", "Floresta de bambu e caminhos de pedra"],
+    "Tempel im Abendlicht": ["Tempel im Abendlicht", "Temple in evening light", "Templo à luz do entardecer"],
+    "Mondlicht und stilles Wasser": ["Mondlicht und stilles Wasser", "Moonlight and still water", "Luar e águas tranquilas"],
+    "Licht über den Wolken": ["Licht über den Wolken", "Light above the clouds", "Luz sobre as nuvens"],
+    "Viererlinien lernen": ["Viererlinien lernen", "Learn winning lines", "Aprender linhas vencedoras"],
+    "Noch eine Runde?": ["Noch eine Runde?", "Another round?", "Mais uma ronda?"],
+    "Freigeschaltet": ["Freigeschaltet", "Unlocked", "Desbloqueado"],
+}
+
 static func translate(source: String, code: String) -> String:
+    if ZEN_PATCH.has(source):
+        var p: Array = ZEN_PATCH[source]
+        return str(p[1] if code == "en" else p[2] if code == "pt" else p[0])
     # Short, game-first wording; explicit DE/EN/PT-PT variants prevent mixed text.
     if NATURAL_COPY.has(source):
         var variants: Array = NATURAL_COPY[source]
