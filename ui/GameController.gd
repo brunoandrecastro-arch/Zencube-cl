@@ -78,6 +78,7 @@ var zen_campaign_stage: int = 0
 var zen_campaign_classic_board: Dictionary = {}
 var zen_campaign_classic_history: Array = []
 var zen_campaign_classic_settings: Dictionary = {}
+var zen_campaign_classic_world: int = 0
 # ZENCUBE WORLD MUSIC PATCH 1
 func language_code() -> String:
     if data == null: return "de"
@@ -2022,7 +2023,9 @@ func start_zen_campaign() -> void:
     zen_campaign_classic_board = board.snapshot()
     zen_campaign_classic_history = board.history.duplicate(true)
     zen_campaign_classic_settings = data.settings.duplicate(true)
+    zen_campaign_classic_world = int(data.ascension.get("world", 0))
     zen_campaign_active = true
+    data.ascension.world = 0
     data.settings.mode = 1
     data.settings.level = 0
     data.settings.swap = false
@@ -2078,6 +2081,7 @@ func _zen_campaign_result() -> void:
     var human_won: bool = board.winner != 3 and int(board.owners[board.winner-1]) == 0
     var headline: String = ZenCampaign.text_for(language_code(), "result_draw" if board.winner == 3 else "result_win" if human_won else "result_loss")
     var box: VBoxContainer = modal(headline)
+    box.get_child(1).hide()
     popup.anchor_top = 0.48
     popup.anchor_bottom = 0.97
     popup.offset_top = 0
@@ -2113,6 +2117,7 @@ func _zen_campaign_advance() -> void:
 
 func _zen_campaign_finished() -> void:
     var box: VBoxContainer = modal(ZenCampaign.text_for(language_code(), "chapter_done"))
+    box.get_child(1).hide()
     label(ZenCampaign.text_for(language_code(), "done"), box, 18)
     premium_button(ZenCampaign.text_for(language_code(), "chronicles"), box, _zen_campaign_leave, true)
 
@@ -2123,6 +2128,7 @@ func _zen_campaign_leave() -> void:
     generation += 1
     zen_campaign_active = false
     data.settings = zen_campaign_classic_settings.duplicate(true)
+    data.ascension.world = zen_campaign_classic_world
     board = BoardModel.new()
     board.restore(zen_campaign_classic_board)
     board.history = zen_campaign_classic_history.duplicate(true)
