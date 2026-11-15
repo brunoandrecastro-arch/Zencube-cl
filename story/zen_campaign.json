@@ -137,7 +137,20 @@
     "after_bow": "They bow. On the other side, the seat is empty. At the gate, Natsu leaves a small wooden cube in Kuze’s hand.\n\nNatsu · For your boy. Tell him the old man loses a lot.",
     "epilogue_still": "A year later, on a northern island, Shin mends a net.\n\nShin · I told you not to write.\nKuze · I walked. I came to tell you what our lord said. Look after them. The other words were mine. Ibuki died for them.\nShin · You stood in that doorway with your hand open.\nKuze · Yes.\n\nShin looks at the wooden cube. “I’ll take crosses.”",
     "epilogue_red": "A year later, on a northern island, Shin mends a net.\n\nShin · Father! Tell them what you did that night.\nKuze · I will tell you first. Our lord said: Look after them. The other words were mine. Thirteen men died for them.\nShin · You are lying.\nKuze · I was. For two years.\n\nShin stays where he is. He looks at the wooden cube. “I’ll take crosses.”",
-    "epilogue_again": "Shin · Again."
+    "epilogue_again": "Shin · Again.",
+    "chapter_2_end_title": "Chapter 2 · The Bamboo Path",
+    "chapter_2_end_body": "The rain thins. Four shadows now sit among the bamboo, no longer fighting. Kuze has finally spoken aloud that he was his lord's second.\\n\\nThe fork in the road lies behind him. Bamboo still rests inside his scabbard. He lifts the stone cube and climbs toward the temple.",
+    "chapter_3_end_title": "Chapter 3 · The Reclaimed Sword",
+    "chapter_3_end_body": "Evening deepens. Six demons sit along the temple wall. Fourteen men have bought Kuze's sword back, and his hand has grown still. The Name calls him a master.\\n\\nBut the abbot never says Kuze is ready. The road down is open. The Eleventh Night waits.",
+    "combat_2_block": "The Frozen One: Not there.",
+    "combat_2_fork": "The Frozen One: I cannot hold both lines.",
+    "combat_3_mirror": "The Double: And if I were you?",
+    "combat_3_question": "The Double: Swordsman or coward?",
+    "combat_4_attack": "The Red One: Faster. Faster.",
+    "combat_4_block": "The Red One: Still sitting?",
+    "combat_4_think": "The Red One: Oba ate duck that week.",
+    "combat_5_block": "The Name: A borrowed trick.",
+    "combat_5_showoff": "The Name: They will tell that story for years."
   },
   "de": {
     "title": "Zen Campaign",
@@ -277,7 +290,20 @@
     "after_bow": "Sie verbeugen sich. Gegenüber ist der Platz leer. Am Tor legt Natsu Kuze einen kleinen Holzwürfel in die Hand.\n\nNatsu · Für deinen Jungen. Sag ihm, dass der Alte oft verliert.",
     "epilogue_still": "Ein Jahr später flickt Shin auf einer nördlichen Insel ein Netz.\n\nShin · Ich habe dir gesagt, du sollst nicht schreiben.\nKuze · Ich bin zu Fuß gekommen. Ich wollte dir sagen, was unser Fürst gesagt hat. Kümmere dich um sie. Die anderen Worte waren meine. Ibuki ist dafür gestorben.\nShin · Du standest mit offener Hand im Eingang.\nKuze · Ja.\n\nShin schaut auf den Holzwürfel. „Ich nehme die Kreuze.“",
     "epilogue_red": "Ein Jahr später flickt Shin auf einer nördlichen Insel ein Netz.\n\nShin · Vater! Sag ihnen, was du in jener Nacht getan hast.\nKuze · Zuerst sage ich es dir. Unser Fürst sagte: Kümmere dich um sie. Die anderen Worte waren meine. Dreizehn Männer sind dafür gestorben.\nShin · Du lügst.\nKuze · Das habe ich. Zwei Jahre lang.\n\nShin bleibt sitzen. Er schaut auf den Holzwürfel. „Ich nehme die Kreuze.“",
-    "epilogue_again": "Shin · Noch einmal."
+    "epilogue_again": "Shin · Noch einmal.",
+    "chapter_2_end_title": "Kapitel 2 · Der Pfad im Bambus",
+    "chapter_2_end_body": "Der Regen lässt nach. Zwischen den Bambusstämmen sitzen nun vier Schatten, ohne zu kämpfen. Kuze hat endlich ausgesprochen, dass er seinem Herrn als Sekundant diente.\\n\\nDie Gabelung des Pfades bleibt hinter ihm. In der Schwertscheide steckt noch Bambus. Er nimmt den Steinwürfel auf und steigt zum Tempel hinauf.",
+    "chapter_3_end_title": "Kapitel 3 · Das wiedergefundene Schwert",
+    "chapter_3_end_body": "Der Abend wird dunkel. Sechs Dämonen sitzen entlang der Tempelmauer. Vierzehn Männer haben Kuzes Schwert zurückgekauft; seine Hand ist wieder ruhig. Der Name nennt ihn einen Meister.\\n\\nDoch der Abt sagt nicht, dass Kuze bereit sei. Der Weg hinunter steht offen. Die Elfte Nacht wartet.",
+    "combat_2_block": "Der Erstarrte: Nicht dort.",
+    "combat_2_fork": "Der Erstarrte: Ich kann nicht beide Linien halten.",
+    "combat_3_mirror": "Der Doppelgänger: Und wenn ich du wäre?",
+    "combat_3_question": "Der Doppelgänger: Schwertkämpfer oder Feigling?",
+    "combat_4_attack": "Der Rote: Schneller. Schneller.",
+    "combat_4_block": "Der Rote: Wieso hältst du noch still?",
+    "combat_4_think": "Der Rote: Oba aß damals Ente.",
+    "combat_5_block": "Der Name: Ein geliehener Trick.",
+    "combat_5_showoff": "Der Name: Davon werden sie noch lange erzählen."
   },
   "pt": {
     "title": "Zen Campaign",
@@ -417,6 +443,19 @@
     "after_bow": "Inclinam-se. Do outro lado, o lugar está vazio. Junto ao portão, Natsu deixa um pequeno cubo de madeira na mão de Kuze.\n\nNatsu · Para o teu rapaz. Diz-lhe que o velho perde muitas vezes.",
     "epilogue_still": "Um ano depois, numa ilha do norte, Shin remenda uma rede.\n\nShin · Disse-te para não escreveres.\nKuze · Vim a pé. Vim dizer-te o que o nosso senhor disse. Cuida deles. As outras palavras foram minhas. Ibuki morreu por elas.\nShin · Ficaste à porta com a mão aberta.\nKuze · Sim.\n\nShin olha para o cubo de madeira. «Fico com as cruzes.»",
     "epilogue_red": "Um ano depois, numa ilha do norte, Shin remenda uma rede.\n\nShin · Pai! Conta-lhes o que fizeste naquela noite.\nKuze · Conto-te primeiro a ti. O nosso senhor disse: Cuida deles. As outras palavras foram minhas. Treze homens morreram por elas.\nShin · Estás a mentir.\nKuze · Menti. Durante dois anos.\n\nShin fica onde está. Olha para o cubo de madeira. «Fico com as cruzes.»",
-    "epilogue_again": "Shin · Outra vez."
+    "epilogue_again": "Shin · Outra vez.",
+    "chapter_2_end_title": "Capítulo 2 · O Caminho dos Bambus",
+    "chapter_2_end_body": "A chuva abranda. Quatro sombras estão agora sentadas entre os bambus, sem lutar. Kuze disse finalmente em voz alta que tinha sido o segundo do seu senhor.\\n\\nA bifurcação ficou para trás. Ainda há bambu na bainha. Kuze ergue o cubo de pedra e sobe até ao templo.",
+    "chapter_3_end_title": "Capítulo 3 · A Espada Recuperada",
+    "chapter_3_end_body": "A noite aproxima-se. Seis demónios estão sentados junto ao muro do templo. Catorze homens recuperaram a espada de Kuze, e a sua mão já não treme. O Nome chama-lhe mestre.\\n\\nMas o abade não diz que Kuze está preparado. O caminho de descida está aberto. A Décima Primeira Noite espera.",
+    "combat_2_block": "O Imóvel: Aí não.",
+    "combat_2_fork": "O Imóvel: Não consigo defender as duas linhas.",
+    "combat_3_mirror": "O Duplo: E se eu fosse tu?",
+    "combat_3_question": "O Duplo: Espadachim ou cobarde?",
+    "combat_4_attack": "O Rubro: Mais depressa. Mais depressa.",
+    "combat_4_block": "O Rubro: Ainda estás sentado?",
+    "combat_4_think": "O Rubro: Oba comeu pato naquela semana.",
+    "combat_5_block": "O Nome: Um truque emprestado.",
+    "combat_5_showoff": "O Nome: Vão contar essa história por muitos anos."
   }
 }
