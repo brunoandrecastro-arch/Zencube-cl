@@ -150,7 +150,20 @@
     "combat_4_block": "The Red One: Still sitting?",
     "combat_4_think": "The Red One: Oba ate duck that week.",
     "combat_5_block": "The Name: A borrowed trick.",
-    "combat_5_showoff": "The Name: They will tell that story for years."
+    "combat_5_showoff": "The Name: They will tell that story for years.",
+    "chapter_4_end_title": "Chapter 4 · Still Water",
+    "chapter_4_end_body": "Eight figures sit at the winter shore, as still as the water. The Lord has given up his place. The Slain bow. In the reflection, Kuze recognises that the bloody order never came from his lord. The abbot brings two cups of tea.\\n\\nKuze: “What do I do with the sword?”\\nAbbot: “The village smith makes good sickles.”\\n\\nAbove the ridge waits a light too beautiful to be true.",
+    "chapter_5_end_title": "Chapter 5 · The Stone Left Behind",
+    "chapter_5_end_body": "The Self asks for the last time which of them is Kuze.\\n\\nKuze: “The one sitting here.”\\n\\nHe bows and leaves the heavy stone on the summit. The false golden dawn is gone; a plain, cold morning rises above the clouds. At the gate Natsu places a small wooden cube in his hand for Shin. The path now leads not higher, but to his son on the island.",
+    "combat_7_build": "The Lord: As I arranged.",
+    "combat_7_block": "The Lord: Kneel to it.",
+    "combat_8_hidden": "Abbot: You will have to turn the cube.",
+    "combat_8_turn": "The Slain: I was twenty-two. I had a good stance.",
+    "combat_9_bait": "The False Dawn: It is forgiven. Take the stone.",
+    "combat_9_block": "The False Dawn: So careful. There is no need.",
+    "combat_10_build": "The Self: You saw that. Of course you did.",
+    "combat_10_block": "The Self: I would have blocked there too.",
+    "combat_10_favorite": "The Self: You always start there."
   },
   "de": {
     "title": "Zen Campaign",
@@ -303,7 +316,20 @@
     "combat_4_block": "Der Rote: Wieso hältst du noch still?",
     "combat_4_think": "Der Rote: Oba aß damals Ente.",
     "combat_5_block": "Der Name: Ein geliehener Trick.",
-    "combat_5_showoff": "Der Name: Davon werden sie noch lange erzählen."
+    "combat_5_showoff": "Der Name: Davon werden sie noch lange erzählen.",
+    "chapter_4_end_title": "Kapitel 4 · Das stille Wasser",
+    "chapter_4_end_body": "Acht Gestalten sitzen am winterlichen Ufer, still wie das Wasser. Der Fürst hat seinen Platz geräumt. Die Gefallenen verneigen sich. In der Spiegelung erkennt Kuze, dass die blutigen Worte nicht von seinem Fürsten stammten. Der Abt bringt zwei Tassen Tee.\\n\\nKuze: »Was tue ich mit dem Schwert?«\\nAbt: »Der Schmied im Dorf macht gute Sicheln.«\\n\\nÜber dem Grat wartet ein Licht, das zu schön ist, um wahr zu sein.",
+    "chapter_5_end_title": "Kapitel 5 · Der Stein bleibt zurück",
+    "chapter_5_end_body": "Das Selbst fragt zum letzten Mal, wer von beiden Kuze sei.\\n\\nKuze: »Der, der hier sitzt.«\\n\\nEr verneigt sich und lässt den schweren Stein auf dem Gipfel zurück. Die falsche goldene Sonne ist fort; über den Wolken beginnt ein gewöhnlicher, kühler Morgen. Am Tor gibt Natsu ihm einen kleinen Holzwürfel für Shin. Nun führt der Weg nicht weiter hinauf, sondern zu seinem Sohn auf der Insel.",
+    "combat_7_build": "Der Fürst: Wie ich es angeordnet habe.",
+    "combat_7_block": "Der Fürst: Knie nieder.",
+    "combat_8_hidden": "Abt: Du wirst den Würfel drehen müssen.",
+    "combat_8_turn": "Der Gefallene: Ich war zweiundzwanzig. Meine Stellung war gut.",
+    "combat_9_bait": "Die Falsche Morgenröte: Es ist vergeben. Nimm den Stein.",
+    "combat_9_block": "Die Falsche Morgenröte: So vorsichtig. Das ist nicht nötig.",
+    "combat_10_build": "Das Selbst: Das hast du gesehen. Natürlich.",
+    "combat_10_block": "Das Selbst: Ich hätte dort ebenfalls geblockt.",
+    "combat_10_favorite": "Das Selbst: Du beginnst immer dort."
   },
   "pt": {
     "title": "Zen Campaign",
@@ -456,6 +482,19 @@
     "combat_4_block": "O Rubro: Ainda estás sentado?",
     "combat_4_think": "O Rubro: Oba comeu pato naquela semana.",
     "combat_5_block": "O Nome: Um truque emprestado.",
-    "combat_5_showoff": "O Nome: Vão contar essa história por muitos anos."
+    "combat_5_showoff": "O Nome: Vão contar essa história por muitos anos.",
+    "chapter_4_end_title": "Capítulo 4 · Águas Paradas",
+    "chapter_4_end_body": "Oito figuras sentam-se na margem gelada, imóveis como a água. O Senhor deixou o seu lugar. Os mortos inclinam-se. No reflexo, Kuze reconhece que a ordem sangrenta nunca veio do seu senhor. O abade traz duas chávenas de chá.\\n\\nKuze: «O que faço com a espada?»\\nAbade: «O ferreiro da aldeia faz boas foices.»\\n\\nAcima da serra espera uma luz bela demais para ser verdadeira.",
+    "chapter_5_end_title": "Capítulo 5 · A Pedra Fica Para Trás",
+    "chapter_5_end_body": "O Próprio pergunta pela última vez qual deles é Kuze.\\n\\nKuze: «Aquele que está aqui sentado.»\\n\\nInclina-se e deixa a pesada pedra no cume. A falsa aurora dourada desapareceu; nasce uma manhã simples e fria acima das nuvens. Ao portão, Natsu coloca-lhe na mão um pequeno cubo de madeira para Shin. O caminho já não sobe: leva-o até ao filho na ilha.",
+    "combat_7_build": "O Senhor: Como determinei.",
+    "combat_7_block": "O Senhor: Ajoelha-te.",
+    "combat_8_hidden": "Abade: Terás de rodar o cubo.",
+    "combat_8_turn": "O Morto: Tinha vinte e dois anos. A minha guarda era boa.",
+    "combat_9_bait": "A Falsa Aurora: Está tudo perdoado. Aceita a pedra.",
+    "combat_9_block": "A Falsa Aurora: Tão cuidadoso. Não é preciso.",
+    "combat_10_build": "O Próprio: Viste isso. Claro que viste.",
+    "combat_10_block": "O Próprio: Também teria defendido aí.",
+    "combat_10_favorite": "O Próprio: Começas sempre aí."
   }
 }
