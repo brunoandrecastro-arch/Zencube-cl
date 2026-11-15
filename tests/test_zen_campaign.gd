@@ -82,6 +82,7 @@ func _verify() -> void:
     _verify_ai()
     game.set_process(false)
     _verify_results()
+    _verify_chapters_2_3()
     _verify_route()
     _check(FileAccess.get_file_as_string(SaveManager.PATH) == restored_on_disk, "all campaign branches leave the Classic save untouched")
     _verify_languages()
@@ -258,6 +259,47 @@ func _verify_results() -> void:
     _finish_draw()
     _check(Campaign.load_progress().night == "still", "draw resolves the Still Hand per the mechanics outline")
 
+func _verify_chapters_2_3() -> void:
+    for stage in [2, 3, 4, 5]:
+        var art_path: String = Campaign.encounter_art(stage)
+        _check(ResourceLoader.exists(art_path), "chapter 2-3 illustration exists: " + art_path)
+        var art: Texture2D = load(art_path) as Texture2D
+        _check(art != null and art.get_width() >= 800 and art.get_height() >= 500,
+            "chapter 2-3 illustration imports at full resolution: " + art_path)
+        _start_fixture(stage)
+        _check(game.zen_campaign_stage == stage, "chapter 2-3 boss is accessible in campaign")
+        _check(_art_count(game.popup) == 1,
+            "chapter 2-3 artwork is shown in real encounter intro: " + art_path)
+        if stage == 3:
+            _check(not game._zen_campaign_can_undo(), "The Double physically disables undo")
+            game._zen_campaign_begin()
+            for cell in [0, 18, 1, 27, 2, 36]:
+                game.place(cell)
+            _check(game.zen_campaign_battle_line == Campaign.text_for("de", "combat_3_question"),
+                "The Double asks a contextual question during the real match")
+    _start_fixture(3)
+    _finish_match(0)
+    game._zen_campaign_advance()
+    _check(game.zen_campaign_stage == 4 and Campaign.load_progress().pending == "chapter_2_end",
+        "Bamboo Forest completion leads to a saved cinematic chapter ending")
+    _check(_art_count(game.popup) == 1, "chapter 2 ending has the world illustration")
+    game._zen_campaign_leave()
+    game.start_zen_campaign()
+    _check(_button(game.popup, Campaign.text_for("de", "next_chapter")) != null,
+        "chapter 2 ending resumes correctly after relaunch")
+    _press(game.popup, Campaign.text_for("de", "next_chapter"))
+    _check(Campaign.load_progress().pending == "" and game.zen_campaign_stage == 4,
+        "chapter 3 begins only after confirming Bamboo finale")
+    _start_fixture(5)
+    _finish_match(0)
+    game._zen_campaign_advance()
+    _check(game.zen_campaign_stage == Campaign.NIGHT and Campaign.load_progress().pending == "chapter_3_end",
+        "Temple completion saves the story ending before the Eleventh Night")
+    _check(_art_count(game.popup) == 1, "chapter 3 ending uses temple artwork")
+    _press(game.popup, Campaign.text_for("de", "next_chapter"))
+    _check(Campaign.load_progress().pending == "" and game.zen_campaign_stage == Campaign.NIGHT,
+        "temple finale reveals the one-time Eleventh Night only once")
+
 func _verify_route() -> void:
     _start_fixture(0)
     for stage in range(Campaign.SELF + 1):
@@ -273,6 +315,14 @@ func _verify_route() -> void:
                 _press(game.popup, Campaign.text_for("de", "bow"))
             else:
                 game._zen_campaign_advance()
+        if stage in [3, 5]:
+            var end_scene := "chapter_2_end" if stage == 3 else "chapter_3_end"
+            _check(Campaign.load_progress().pending == end_scene,
+                "chapter finale is a persistent scene before moving forward")
+            game._zen_campaign_leave()
+            game.start_zen_campaign()
+            _press(game.popup, Campaign.text_for("de", "next_chapter"))
+            _check(Campaign.load_progress().pending == "", "chapter finale acknowledged")
         if stage == Campaign.DAWN:
             _check(Campaign.load_progress().pending == "false_ending", "false ending saved before the summit continues")
             game._zen_campaign_leave()
