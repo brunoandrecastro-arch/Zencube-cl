@@ -85,7 +85,7 @@ const TEXT := {
     }
 }
 
-static func tr(lang: String, key: String) -> String:
+static func text_for(lang: String, key: String) -> String:
     var dictionary: Dictionary = TEXT.get(lang, TEXT["en"])
     return str(dictionary.get(key, TEXT["en"].get(key, key)))
 
