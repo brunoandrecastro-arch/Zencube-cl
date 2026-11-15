@@ -9,22 +9,46 @@ cd "$(dirname "$0")/.."
 export XDG_CONFIG_HOME="${ZENCUBE_BUILD_CONFIG:-$PWD/build/editor-config}"
 config_dir="$XDG_CONFIG_HOME/godot"
 mkdir -p "$config_dir" build
-key_path="${ZENCUBE_DEBUG_KEYSTORE:-$HOME/.android/zencube-debug.keystore}"
-mkdir -p "$(dirname "$key_path")"
-if [[ ! -f "$key_path" ]]; then
-  "$JAVA_HOME/bin/keytool" -genkeypair -keystore "$key_path" -storepass android -alias androiddebugkey -keypass android -dname 'CN=Android Debug,O=Android,C=US' -keyalg RSA -keysize 2048 -validity 10000
-fi
 # An isolated editor configuration leaves existing user preferences untouched.
 cat > "$config_dir/editor_settings-4.5.tres" <<SETTINGS
 [gd_resource type="EditorSettings" format=3]
 [resource]
 export/android/android_sdk_path = "$ANDROID_SDK_ROOT"
 export/android/java_sdk_path = "$JAVA_HOME"
+SETTINGS
+key_path="${ZENCUBE_DEBUG_KEYSTORE:-$HOME/.android/zencube-debug.keystore}"
+mkdir -p "$(dirname "$key_path")"
+if [[ ! -f "$key_path" ]]; then
+  "$JAVA_HOME/bin/keytool" -genkeypair -keystore "$key_path" -storepass android -alias androiddebugkey -keypass android -dname 'CN=Android Debug,O=Android,C=US' -keyalg RSA -keysize 2048 -validity 10000
+fi
+cat >> "$config_dir/editor_settings-4.5.tres" <<SETTINGS
 export/android/debug_keystore = "$key_path"
 export/android/debug_keystore_user = "androiddebugkey"
 export/android/debug_keystore_pass = "android"
 SETTINGS
 "$GODOT" --headless --editor --import --quit
 "$GODOT" --headless --path . --script tests/test_engine.gd
-"$GODOT" --headless --path . --export-debug Android build/ZenCube-3D.apk
-"$ANDROID_SDK_ROOT/build-tools/35.0.0/apksigner" verify --verbose build/ZenCube-3D.apk
+
+campaign_test="${ZENCUBE_CAMPAIGN_TEST:-false}"
+campaign_package="com.zencube.game.campaign"
+campaign_label="ZenCube Campaign Test"
+if [[ "$campaign_test" == true ]]; then
+  # Override the Android debug preset for this export only.
+  preset_backup="$(mktemp)"
+  cp -p export_presets.cfg "$preset_backup"
+  trap 'mv -f -- "$preset_backup" export_presets.cfg' EXIT
+  sed -i "/^\[preset\.0\.options\]$/,/^\[/ {
+    s|^package/unique_name=.*|package/unique_name=\"$campaign_package\"|
+    s|^package/name=.*|package/name=\"$campaign_label\"|
+  }" export_presets.cfg
+fi
+
+apk_path=build/ZenCube-3D.apk
+android_build_tools="$ANDROID_SDK_ROOT/build-tools/35.0.0"
+"$GODOT" --headless --path . --export-debug Android "$apk_path"
+"$android_build_tools/apksigner" verify --verbose "$apk_path"
+if [[ "$campaign_test" == true ]]; then
+  badging="$("$android_build_tools/aapt2" dump badging "$apk_path")"
+  grep -F "package: name='$campaign_package' " <<< "$badging"
+  grep -Fx "application-label:'$campaign_label'" <<< "$badging"
+fi
