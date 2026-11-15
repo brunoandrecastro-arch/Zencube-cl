@@ -55,6 +55,14 @@ func _verify() -> void:
     var full_hero: TextureRect = reader._screen.find_child("zen_campaign_prologue", true, false) as TextureRect
     _check(full_hero != null and full_hero.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED,
         "campaign header displays complete hero illustration without cropped head")
+    _check(str(ProjectSettings.get_setting("display/window/stretch/aspect", "")) == "expand",
+        "Godot stretches into tall Android screens without black letterbox bands")
+    root.size = Vector2i(480, 1060)
+    await process_frame
+    _check(reader._screen.size.y >= 1030.0,
+        "campaign overview uses the extra height of a tall Android display")
+    root.size = Vector2i(480, 900)
+    await process_frame
     _press(reader._screen, Campaign.text_for("de", "start_campaign"))
     _check(bool(game.zen_campaign_active), "launch through the Chronicles and campaign overview")
     _check(game.board.cells.size() == 54 and game.rules.lines.size() == 108, "actual cube rules and board")
