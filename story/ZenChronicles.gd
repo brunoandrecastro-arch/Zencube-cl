@@ -223,6 +223,13 @@ func open_library() -> void:
     _make_button("✕", head, close_chronicles)
     _make_label(_t("tagline"), outer, 15, MUTED)
     _make_label(_t("summary"), outer, 13, MUTED)
+    # A second entry INSIDE Zen Chronicles, not a replacement for the five comics.
+    var campaign_title: String = str({
+        "de": "⚔ Zen Campaign · Spielen",
+        "en": "⚔ Zen Campaign · Play",
+        "pt": "⚔ Zen Campaign · Jogar"
+    }.get(_active_language, "⚔ Zen Campaign · Play"))
+    _make_button(campaign_title, outer, _launch_campaign)
     var line := HSeparator.new()
     outer.add_child(line)
     var scroll := ScrollContainer.new()
@@ -359,3 +366,12 @@ func _input(event: InputEvent) -> void:
         elif _active_chapter >= 0 and event.keycode == KEY_LEFT:
             _turn_page(-1)
             get_viewport().set_input_as_handled()
+
+# The interactive campaign uses GameController's existing real 3D board.
+func _launch_campaign() -> void:
+    close_chronicles()
+    var game: Node = get_tree().current_scene
+    if game != null and game.has_method("start_zen_campaign"):
+        game.call("start_zen_campaign")
+    else:
+        push_warning("Zen Campaign: GameController nicht gefunden")
