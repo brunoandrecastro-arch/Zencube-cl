@@ -1,320 +1,305 @@
 extends SceneTree
 
 const Campaign = preload("res://story/ZenCampaign.gd")
-const WIN_LINE := [2, 1, 0, 20]
-const OTHER_LINE := [5, 4, 3, 23]
 
-var game: Node
-var library: Node
-var previous_files: Dictionary = {}
 var failures := 0
+var scene: PackedScene
+var game: Node
+var reader: Node
+var fixture_save: Dictionary = {}
 
 func _initialize() -> void:
-    call_deferred("verify")
+    call_deferred("_verify")
 
-func check(ok: bool, message: String) -> void:
-    if not ok:
-        printerr("FAIL: ", message)
+func _check(passed: bool, message: String) -> void:
+    if not passed:
         failures += 1
+        printerr("FAIL: " + message)
 
-func verify() -> void:
-    library = root.get_node("ZenChronicles")
+func _verify() -> void:
+    root.size = Vector2i(480, 900)
     for path in [SaveManager.PATH, Campaign.SAVE_FILE]:
-        previous_files[path] = FileAccess.get_file_as_bytes(path) if FileAccess.file_exists(path) else null
-    if FileAccess.file_exists(Campaign.SAVE_FILE):
-        DirAccess.remove_absolute(ProjectSettings.globalize_path(Campaign.SAVE_FILE))
+        if FileAccess.file_exists(path):
+            fixture_save[path] = FileAccess.get_file_as_bytes(path)
+            DirAccess.remove_absolute(path)
+    _verify_save_migration()
+    var classic := SaveManager.defaults()
+    classic.settings.merge({"language": "de", "intro_seen": true, "mode": 0, "music": false}, true)
+    classic.stats.played = 18
+    classic.stats.p1 = 7
+    classic.ascension.completed[0] = true
+    classic.ascension.world = 1
+    classic.economy.merge({"leaves": 124, "owned": [0, 1], "equipped": 1, "migrated": true}, true)
+    classic.ascend = {"unlocked": true, "realm": 1}
+    _check(SaveManager.save_data(classic), "seed Classic account")
+    scene = load("res://Main.tscn")
+    reader = root.get_node("ZenChronicles")
+    await _load_main()
+    game.close_modal()
+    game.on_cell(29)
+    var classic_board: Dictionary = game.board.snapshot()
+    var on_disk := FileAccess.get_file_as_string(SaveManager.PATH)
 
-    verify_bot_personalities()
-    verify_migration()
-    await verify_story()
-    await verify_night()
-    await verify_languages()
-    library.call("close_chronicles")
-    await close_game()
+    game.open_menu()
+    _press(game.popup, game.T("Zen-Chroniken 📖"))
+    _press(reader._screen, Campaign.text_for("de", "webcomic"))
+    var read: Button = _button(reader._screen, "Lesen  ›")
+    _check(read != null and not read.disabled, "webcomic has its original unlocked chapter")
+    reader.open_chapter(0)
+    _check(reader._page_image.texture != null and reader._page_counter.text == "1 / 4", "original comic has working pages")
+    reader.open_library()
+    _press(reader._screen, Campaign.text_for("de", "play"))
+    await process_frame
+    _check(bool(reader.is_open()), "campaign overview is reachable")
+    _check(_art_count(reader._screen) == 6, "poster and five thumbnail textures are bound to controls")
+    _press(reader._screen, Campaign.text_for("de", "start_campaign"))
+    _check(bool(game.zen_campaign_active), "launch through the Chronicles and campaign overview")
+    _check(game.board.cells.size() == 54 and game.rules.lines.size() == 108, "actual cube rules and board")
+    _check(_art_count(game.popup) == 1, "prologue illustration is visible")
+    _press(game.popup, Campaign.text_for("de", "continue"))
+    _check(_art_count(game.popup) == 1, "first demon illustration is visible")
+    _press(game.popup, Campaign.text_for("de", "begin"))
+    game.on_cell(4)
+    _press(game.popup, Campaign.text_for("de", "continue"))
+    game.zen_campaign_bot_ready = 0
+    await _wait_for_bot()
+    _check(game.board.move_count() == 2 and game.board.cells.count(2) == 1, "The Startle responds through the real AI worker")
+    var campaign_board: Dictionary = game.board.snapshot()
+    var saved_history: Array = Campaign.load_progress().game.history
+    _check(saved_history.size() == 2, "both campaign moves written to disk")
+    _check(FileAccess.get_file_as_string(SaveManager.PATH) == on_disk, "Classic save untouched during play")
 
-    for path in previous_files:
-        var backup: Variant = previous_files[path]
-        if backup == null:
-            if FileAccess.file_exists(path):
-                DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
-        else:
-            var file := FileAccess.open(path, FileAccess.WRITE)
-            file.store_buffer(backup)
-            file.close()
-    if failures == 0:
-        print("PASS: all five Zen Campaign chapters, eleven encounters, two endings and isolated local epilogue")
+    await _load_main()
+    _check(game.board.snapshot() == classic_board, "new session loads the running Classic match")
+    var classic_data: Dictionary = game.data.duplicate(true)
+    var restored_on_disk := FileAccess.get_file_as_string(SaveManager.PATH)
+    game.start_zen_campaign()
+    _check(game.board.snapshot() == campaign_board, "new session can resume the exact campaign board")
+    _press(game.popup, Campaign.text_for("de", "resume"))
+    game._zen_campaign_leave()
+    _check(game.board.snapshot() == classic_board and game.data == classic_data, "return restores Classic board, shop, ranks and Realm data")
+
+    _verify_ai()
+    game.set_process(false)
+    _verify_results()
+    _verify_route()
+    _check(FileAccess.get_file_as_string(SaveManager.PATH) == restored_on_disk, "all campaign branches leave the Classic save untouched")
+    _verify_languages()
+
+    reader.close_chronicles()
+    game.queue_free()
+    await process_frame
+    for path in [SaveManager.PATH, Campaign.SAVE_FILE]:
+        if fixture_save.has(path):
+            FileAccess.open(path, FileAccess.WRITE).store_buffer(fixture_save[path])
+        elif FileAccess.file_exists(path):
+            DirAccess.remove_absolute(path)
+    print("Campaign verification: %d failure(s)" % failures)
     quit(0 if failures == 0 else 1)
 
-func verify_bot_personalities() -> void:
-    var board := BoardModel.new()
-    var seen := {}
-    for seed_value in range(48):
-        var move := Campaign.pick_move(board.cells, 0, seed_value)
-        check(move in range(54), "The Startle selects a legal opening")
-        seen[move] = true
-    check(seen.size() > 18, "The Startle varies its opening faces and cells")
-    var rules := RulesEngine.new()
-    check(rules.lines.size() == 108, "Campaign uses 108 canonical lines")
-    check(WIN_LINE in rules.lines, "Campaign accepts a canonical cross-edge line")
-    check(OTHER_LINE in rules.lines, "Offence test uses a valid second line")
-    # Split three stones across the edge so there is exactly one winning square.
-    for cell in [WIN_LINE[0], WIN_LINE[2], WIN_LINE[3]]:
-        board.cells[cell] = 1
-    var skipped_block := false
-    var blocked := false
-    for seed_value in range(32):
-        if Campaign.pick_move(board.cells, 1, seed_value) == WIN_LINE[1]:
-            blocked = true
-        else:
-            skipped_block = true
-        check(Campaign.pick_move(board.cells, 2, seed_value) == WIN_LINE[1], "The Frozen One blocks immediate defeat")
-    check(skipped_block and blocked, "The Hungry One only occasionally blocks")
-    for cell in [OTHER_LINE[0], OTHER_LINE[2], OTHER_LINE[3]]:
-        board.cells[cell] = 2
-    check(Campaign.pick_move(board.cells, 1, 3) == OTHER_LINE[1], "The Hungry One takes its own win")
-    board = BoardModel.new()
-    board.cells[4] = 1
-    check(Campaign.pick_move(board.cells, 3, 1, 2, 4) == 13, "The Double echoes the opposite face")
-    var openings := Campaign.defaults().openings as Array
-    openings[31] = 10
-    check(Campaign.pick_move(board.cells, Campaign.SELF, 1, 2, 4, [], openings) == 31, "The Self uses saved opening habits")
-    for stage in range(Campaign.EPILOGUE):
-        var move := Campaign.pick_move(board.cells, stage, 23, 2, 4, [1, 2], openings)
-        check(move in range(54) and move != 4, "Legal move from encounter %d" % stage)
+func _verify_save_migration() -> void:
+    var legacy := {"version": 1, "stage": 2, "game": BoardModel.new().snapshot()}
+    FileAccess.open(Campaign.SAVE_FILE, FileAccess.WRITE).store_string(JSON.stringify(legacy))
+    var moved := Campaign.load_progress()
+    _check(moved.stage == 2 and moved.game.is_empty(), "finished Chapter 1 draft migrates to Bamboo Forest")
+    var started := BoardModel.new()
+    started.swap_enabled = false
+    started.cells[4] = 1
+    started.turn = 2
+    var later := {"version": 2, "stage": Campaign.SELF, "night_result": "draw", "game": started.snapshot()}
+    FileAccess.open(Campaign.SAVE_FILE, FileAccess.WRITE).store_string(JSON.stringify(later))
+    moved = Campaign.load_progress()
+    _check(moved.night == "red" and moved.game.cells[4] == 1 and moved.game.owners == [0, 1],
+        "prior campaign save retains the Night branch and active board ownership")
+    DirAccess.remove_absolute(Campaign.SAVE_FILE)
 
-func verify_migration() -> void:
-    var old_board := BoardModel.new()
-    old_board.swap_enabled = false
-    RulesEngine.new().play(old_board, 42)
-    if not write_v1(1, old_board.snapshot()):
-        check(false, "Can set up v1 in-progress save")
-        return
-    var migrated := Campaign.load_progress()
-    check(migrated.version == Campaign.VERSION and migrated.stage == 1 and int(migrated.game.cells[42]) == 1,
-        "v1 match and stage are migrated")
-    check(write_v1(2, old_board.snapshot()), "Can set up v1 completed save")
-    var finished_chapter := Campaign.load_progress()
-    check(finished_chapter.stage == 2 and finished_chapter.prologue_seen and finished_chapter.game.is_empty(),
-        "A v1 Chapter 1 completion unlocks Chapter 2")
-    check(Campaign.save_progress(Campaign.defaults()), "Reset scratch campaign for story test")
-
-func write_v1(stage: int, snapshot: Dictionary) -> bool:
-    var file := FileAccess.open(Campaign.SAVE_FILE, FileAccess.WRITE)
-    if file == null:
-        return false
-    file.store_string(JSON.stringify({"version": 1, "stage": stage, "game": snapshot}))
-    file.close()
-    return true
-
-func new_classic(lang: String) -> Dictionary:
-    var classic := SaveManager.defaults()
-    classic.settings.language = lang
-    classic.settings.intro_seen = true
-    classic.settings.mode = 0
-    classic.settings.music = false
-    classic.settings.haptics = false
-    classic.stats.played = 14
-    classic.economy.leaves = 126
-    classic.economy.owned = [0, 1]
-    classic.economy.migrated = true
-    classic.ascension.rank = 2
-    classic.ascension.world = 2
-    classic.ascension.completed = [true, true, false, false, false]
-    classic.ascend.realm = 1
-    var board := BoardModel.new()
-    board.swap_enabled = false
-    RulesEngine.new().play(board, 27)
-    classic.game = board.snapshot()
-    classic.game.history = board.history
-    return classic
-
-func open_game() -> void:
-    game = (load("res://Main.tscn") as PackedScene).instantiate()
-    root.add_child(game)
-    current_scene = game
-    await process_frame
-    game.set_process(false)
-
-func close_game() -> void:
+func _load_main() -> void:
+    reader.close_chronicles()
     if is_instance_valid(game):
         game.queue_free()
         await process_frame
-
-func verify_story() -> void:
-    check(SaveManager.save_data(new_classic("en")), "Create a Classic save with rank, shop and running game")
-    await open_game()
-    var saved_classic := FileAccess.get_file_as_bytes(SaveManager.PATH)
-    var original_board: BoardModel = game.get("board")
-    var renderer: CubeRenderer = game.get("renderer")
-    renderer.rotate_cube(Vector2(12, -30))
-    var original_orientation: Basis = renderer.pivot.basis
-    library.call("open_library")
-    check(_press(Campaign.text_for("en", "hub_read")), "Webcomic remains in the Chronicles menu")
-    library.call("open_chapter", 0)
+    game = scene.instantiate()
+    root.add_child(game)
+    current_scene = game
     await process_frame
-    var comic: TextureRect = library.get("_page_image")
-    check(is_instance_valid(comic) and comic.texture != null, "The first of the original 20 comics still opens")
-    library.call("open_library")
-    check(_press(Campaign.text_for("en", "hub_play")), "Campaign opens from Zen Chronicles")
-    await process_frame
-    verify_overview_art()
-    check(_press(Campaign.text_for("en", "start_campaign")), "Overview enters the prologue")
-    check(game.get("zen_campaign_active"), "Campaign is active on the real scene")
-    check(_has_picture(Campaign.PROLOGUE), "Prologue illustration loads in the story")
-    check(_press(Campaign.text_for("en", "next")), "Read the prologue")
-    check(_has_picture(Campaign.FIRST_DEMON), "First encounter illustration loads")
-    check(_press(Campaign.text_for("en", "begin")), "Begin The Startle")
-    game.call("on_cell", 21)
-    game.set_process(true)
-    await create_timer(1.15).timeout
-    game.set_process(false)
-    var live_board: BoardModel = game.get("board")
-    check(live_board.move_count() == 2 and live_board.cells.count(2) == 1, "The existing worker plays a demon move")
-    var resume_cells := live_board.cells.duplicate()
-    game.call("_zen_campaign_leave")
-    check(game.get("board") == original_board and renderer.pivot.basis.is_equal_approx(original_orientation),
-        "Leaving restores the exact original board and view")
-    check(FileAccess.get_file_as_bytes(SaveManager.PATH) == saved_classic, "Campaign never writes the Classic file")
-    await close_game()
-    await open_game()
-    game.call("start_zen_campaign")
-    var restored: BoardModel = game.get("board")
-    check(restored.cells == resume_cells, "Saved campaign positions survive a fresh scene")
-    check(_press(Campaign.text_for("en", "resume")), "Resume the match")
-    finish_with(2)
-    game.call("_zen_campaign_advance")
-    check(Campaign.load_progress().stage == 0, "A defeat cannot advance a regular encounter")
-    game.call("_zen_campaign_retry")
-    game.call("_zen_campaign_begin")
-    make_draw()
-    game.call("_zen_campaign_advance")
-    check(Campaign.load_progress().stage == 0, "A draw cannot advance a regular encounter")
-    game.call("_zen_campaign_retry")
-    for stage in range(Campaign.EPILOGUE):
-        game.call("_zen_campaign_begin")
-        if stage == Campaign.LORD:
-            var lord_board: BoardModel = game.get("board")
-            check(lord_board.turn == 1 and lord_board.current_owner() == 1, "The Lord opens as X")
-        finish_with(2 if stage == Campaign.LORD else 1)
-        game.call("_zen_campaign_show_section")
-        if stage == Campaign.SLAIN:
-            check(_press(Campaign.text_for("en", "next")), "The Slain's revelation cannot be skipped after an early win")
-        game.call("_zen_campaign_advance")
-        var progress := Campaign.load_progress()
-        check(progress.stage == stage + 1 and progress.game.is_empty(), "Victory unlocks encounter %d" % (stage + 1))
-    check(Campaign.load_progress().night_result == "win", "The Still Hand result survives later chapters")
-    game.call("_zen_campaign_begin")
-    var local: BoardModel = game.get("board")
-    game.call("on_cell", 4)
-    game.call("on_cell", 13)
-    check(local.cells[4] == 1 and local.cells[13] == 2, "Shin and Kuze can both play locally")
-    finish_with(1)
-    game.call("_zen_campaign_advance")
-    check(Campaign.load_progress().stage == Campaign.COMPLETE, "The epilogue closes the story")
-    game.call("_zen_campaign_leave")
-    check(FileAccess.get_file_as_bytes(SaveManager.PATH) == saved_classic, "Eleven encounters and the epilogue preserve Classic data")
-    library.call("close_chronicles")
-    game.call("open_store")
-    check(game.get("popup") != null and game.get("data").economy.leaves == 126, "The existing shop opens with its saved balance")
-    await close_game()
 
-func verify_night() -> void:
-    for expected in ["loss", "draw", "timeout"]:
-        var night := Campaign.defaults()
-        night.stage = Campaign.NIGHT
-        night.prologue_seen = true
-        check(Campaign.save_progress(night), "Prepare Night fixture")
-        await open_game()
-        game.call("start_zen_campaign")
-        game.call("_zen_campaign_begin")
-        if expected == "timeout":
-            game.call("_zen_campaign_tick", 12.5)
-            game.call("_zen_campaign_leave")
-            game.call("start_zen_campaign")
-            check(is_equal_approx(float(game.get("zen_campaign_progress").seconds_left), 9.5),
-                "The Night turn clock survives leaving and resuming")
-            game.call("_zen_campaign_resume")
-            game.call("_zen_campaign_tick", 10.0)
-        elif expected == "draw":
-            make_draw()
-        else:
-            finish_with(2)
-        var decided := Campaign.load_progress()
-        check(decided.night_result == expected, "The Night stores %s immediately" % expected)
-        game.call("_zen_campaign_retry")
-        check(Campaign.load_progress().game == decided.game, "The Night cannot be replayed")
-        game.call("_zen_campaign_leave")
-        await close_game()
-        await open_game()
-        game.call("start_zen_campaign")
-        check(game.call("_zen_campaign_outcome") == expected, "Locked Night outcome reloads after restart")
-        game.call("_zen_campaign_advance")
-        var kept := Campaign.load_progress()
-        check(kept.stage == Campaign.LORD and kept.night_result == expected, "The Red Hand route advances with its saved result")
-        game.call("_zen_campaign_leave")
-        await close_game()
+func _button(node: Node, text: String) -> Button:
+    if node == null:
+        return null
+    if node is Button and node.text == text and node.visible:
+        return node
+    for child in node.get_children():
+        var found := _button(child, text)
+        if found != null:
+            return found
+    return null
 
-func verify_languages() -> void:
-    for lang in ["de", "en", "pt"]:
-        var progress := Campaign.load_progress()
-        progress.game = {}
-        check(Campaign.save_progress(progress), "Prepare a new match for language " + lang)
-        check(SaveManager.save_data(new_classic(lang)), "Set Classic language " + lang)
-        await open_game()
-        library.call("open_library")
-        check(_press(Campaign.text_for(lang, "hub_play")), "Localized launch in " + lang)
-        check(_press(Campaign.text_for(lang, "continue_campaign")), "Localized resume in " + lang)
-        check(_press(Campaign.text_for(lang, "begin")), "Localized Next encounter in " + lang)
-        var status: Label = game.get("status")
-        check(status.text == Campaign.text_for(lang, "bot_turn") % [Campaign.stage_title(lang, Campaign.LORD), "X"],
-            "Board honors the selected language " + lang)
-        game.call("_zen_campaign_leave")
-        await close_game()
+func _press(node: Node, text: String) -> void:
+    var button := _button(node, text)
+    _check(button != null and not button.disabled, "visible enabled button: " + text)
+    if button != null and not button.disabled:
+        button.pressed.emit()
 
-func verify_overview_art() -> void:
-    check(_has_picture(Campaign.POSTER), "Poster is connected to the campaign overview")
-    for path in Campaign.CHAPTER_ART:
-        check(_has_picture(path), "Chapter overview displays " + path.get_file())
-    var poster: TextureRect = library.get("_screen").find_child(Campaign.POSTER.get_file().get_basename(), true, false)
-    if is_instance_valid(poster):
-        check(poster.size.x <= 480.0 and poster.size.y >= 178.0, "Poster fits the portrait viewport")
-    for path in [Campaign.PROLOGUE, Campaign.FIRST_DEMON]:
-        check(ResourceLoader.exists(path), "Story illustration is a Godot resource")
+func _art_count(node: Node) -> int:
+    if node == null:
+        return 0
+    var total := int(node is TextureRect and node.texture != null)
+    for child in node.get_children():
+        total += _art_count(child)
+    return total
 
-func _has_picture(path: String) -> bool:
-    var screen: ColorRect = library.get("_screen")
-    if not is_instance_valid(screen):
-        return false
-    var view := screen.find_child(path.get_file().get_basename(), true, false) as TextureRect
-    return is_instance_valid(view) and view.texture != null
+func _wait_for_bot() -> void:
+    var deadline := Time.get_ticks_msec() + 2500
+    while game.board.move_count() == 1 and Time.get_ticks_msec() < deadline:
+        await process_frame
 
-func _press(text: String) -> bool:
-    var screen: ColorRect = library.get("_screen")
-    if not is_instance_valid(screen):
-        return false
-    for button in screen.find_children("*", "Button", true, false):
-        if button.text == text and not button.disabled:
-            button.pressed.emit()
-            return true
-    return false
+func _verify_ai() -> void:
+    var board := BoardModel.new()
+    var line: Array = game.rules.lines[22]
+    for c in line.slice(0, 3):
+        board.cells[c] = 1
+    var threats: Array = game.rules.threats(board.cells, 1)
+    var weak_blocks := 0
+    var startle_choices := {}
+    for seed in range(1, 48):
+        var weak_move := Campaign.pick_move(board.cells, 1, seed)
+        var startle_move := Campaign.pick_move(board.cells, 0, seed)
+        weak_blocks += int(threats.has(weak_move))
+        startle_choices[startle_move] = true
+        _check(threats.has(Campaign.pick_move(board.cells, 2, seed)), "Frozen One reliably blocks a forced threat")
+    _check(weak_blocks > 0 and weak_blocks < 24, "Hungry One sometimes overlooks a block")
+    _check(startle_choices.size() > 20, "Startle spreads its moves across the cube")
+    for stage in range(Campaign.SELF + 1):
+        var fresh := BoardModel.new()
+        var move := Campaign.pick_move(fresh.cells, stage, 87, {"openings": {"24": 3}})
+        _check(move >= 0 and move < 54, "stage %d AI makes legal opening" % stage)
+        if stage == Campaign.SELF:
+            _check(move == 24, "The Self mirrors the player's most frequent opening")
+    var hungry := BoardModel.new()
+    for c in line.slice(0, 3):
+        hungry.cells[c] = 2
+    _check(game.rules.threats(hungry.cells, 2).has(Campaign.pick_move(hungry.cells, 1, 73)), "Hungry One finishes its own line")
 
-func finish_with(mark: int) -> void:
-    var active: BoardModel = game.get("board")
-    active.cells.fill(0)
-    active.winner = 0
-    for cell in WIN_LINE.slice(0, 3):
-        active.cells[cell] = mark
-    active.turn = mark
-    game.call("place", WIN_LINE[3])
-    check(active.winner == mark and active.win_lines.has(WIN_LINE), "Campaign result uses the cross-edge rule")
+func _start_fixture(stage: int, fields: Dictionary = {}) -> void:
+    if game.zen_campaign_active:
+        game._zen_campaign_leave()
+    var progress := Campaign.new_progress()
+    progress.stage = stage
+    progress.prologue_seen = true
+    progress.merge(fields, true)
+    _check(Campaign.save_progress(progress), "seed isolated campaign stage")
+    game.start_zen_campaign()
 
-func make_draw() -> void:
-    var cells: Array = JSON.parse_string(FileAccess.get_file_as_string("res://reports/draw_fixture.json"))
-    var active: BoardModel = game.get("board")
-    active.cells = cells.map(func(mark): return int(mark))
-    var last := active.cells.find(2)
-    active.cells[last] = 0
-    active.turn = 2
-    active.winner = 0
-    game.call("place", last)
-    check(active.winner == 3, "Canonical full-board fixture draws in Campaign")
+func _finish_match(winner: int) -> void:
+    game._zen_campaign_begin()
+    var owner_mark: int = game.board.owners.find(winner) + 1
+    var path: Array = game.rules.lines[9].duplicate()
+    var fillers: Array = [49, 45, 53, 47]
+    var count := 0
+    while game.board.winner == 0 and count < 8:
+        var cell: int = path.pop_front() if game.board.turn == owner_mark else fillers.pop_front()
+        game.place(cell)
+        while game._zen_campaign_has_story_beat():
+            game._zen_campaign_story_beat_read()
+        count += 1
+    _check(game.board.winner == owner_mark and game.board.win_lines.size() >= 1, "real four-in-a-row finish")
+
+func _finish_draw() -> void:
+    game._zen_campaign_begin()
+    var draw: Array = JSON.parse_string(FileAccess.get_file_as_string("res://reports/draw_fixture.json"))
+    for i in range(54):
+        for c in range(54):
+            if game.board.cells[c] == 0 and int(draw[c]) == game.board.turn:
+                game.place(c)
+                break
+    _check(game.board.winner == 3 and game.board.move_count() == 54, "real full-board draw")
+
+func _verify_results() -> void:
+    _start_fixture(1)
+    _finish_match(1)
+    var loss: Dictionary = Campaign.load_progress()
+    game._zen_campaign_advance()
+    _check(game.zen_campaign_stage == 1, "defeat cannot advance")
+    game._zen_campaign_leave()
+    game.start_zen_campaign()
+    _check(game.board.winner == int(loss.game.winner), "unacknowledged defeat survives reopening")
+    game._zen_campaign_retry()
+    _finish_draw()
+    game._zen_campaign_advance()
+    _check(game.zen_campaign_stage == 1, "draw cannot advance Chapter 1")
+    game._zen_campaign_retry()
+    _finish_match(0)
+    game._zen_campaign_advance()
+    _check(game.zen_campaign_stage == 2, "Hungry One victory unlocks Bamboo Forest")
+
+    _start_fixture(Campaign.NIGHT)
+    game._zen_campaign_begin()
+    game.on_cell(20)
+    var before: Dictionary = game.board.snapshot()
+    game.undo()
+    game.confirm_new()
+    _check(game.board.snapshot() == before, "Eleventh Night cannot undo or restart")
+    game._zen_campaign_leave()
+    game.start_zen_campaign()
+    _check(game.board.snapshot() == before, "Eleventh Night resumes the same board")
+    _start_fixture(Campaign.NIGHT)
+    game._zen_campaign_begin()
+    game._zen_campaign_tick(Campaign.NIGHT_SECONDS + 1.0)
+    _check(Campaign.load_progress().night == "red", "timer expiry durably resolves the Red Hand")
+    game._zen_campaign_retry()
+    _check(game.board.winner != 0, "decisive result cannot be replayed")
+    game._zen_campaign_leave()
+    game.start_zen_campaign()
+    _check(_button(game.popup, Campaign.text_for("de", "next_chapter")) != null, "branch story resumes after timeout")
+    _press(game.popup, Campaign.text_for("de", "next_chapter"))
+    _check(game.zen_campaign_stage == Campaign.LORD and game.board.current_owner() == 1, "Lord opens on the next board")
+    _check(Campaign.load_progress().night == "red", "Red Hand survives transition")
+    _start_fixture(Campaign.NIGHT)
+    _finish_draw()
+    _check(Campaign.load_progress().night == "still", "draw resolves the Still Hand per the mechanics outline")
+
+func _verify_route() -> void:
+    _start_fixture(0)
+    for stage in range(Campaign.SELF + 1):
+        _check(game.zen_campaign_stage == stage, "linear campaign stage %d" % stage)
+        if stage == Campaign.NIGHT:
+            _finish_match(0)
+            _check(Campaign.load_progress().night == "still", "win resolves the Still Hand")
+            _press(game.popup, Campaign.text_for("de", "next_chapter"))
+            continue
+        for _round in range(Campaign.WINS_FOR_STAGE[stage]):
+            _finish_match(0)
+            if stage == Campaign.SELF and _round == Campaign.WINS_FOR_STAGE[stage] - 1:
+                _press(game.popup, Campaign.text_for("de", "bow"))
+            else:
+                game._zen_campaign_advance()
+        if stage == Campaign.DAWN:
+            _check(Campaign.load_progress().pending == "false_ending", "false ending saved before the summit continues")
+            game._zen_campaign_leave()
+            game.start_zen_campaign()
+            _press(game.popup, Campaign.text_for("de", "sit_again"))
+            _press(game.popup, Campaign.text_for("de", "continue"))
+    _check(Campaign.load_progress().complete, "bow completes all five worlds")
+    _press(game.popup, Campaign.text_for("de", "continue"))
+    _press(game.popup, Campaign.text_for("de", "begin"))
+    game.on_cell(1)
+    game.on_cell(2)
+    _check(game.board.cells[1] == 1 and game.board.cells[2] == 2 and not game._zen_campaign_bot_turn(), "epilogue uses local two-player turns")
+    game._zen_campaign_leave()
+
+func _verify_languages() -> void:
+    var bundle: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(Campaign.TEXT_FILE))
+    for language in ["de", "en", "pt"]:
+        _check(bundle[language].size() == bundle.en.size(), language + ": full key set")
+        for key in bundle.en:
+            _check(not str(bundle[language].get(key, "")).strip_edges().is_empty(), language + ": translated " + key)
+        # Change the selected locale as the main settings menu would do.
+        game.choose_language(language)
+        reader.open_library()
+        _check(_button(reader._screen, Campaign.text_for(language, "play")) != null, "hub follows selected language " + language)
+        reader.open_campaign_overview()
+        _check(_button(reader._screen, Campaign.text_for(language, "open_epilogue")) != null, "overview follows selected language " + language)
+        game.start_zen_campaign()
+        _check(_button(game.popup, Campaign.text_for(language, "resume")) != null, "match popup follows selected language " + language)
+        game._zen_campaign_leave()
+    game.choose_language("de")

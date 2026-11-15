@@ -45,8 +45,6 @@ var _preview_all: bool = false
 var _show_quick: bool = true
 var _screen_name := ""
 var _campaign_board_active := false
-var _campaign_cancel: Callable
-var _campaign_error: Label
 
 func _ready() -> void:
     layer = 90
@@ -228,8 +226,8 @@ func open_library() -> void:
     var heading := _make_label(_t("library_header"), head, 24, GOLD)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
-    _make_button(Campaign.text_for(_active_language, "hub_play"), outer, open_campaign_overview)
-    _make_button(Campaign.text_for(_active_language, "hub_read"), outer, open_comic_library)
+    _make_button(Campaign.text_for(_active_language, "play"), outer, open_campaign_overview)
+    _make_button(Campaign.text_for(_active_language, "webcomic"), outer, open_comic_library)
 
 func open_comic_library() -> void:
     _sync_language()
@@ -350,8 +348,6 @@ func _turn_page(dir: int) -> void:
 func close_chronicles() -> void:
     _active_chapter = -1
     _screen_name = ""
-    _campaign_cancel = Callable()
-    _campaign_error = null
     if _screen != null:
         _screen.hide()
         _screen.queue_free()
@@ -384,9 +380,6 @@ func _input(event: InputEvent) -> void:
                     open_comic_library()
                 "comics", "campaign":
                     open_library()
-                "campaign_story":
-                    if _campaign_cancel.is_valid():
-                        _campaign_cancel.call()
                 _:
                     close_chronicles()
             get_viewport().set_input_as_handled()
@@ -403,26 +396,24 @@ func open_campaign_overview() -> void:
     _screen_name = "campaign"
     var progress := Campaign.load_progress()
     var stage: int = progress.stage
-    var current_chapter := Campaign.chapter_for(stage)
+    var current_chapter: int = Campaign.CHAPTER_FOR_STAGE[stage]
     var outer := _make_screen()
     _screen.color = Color("#14171a")
     var nav := HBoxContainer.new()
     nav.add_theme_constant_override("separation", 12)
     outer.add_child(nav)
-    _make_button("‹", nav, open_library).custom_minimum_size.x = 46
+    _make_button("‹", nav, open_library).custom_minimum_size.x = 48
     var title := _make_label(Campaign.text_for(_active_language, "title"), nav, 30, GOLD)
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    _make_button("✕", nav, close_chronicles).custom_minimum_size.x = 46
+    _make_button("✕", nav, close_chronicles).custom_minimum_size.x = 48
 
     var content := _campaign_scroll(outer)
     # The poster carries German lettering. Its artwork crops cleanly for the three locales.
-    _campaign_picture(content, Campaign.POSTER, 178, Rect2(0, 0, 820, 455))
-    _make_label(Campaign.text_for(_active_language, "tagline"), content, 16, CREAM)
+    content.add_child(Campaign.artwork(Campaign.POSTER, 166, Rect2(0, 0, 820, 455)))
+    _make_label(Campaign.text_for(_active_language, "campaign_desc"), content, 16, CREAM)
     var action := "start_campaign" if not bool(progress.prologue_seen) else "continue_campaign"
-    if stage == Campaign.COMPLETE:
-        action = "read_ending"
-    _campaign_primary(Campaign.text_for(_active_language, action), content, _launch_campaign)
-    _make_label(Campaign.text_for(_active_language, "overview"), content, 21, GOLD)
+    if stage == Campaign.EPILOGUE:
+        action = "open_epilogue"
     for chapter in range(Campaign.CHAPTER_ART.size()):
         var card := PanelContainer.new()
         var border := _style(Color("#262421"), 13)
@@ -433,8 +424,9 @@ func open_campaign_overview() -> void:
         var row := HBoxContainer.new()
         row.add_theme_constant_override("separation", 13)
         card.add_child(row)
-        var thumb := _campaign_picture(row, Campaign.CHAPTER_ART[chapter], 84, Rect2(0, 0, 640, 390))
+        var thumb := Campaign.artwork(Campaign.CHAPTER_ART[chapter], 68, Rect2(0, 0, 640, 390))
         thumb.custom_minimum_size.x = 128
+        row.add_child(thumb)
         var column := VBoxContainer.new()
         column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         column.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -445,36 +437,11 @@ func open_campaign_overview() -> void:
             state = "completed"
         elif chapter == current_chapter:
             state = "current"
-        var chapter_label := Campaign.text_for(_active_language, "chapter") % (chapter + 1)
+        var chapter_label := Campaign.text_for(_active_language, "chapter_label") % (chapter + 1)
         _make_label(chapter_label + " · " + Campaign.text_for(_active_language, state), column, 13, GOLD)
         _make_label(Campaign.text_for(_active_language, "chapter_%d" % chapter), column, 20)
         _make_label(Campaign.text_for(_active_language, "theme_%d" % chapter), column, 14, MUTED)
-
-func open_campaign_scene(lang: String, title: String, art: String, body: String,
-        action: String, next: Callable, back: Callable) -> void:
-    _active_chapter = -1
-    _screen_name = "campaign_story"
-    _campaign_cancel = back
-    var outer := _make_screen()
-    _screen.color = Color("#14171a")
-    var content := _campaign_scroll(outer)
-    var art_crop := Rect2(0, 0, 640, 389) if art in Campaign.CHAPTER_ART else Rect2()
-    _campaign_picture(content, art, 244, art_crop)
-    _make_label(title, content, 29, GOLD)
-    _make_label(body, content, 19)
-    _campaign_error = _make_label("", outer, 15, Color("#ffbe9c"))
-    _campaign_error.hide()
-    var back_text := Campaign.text_for(lang, "leave")
-    if action.is_empty():
-        _campaign_primary(back_text, outer, back)
-    else:
-        _campaign_primary(action, outer, next)
-        _make_button(back_text, outer, back)
-
-func show_campaign_error(message: String) -> void:
-    if is_instance_valid(_campaign_error) and _screen_name == "campaign_story":
-        _campaign_error.text = message
-        _campaign_error.show()
+    _campaign_primary(Campaign.text_for(_active_language, action), outer, _launch_campaign)
 
 func _campaign_scroll(parent: VBoxContainer) -> VBoxContainer:
     var scroll := ScrollContainer.new()
@@ -484,28 +451,9 @@ func _campaign_scroll(parent: VBoxContainer) -> VBoxContainer:
     parent.add_child(scroll)
     var content := VBoxContainer.new()
     content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    content.add_theme_constant_override("separation", 12)
+    content.add_theme_constant_override("separation", 9)
     scroll.add_child(content)
     return content
-
-func _campaign_picture(parent: Control, path: String, height: float, crop: Rect2) -> TextureRect:
-    var picture := TextureRect.new()
-    picture.name = path.get_file().get_basename()
-    picture.custom_minimum_size.y = height
-    picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-    picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    var texture: Texture2D = load(path)
-    if crop.has_area():
-        var cropped := AtlasTexture.new()
-        cropped.atlas = texture
-        cropped.region = crop
-        cropped.filter_clip = true
-        picture.texture = cropped
-    else:
-        picture.texture = texture
-    parent.add_child(picture)
-    return picture
 
 func _campaign_primary(value: String, parent: Node, callback: Callable) -> void:
     var action := _make_button(value, parent, callback)

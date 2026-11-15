@@ -1,93 +1,123 @@
 extends RefCounted
-## Demon personalities scored on the same canonical winning lines as the player.
-## Called on the existing bot worker. Uses only the supplied board and profile.
+## Demon personalities operate on the original 108 winning lines.
+## Called by the existing bot worker with an independent snapshot.
 
-# The Eleventh Night, The Lord and The Self use the existing tactical search.
-const ATTACK := [0.8, 2.0, 0.0, 0.9, 2.8, 1.5, 0.0, 0.0, 0.85, 1.2]
-const DEFENCE := [0.6, 0.14, 2.6, 1.0, 0.4, 0.75, 0.0, 0.0, 1.7, 1.5]
-const BLOCK_CHANCE := [0.62, 0.16, 1.0, 1.0, 0.55, 0.73, 0.0, 0.0, 1.0, 1.0]
-const BUILD := [0.0, 1.0, 6.0, 31.0]
-const DENY := [0.0, 0.4, 4.0, 42.0]
+# Attack, defence, chance to block an immediate threat.
+const PROFILES := [
+    [0.70, 0.10, 0.25], [2.00, 0.05, 0.22], [0.00, 2.20, 1.00],
+    [1.20, 1.15, 0.90], [2.65, 0.26, 0.57], [1.90, 0.90, 0.82],
+    [2.65, 0.48, 0.82], [1.75, 1.60, 1.00], [1.32, 1.95, 1.00],
+    [1.82, 1.50, 1.00], [1.70, 1.75, 1.00],
+]
+const BUILD := [1.0, 4.0, 25.0]
+const DENY := [0.0, 1.0, 5.0]
 
-static func pick_move(cells: Array, stage: int, seed_value: int, player: int,
-        last_cell: int, hidden_faces: Array, openings: Array) -> int:
-    var bot := AIEngine.new(seed_value)
-    var legal: Array = bot.legal(cells)
+static func pick_move(cells_in: Array, stage: int, seed_value: int, context: Dictionary) -> int:
+    var ai := AIEngine.new(seed_value)
+    var legal := ai.legal(cells_in)
     if legal.is_empty():
         return -1
-    if stage == 0 and bot.rng.randf() < 0.76:
-        var last_face := CubeGeometry.face(last_cell) if last_cell >= 0 else -1
-        var scattered := legal.filter(func(cell: int): return CubeGeometry.face(cell) != last_face)
-        var choices: Array = legal if scattered.is_empty() else scattered
-        return int(choices[bot.rng.randi_range(0, choices.size() - 1)])
-    if stage == 6:
-        return bot.choose(cells, player, 2, 200)
-    if stage == 7:
-        if legal.size() == cells.size():
-            return 4
-        return bot.choose(cells, player, 3, 220)
+    var player := int(context.get("mark", 2))
+    var opponent := 3 - player
+    var last := int(context.get("last_cell", -1))
+    var last_bot := int(context.get("last_bot", -1))
+    if stage == 0 and ai.rng.randf() < 0.79:
+        var options := legal.filter(func(cell): return last_bot < 0 or CubeGeometry.face(cell) != CubeGeometry.face(last_bot))
+        return _random_from(ai.rng, options if not options.is_empty() else legal)
 
-    var wins := bot.rules.threats(cells, player)
+    var wins := ai.rules.threats(cells_in, player)
     if not wins.is_empty():
-        return int(wins[bot.rng.randi_range(0, wins.size() - 1)])
-    var blocks := bot.rules.threats(cells, 3 - player)
-    if stage == 10:
-        if not blocks.is_empty():
-            return int(blocks[0])
-        if cells.count(player) == 0 and openings.size() == cells.size():
-            var favorite: int = 0
-            var copied: int = -1
-            for cell in legal:
-                if int(openings[cell]) > favorite:
-                    favorite = int(openings[cell])
-                    copied = cell
-            if copied >= 0:
-                return copied
-        return bot.choose(cells, player, 4, 300)
-    if stage == 3 and blocks.is_empty() and last_cell >= 0:
-        var opposite := -CubeGeometry.center(last_cell)
+        return _random_from(ai.rng, wins)
+    var blocks := ai.rules.threats(cells_in, opponent)
+    var profile: Array = PROFILES[stage]
+    if not blocks.is_empty() and ai.rng.randf() < float(profile[2]):
+        return _random_from(ai.rng, blocks)
+    if stage == 10 and legal.size() == 54:
+        var openings: Dictionary = context.get("openings", {})
+        var favorite := -1
+        var frequency := 0
         for cell in legal:
-            if CubeGeometry.center(cell).is_equal_approx(opposite):
+            var count := int(openings.get(str(cell), 0))
+            if count > frequency:
+                favorite = cell
+                frequency = count
+        if favorite >= 0:
+            return favorite
+    if stage == 10 and last >= 0 and ai.rng.randf() < 0.40:
+        # The Self recognises the player's patterns and sometimes reflects
+        # the most recent stone before looking for a different plan.
+        var mirror := -CubeGeometry.center(last)
+        for cell in legal:
+            if CubeGeometry.center(cell).is_equal_approx(mirror):
                 return cell
 
-    # When a demon overlooks defence, drop its explicit blocking preference.
-    var block_now: bool = not blocks.is_empty() and bot.rng.randf() < float(BLOCK_CHANCE[stage])
+    var cells := cells_in.duplicate()
+    var hidden: Array = context.get("hidden_faces", [])
+    var opposite := -1
+    var last_position := Vector3.ZERO
+    if last >= 0:
+        opposite = CubeGeometry.N.find(-CubeGeometry.N[CubeGeometry.face(last)])
+        last_position = CubeGeometry.center(last)
     var scores := PackedFloat32Array()
     scores.resize(cells.size())
-    for line in bot.rules.lines:
-        var own: int = 0
-        var other: int = 0
-        var faces: Array[int] = []
-        for cell in line:
-            if cells[cell] == player:
+    for line in ai.rules.lines:
+        var own := 0
+        var other := 0
+        for tile in line:
+            if cells[tile] == player:
                 own += 1
-            elif cells[cell] != 0:
+            elif cells[tile] == opponent:
                 other += 1
-            var face := CubeGeometry.face(cell)
-            if not faces.has(face):
-                faces.append(face)
         var weight := 0.0
-        if other == 0 and own < 4:
-            weight += (BUILD[own] + 0.15) * ATTACK[stage]
-            if stage == 5 and faces.size() >= 3:
-                weight += 2.5 + 3.0 * own
-            if stage == 9 and own == 2:
-                # A tempting isolated line gives way to overlapping threats.
-                weight += 10.0
-        if own == 0 and other < 4 and (other < 3 or block_now):
-            weight += DENY[other] * DEFENCE[stage]
-        for cell in line:
-            if cells[cell] == 0:
-                scores[cell] += weight
+        if other == 0 and own < 3:
+            weight = BUILD[own] * float(profile[0])
+            if stage == 5 and own == 2:
+                # The Name prefers a conspicuous two-plus-two line across an edge.
+                var face := CubeGeometry.face(line[0])
+                if line.filter(func(tile): return CubeGeometry.face(tile) == face).size() == 2:
+                    weight += 18.0
+            elif stage == 9 and own == 2:
+                weight += 9.0
+        elif own == 0 and other < 3:
+            weight = DENY[other] * float(profile[1])
+        for tile in line:
+            if cells[tile] == 0:
+                scores[tile] += weight
 
-    var candidates: Array = blocks if block_now else legal
-    var best: int = int(candidates[0])
+    var order: Array = []
+    for cell in legal:
+        var score := float(scores[cell]) + ai.rng.randf_range(-0.32, 0.32)
+        if stage == 2 and last >= 0:
+            score -= CubeGeometry.center(cell).distance_to(last_position)
+        elif stage == 3 and CubeGeometry.face(cell) == opposite:
+            score += 15.0 - CubeGeometry.center(cell).distance_to(-last_position) * 2.0
+        elif stage == 7 and cell % 9 == 4:
+            score += 13.0
+        elif stage == 8 and hidden.has(CubeGeometry.face(cell)):
+            score += 17.0
+        order.append([cell, score])
+    order.sort_custom(func(left, right): return left[1] > right[1])
+    var best: int = order[0][0]
+    if stage < 6 or order.size() < 2:
+        return best
+
+    # Reuse the Classic engine’s bounded reply search, with campaign ranking
+    # deciding which candidates are worth searching on a phone.
+    ai.deadline = Time.get_ticks_msec() + (130 if stage == 6 else 170)
+    ai.branch_width = 6
     var best_score := -INF
-    for cell in candidates:
-        var score := float(scores[cell]) + bot.rng.randf_range(-0.34, 0.34)
-        if stage == 8 and hidden_faces.has(CubeGeometry.face(cell)):
-            score += 4.0
+    for candidate in order.slice(0, 5):
+        var cell: int = candidate[0]
+        cells[cell] = player
+        var reply: float = -ai.search(cells, opponent, 1, -INF, INF)
+        cells[cell] = 0
+        if ai.timed_out:
+            break
+        var score := float(candidate[1]) + reply * 0.45
         if score > best_score:
-            best = cell
             best_score = score
+            best = cell
     return best
+
+static func _random_from(random: RandomNumberGenerator, choices: Array) -> int:
+    return int(choices[random.randi_range(0, choices.size() - 1)])
