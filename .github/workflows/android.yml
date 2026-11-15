@@ -152,6 +152,9 @@ jobs:
       - name: Verify main scene and GameController script
         run: |
           timeout 35 "$GODOT" --headless --path . --script tests/test_scene_load.gd
+      - name: Verify playable Zen Campaign and demon AI
+        run: |
+          timeout 45 "$GODOT" --headless --path . --script tests/test_zen_campaign.gd
       - name: Verify 100 tactical challenges on the 3D cube
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
