@@ -51,7 +51,10 @@ func _verify() -> void:
     _press(reader._screen, Campaign.text_for("de", "play"))
     await process_frame
     _check(bool(reader.is_open()), "campaign overview is reachable")
-    _check(_art_count(reader._screen) == 6, "poster and five thumbnail textures are bound to controls")
+    _check(_art_count(reader._screen) == 6, "complete hero art and five thumbnail textures are bound to controls")
+    var full_hero: TextureRect = reader._screen.find_child("zen_campaign_prologue", true, false) as TextureRect
+    _check(full_hero != null and full_hero.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED,
+        "campaign header displays complete hero illustration without cropped head")
     _press(reader._screen, Campaign.text_for("de", "start_campaign"))
     _check(bool(game.zen_campaign_active), "launch through the Chronicles and campaign overview")
     _check(game.board.cells.size() == 54 and game.rules.lines.size() == 108, "actual cube rules and board")
@@ -83,6 +86,7 @@ func _verify() -> void:
     game.set_process(false)
     _verify_results()
     _verify_chapters_2_3()
+    _verify_chapters_4_5()
     _verify_route()
     _check(FileAccess.get_file_as_string(SaveManager.PATH) == restored_on_disk, "all campaign branches leave the Classic save untouched")
     _verify_languages()
@@ -300,6 +304,59 @@ func _verify_chapters_2_3() -> void:
     _check(Campaign.load_progress().pending == "" and game.zen_campaign_stage == Campaign.NIGHT,
         "temple finale reveals the one-time Eleventh Night only once")
 
+func _verify_chapters_4_5() -> void:
+    for stage in [Campaign.LORD, Campaign.SLAIN, Campaign.DAWN, Campaign.SELF, Campaign.EPILOGUE]:
+        var image_path: String = Campaign.encounter_art(stage)
+        _check(ResourceLoader.exists(image_path), "chapter 4-5 illustration is bundled: " + image_path)
+        var texture: Texture2D = load(image_path) as Texture2D
+        _check(texture != null and texture.get_width() >= 800 and texture.get_height() >= 500,
+            "chapter 4-5 image imports at full landscape resolution: " + image_path)
+        _start_fixture(stage, {"night": "still"})
+        _check(game.zen_campaign_stage == stage, "late-game encounter is playable at stage %d" % stage)
+        _check(_art_count(game.popup) == 1, "illustrated late-game intro stage %d" % stage)
+        if stage == Campaign.SLAIN:
+            _check(game.board.cells.size() == 54 and game.rules.lines.size() == 108,
+                "The Slain still plays on the authentic 54-cell 108-line cube")
+        if stage == Campaign.SELF:
+            _check(game.zen_campaign_progress.openings is Dictionary,
+                "The Self has persisted player opening preferences")
+    # World 4 has two win milestones for the Lord and one for the Slain;
+    # its completion interlude survives closing and reopening the game.
+    _start_fixture(Campaign.SLAIN, {"night": "still"})
+    _finish_match(0)
+    game._zen_campaign_advance()
+    _check(game.zen_campaign_stage == Campaign.DAWN and Campaign.load_progress().pending == "chapter_4_end",
+        "Still Water ending is saved before moving to the summit")
+    _check(_art_count(game.popup) == 1, "Still Water ending uses a chapter illustration")
+    game._zen_campaign_leave()
+    game.start_zen_campaign()
+    _check(_button(game.popup, Campaign.text_for("de", "next_chapter")) != null,
+        "Still Water ending resumes from its saved checkpoint")
+    _press(game.popup, Campaign.text_for("de", "next_chapter"))
+    _check(game.zen_campaign_stage == Campaign.DAWN and Campaign.load_progress().pending == "",
+        "False Dawn begins only after acknowledging World 4")
+    # The Self can be replayed at the final rank; bowing alone completes
+    # the campaign and grants no Classic rank or shop currency.
+    _start_fixture(Campaign.SELF, {"night": "red", "wins": 4})
+    _finish_match(0)
+    game._zen_campaign_bow()
+    _check(Campaign.load_progress().pending == "chapter_5_end"
+        and Campaign.load_progress().stage == Campaign.EPILOGUE,
+        "Bow saves World 5's true ending and unlocks the island")
+    _check(_art_count(game.popup) == 1, "summit ending has atmospheric chapter artwork")
+    game._zen_campaign_leave()
+    game.start_zen_campaign()
+    _press(game.popup, Campaign.text_for("de", "next_chapter"))
+    _check(Campaign.load_progress().pending == "epilogue",
+        "chapter 5 completion flows into island epilogue")
+    _check(_art_count(game.popup) == 1, "island epilogue has its own illustration")
+    _press(game.popup, Campaign.text_for("de", "continue"))
+    _press(game.popup, Campaign.text_for("de", "begin"))
+    game.on_cell(3)
+    game.on_cell(4)
+    _check(game.board.cells[3] == 1 and game.board.cells[4] == 2,
+        "island conclusion is played by two local people, never against an AI")
+
 func _verify_route() -> void:
     _start_fixture(0)
     for stage in range(Campaign.SELF + 1):
@@ -315,8 +372,8 @@ func _verify_route() -> void:
                 _press(game.popup, Campaign.text_for("de", "bow"))
             else:
                 game._zen_campaign_advance()
-        if stage in [3, 5]:
-            var end_scene := "chapter_2_end" if stage == 3 else "chapter_3_end"
+        if stage in [3, 5, Campaign.SLAIN]:
+            var end_scene := "chapter_2_end" if stage == 3 else ("chapter_3_end" if stage == 5 else "chapter_4_end")
             _check(Campaign.load_progress().pending == end_scene,
                 "chapter finale is a persistent scene before moving forward")
             game._zen_campaign_leave()
@@ -330,6 +387,9 @@ func _verify_route() -> void:
             _press(game.popup, Campaign.text_for("de", "sit_again"))
             _press(game.popup, Campaign.text_for("de", "continue"))
     _check(Campaign.load_progress().complete, "bow completes all five worlds")
+    _check(Campaign.load_progress().pending == "chapter_5_end", "true ending is saved after bow")
+    _press(game.popup, Campaign.text_for("de", "next_chapter"))
+    _check(Campaign.load_progress().pending == "epilogue", "island interlude follows the true ending")
     _press(game.popup, Campaign.text_for("de", "continue"))
     _press(game.popup, Campaign.text_for("de", "begin"))
     game.on_cell(1)
