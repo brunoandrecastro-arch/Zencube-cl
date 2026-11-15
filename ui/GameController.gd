@@ -2086,7 +2086,15 @@ func _zen_campaign_load_match() -> void:
     var chapter: int = ZenCampaign.CHAPTER_FOR_STAGE[zen_campaign_stage]
     var scenery := 3 if zen_campaign_stage in [ZenCampaign.NIGHT, ZenCampaign.EPILOGUE] else chapter
     world_background.texture = Asc.WORLD_TEXTURES[scenery]
-    world_background.modulate = Color("a6abc5") if zen_campaign_stage == ZenCampaign.NIGHT else Color.WHITE
+    # Winter moonlight, deceptive golden summit, and clear cold dawn are distinct.
+    if zen_campaign_stage in [ZenCampaign.NIGHT, ZenCampaign.LORD, ZenCampaign.SLAIN]:
+        world_background.modulate = Color("b8c9e4")
+    elif zen_campaign_stage == ZenCampaign.DAWN:
+        world_background.modulate = Color("ffe6ac")
+    elif zen_campaign_stage == ZenCampaign.SELF:
+        world_background.modulate = Color("cbdfea")
+    else:
+        world_background.modulate = Color.WHITE
     refresh()
 
 func _campaign_text(key: String) -> String:
@@ -2119,7 +2127,7 @@ func _zen_campaign_refresh(animate: int) -> void:
     if int(ZenCampaign.WINS_FOR_STAGE[stage]) > 1:
         rank_label.text += "  ·  " + _campaign_text("wins") % [int(zen_campaign_progress.wins), ZenCampaign.WINS_FOR_STAGE[stage]]
     help_text.text = _campaign_text("turn_help")
-    if stage in [2, 3, 4, 5] and zen_campaign_battle_line != "" and Time.get_ticks_msec() < zen_campaign_line_until:
+    if stage in [2, 3, 4, 5, 7, 8, 9, 10] and zen_campaign_battle_line != "" and Time.get_ticks_msec() < zen_campaign_line_until:
         help_text.text = zen_campaign_battle_line
     if stage == ZenCampaign.NIGHT and not _zen_campaign_bot_turn() and board.winner == 0:
         help_text.text = _campaign_text("time_left") % ceili(float(zen_campaign_progress.seconds_left))
@@ -2186,7 +2194,7 @@ func _zen_campaign_after_move(cell: int, owner: int) -> void:
 # Does not interrupt a turn; at most one new line every three moves.
 func _zen_campaign_emit_battle_line(cell: int, owner: int) -> void:
     var stage: int = zen_campaign_stage
-    if stage not in [2, 3, 4, 5]:
+    if stage not in [2, 3, 4, 5, 7, 8, 9, 10]:
         return
     if board.move_count() - zen_campaign_last_line_move < 3:
         return
@@ -2226,6 +2234,30 @@ func _zen_campaign_emit_battle_line(cell: int, owner: int) -> void:
             line_key = "combat_5_block"
         elif owner == 1 and not rules.threats(board.cells, bot_mark).is_empty():
             line_key = "combat_5_showoff"
+    elif stage == ZenCampaign.LORD:
+        if owner == 1 and not rules.threats(board.cells, bot_mark).is_empty():
+            line_key = "combat_7_build"
+        elif owner == 1 and human_threats.has(cell):
+            line_key = "combat_7_block"
+    elif stage == ZenCampaign.SLAIN:
+        if owner == 1:
+            var normal: Vector3 = renderer.pivot.basis * CubeGeometry.N[CubeGeometry.face(cell)]
+            if normal.z <= 0.12:
+                line_key = "combat_8_hidden"
+        elif owner == 0 and board.move_count() >= 8:
+            line_key = "combat_8_turn"
+    elif stage == ZenCampaign.DAWN:
+        if owner == 1 and not rules.threats(board.cells, bot_mark).is_empty():
+            line_key = "combat_9_bait"
+        elif owner == 0 and bot_threats.has(cell):
+            line_key = "combat_9_block"
+    elif stage == ZenCampaign.SELF:
+        if owner == 1 and board.move_count() == 1:
+            line_key = "combat_10_favorite"
+        elif owner == 0 and bot_threats.has(cell):
+            line_key = "combat_10_block"
+        elif owner == 1 and not rules.threats(board.cells, bot_mark).is_empty():
+            line_key = "combat_10_build"
     if line_key == "" or zen_campaign_spoken.has(line_key):
         return
     zen_campaign_spoken[line_key] = true
@@ -2259,7 +2291,7 @@ func _zen_campaign_arm_turn() -> void:
 func _zen_campaign_tick(delta: float) -> void:
     if zen_campaign_battle_line != "" and Time.get_ticks_msec() >= zen_campaign_line_until:
         zen_campaign_battle_line = ""
-        if popup == null and zen_campaign_stage in [2, 3, 4, 5]:
+        if popup == null and zen_campaign_stage in [2, 3, 4, 5, 7, 8, 9, 10]:
             help_text.text = _campaign_text("turn_help")
     if zen_campaign_paused or board.winner != 0:
         return
@@ -2452,7 +2484,7 @@ func _zen_campaign_result() -> void:
 
 func _zen_campaign_night_result() -> void:
     var still: bool = zen_campaign_progress.night == "still"
-    var box := _zen_campaign_story_box(_campaign_text("still" if still else "red_hand"))
+    var box := _zen_campaign_story_box(_campaign_text("still" if still else "red_hand"), ZenCampaign.CHAPTER_ART[2])
     if float(zen_campaign_progress.seconds_left) == 0.0:
         _zen_campaign_paragraph(box, _campaign_text("time_out"))
     _zen_campaign_paragraph(box, _campaign_text("night_still" if still else "night_red"))
@@ -2482,6 +2514,8 @@ func _zen_campaign_advance() -> void:
             pending = "chapter_2_end"
         elif zen_campaign_stage == 5:
             pending = "chapter_3_end"
+        elif zen_campaign_stage == ZenCampaign.SLAIN:
+            pending = "chapter_4_end"
         elif zen_campaign_stage == ZenCampaign.DAWN:
             pending = "false_ending"
         _zen_campaign_transition(zen_campaign_stage + 1, 0, pending)
@@ -2489,7 +2523,7 @@ func _zen_campaign_advance() -> void:
 func _zen_campaign_bow() -> void:
     var wins := int(zen_campaign_progress.wins) + int(ZenCampaign.victory_by_player(board))
     if zen_campaign_stage == ZenCampaign.SELF and wins >= ZenCampaign.WINS_FOR_STAGE[ZenCampaign.SELF]:
-        _zen_campaign_transition(ZenCampaign.EPILOGUE, 0, "epilogue")
+        _zen_campaign_transition(ZenCampaign.EPILOGUE, 0, "chapter_5_end")
 
 func _zen_campaign_transition(stage: int, wins: int, pending: String = "") -> void:
     if not zen_campaign_active:
@@ -2515,13 +2549,19 @@ func _zen_campaign_transition(stage: int, wins: int, pending: String = "") -> vo
 
 func _zen_campaign_interlude() -> void:
     var scene: String = zen_campaign_progress.pending
-    if scene in ["chapter_2_end", "chapter_3_end"]:
-        var completed_world: int = 1 if scene == "chapter_2_end" else 2
+    if scene in ["chapter_2_end", "chapter_3_end", "chapter_4_end", "chapter_5_end"]:
+        var completed_world: int = {
+            "chapter_2_end": 1,
+            "chapter_3_end": 2,
+            "chapter_4_end": 3,
+            "chapter_5_end": 4
+        }[scene]
         var chapter_box := _zen_campaign_story_box(
             _campaign_text(scene + "_title"), ZenCampaign.CHAPTER_ART[completed_world])
         _zen_campaign_paragraph(chapter_box, _campaign_text(scene + "_body"))
+        var following: String = "epilogue" if scene == "chapter_5_end" else ""
         premium_button(_campaign_text("next_chapter"), chapter_box,
-            _zen_campaign_transition.bind(zen_campaign_stage, 0), true)
+            _zen_campaign_transition.bind(zen_campaign_stage, 0, following), true)
         button(_campaign_text("leave"), chapter_box, _zen_campaign_leave, true)
     elif scene == "false_ending":
         var box := _zen_campaign_story_box(_campaign_text("false_title"), ZenCampaign.CHAPTER_ART[4])
@@ -2533,7 +2573,7 @@ func _zen_campaign_interlude() -> void:
     else:
         var island := scene == "epilogue"
         var title_key := "epilogue" if island else "dawn"
-        var box := _zen_campaign_story_box(_campaign_text(title_key), ZenCampaign.CHAPTER_ART[3] if island else "")
+        var box := _zen_campaign_story_box(_campaign_text(title_key), ZenCampaign.encounter_art(ZenCampaign.EPILOGUE) if island else "")
         if island:
             _zen_campaign_paragraph(box, _campaign_text("after_bow"))
             _zen_campaign_paragraph(box, _campaign_text("epilogue_" + str(zen_campaign_progress.night)))
