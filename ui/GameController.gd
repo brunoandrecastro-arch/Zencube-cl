@@ -72,6 +72,12 @@ const BotAuto = preload("res://core/ZenBotAutoLevel.gd")
 const ZMode = preload("res://core/ZenAscend.gd")
 const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
+const ZenCampaign = preload("res://story/ZenCampaign.gd")
+var zen_campaign_active: bool = false
+var zen_campaign_stage: int = 0
+var zen_campaign_classic_board: Dictionary = {}
+var zen_campaign_classic_history: Array = []
+var zen_campaign_classic_settings: Dictionary = {}
 # ZENCUBE WORLD MUSIC PATCH 1
 func language_code() -> String:
     if data == null: return "de"
@@ -479,9 +485,19 @@ func refresh(animate: int = -1) -> void:
     classic_actions.visible = not challenge_active
     renderer.selected = board.last_cell
     renderer.paint(board,(bool(data.settings.hints) or tutorial != null) and not challenge_active,preview,animate)
+    if zen_campaign_active:
+        world_title_label.text = ZenCampaign.tr(language_code(), "title")
+        world_quote_label.text = ZenCampaign.tr(language_code(), "subtitle")
+        detail.text = ZenCampaign.tr(language_code(), "first" if zen_campaign_stage == 0 else "second") + " · " + str(board.move_count())
     if tutorial == null and not challenge_active: persist()
     if net_active: update_net()
 func persist() -> void:
+    if zen_campaign_active:
+        var campaign_game: Dictionary = board.snapshot()
+        campaign_game["history"] = board.history.duplicate(true)
+        if not ZenCampaign.save_progress(zen_campaign_stage, campaign_game):
+            push_warning("Zen Campaign: Spielstand konnte nicht gespeichert werden")
+        return
     if challenge_active:
         # Settings may be saved during a puzzle, but NEVER replace the classic save.
         if not SaveManager.save_data(data): notify_user("Speichern fehlgeschlagen: Speicherplatz prüfen.")
@@ -524,7 +540,7 @@ func place(cell: int) -> void:
     if placed_by_owner == 0 or int(data.settings.mode) == 0:
         vibrate_on_move()
     if board.winner != 0:
-        if tutorial == null and int(data.settings.mode) != 2: record_result()
+        if tutorial == null and int(data.settings.mode) != 2 and not zen_campaign_active: record_result()
         if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
     refresh(cell)
     if board.winner != 0 and tutorial == null and int(data.settings.mode) != 2:
@@ -631,7 +647,13 @@ func _process(_delta: float) -> void:
         var seed_value = int(Time.get_ticks_usec())
         var budgets: Array = [45, 95, 200, 330, 520]
         var budget: int = int(budgets[clampi(level,0,4)])
-        worker.start(func(): return AIEngine.new(seed_value).choose(cells,player,level,budget))
+        var running_campaign: bool = zen_campaign_active
+        var running_stage: int = zen_campaign_stage
+        worker.start(func():
+            if running_campaign:
+                return ZenCampaign.pick_move(cells, running_stage, seed_value)
+            return AIEngine.new(seed_value).choose(cells,player,level,budget)
+        )
         refresh()
 func _exit_tree() -> void:
     if worker != null: worker.wait_to_finish()
@@ -684,6 +706,12 @@ func close_modal() -> void:
         popup.queue_free()
         popup = null
 func open_menu() -> void:
+    if zen_campaign_active:
+        var campaign_box: VBoxContainer = modal(ZenCampaign.tr(language_code(), "title"))
+        label(ZenCampaign.tr(language_code(), "first" if zen_campaign_stage == 0 else "second"), campaign_box, 19)
+        premium_button(ZenCampaign.tr(language_code(), "resume"), campaign_box, close_modal, true)
+        premium_button(ZenCampaign.tr(language_code(), "leave"), campaign_box, _zen_campaign_leave)
+        return
     var box = modal("Hauptmenü")
     popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.975), 26))
     var heading: Label = box.get_child(0) as Label
@@ -1127,6 +1155,9 @@ func show_result_screen() -> void:
     if challenge_active or tutorial != null or board.winner == 0 or popup != null:
         return
     if int(data.settings.mode) == 2:
+        return
+    if zen_campaign_active:
+        _zen_campaign_result()
         return
     # Rank-up is already persisted by record_result(); this is visual only.
     # Never replay the ceremony on reopening results or loading a previous rank.
@@ -1608,6 +1639,8 @@ func end_tutorial() -> void:
     board.history = saved_training.history
     refresh()
 func start_mode(mode: int, level: int = 0, from_welcome: bool = false) -> void:
+    if zen_campaign_active:
+        _zen_campaign_leave()
     if challenge_active: leave_challenges()
     close_modal()
     if tutorial != null:
@@ -1972,3 +2005,132 @@ func play_sound(win: bool) -> void:
     if not bool(data.settings.sound): return
     sound_player.pitch_scale = 1.5 if win else 1.0
     sound_player.play()
+
+
+# Zen Chronicles > Zen Campaign. This uses the unchanged 3D cube/4-in-a-row rules.
+# Campaign games and their bot personalities are kept isolated from Classic saves.
+func start_zen_campaign() -> void:
+    if zen_campaign_active:
+        close_modal()
+        _zen_campaign_intro(false)
+        return
+    if challenge_active:
+        leave_challenges()
+    if tutorial != null:
+        end_tutorial()
+    close_modal()
+    zen_campaign_classic_board = board.snapshot()
+    zen_campaign_classic_history = board.history.duplicate(true)
+    zen_campaign_classic_settings = data.settings.duplicate(true)
+    zen_campaign_active = true
+    data.settings.mode = 1
+    data.settings.level = 0
+    data.settings.swap = false
+    data.settings.alternate = false
+    data.settings.next_start = 0
+    var progress: Dictionary = ZenCampaign.load_progress()
+    zen_campaign_stage = int(progress.get("stage", 0))
+    if zen_campaign_stage >= 2:
+        _zen_campaign_finished()
+        return
+    var saved_game: Dictionary = progress.get("game", {})
+    var resume: bool = SaveManager.valid_game(saved_game)
+    if resume:
+        board = BoardModel.new()
+        board.restore(saved_game)
+        board.history = saved_game.get("history", []).duplicate(true)
+        board.swap_enabled = false
+        generation += 1
+        renderer.reset_view()
+        refresh()
+        if board.winner != 0:
+            call_deferred("show_result_screen")
+            return
+    else:
+        _zen_campaign_reset_match()
+    _zen_campaign_intro(resume)
+
+func _zen_campaign_reset_match() -> void:
+    generation += 1
+    board = BoardModel.new()
+    board.swap_enabled = false
+    board.starter_owner = 0
+    board.owners = [0, 1]
+    preview = []
+    renderer.selected = -1
+    renderer.reset_view()
+    refresh()
+
+func _zen_campaign_intro(resuming: bool) -> void:
+    if not zen_campaign_active or zen_campaign_stage >= 2:
+        return
+    var box: VBoxContainer = modal(ZenCampaign.tr(language_code(), "first" if zen_campaign_stage == 0 else "second"))
+    if not resuming and zen_campaign_stage == 0:
+        label(ZenCampaign.tr(language_code(), "start"), box, 17)
+    if not resuming:
+        label(ZenCampaign.tr(language_code(), "first_intro" if zen_campaign_stage == 0 else "second_intro"), box, 17)
+    premium_button(ZenCampaign.tr(language_code(), "resume" if resuming else "begin"), box, close_modal, true)
+    button(ZenCampaign.tr(language_code(), "leave"), box, _zen_campaign_leave, true)
+
+func _zen_campaign_result() -> void:
+    if not zen_campaign_active or board.winner == 0:
+        return
+    var human_won: bool = board.winner != 3 and int(board.owners[board.winner-1]) == 0
+    var headline: String = ZenCampaign.tr(language_code(), "result_draw" if board.winner == 3 else "result_win" if human_won else "result_loss")
+    var box: VBoxContainer = modal(headline)
+    popup.anchor_top = 0.48
+    popup.anchor_bottom = 0.97
+    popup.offset_top = 0
+    var story_key: String = ("first_win" if zen_campaign_stage == 0 else "second_win") if human_won else ("first_loss" if zen_campaign_stage == 0 else "second_loss")
+    label(ZenCampaign.tr(language_code(), story_key), box, 17)
+    if human_won:
+        premium_button(ZenCampaign.tr(language_code(), "continue"), box, _zen_campaign_advance, true)
+    else:
+        premium_button(ZenCampaign.tr(language_code(), "again"), box, _zen_campaign_retry, true)
+    button(ZenCampaign.tr(language_code(), "leave"), box, _zen_campaign_leave, true)
+
+func _zen_campaign_retry() -> void:
+    if not zen_campaign_active:
+        return
+    close_modal()
+    _zen_campaign_reset_match()
+    _zen_campaign_intro(false)
+
+func _zen_campaign_advance() -> void:
+    if not zen_campaign_active or board.winner == 0 or board.winner == 3:
+        return
+    if int(board.owners[board.winner - 1]) != 0:
+        return
+    zen_campaign_stage += 1
+    if not ZenCampaign.save_progress(zen_campaign_stage, {}):
+        push_warning("Zen Campaign: Kapitelfortschritt konnte nicht gespeichert werden")
+    close_modal()
+    if zen_campaign_stage >= 2:
+        _zen_campaign_finished()
+    else:
+        _zen_campaign_reset_match()
+        _zen_campaign_intro(false)
+
+func _zen_campaign_finished() -> void:
+    var box: VBoxContainer = modal(ZenCampaign.tr(language_code(), "chapter_done"))
+    label(ZenCampaign.tr(language_code(), "done"), box, 18)
+    premium_button(ZenCampaign.tr(language_code(), "chronicles"), box, _zen_campaign_leave, true)
+
+func _zen_campaign_leave() -> void:
+    if not zen_campaign_active:
+        return
+    close_modal()
+    generation += 1
+    zen_campaign_active = false
+    data.settings = zen_campaign_classic_settings.duplicate(true)
+    board = BoardModel.new()
+    board.restore(zen_campaign_classic_board)
+    board.history = zen_campaign_classic_history.duplicate(true)
+    renderer.selected = -1
+    renderer.reset_view()
+    zen_campaign_classic_board = {}
+    zen_campaign_classic_history = []
+    zen_campaign_classic_settings = {}
+    refresh()
+    get_node("/root/ZenChronicles").open_library()
+
