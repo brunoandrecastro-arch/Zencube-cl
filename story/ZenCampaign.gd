@@ -14,6 +14,13 @@ const CHAPTER_ART: Array[String] = [
     ART + "chapter_previews/04_still_water.webp",
     ART + "chapter_previews/05_above_clouds.webp",
 ]
+# Unique illustrations for each playable encounter in chapters two and three.
+const ENCOUNTER_ART: Dictionary = {
+    2: ART + "encounters/02_frozen.svg",
+    3: ART + "encounters/02_double.svg",
+    4: ART + "encounters/03_red.svg",
+    5: ART + "encounters/03_name.svg",
+}
 const NIGHT := 6
 const LORD := 7
 const SLAIN := 8
@@ -44,6 +51,13 @@ static func chapter_name(lang: String, chapter: int) -> String:
 
 static func demon_name(lang: String, stage: int) -> String:
     return text_for(lang, NAME_KEYS[stage])
+
+static func encounter_art(stage: int) -> String:
+    if stage == 0:
+        return FIRST_DEMON_ART
+    if ENCOUNTER_ART.has(stage):
+        return str(ENCOUNTER_ART[stage])
+    return CHAPTER_ART[CHAPTER_FOR_STAGE[stage]]
 
 static func artwork(path: String, height: float, region := Rect2()) -> TextureRect:
     var picture := TextureRect.new()
@@ -105,7 +119,7 @@ static func load_progress() -> Dictionary:
         progress.wins = clampi(int(progress.wins), 0, WINS_FOR_STAGE[progress.stage])
         progress.revealed = clampi(int(progress.revealed), 0, 3)
         progress.seconds_left = clampf(float(progress.seconds_left), 0.0, NIGHT_SECONDS)
-        if not progress.pending in ["", "false_ending", "false_accept", "false_refuse", "epilogue"]:
+        if not progress.pending in ["", "false_ending", "false_accept", "false_refuse", "epilogue", "chapter_2_end", "chapter_3_end"]:
             progress.pending = ""
         if not progress.night in ["", "still", "red"]:
             progress.night = ""
