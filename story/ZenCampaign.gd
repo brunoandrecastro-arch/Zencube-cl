@@ -14,12 +14,17 @@ const CHAPTER_ART: Array[String] = [
     ART + "chapter_previews/04_still_water.webp",
     ART + "chapter_previews/05_above_clouds.webp",
 ]
-# Unique illustrations for each playable encounter in chapters two and three.
+# Unique illustrations for every playable encounter, including the island epilogue.
 const ENCOUNTER_ART: Dictionary = {
     2: ART + "encounters/02_frozen.svg",
     3: ART + "encounters/02_double.svg",
     4: ART + "encounters/03_red.svg",
     5: ART + "encounters/03_name.svg",
+    7: ART + "encounters/04_lord.svg",
+    8: ART + "encounters/04_slain.svg",
+    9: ART + "encounters/05_false_dawn.svg",
+    10: ART + "encounters/05_self.svg",
+    11: ART + "encounters/05_epilogue_island.svg",
 }
 const NIGHT := 6
 const LORD := 7
@@ -119,7 +124,7 @@ static func load_progress() -> Dictionary:
         progress.wins = clampi(int(progress.wins), 0, WINS_FOR_STAGE[progress.stage])
         progress.revealed = clampi(int(progress.revealed), 0, 3)
         progress.seconds_left = clampf(float(progress.seconds_left), 0.0, NIGHT_SECONDS)
-        if not progress.pending in ["", "false_ending", "false_accept", "false_refuse", "epilogue", "chapter_2_end", "chapter_3_end"]:
+        if not progress.pending in ["", "false_ending", "false_accept", "false_refuse", "epilogue", "chapter_2_end", "chapter_3_end", "chapter_4_end", "chapter_5_end"]:
             progress.pending = ""
         if not progress.night in ["", "still", "red"]:
             progress.night = ""
