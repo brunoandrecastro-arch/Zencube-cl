@@ -9,6 +9,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -178,8 +180,6 @@ jobs:
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim
           /tmp/zencube-sim reports/lines.json > reports/simulation.json
       - name: Build debug APK
-        env:
-          ZENCUBE_UNSIGNED_DEBUG: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
         shell: bash
@@ -196,7 +196,18 @@ jobs:
           for file in $(git ls-files 'assets/zen_campaign/*.webp'); do
             grep -Fx "assets/$file.import" <<< "$apk_contents"
           done
+      - name: Name campaign test APK
+        if: env.ZENCUBE_CAMPAIGN_TEST == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-Campaign-Test.apk
+      - name: Upload campaign test APK
+        if: env.ZENCUBE_CAMPAIGN_TEST == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-Campaign-Test
+          path: build/ZenCube-3D-Campaign-Test.apk
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
+        if: env.ZENCUBE_CAMPAIGN_TEST != 'true'
         with:
           name: ZenCube-3D-debug
           path: |
