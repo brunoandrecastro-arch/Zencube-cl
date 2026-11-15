@@ -177,7 +177,9 @@ jobs:
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim
           /tmp/zencube-sim reports/lines.json > reports/simulation.json
-      - name: Build signed debug APK
+      - name: Build debug APK
+        env:
+          ZENCUBE_UNSIGNED_DEBUG: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
         shell: bash
@@ -189,6 +191,10 @@ jobs:
           done
           for file in chronicles.json localization.json settings.json; do
             grep -Fx "assets/story/$file" <<< "$apk_contents"
+          done
+          grep -Fx 'assets/story/zen_campaign.json' <<< "$apk_contents"
+          for file in $(git ls-files 'assets/zen_campaign/*.webp'); do
+            grep -Fx "assets/$file.import" <<< "$apk_contents"
           done
       - uses: actions/upload-artifact@v4
         with:

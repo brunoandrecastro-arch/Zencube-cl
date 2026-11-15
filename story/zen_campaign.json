@@ -1,0 +1,251 @@
+{
+  "title": ["Zen Campaign", "Zen Campaign", "Zen Campaign"],
+  "hub_play": ["Zen Campaign – Spielen", "Zen Campaign – Play", "Zen Campaign – Jogar"],
+  "hub_read": ["Zen Chronicles – Webcomic lesen", "Zen Chronicles – Read the webcomic", "Zen Chronicles – Ler a banda desenhada"],
+  "overview": ["Fünf Welten", "Five worlds", "Cinco mundos"],
+  "tagline": [
+    "Kuze Tadanobu sucht am Bergtempel eine ruhige Schwerthand. Am Steinwürfel nehmen ihm gegenüber Gestalten aus seiner Vergangenheit Platz.",
+    "Kuze Tadanobu climbs to a mountain temple in search of a steady sword hand. At a stone cube, figures from his past take the seat opposite him.",
+    "Kuze Tadanobu sobe a um templo na montanha à procura de firmeza na mão que empunha a espada. Junto a um cubo de pedra, figuras do seu passado sentam-se diante dele."
+  ],
+  "start_campaign": ["Prolog beginnen", "Begin the prologue", "Começar o prólogo"],
+  "continue_campaign": ["Kampagne fortsetzen", "Continue campaign", "Continuar a campanha"],
+  "chapter": ["Kapitel %d", "Chapter %d", "Capítulo %d"],
+  "completed": ["Abgeschlossen", "Completed", "Concluído"],
+  "current": ["Aktuell", "In progress", "Em curso"],
+  "locked": ["Gesperrt", "Locked", "Bloqueado"],
+  "chapter_0": ["Zen-Garten", "Zen Garden", "Jardim Zen"],
+  "chapter_1": ["Bambuswald", "Bamboo Forest", "Bosque de Bambu"],
+  "chapter_2": ["Der Tempel", "Temple", "O Templo"],
+  "chapter_3": ["Stilles Wasser", "Still Water", "Águas Tranquilas"],
+  "chapter_4": ["Jenseits der Wolken", "Beyond the Clouds", "Para Lá das Nuvens"],
+  "theme_0": ["Unruhe und Gier", "Restlessness and greed", "Inquietação e cobiça"],
+  "theme_1": ["Angst und Zweifel", "Fear and doubt", "Medo e dúvida"],
+  "theme_2": ["Wut und Stolz", "Anger and pride", "Ira e orgulho"],
+  "theme_3": ["Vergangenheit und Schuld", "The past and guilt", "O passado e a culpa"],
+  "theme_4": ["Loslassen", "Letting go", "Deixar ir"],
+  "prologue": ["Prolog · Das Tor", "Prologue · The Gate", "Prólogo · O Portão"],
+  "prologue_story": [
+    "Im Frühling steigt der Rōnin Kuze Tadanobu zum Bergtempel hinauf. Seit dem Tod seines Herrn zittert seine rechte Hand am Schwertgriff. Bis zum Herbst soll sie wieder ruhig sein. Dann will er seine Schuld bei Ratsherr Oba begleichen.\n\n„Ich kenne diesen Gang“, sagt der Abt und reicht ihm einen Besen. „Der Garten muss gefegt werden.“\n\nKuze will umkehren. Da zeigt der Abt auf einen Steinwürfel. „Er hat sechs Seiten. Drei kannst du sehen. Setz dich zu ihm, wenn der Weg sauber ist. Gegenüber wird etwas Platz nehmen. Sei höflich zu ihm.“",
+    "In spring, the rōnin Kuze Tadanobu climbs to a mountain temple. His right hand has shaken on the hilt ever since his lord died. He wants it steady by autumn. Then he can settle his debt with Councillor Oba.\n\n“I know that walk,” says the abbot, handing him a broom. “The garden needs sweeping.”\n\nKuze turns to leave. The abbot points to a stone cube. “It has six sides. You can see three. Sit with it when the path is clear. Something will sit down across from you. Be polite to it.”",
+    "Na primavera, o rōnin Kuze Tadanobu sobe ao templo da montanha. Desde a morte do seu senhor, a mão direita treme-lhe quando aperta o punho da espada. Quer recuperá-la até ao outono. Depois acertará contas com o conselheiro Oba.\n\n«Conheço esse andar», diz o abade, entregando-lhe uma vassoura. «O jardim precisa de ser varrido.»\n\nKuze vira-se para sair. O abade aponta para um cubo de pedra. «Tem seis faces. Consegues ver três. Senta-te diante dele quando o caminho estiver limpo. Algo se sentará à tua frente. Trata-o com cortesia.»"
+  ],
+  "stage_0": ["Der Schreck", "The Startle", "O Sobressalto"],
+  "stage_1": ["Der Hungrige", "The Hungry One", "O Faminto"],
+  "stage_2": ["Der Erstarrte", "The Frozen One", "O Imóvel"],
+  "stage_3": ["Der Doppelgänger", "The Double", "O Duplo"],
+  "stage_4": ["Der Rote", "The Red One", "O Rubro"],
+  "stage_5": ["Der Name", "The Name", "O Nome"],
+  "stage_6": ["Die elfte Nacht", "The Eleventh Night", "A Décima Primeira Noite"],
+  "stage_7": ["Der Herr", "The Lord", "O Senhor"],
+  "stage_8": ["Die Erschlagenen", "The Slain", "Os Caídos"],
+  "stage_9": ["Die falsche Morgenröte", "The False Dawn", "A Falsa Aurora"],
+  "stage_10": ["Das eigene Ich", "The Self", "O Próprio Eu"],
+  "stage_11": ["Epilog · Die Insel", "Epilogue · The Island", "Epílogo · A Ilha"],
+  "stage_12": ["Die Reise ist zu Ende", "The journey is complete", "A viagem chegou ao fim"],
+  "intro_0": [
+    "Ein Schatten zuckt bei jedem Geräusch. „Hast du das gehört?“\n\nNatsu bringt Gemüse zum Tempel. Als Kuze den ersten Stein aufsetzt, klappert er auf dem Würfel. „Warum zittert deine Hand?“\n\n„Es ist kalt“, sagt Kuze. „Es ist Frühling“, sagt Natsu.\n\nDrehe den Würfel, um seine Seiten zu sehen. Vier Zeichen in einer gültigen Linie gewinnen.",
+    "A shadow flinches at every sound. “Did you hear that?”\n\nNatsu brings vegetables to the temple. Kuze’s first stone rattles against the cube. “Why is your hand doing that?”\n\n“It is cold,” says Kuze. “It is spring,” says Natsu.\n\nTurn the cube to see its sides. Four marks on a valid line win the match.",
+    "Uma sombra estremece a cada ruído. «Ouviste isso?»\n\nNatsu traz legumes ao templo. A primeira pedra de Kuze bate no cubo. «Porque te treme a mão?»\n\n«Está frio», diz Kuze. «É primavera», responde Natsu.\n\nRoda o cubo para veres as faces. Quatro símbolos numa linha válida vencem a partida."
+  ],
+  "win_0": [
+    "Der Schreck verneigt sich und nimmt am Rand des Gartens Platz. Der Abt fegt eine Blüte vom Weg.\n\n„Morgen fährt er wieder zusammen. Deine Hand auch. Setz dich trotzdem.“",
+    "The Startle bows and takes a seat at the edge of the garden. The abbot sweeps a blossom from the path.\n\n“It will jump again tomorrow. So will the hand. Sit anyway.”",
+    "O Sobressalto inclina-se e senta-se à beira do jardim. O abade varre uma flor do caminho.\n\n«Amanhã volta a estremecer. A mão também. Senta-te na mesma.»"
+  ],
+  "intro_1": [
+    "Ein Händler setzt sich zu Kuze. In seinen Händen dampft eine Schale Reis, von der er keinen Bissen nimmt.\n\n„Ein Schwert für elf Tage Reis. Ich habe mitgezählt. Am vierzehnten Tag starb sie. Oba hat diese Woche Ente gegessen.“",
+    "A merchant sits opposite Kuze. Steam rises from a bowl of rice he never touches.\n\n“One sword bought eleven days of rice. I counted with you. She died on the fourteenth. Oba ate duck that week.”",
+    "Um mercador senta-se diante de Kuze. Sobe vapor da tigela de arroz em que nunca toca.\n\n«Uma espada comprou onze dias de arroz. Contei-os contigo. Ela morreu ao décimo quarto dia. Nessa semana, Oba comeu pato.»"
+  ],
+  "win_1": [
+    "Der Hungrige stellt die Schale auf den Boden. „Ich halte sie für sie warm.“\n\n„Gehen sie irgendwann fort?“, fragt Kuze.\n\nDer Abt legt ihm den Besen neben das Kissen. „Sie setzen sich. Mehr tun sie nicht.“ Der Regen beginnt.",
+    "The Hungry One sets the bowl down. “I will keep it warm for her.”\n\n“Do they ever go away?” Kuze asks.\n\nThe abbot lays the broom beside his cushion. “They sit down. That is all any of them do.” Rain begins to fall.",
+    "O Faminto pousa a tigela. «Vou mantê-la quente para ela.»\n\n«Alguma vez se vão embora?», pergunta Kuze.\n\nO abade deixa a vassoura ao lado da almofada. «Sentam-se. É só isso que fazem.» Começa a chover."
+  ],
+  "intro_2": [
+    "Mit dem Sommerregen kommt ein Brief von Shin. „Herr, ich habe einen Platz unter den Vierzehn eingenommen. Ibuki sagt, Eure Hand braucht Zeit. Meine ist bereit.“\n\nIm Bambus kniet eine weiße Gestalt mit dem Rücken zu Kuze. „Du standest mit dem langen Schwert hinter mir. Deine Knie zitterten. Ich bin das, woran sich deine Hand erinnert.“",
+    "Shin’s letter arrives with the summer rain. “Sir, I have taken a place among the fourteen. Ibuki says your hand needs time. Mine does not.”\n\nA figure in white kneels in the bamboo, its back to Kuze. “You stood behind me with the long sword. Your knees shook. I am what your hand remembers.”",
+    "A carta de Shin chega com as chuvas de verão. «Senhor, tomei um lugar entre os catorze. Ibuki diz que a vossa mão precisa de tempo. A minha está pronta.»\n\nUma figura de branco ajoelha-se de costas para Kuze. «Estavas atrás de mim com a espada longa. Tremiam-te os joelhos. Sou o que a tua mão recorda.»"
+  ],
+  "win_2": [
+    "Die Gestalt bleibt im Regen knien. Kuze sieht dem Abt ins Gesicht. „Ich war sein Sekundant. Ich habe das noch nie laut gesagt.“\n\nDer Abt nickt. „Jetzt schon. Dort an der Gabelung muss der Bambus ausgelichtet werden.“",
+    "The figure stays kneeling in the rain. Kuze looks the abbot in the face. “I was his second. I have never said it aloud.”\n\n“You have now,” says the abbot. “Thin the bamboo at the fork.”",
+    "A figura fica de joelhos à chuva. Kuze olha o abade de frente. «Fui o seu assistente na cerimónia. Nunca o tinha dito em voz alta.»\n\n«Agora já disseste», responde o abade. «Desbasta o bambu na bifurcação.»"
+  ],
+  "intro_3": [
+    "Am anderen Ende des Würfels sitzt jemand mit Kuzes Schultern.\n\n„Willst du, dass die Hand wieder ruhig wird? Oder willst du einen Grund, fernzubleiben?“\n\n„Ich will Oba tot sehen.“\n\nDer Doppelgänger zieht eine Bambusstange aus Kuzes Schwertscheide. „Weiß dein Sohn davon?“",
+    "Someone with Kuze’s shoulders sits on the far side of the cube.\n\n“Do you want the hand cured? Or do you want a reason to stay away?”\n\n“I want Oba dead.”\n\nThe Double draws a length of bamboo from Kuze’s scabbard. “Does your son know?”",
+    "Do outro lado do cubo senta-se alguém com os ombros de Kuze.\n\n«Queres recuperar a mão? Ou queres um motivo para ficar longe?»\n\n«Quero que Oba morra.»\n\nO Duplo tira uma vara de bambu da bainha de Kuze. «O teu filho sabe?»"
+  ],
+  "win_3": [
+    "„Und was tust du in der elften Nacht?“, fragt der Doppelgänger und rückt zur Seite.\n\n„Ich weiß es nicht.“\n\nDer Abt bindet die Bohnen hoch. „Gut. Dann lass die Frage noch eine Weile offen.“",
+    "“And on the eleventh night?” asks the Double, moving aside.\n\n“I do not know.”\n\nThe abbot ties the beans to their stakes. “Good. Keep not knowing for a while.”",
+    "«E que farás na décima primeira noite?», pergunta o Duplo, afastando-se.\n\n«Não sei.»\n\nO abade ata os feijoeiros às estacas. «Ainda bem. Deixa a pergunta em aberto mais algum tempo.»"
+  ],
+  "intro_4": [
+    "Im Herbst stellt Kuze eine volle Teetasse auf seinen Handrücken. Kein Tropfen fällt. Mit den Rettichen kommt ein Bündel von Ibuki. Vierzehn Männer haben das alte Schwert zurückgekauft. Shin hat es die letzten Meilen getragen.\n\n„Spürst du das? Kein Zittern“, sagt der Rote. „Endlich sind wir wieder ganz.“",
+    "In autumn, Kuze balances a full cup on the back of his hand. Nothing spills. A bundle from Ibuki arrives with the radishes. Fourteen men bought back his old sword. Shin carried it the last miles himself.\n\n“Feel that? No shake,” says the Red One. “We are whole again.”",
+    "No outono, Kuze equilibra uma chávena cheia nas costas da mão. Nem uma gota cai. Com os nabos chega um embrulho de Ibuki. Catorze homens recompraram a velha espada. Shin trouxe-a nas últimas milhas.\n\n«Sentes? Já não treme», diz o Rubro. «Voltámos a estar inteiros.»"
+  ],
+  "win_4": [
+    "Der Rote verneigt sich. Über dem Tempeldach steigt der Mond auf.\n\n„Ich bleibe hier“, sagt er. „Ich komme mit dir.“",
+    "The Red One bows. The moon rises over the temple roof.\n\n“I am going nowhere,” it says. “I am coming with you.”",
+    "O Rubro inclina-se. A lua ergue-se por cima do telhado do templo.\n\n«Fico aqui», diz ele. «Vou contigo.»"
+  ],
+  "intro_5": [
+    "Der Mann gegenüber trägt das Wappen der Tsukihara. Kuze erkennt seine Rüstung und das Gesicht, das er mit fünfundzwanzig hatte.\n\n„Kuze Tadanobu. Lord Tsukihara gab dir den Namen selbst. Ein-Schnitt-Kuze. Sag ihn laut. Vierzehn Männer haben ihn zurückgekauft.“",
+    "The man across the cube wears the Tsukihara crest. Kuze recognises his armour and the face he had at twenty-five.\n\n“Kuze Tadanobu. Named by Lord Tsukihara’s own mouth. One-Cut Kuze. Say it aloud. Fourteen men bought that name back.”",
+    "O homem do outro lado do cubo ostenta o brasão dos Tsukihara. Kuze reconhece a sua armadura e o rosto que tinha aos vinte e cinco anos.\n\n«Kuze Tadanobu. Foi o senhor Tsukihara quem te deu o nome. Kuze de Um Só Golpe. Diz o nome em voz alta. Catorze homens compraram-no de volta.»"
+  ],
+  "win_5": [
+    "„Zen-Meister“, sagt der Name und verneigt sich. „Furchtlos, wie in den Geschichten.“ Kuze nimmt das Schwert und geht zum Tor.\n\n„Willst du mich aufhalten?“, fragt er den Abt.\n\n„Ich bin ein alter Mann mit einem Rechen. Wenn du dort ankommst, dreh um, was vor dir steht. Schau auf die andere Seite.“",
+    "“Zen Master,” says the Name, bowing. “Fearless, as the stories promised.” Kuze takes his sword to the gate.\n\n“Will you stop me?” he asks the abbot.\n\n“I am an old man with a rake. When you get there, turn whatever is in front of you. Look at the other side.”",
+    "«Mestre Zen», diz o Nome, inclinando-se. «Sem medo, como nas histórias.» Kuze leva a espada até ao portão.\n\n«Vais impedir-me?», pergunta ao abade.\n\n«Sou um velho com um ancinho. Quando lá chegares, roda o que tiveres à tua frente. Vê o outro lado.»"
+  ],
+  "intro_6": [
+    "Am Tor von Ratsherr Oba fällt der erste Schnee. Ibuki und Shin warten mit den anderen. Ein alter Mann schiebt die Tür auf und hebt eine Lampe. Im Steinwürfel spiegelt sich der Rote.\n\n„Ein Schnitt. Dann bist du wieder sein Vater.“\n\nDu hast 22 Sekunden pro Zug. Ein Sieg führt zur Ruhigen Hand. Niederlage, Zeitablauf und Unentschieden führen zur Roten Hand. Das Ergebnis wird gespeichert. Du kannst die Partie unterbrechen und später an derselben Stelle fortsetzen.",
+    "The first snow falls at Councillor Oba’s gate. Ibuki and Shin wait with the others. An old man slides the door open and holds up a lamp. The stone cube reflects the Red One.\n\n“One cut. Then you are his father again.”\n\nYou have 22 seconds per turn. Win to take the Still Hand path. A loss, timeout or draw leads to the Red Hand. The result is saved. You can leave and resume the same match.",
+    "A primeira neve cai junto ao portão do conselheiro Oba. Ibuki e Shin esperam com os outros. Um velho abre a porta de correr e ergue um candeeiro. O cubo de pedra reflete o Rubro.\n\n«Um golpe. Depois voltas a ser pai dele.»\n\nTens 22 segundos por jogada. Uma vitória leva-te à Mão Serena. A derrota, o fim do tempo ou o empate conduzem à Mão Rubra. O resultado fica guardado. Podes sair e retomar a mesma partida."
+  ],
+  "night_still": ["Die Ruhige Hand", "The Still Hand", "A Mão Serena"],
+  "night_red": ["Die Rote Hand", "The Red Hand", "A Mão Rubra"],
+  "night_story_still": [
+    "Kuze lässt die Hand offen und stellt sich in die Tür. Ibuki verwundet die Hand, als er sich vorbeidrängt, und fällt vor Obas Wachen. Oba überlebt. Die anderen werden auf die nördlichen Inseln verbannt.\n\n„Ich habe keinen Vater“, sagt Shin, als sie ihn abführen. „Schreibt mir nicht.“",
+    "Kuze keeps his hand open and stands in the doorway. Ibuki wounds it trying to pass and falls to Oba’s guards. Oba survives. The others are sent into exile on the northern islands.\n\n“I have no father,” says Shin as they lead him away. “Do not write.”",
+    "Kuze mantém a mão aberta e coloca-se à porta. Ibuki fere-lhe a mão ao tentar passar e cai perante os guardas de Oba. Oba sobrevive. Os restantes são exilados nas ilhas do norte.\n\n«Não tenho pai», diz Shin enquanto o levam. «Não me escrevais.»"
+  ],
+  "night_story_red": [
+    "Kuzes Hand schließt sich um den Griff. Oba stirbt. Ibuki schickt Kuze fort. Er und die anderen warten auf den Magistrat.\n\nBeim ersten schweren Schnee kommt das Urteil. Dreizehn Männer sollen sterben. Shin wird wegen seiner Jugend verbannt. Als Kuze geht, nennt Shin ihn zum ersten Mal seit Jahren wieder Vater.",
+    "Kuze’s hand closes on the hilt. Oba dies. Ibuki sends Kuze away and waits for the magistrate with the others.\n\nThe sentence arrives with the first heavy snow. Thirteen men are to die. Shin is exiled for his youth. As Kuze leaves, Shin calls him father for the first time in years.",
+    "Kuze fecha a mão no punho da espada. Oba morre. Ibuki manda Kuze embora e espera pelo magistrado com os outros.\n\nA sentença chega com a primeira grande queda de neve. Treze homens vão morrer. Shin é exilado por ser jovem. Quando Kuze parte, Shin chama-lhe pai pela primeira vez em anos."
+  ],
+  "intro_7_still": [
+    "Mit verbundener Hand kehrt Kuze zum Bergtempel zurück. Der Abt öffnet das Tor. „Am Rand ist der Teich zugefroren.“\n\nDort sitzt Lord Tsukihara. „Tadanobu. Ich habe dir den Namen gegeben. Ihn lässt du leben, und mich hast du enthauptet.“\n\nDer Herr setzt zuerst. Kuze spielt O.",
+    "With his hand bound, Kuze returns to the mountain temple. The abbot opens the gate. “The pond has frozen at the edge.”\n\nLord Tsukihara is waiting there. “Tadanobu. I gave you that name. Him you spare, and me you cut.”\n\nThe Lord moves first. Kuze plays O.",
+    "Com a mão ligada, Kuze volta ao templo da montanha. O abade abre o portão. «O lago gelou junto à margem.»\n\nO senhor Tsukihara espera por ele. «Tadanobu. Fui eu que te dei esse nome. A ele poupaste, a mim cortaste.»\n\nO Senhor joga primeiro. Kuze joga com O."
+  ],
+  "intro_7_red": [
+    "Kuze kehrt im Schnee zurück. „Dreizehn Männer werden dafür sterben.“ Der Abt lässt ihn ein.\n\nAm Teich wartet Lord Tsukihara. „Ein sauberer Schnitt. Dreizehn sind auf dem Weg zu mir. Nun komm.“\n\n„Auf einer Insel sitzt ein Junge“, sagt Kuze. Der Herr setzt zuerst. Kuze spielt O.",
+    "Kuze returns through the snow. “Thirteen men are going to die for it.” The abbot lets him in.\n\nLord Tsukihara waits by the pond. “A clean cut. Thirteen are on the road to me. Now come.”\n\n“There is a boy on an island,” Kuze says. The Lord moves first. Kuze plays O.",
+    "Kuze regressa pela neve. «Treze homens vão morrer por isso.» O abade deixa-o entrar.\n\nO senhor Tsukihara espera junto ao lago. «Um golpe perfeito. Treze estão a caminho. Vem.»\n\n«Há um rapaz numa ilha», diz Kuze. O Senhor joga primeiro. Kuze joga com O."
+  ],
+  "win_7": [
+    "„Dann gib den Namen zurück.“\n\nKuze verbeugt sich. „Nehmt ihn. Ich kann ihn nicht tragen.“\n\n„Wer kniet dann vor mir?“\n\n„Ich weiß es nicht.“ Auf dem Eis zeichnen sich weitere Gestalten ab.",
+    "“Give the name back, then.”\n\nKuze bows. “Take it. I cannot carry it.”\n\n“Then who is kneeling there?”\n\n“I do not know.” More figures take shape on the ice.",
+    "«Então devolve o nome.»\n\nKuze inclina-se. «Levai-o. Já não o consigo carregar.»\n\n«Então quem está aí de joelhos?»\n\n«Não sei.» Surgem mais figuras sobre o gelo."
+  ],
+  "intro_8_still": [
+    "Ein junger Duellant kniet am gefrorenen Teich. Sein Stand war gut. Kuze erinnert sich. Neben ihm setzt sich Ibuki mit zerrissenem Ärmel.\n\n„Du hast mich nicht geschnitten“, sagt Ibuki. „Du standest einfach in der Tür.“",
+    "A young duellist kneels by the frozen pond. He had a good stance. Kuze remembers. Ibuki sits beside him, his sleeve torn.\n\n“You did not cut me,” says Ibuki. “You only stood in the door.”",
+    "Um jovem duelista ajoelha-se junto ao lago gelado. Tinha uma boa postura. Kuze lembra-se. Ibuki senta-se ao seu lado, com a manga rasgada.\n\n«Não me cortaste», diz Ibuki. «Ficaste à porta.»"
+  ],
+  "intro_8_red": [
+    "Ein junger Duellant kniet am gefrorenen Teich. Neben ihm hält Oba eine Lampe. „Ich habe einen Brief geschrieben.“\n\nIbuki und zwölf andere nehmen Platz. „Wir haben auf den Magistrat gewartet. Hast du ihm gesagt, dass es getan ist?“",
+    "A young duellist kneels by the frozen pond. Oba holds a lamp beside him. “I wrote a letter.”\n\nIbuki and twelve others sit down. “We waited for the magistrate. Did you tell our lord it was done?”",
+    "Um jovem duelista ajoelha-se junto ao lago gelado. Oba segura um candeeiro ao seu lado. «Escrevi uma carta.»\n\nIbuki e outros doze sentam-se. «Esperámos pelo magistrado. Disseste ao nosso senhor que estava feito?»"
+  ],
+  "reveal_title": ["Die letzten Worte", "The Last Words", "As Últimas Palavras"],
+  "reveal_story_still": [
+    "„Setz dich dorthin, wo ich saß“, sagt sein Herr. In der Spiegelung des Teichs hört Kuze die Worte wieder. „Kümmere dich um sie.“\n\n„Wer hat den Vierzehn gesagt, dass ich Blut wollte?“\n\n„Ich“, sagt Kuze. „Ibuki fragte. Ich ertrug es nicht, dass eure Worte so sanft waren.“\n\nIbuki blickt auf. „Wofür bin ich dann gestorben?“\n\n„Für Worte, die ich ihm in den Mund gelegt habe.“",
+    "“Sit where I sat,” says his lord. Kuze hears the words again in the reflection of the pond. “Look after them.”\n\n“Who told fourteen men I asked for blood?”\n\n“I did,” says Kuze. “Ibuki asked. I could not bear that the words had been gentle.”\n\nIbuki looks up. “Then what did I die for?”\n\n“For words I put in his mouth.”",
+    "«Senta-te onde eu me sentei», diz-lhe o senhor. No reflexo do lago, Kuze volta a ouvir as palavras. «Cuida deles.»\n\n«Quem disse a catorze homens que eu queria sangue?»\n\n«Fui eu», diz Kuze. «Ibuki perguntou-me. Não suportei que as palavras tivessem sido tão brandas.»\n\nIbuki ergue os olhos. «Então morri porquê?»\n\n«Por palavras que lhe pus na boca.»"
+  ],
+  "reveal_story_red": [
+    "„Setz dich dorthin, wo ich saß“, sagt sein Herr. Kuze hört seine letzten Worte wieder. „Kümmere dich um sie.“\n\n„Du hast nie verlangt, dass ich dich räche“, sagt Kuze. „Das habe ich den Vierzehn erzählt. Ich ertrug deine Worte nicht.“\n\nSein Herr blickt zu den Erschlagenen. „Einer ist dir geblieben. Der Junge. Kümmere dich um ihn.“",
+    "“Sit where I sat,” says his lord. Kuze hears his last words again. “Look after them.”\n\n“You never asked me to avenge you,” Kuze says. “I told the fourteen that. I could not bear what you said.”\n\nHis lord looks at the Slain. “One of them is left to you. The boy. Look after him.”",
+    "«Senta-te onde eu me sentei», diz-lhe o senhor. Kuze volta a ouvir as suas últimas palavras. «Cuida deles.»\n\n«Nunca me pedistes vingança», diz Kuze. «Fui eu que o disse aos catorze. Não consegui aceitar as vossas palavras.»\n\nO senhor olha para os Caídos. «Ainda te resta um. O rapaz. Cuida dele.»"
+  ],
+  "win_8": [
+    "Die Erschlagenen verneigen sich. Der Abt stellt eine Tasse vor den jungen Duellanten. „Er mochte den Tee nie heiß. Er war mein Sohn. Am Tor habe ich dich an deinem Gang erkannt.“\n\nKuze schaut auf sein Schwert. „Was mache ich damit?“\n\n„Der Schmied im Dorf macht gute Sicheln.“",
+    "The Slain bow. The abbot sets a cup before the young duellist. “He never liked it hot. He was my son. I knew you at the gate by your walk.”\n\nKuze looks at the sword. “What do I do with it?”\n\n“The smith in the village makes good sickles.”",
+    "Os Caídos inclinam-se. O abade põe uma chávena diante do jovem duelista. «Nunca gostou de chá quente. Era meu filho. Reconheci-te pelo andar, ao portão.»\n\nKuze olha para a espada. «Que faço com ela?»\n\n«O ferreiro da aldeia faz boas foices.»"
+  ],
+  "intro_9_still": [
+    "Über den Wolken wartet ein Abt im goldenen Licht. Neben ihm lächeln Ibuki und Kuzes Frau.\n\n„Alle haben dir vergeben. Dein Sohn versteht es jetzt. Er wartet am Ufer.“",
+    "Above the clouds an abbot waits in golden light. Ibuki and Kuze’s wife stand beside him, smiling.\n\n“Everyone has forgiven you. Your son understands now. He is waiting on the shore.”",
+    "Acima das nuvens espera um abade, banhado em luz dourada. Ibuki e a mulher de Kuze sorriem ao seu lado.\n\n«Todos te perdoaram. O teu filho já compreende. Espera por ti na margem.»"
+  ],
+  "intro_9_red": [
+    "Über den Wolken erwartet ihn ein goldenes Morgenlicht. Eine freundliche Stimme zählt all die Menschen auf, denen Kuze noch etwas schuldet.\n\n„Sie haben dir vergeben. Dein Sohn braucht es nie zu erfahren. Warum solltest du ihn damit verletzen?“",
+    "A golden dawn waits above the clouds. A kindly voice names everyone Kuze still owes.\n\n“They have forgiven you. Your son need never know. Why hurt him with it?”",
+    "Acima das nuvens espera-o uma aurora dourada. Uma voz bondosa enumera as pessoas a quem Kuze ainda deve alguma coisa.\n\n«Perdoaram-te. O teu filho nunca precisa de saber. Para quê magoá-lo com isso?»"
+  ],
+  "win_9": [
+    "„Dir ist vergeben“, flüstert die Stimme. „Die Reise ist vorbei.“\n\nKuze sieht die Frau im goldenen Licht an. „Meine Frau hat nie so gelächelt. Sie hatte Hunger.“ Das Gold weicht einem kalten Sonnenaufgang.",
+    "“You are forgiven,” whispers the voice. “The path is complete.”\n\nKuze looks at the woman in the gold light. “My wife never smiled like that. She was hungry.” The gold drains into a cold sunrise.",
+    "«Estás perdoado», sussurra a voz. «A viagem acabou.»\n\nKuze olha para a mulher na luz dourada. «A minha mulher nunca sorriu assim. Tinha fome.» O dourado cede a um amanhecer frio."
+  ],
+  "intro_10_still": [
+    "Kuze erkennt sein Gesicht. Der Mann hat erst die Rüstung des Duellanten an, dann das schlichte Gewand des Sekundanten.\n\n„Ich bin Ein-Schnitt-Kuze. Ich habe meinem Herrn Worte in den Mund gelegt. Ich bin der Mann an der Tür. Mein Sohn nennt mich Feigling.“",
+    "Kuze recognises his own face. The man wears the duellist’s armour, then the plain clothes of the second.\n\n“I am One-Cut Kuze. I put words in a dead man’s mouth. I am the man in the doorway. My son calls me a coward.”",
+    "Kuze reconhece o próprio rosto. O homem veste primeiro a armadura do duelista, depois o traje simples do assistente da cerimónia.\n\n«Sou Kuze de Um Só Golpe. Pus palavras na boca de um morto. Sou o homem à porta. O meu filho chama-me cobarde.»"
+  ],
+  "intro_10_red": [
+    "Kuze erkennt sein Gesicht. Der Mann hat erst die Rüstung des Duellanten an, dann das schlichte Gewand des Sekundanten.\n\n„Ich bin Ein-Schnitt-Kuze. Ich habe meinem Herrn Worte in den Mund gelegt. Ich bin der Held der elften Nacht. Mein Sohn nennt mich Vater.“",
+    "Kuze recognises his own face. The man wears the duellist’s armour, then the plain clothes of the second.\n\n“I am One-Cut Kuze. I put words in a dead man’s mouth. I am the hero of the eleventh night. My son calls me father.”",
+    "Kuze reconhece o próprio rosto. O homem veste primeiro a armadura do duelista, depois o traje simples do assistente da cerimónia.\n\n«Sou Kuze de Um Só Golpe. Pus palavras na boca de um morto. Sou o herói da décima primeira noite. O meu filho chama-me pai.»"
+  ],
+  "win_10": [
+    "„Welcher davon bist du?“, fragt der Mann.\n\n„Der, der hier sitzt.“ Beide verneigen sich. Als Kuze aufblickt, ist das Kissen gegenüber leer.\n\nAm Tor drückt Natsu ihm einen kleinen Holzwürfel in die Hand. „Für deinen Jungen. Sag ihm, dass der alte Mann oft verliert.“",
+    "“Which one are you?” the man asks.\n\n“The one who is sitting here.” They bow. When Kuze looks up, the cushion across from him is empty.\n\nAt the gate, Natsu puts a wooden cube in his hand. “For your boy. Tell him the old man loses a lot.”",
+    "«Qual deles és tu?», pergunta o homem.\n\n«O que está aqui sentado.» Inclinaram-se os dois. Quando Kuze ergue os olhos, a almofada em frente está vazia.\n\nAo portão, Natsu põe-lhe um cubo de madeira na mão. «Para o teu rapaz. Diz-lhe que o velho perde muitas vezes.»"
+  ],
+  "intro_11_still": [
+    "Ein Jahr später flickt Shin auf der Insel ein Netz. „Ich habe Euch gesagt, Ihr sollt mir nicht schreiben.“\n\n„Ich habe dir nicht geschrieben. Ich bin gekommen.“ Kuze setzt sich. „Unser Herr sagte: Kümmere dich um sie. Ich habe den anderen etwas anderes erzählt. Ibuki ist deshalb gestorben.“\n\nShin schaut auf den Holzwürfel. „Ich nehme die Kreuze.“\n\nSpielt zu zweit am selben Gerät. Shin setzt X, Kuze setzt O.",
+    "A year later, Shin is mending a net on the island. “I told you not to write.”\n\n“I did not write. I walked.” Kuze sits down. “Our lord said, ‘Look after them.’ I told everyone something else. Ibuki died of it.”\n\nShin looks at the wooden cube. “Crosses.”\n\nPlay together on the same device. Shin plays X and Kuze plays O.",
+    "Um ano depois, Shin remenda uma rede na ilha. «Pedi-vos que não me escrevêsseis.»\n\n«Não escrevi. Vim.» Kuze senta-se. «O nosso senhor disse: cuida deles. Eu contei outra coisa aos restantes. Ibuki morreu por isso.»\n\nShin olha para o cubo de madeira. «Fico com as cruzes.»\n\nJoguem os dois no mesmo dispositivo. Shin joga com X e Kuze com O."
+  ],
+  "intro_11_red": [
+    "Ein Jahr später flickt Shin auf der Insel ein Netz. „Vater! Erzählt ihnen, was Ihr in jener Nacht getan habt.“\n\nKuze setzt sich. „Ich erzähle es zuerst dir. Unser Herr sagte: Kümmere dich um sie. Die anderen Worte waren meine. Dreizehn Männer sind deshalb gestorben.“\n\nShin bleibt. Er schaut auf den Holzwürfel. „Ich nehme die Kreuze.“\n\nSpielt zu zweit am selben Gerät. Shin setzt X, Kuze setzt O.",
+    "A year later, Shin is mending a net on the island. “Father! Tell them what you did that night.”\n\nKuze sits down. “I will tell you first. Our lord said, ‘Look after them.’ The other words were mine. Thirteen men died of them.”\n\nShin stays. He looks at the wooden cube. “Crosses.”\n\nPlay together on the same device. Shin plays X and Kuze plays O.",
+    "Um ano depois, Shin remenda uma rede na ilha. «Pai! Contai-lhes o que fizestes naquela noite.»\n\nKuze senta-se. «Conto-te primeiro a ti. O nosso senhor disse: cuida deles. As outras palavras foram minhas. Treze homens morreram por elas.»\n\nShin fica. Olha para o cubo de madeira. «Fico com as cruzes.»\n\nJoguem os dois no mesmo dispositivo. Shin joga com X e Kuze com O."
+  ],
+  "complete_story": [
+    "Am Ufer nimmt Shin die Steine vom Würfel. Dann schiebt er einen zu Kuze.\n\n„Noch einmal.“",
+    "On the shore, Shin lifts the stones from the cube. Then he slides one towards Kuze.\n\n“Again.”",
+    "Na margem, Shin tira as pedras do cubo. Depois desliza uma para Kuze.\n\n«Outra vez.»"
+  ],
+  "loss_0": ["Der Abt wartet, bis der Garten wieder still ist. „Noch einmal.“", "The abbot waits for the garden to fall quiet. “Again.”", "O abade espera que o jardim volte a ficar em silêncio. «Outra vez.»"],
+  "loss_1": ["Der Hungrige rückt die Schale näher. „Setz dich. Es ist noch Reis da.“", "The Hungry One moves the bowl closer. “Sit. There is rice left.”", "O Faminto aproxima a tigela. «Senta-te. Ainda há arroz.»"],
+  "loss_2": ["Der Abt sieht auf den Würfel. „Er versperrt jeden Weg. Was baut er selbst?“", "The abbot studies the cube. “It blocks every road. What does it build?”", "O abade observa o cubo. «Ele fecha todos os caminhos. Que caminho abre para si?»"],
+  "loss_3": ["„Wolltest du ihn um Erlaubnis fragen?“, fragt der Abt. „Setz dich wieder.“", "“Were you asking its permission?” says the abbot. “Sit again.”", "«Estavas a pedir-lhe licença?», pergunta o abade. «Volta a sentar-te.»"],
+  "loss_4": ["Der Abt schenkt Tee ein. „Du hattest es eilig. Das gefällt ihm.“", "The abbot pours tea. “You hurried. It likes that.”", "O abade serve o chá. «Tiveste pressa. Ele gosta disso.»"],
+  "loss_5": ["Der Name betrachtet die eigene Linie. „Sie werden noch in hundert Jahren davon erzählen.“", "The Name admires his line. “They will tell it for a hundred years.”", "O Nome admira a própria linha. «Contarão isto daqui a cem anos.»"],
+  "loss_7": ["„Er steht über dir“, sagt der Abt. „Setz dich wieder.“", "“He outranks you,” says the abbot. “Sit again.”", "«Está acima de ti», diz o abade. «Volta a sentar-te.»"],
+  "loss_8": ["„Sie haben es nicht eilig“, sagt der Abt. „Dreh den Würfel und schau noch einmal hin.“", "“They are in no hurry,” says the abbot. “Turn the cube and look again.”", "«Não têm pressa», diz o abade. «Roda o cubo e volta a olhar.»"],
+  "loss_9": ["Das Gold flimmert. „Du hast dem einfachen Zug geglaubt“, sagt der Abt.", "The gold flickers. “You believed the easy move,” says the abbot.", "O dourado tremeluz. «Acreditaste na jogada fácil», diz o abade."],
+  "loss_10": ["Dein Gegenüber legt den Stein zurück. „Ich wusste, dass du dort setzen würdest.“", "The man across from you sets the stone down. “I knew you would play there.”", "O homem do outro lado pousa a pedra. «Sabia que ias jogar ali.»"],
+  "draw_story": ["Beide Seiten sind verstummt. Der Abt wartet, bis Kuze den ersten Stein für die nächste Partie in die Hand nimmt.", "Both players sit in silence. The abbot waits for Kuze to pick up the first stone of the next match.", "Os dois ficam em silêncio. O abade espera que Kuze pegue na primeira pedra da próxima partida."],
+  "quote_0": ["„Hast du das gehört?“", "“Did you hear that?”", "«Ouviste isso?»"],
+  "quote_1": ["„Ich war gerade dabei.“", "“I was using that.”", "«Estava a usar isso.»"],
+  "quote_2": ["„Beide kann ich nicht halten.“", "“I cannot hold both.”", "«Não consigo travar as duas.»"],
+  "quote_3": ["„Bist du sicher?“", "“Are you sure?”", "«Tens a certeza?»"],
+  "quote_4": ["„Schneller. Schneller.“", "“Faster. Faster.”", "«Mais depressa. Mais depressa.»"],
+  "quote_5": ["„Lauter.“", "“Louder.”", "«Mais alto.»"],
+  "quote_6": ["„Für sie. Für ihn. Für deinen Namen.“", "“For her. For him. For your name.”", "«Por ela. Por ele. Pelo teu nome.»"],
+  "quote_7": ["„Ein Gefolgsmann zieht nach seinem Herrn.“", "“A retainer does not move before his lord.”", "«Um vassalo joga depois do seu senhor.»"],
+  "quote_8": ["„Du wirst ihn drehen müssen.“", "“You will have to turn it.”", "«Vais ter de o rodar.»"],
+  "quote_9": ["„Dort. Den Zug kann ich dir abnehmen.“", "“There. That one. Let me carry it for you.”", "«Ali. Essa jogada. Deixa-me fazê-la por ti.»"],
+  "quote_10": ["„Da fängst du immer an.“", "“You always start there.”", "«Começas sempre aí.»"],
+  "quote_11": ["„Ich nehme die Kreuze.“", "“Crosses.”", "«Fico com as cruzes.»"],
+  "resume_story": ["Deine Steine liegen noch dort, wo du sie zurückgelassen hast.", "The stones are where you left them.", "As pedras continuam onde as deixaste."],
+  "next": ["Weiter", "Continue", "Continuar"],
+  "begin": ["Kampf beginnen", "Begin battle", "Começar o combate"],
+  "start_epilogue": ["Partie zu zweit beginnen", "Start a two-player match", "Começar a partida a dois"],
+  "again": ["Erneut versuchen", "Try again", "Tentar novamente"],
+  "resume": ["Partie fortsetzen", "Resume match", "Retomar a partida"],
+  "leave": ["Zur Kampagnenübersicht", "Back to campaign overview", "Voltar à campanha"],
+  "result_win": ["Du hast den Dämon besiegt", "You defeated the demon", "Venceste o demónio"],
+  "result_loss": ["Der Dämon gewinnt", "The demon wins", "O demónio venceu"],
+  "result_draw": ["Unentschieden", "Draw", "Empate"],
+  "result_timeout": ["Zeit abgelaufen", "Time is up", "O tempo acabou"],
+  "result_local": ["%s gewinnt", "%s wins", "%s venceu"],
+  "your_turn": ["Du bist am Zug · %s", "Your turn · %s", "É a tua vez · %s"],
+  "bot_turn": ["%s ist am Zug · %s", "%s to play · %s", "%s joga · %s"],
+  "move_count": ["Zug %d", "Move %d", "Jogada %d"],
+  "turn_clock": ["Noch %d Sek.", "%d sec left", "Faltam %d s"],
+  "controls": ["Ziehen zum Drehen · Tippen zum Setzen", "Drag to rotate · Tap to place", "Arrasta para rodar · Toca para jogar"],
+  "save_error": ["Speichern ist fehlgeschlagen. Prüfe den Gerätespeicher und versuche es erneut.", "Could not save. Check device storage and try again.", "Não foi possível guardar. Verifica o espaço no dispositivo e tenta novamente."],
+  "read_ending": ["Epilog lesen", "Read the epilogue", "Ler o epílogo"]
+}

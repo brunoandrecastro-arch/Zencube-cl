@@ -8,6 +8,7 @@ const STORY_LANG_FILE = "res://story/localization.json"
 const GOLD = Color(0.86, 0.72, 0.47)
 const CREAM = Color(0.98, 0.94, 0.84)
 const MUTED = Color(0.75, 0.78, 0.77)
+const Campaign = preload("res://story/ZenCampaign.gd")
 # German is the authored source language; EN and PT-PT live in a separate JSON.
 const UI_DE: Dictionary = {
     "library_tip": "Zen-Chroniken",
@@ -42,6 +43,10 @@ var _next_button: Button
 var _touch_start: Vector2 = Vector2.ZERO
 var _preview_all: bool = false
 var _show_quick: bool = true
+var _screen_name := ""
+var _campaign_board_active := false
+var _campaign_cancel: Callable
+var _campaign_error: Label
 
 func _ready() -> void:
     layer = 90
@@ -183,6 +188,7 @@ func _make_button(value: String, parent: Node, callback: Callable) -> Button:
 
 func _make_screen() -> VBoxContainer:
     if _screen != null:
+        _screen.hide()
         _screen.queue_free()
         _screen = null
     _screen = ColorRect.new()
@@ -215,21 +221,29 @@ func _chapter_accessible(i: int) -> bool:
 func open_library() -> void:
     _sync_language()
     _active_chapter = -1
+    _screen_name = "library"
     var outer := _make_screen()
     var head := HBoxContainer.new()
     outer.add_child(head)
     var heading := _make_label(_t("library_header"), head, 24, GOLD)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
+    _make_button(Campaign.text_for(_active_language, "hub_play"), outer, open_campaign_overview)
+    _make_button(Campaign.text_for(_active_language, "hub_read"), outer, open_comic_library)
+
+func open_comic_library() -> void:
+    _sync_language()
+    _active_chapter = -1
+    _screen_name = "comics"
+    var outer := _make_screen()
+    var head := HBoxContainer.new()
+    outer.add_child(head)
+    _make_button("‹", head, open_library)
+    var heading := _make_label(_t("library_header"), head, 24, GOLD)
+    heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _make_button("✕", head, close_chronicles)
     _make_label(_t("tagline"), outer, 15, MUTED)
     _make_label(_t("summary"), outer, 13, MUTED)
-    # A second entry INSIDE Zen Chronicles, not a replacement for the five comics.
-    var campaign_title: String = str({
-        "de": "⚔ Zen Campaign · Spielen",
-        "en": "⚔ Zen Campaign · Play",
-        "pt": "⚔ Zen Campaign · Jogar"
-    }.get(_active_language, "⚔ Zen Campaign · Play"))
-    _make_button(campaign_title, outer, _launch_campaign)
     var line := HSeparator.new()
     outer.add_child(line)
     var scroll := ScrollContainer.new()
@@ -240,7 +254,6 @@ func open_library() -> void:
     cards.add_theme_constant_override("separation", 12)
     scroll.add_child(cards)
     for i in range(_chapters.size()):
-        var entry: Dictionary = _chapters[i]
         var unlocked: bool = _chapter_accessible(i)
         var card := PanelContainer.new()
         card.add_theme_stylebox_override("panel", _style(Color(0.12, 0.18, 0.20), 14))
@@ -261,11 +274,11 @@ func open_chapter(i: int) -> void:
         return
     _active_chapter = i
     _active_page = 0
-    var entry: Dictionary = _chapters[i]
+    _screen_name = "reader"
     var outer := _make_screen()
     var top := HBoxContainer.new()
     outer.add_child(top)
-    _make_button("‹", top, open_library)
+    _make_button("‹", top, open_comic_library)
     var head := _make_label(_t("reader_row") % [_chapter_field(i, "world"), i + 1], top, 20, GOLD)
     head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", top, close_chronicles)
@@ -329,18 +342,29 @@ func _turn_page(dir: int) -> void:
     var pages: Array = _chapters[_active_chapter].get("pages", [])
     var next: int = _active_page + dir
     if next >= pages.size():
-        open_library()
+        open_comic_library()
         return
     _active_page = clampi(next, 0, pages.size()-1)
     _update_page()
 
 func close_chronicles() -> void:
     _active_chapter = -1
+    _screen_name = ""
+    _campaign_cancel = Callable()
+    _campaign_error = null
     if _screen != null:
+        _screen.hide()
         _screen.queue_free()
         _screen = null
     if _quick_button != null:
-        _quick_button.visible = _show_quick
+        _quick_button.visible = _show_quick and not _campaign_board_active
+
+func set_campaign_board_active(active: bool) -> void:
+    _campaign_board_active = active
+    _quick_button.visible = _show_quick and not active and _screen == null
+
+func is_open() -> bool:
+    return _screen != null
 
 func _input(event: InputEvent) -> void:
     if _screen == null:
@@ -355,10 +379,16 @@ func _input(event: InputEvent) -> void:
                 get_viewport().set_input_as_handled()
     if event is InputEventKey and event.pressed and not event.echo:
         if event.keycode == KEY_ESCAPE:
-            if _active_chapter >= 0:
-                open_library()
-            else:
-                close_chronicles()
+            match _screen_name:
+                "reader":
+                    open_comic_library()
+                "comics", "campaign":
+                    open_library()
+                "campaign_story":
+                    if _campaign_cancel.is_valid():
+                        _campaign_cancel.call()
+                _:
+                    close_chronicles()
             get_viewport().set_input_as_handled()
         elif _active_chapter >= 0 and event.keycode == KEY_RIGHT:
             _turn_page(1)
@@ -367,11 +397,125 @@ func _input(event: InputEvent) -> void:
             _turn_page(-1)
             get_viewport().set_input_as_handled()
 
-# The interactive campaign uses GameController's existing real 3D board.
+func open_campaign_overview() -> void:
+    _sync_language()
+    _active_chapter = -1
+    _screen_name = "campaign"
+    var progress := Campaign.load_progress()
+    var stage: int = progress.stage
+    var current_chapter := Campaign.chapter_for(stage)
+    var outer := _make_screen()
+    _screen.color = Color("#14171a")
+    var nav := HBoxContainer.new()
+    nav.add_theme_constant_override("separation", 12)
+    outer.add_child(nav)
+    _make_button("‹", nav, open_library).custom_minimum_size.x = 46
+    var title := _make_label(Campaign.text_for(_active_language, "title"), nav, 30, GOLD)
+    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _make_button("✕", nav, close_chronicles).custom_minimum_size.x = 46
+
+    var content := _campaign_scroll(outer)
+    # The poster carries German lettering. Its artwork crops cleanly for the three locales.
+    _campaign_picture(content, Campaign.POSTER, 178, Rect2(0, 0, 820, 455))
+    _make_label(Campaign.text_for(_active_language, "tagline"), content, 16, CREAM)
+    var action := "start_campaign" if not bool(progress.prologue_seen) else "continue_campaign"
+    if stage == Campaign.COMPLETE:
+        action = "read_ending"
+    _campaign_primary(Campaign.text_for(_active_language, action), content, _launch_campaign)
+    _make_label(Campaign.text_for(_active_language, "overview"), content, 21, GOLD)
+    for chapter in range(Campaign.CHAPTER_ART.size()):
+        var card := PanelContainer.new()
+        var border := _style(Color("#262421"), 13)
+        border.border_color = GOLD if chapter == current_chapter else Color("#6a5741")
+        border.set_border_width_all(1)
+        card.add_theme_stylebox_override("panel", border)
+        content.add_child(card)
+        var row := HBoxContainer.new()
+        row.add_theme_constant_override("separation", 13)
+        card.add_child(row)
+        var thumb := _campaign_picture(row, Campaign.CHAPTER_ART[chapter], 84, Rect2(0, 0, 640, 390))
+        thumb.custom_minimum_size.x = 128
+        var column := VBoxContainer.new()
+        column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        column.alignment = BoxContainer.ALIGNMENT_CENTER
+        column.add_theme_constant_override("separation", 2)
+        row.add_child(column)
+        var state := "locked"
+        if chapter < current_chapter or stage >= Campaign.EPILOGUE:
+            state = "completed"
+        elif chapter == current_chapter:
+            state = "current"
+        var chapter_label := Campaign.text_for(_active_language, "chapter") % (chapter + 1)
+        _make_label(chapter_label + " · " + Campaign.text_for(_active_language, state), column, 13, GOLD)
+        _make_label(Campaign.text_for(_active_language, "chapter_%d" % chapter), column, 20)
+        _make_label(Campaign.text_for(_active_language, "theme_%d" % chapter), column, 14, MUTED)
+
+func open_campaign_scene(lang: String, title: String, art: String, body: String,
+        action: String, next: Callable, back: Callable) -> void:
+    _active_chapter = -1
+    _screen_name = "campaign_story"
+    _campaign_cancel = back
+    var outer := _make_screen()
+    _screen.color = Color("#14171a")
+    var content := _campaign_scroll(outer)
+    var art_crop := Rect2(0, 0, 640, 389) if art in Campaign.CHAPTER_ART else Rect2()
+    _campaign_picture(content, art, 244, art_crop)
+    _make_label(title, content, 29, GOLD)
+    _make_label(body, content, 19)
+    _campaign_error = _make_label("", outer, 15, Color("#ffbe9c"))
+    _campaign_error.hide()
+    var back_text := Campaign.text_for(lang, "leave")
+    if action.is_empty():
+        _campaign_primary(back_text, outer, back)
+    else:
+        _campaign_primary(action, outer, next)
+        _make_button(back_text, outer, back)
+
+func show_campaign_error(message: String) -> void:
+    if is_instance_valid(_campaign_error) and _screen_name == "campaign_story":
+        _campaign_error.text = message
+        _campaign_error.show()
+
+func _campaign_scroll(parent: VBoxContainer) -> VBoxContainer:
+    var scroll := ScrollContainer.new()
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.scroll_deadzone = 12
+    parent.add_child(scroll)
+    var content := VBoxContainer.new()
+    content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    content.add_theme_constant_override("separation", 12)
+    scroll.add_child(content)
+    return content
+
+func _campaign_picture(parent: Control, path: String, height: float, crop: Rect2) -> TextureRect:
+    var picture := TextureRect.new()
+    picture.name = path.get_file().get_basename()
+    picture.custom_minimum_size.y = height
+    picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var texture: Texture2D = load(path)
+    if crop.has_area():
+        var cropped := AtlasTexture.new()
+        cropped.atlas = texture
+        cropped.region = crop
+        cropped.filter_clip = true
+        picture.texture = cropped
+    else:
+        picture.texture = texture
+    parent.add_child(picture)
+    return picture
+
+func _campaign_primary(value: String, parent: Node, callback: Callable) -> void:
+    var action := _make_button(value, parent, callback)
+    action.custom_minimum_size.y = 54
+    action.add_theme_font_size_override("font_size", 18)
+    action.add_theme_stylebox_override("normal", _style(Color("#73392d"), 13))
+    action.add_theme_stylebox_override("hover", _style(Color("#8d4738"), 13))
+    action.add_theme_stylebox_override("pressed", _style(Color("#592d26"), 13))
+
 func _launch_campaign() -> void:
-    close_chronicles()
     var game: Node = get_tree().current_scene
     if game != null and game.has_method("start_zen_campaign"):
         game.call("start_zen_campaign")
-    else:
-        push_warning("Zen Campaign: GameController nicht gefunden")

@@ -73,12 +73,14 @@ const ZMode = preload("res://core/ZenAscend.gd")
 const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const ZenCampaign = preload("res://story/ZenCampaign.gd")
+@onready var chronicles: Node = get_node("/root/ZenChronicles")
 var zen_campaign_active: bool = false
-var zen_campaign_stage: int = 0
-var zen_campaign_classic_board: Dictionary = {}
-var zen_campaign_classic_history: Array = []
-var zen_campaign_classic_settings: Dictionary = {}
-var zen_campaign_classic_world: int = 0
+var zen_campaign_progress: Dictionary = {}
+var zen_campaign_classic: Dictionary = {}
+var zen_campaign_match_started := false
+var zen_campaign_application_paused := false
+var zen_campaign_bot_ready_at := 0
+var zen_campaign_player_since := 0
 # ZENCUBE WORLD MUSIC PATCH 1
 func language_code() -> String:
     if data == null: return "de"
@@ -422,7 +424,10 @@ func apply_world() -> void:
         create_tween().tween_property(world_quote_label, "modulate:a", 1.0, 0.45)
     sync_music() # Auto-World theme follows the selected World.
 
-func refresh(animate: int = -1) -> void:
+func refresh(animate: int = -1, save_classic: bool = true) -> void:
+    if zen_campaign_active:
+        _refresh_zen_campaign(animate)
+        return
     Collection.ensure(data)
     apply_world()
     # Refresh both whenever the World OR the interface language changes.
@@ -486,18 +491,11 @@ func refresh(animate: int = -1) -> void:
     classic_actions.visible = not challenge_active
     renderer.selected = board.last_cell
     renderer.paint(board,(bool(data.settings.hints) or tutorial != null) and not challenge_active,preview,animate)
-    if zen_campaign_active:
-        world_title_label.text = ZenCampaign.text_for(language_code(), "title")
-        world_quote_label.text = ZenCampaign.text_for(language_code(), "subtitle")
-        detail.text = ZenCampaign.text_for(language_code(), "first" if zen_campaign_stage == 0 else "second") + " · " + str(board.move_count())
-    if tutorial == null and not challenge_active: persist()
+    if save_classic and tutorial == null and not challenge_active: persist()
     if net_active: update_net()
 func persist() -> void:
     if zen_campaign_active:
-        var campaign_game: Dictionary = board.snapshot()
-        campaign_game["history"] = board.history.duplicate(true)
-        if not ZenCampaign.save_progress(zen_campaign_stage, campaign_game):
-            push_warning("Zen Campaign: Spielstand konnte nicht gespeichert werden")
+        _zen_campaign_save_match()
         return
     if challenge_active:
         # Settings may be saved during a puzzle, but NEVER replace the classic save.
@@ -516,6 +514,10 @@ func notify_user(message: String) -> void:
     if help_text != null: help_text.text = toast
 func on_cell(cell: int) -> void:
     if cell < 0 or ceremony_active or (popup != null and not net_active): return
+    if zen_campaign_active:
+        if zen_campaign_match_started and not chronicles.is_open() and not _zen_campaign_bot_turn():
+            place(cell)
+        return
     if challenge_active:
         challenge_try_cell(cell)
         return
@@ -538,13 +540,15 @@ func place(cell: int) -> void:
     renderer.selected = cell
     generation += 1
     play_sound(board.winner != 0)
-    if placed_by_owner == 0 or int(data.settings.mode) == 0:
+    if placed_by_owner == 0 or (zen_campaign_active and _zen_campaign_stage() == ZenCampaign.EPILOGUE) or (not zen_campaign_active and int(data.settings.mode) == 0):
         vibrate_on_move()
     if board.winner != 0:
         if tutorial == null and int(data.settings.mode) != 2 and not zen_campaign_active: record_result()
         if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
     refresh(cell)
-    if board.winner != 0 and tutorial == null and int(data.settings.mode) != 2:
+    if zen_campaign_active:
+        _zen_campaign_after_move(placed_by_owner, cell)
+    elif board.winner != 0 and tutorial == null and int(data.settings.mode) != 2:
         call_deferred("show_result_screen")
 func record_result() -> void:
     if board.result_recorded: return
@@ -626,15 +630,28 @@ func undo() -> void:
         preview = []
         renderer.selected = -1
         refresh()
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     if data == null: return
+    var campaign_paused: bool = zen_campaign_active and (
+        not zen_campaign_match_started or zen_campaign_application_paused or chronicles.is_open()
+    )
     if worker != null and not worker.is_alive():
         var move = worker.wait_to_finish()
         worker = null
         ai_running = false
-        if worker_generation == generation and not challenge_active and tutorial == null and board.winner == 0 and not board.swap_pending and popup == null: place(int(move))
-        else: refresh()
-    if challenge_active or tutorial != null or popup != null or int(data.settings.mode) != 1 or board.winner != 0: return
+        if worker_generation == generation and not challenge_active and tutorial == null and board.winner == 0 and not board.swap_pending and popup == null and not campaign_paused:
+            place(int(move))
+        else:
+            refresh(-1, false)
+    if challenge_active or tutorial != null or popup != null or campaign_paused or board.winner != 0: return
+    if zen_campaign_active:
+        if not _zen_campaign_bot_turn():
+            _zen_campaign_tick(delta)
+            return
+        if Time.get_ticks_msec() < zen_campaign_bot_ready_at:
+            return
+    elif int(data.settings.mode) != 1:
+        return
     if board.swap_pending:
         if board.current_owner() == 1: resolve_swap(true)
         else: return
@@ -648,13 +665,18 @@ func _process(_delta: float) -> void:
         var seed_value = int(Time.get_ticks_usec())
         var budgets: Array = [45, 95, 200, 330, 520]
         var budget: int = int(budgets[clampi(level,0,4)])
-        var running_campaign: bool = zen_campaign_active
-        var running_stage: int = zen_campaign_stage
-        worker.start(func():
-            if running_campaign:
-                return ZenCampaign.pick_move(cells, running_stage, seed_value)
-            return AIEngine.new(seed_value).choose(cells,player,level,budget)
-        )
+        if zen_campaign_active:
+            var stage := _zen_campaign_stage()
+            var last_cell: int = board.last_cell
+            var hidden_faces: Array = []
+            if stage == ZenCampaign.SLAIN:
+                for face in range(CubeGeometry.N.size()):
+                    if (renderer.pivot.basis * CubeGeometry.N[face]).z < 0.22:
+                        hidden_faces.append(face)
+            var openings: Array = zen_campaign_progress.openings.duplicate()
+            worker.start(func(): return ZenCampaign.pick_move(cells, stage, seed_value, player, last_cell, hidden_faces, openings))
+        else:
+            worker.start(func(): return AIEngine.new(seed_value).choose(cells,player,level,budget))
         refresh()
 func _exit_tree() -> void:
     if worker != null: worker.wait_to_finish()
@@ -708,9 +730,14 @@ func close_modal() -> void:
         popup = null
 func open_menu() -> void:
     if zen_campaign_active:
-        var campaign_box: VBoxContainer = modal(ZenCampaign.text_for(language_code(), "title"))
-        label(ZenCampaign.text_for(language_code(), "first" if zen_campaign_stage == 0 else "second"), campaign_box, 19)
-        premium_button(ZenCampaign.text_for(language_code(), "resume"), campaign_box, close_modal, true)
+        if board.winner != 0:
+            _zen_campaign_show_section()
+            return
+        _zen_campaign_save_match()
+        var campaign_box: VBoxContainer = modal(_zen_campaign_text("title"))
+        campaign_box.get_child(1).hide()
+        label(ZenCampaign.stage_title(language_code(), _zen_campaign_stage()), campaign_box, 19)
+        premium_button(_zen_campaign_text("resume"), campaign_box, _zen_campaign_resume, true)
         premium_button(ZenCampaign.text_for(language_code(), "leave"), campaign_box, _zen_campaign_leave)
         return
     var box = modal("Hauptmenü")
@@ -725,7 +752,7 @@ func open_menu() -> void:
     premium_button("Zen-Aufstieg", box, open_ascension)
     premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
     premium_button("Welten", box, open_worlds)
-    premium_button("Zen-Chroniken 📖", box, func(): get_node("/root/ZenChronicles").open_library())
+    premium_button("Zen-Chroniken 📖", box, chronicles.open_library)
     premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
     premium_button("Einstellungen", box, open_settings)
@@ -1153,12 +1180,9 @@ func restore_rank_music() -> void:
 
 func show_result_screen() -> void:
     # Called deferred after a real Classic match finishes. A new match cancels it.
-    if challenge_active or tutorial != null or board.winner == 0 or popup != null:
+    if zen_campaign_active or challenge_active or tutorial != null or board.winner == 0 or popup != null:
         return
     if int(data.settings.mode) == 2:
-        return
-    if zen_campaign_active:
-        _zen_campaign_result()
         return
     # Rank-up is already persisted by record_result(); this is visual only.
     # Never replay the ceremony on reopening results or loading a previous rank.
@@ -1641,7 +1665,7 @@ func end_tutorial() -> void:
     refresh()
 func start_mode(mode: int, level: int = 0, from_welcome: bool = false) -> void:
     if zen_campaign_active:
-        _zen_campaign_leave()
+        return
     if challenge_active: leave_challenges()
     close_modal()
     if tutorial != null:
@@ -2008,135 +2032,297 @@ func play_sound(win: bool) -> void:
     sound_player.play()
 
 
-# Zen Chronicles > Zen Campaign. This uses the unchanged 3D cube/4-in-a-row rules.
-# Campaign games and their bot personalities are kept isolated from Classic saves.
+# Zen Chronicles runs on the classic cube with an independent board and save.
 func start_zen_campaign() -> void:
-    if zen_campaign_active:
-        close_modal()
-        _zen_campaign_intro(false)
+    if zen_campaign_active or ceremony_active:
         return
     if challenge_active:
         leave_challenges()
     if tutorial != null:
         end_tutorial()
     close_modal()
-    zen_campaign_classic_board = board.snapshot()
-    zen_campaign_classic_history = board.history.duplicate(true)
-    zen_campaign_classic_settings = data.settings.duplicate(true)
-    zen_campaign_classic_world = int(data.ascension.get("world", 0))
+    zen_campaign_classic = {
+        "board": board, "preview": preview, "background": world_background.texture,
+        "orientation": renderer.pivot.basis, "camera_position": renderer.camera.position,
+    }
+    zen_campaign_progress = ZenCampaign.load_progress()
     zen_campaign_active = true
-    data.ascension.world = 0
-    data.settings.mode = 1
-    data.settings.level = 0
-    data.settings.swap = false
-    data.settings.alternate = false
-    data.settings.next_start = 0
-    var progress: Dictionary = ZenCampaign.load_progress()
-    zen_campaign_stage = int(progress.get("stage", 0))
-    if zen_campaign_stage >= 2:
-        _zen_campaign_finished()
-        return
-    var saved_game: Dictionary = progress.get("game", {})
-    var resume: bool = SaveManager.valid_game(saved_game)
-    if resume:
-        board = BoardModel.new()
-        board.restore(saved_game)
-        board.history = saved_game.get("history", []).duplicate(true)
-        board.swap_enabled = false
-        generation += 1
-        renderer.reset_view()
-        refresh()
-        if board.winner != 0:
-            call_deferred("show_result_screen")
-            return
-    else:
-        _zen_campaign_reset_match()
-    _zen_campaign_intro(resume)
+    chronicles.set_campaign_board_active(true)
+    _zen_campaign_load_match()
+    _zen_campaign_show_section()
 
-func _zen_campaign_reset_match() -> void:
+func _zen_campaign_stage() -> int:
+    return int(zen_campaign_progress.stage)
+
+func _zen_campaign_text(key: String) -> String:
+    return ZenCampaign.text_for(language_code(), key)
+
+func _zen_campaign_branch(key: String) -> String:
+    return ZenCampaign.branch_text(language_code(), key, str(zen_campaign_progress.night_result))
+
+func _zen_campaign_bot_turn() -> bool:
+    return _zen_campaign_stage() < ZenCampaign.EPILOGUE and board.current_owner() == 1
+
+func _zen_campaign_load_match() -> void:
     generation += 1
+    ai_running = false
+    var stage := _zen_campaign_stage()
     board = BoardModel.new()
     board.swap_enabled = false
-    board.starter_owner = 0
-    board.owners = [0, 1]
+    if stage in [ZenCampaign.LORD, ZenCampaign.EPILOGUE]:
+        board.owners = [1, 0]
+        board.starter_owner = 1
+    var saved: Dictionary = zen_campaign_progress.game
+    zen_campaign_match_started = not saved.is_empty()
+    if zen_campaign_match_started:
+        board.restore(saved)
+        board.win_lines = rules.victories(board.cells, 1) + rules.victories(board.cells, 2)
     preview = []
-    renderer.selected = -1
     renderer.reset_view()
+    world_background.texture = Asc.WORLD_TEXTURES[ZenCampaign.chapter_for(stage)]
     refresh()
 
-func _zen_campaign_intro(resuming: bool) -> void:
-    if not zen_campaign_active or zen_campaign_stage >= 2:
-        return
-    var box: VBoxContainer = modal(ZenCampaign.text_for(language_code(), "first" if zen_campaign_stage == 0 else "second"))
-    if not resuming and zen_campaign_stage == 0:
-        label(ZenCampaign.text_for(language_code(), "start"), box, 17)
-    if not resuming:
-        label(ZenCampaign.text_for(language_code(), "first_intro" if zen_campaign_stage == 0 else "second_intro"), box, 17)
-    premium_button(ZenCampaign.text_for(language_code(), "resume" if resuming else "begin"), box, close_modal, true)
-    button(ZenCampaign.text_for(language_code(), "leave"), box, _zen_campaign_leave, true)
+func _refresh_zen_campaign(animate: int) -> void:
+    var stage := _zen_campaign_stage()
+    var chapter := ZenCampaign.chapter_for(stage)
+    world_title_label.text = _zen_campaign_text("chapter_%d" % chapter)
+    detail.text = ZenCampaign.stage_title(language_code(), stage) + "  ·  " + (
+        _zen_campaign_text("move_count") % board.move_count()
+    )
+    var mark := "X" if board.turn == 1 else "O"
+    status.text = _zen_campaign_text("your_turn") % mark
+    if _zen_campaign_bot_turn():
+        var opponent := _zen_campaign_text("stage_4") if stage == ZenCampaign.NIGHT else ZenCampaign.stage_title(language_code(), stage)
+        status.text = _zen_campaign_text("bot_turn") % [opponent, mark]
+    elif stage == ZenCampaign.EPILOGUE:
+        var player := "Shin" if board.turn == 1 else "Kuze"
+        status.text = _zen_campaign_text("bot_turn") % [player, mark]
+    if board.winner != 0:
+        status.text = _zen_campaign_text("result_" + _zen_campaign_outcome())
+        if stage == ZenCampaign.EPILOGUE and board.winner != 3:
+            status.text = _zen_campaign_text("result_local") % ("Shin" if board.winner == 1 else "Kuze")
+    status.add_theme_color_override("font_color", Color("#453329"))
+    rank_label.visible = stage == ZenCampaign.NIGHT and not _zen_campaign_bot_turn() and board.winner == 0
+    if rank_label.visible:
+        _zen_campaign_refresh_clock()
+    world_quote_label.text = _zen_campaign_text("quote_%d" % mini(stage, ZenCampaign.EPILOGUE))
+    help_text.text = _zen_campaign_text("controls")
+    swap_row.hide()
+    tutorial_row.hide()
+    challenge_role_panel.hide()
+    challenge_row.hide()
+    challenge_leave_row.hide()
+    classic_views.hide()
+    classic_actions.hide()
+    renderer.selected = board.last_cell
+    renderer.paint(board, false, [], animate)
 
-func _zen_campaign_result() -> void:
-    if not zen_campaign_active or board.winner == 0:
-        return
-    var human_won: bool = board.winner != 3 and int(board.owners[board.winner-1]) == 0
-    var headline: String = ZenCampaign.text_for(language_code(), "result_draw" if board.winner == 3 else "result_win" if human_won else "result_loss")
-    var box: VBoxContainer = modal(headline)
-    box.get_child(1).hide()
-    popup.anchor_top = 0.48
-    popup.anchor_bottom = 0.97
-    popup.offset_top = 0
-    var story_key: String = ("first_win" if zen_campaign_stage == 0 else "second_win") if human_won else ("first_loss" if zen_campaign_stage == 0 else "second_loss")
-    label(ZenCampaign.text_for(language_code(), story_key), box, 17)
-    if human_won:
-        premium_button(ZenCampaign.text_for(language_code(), "continue"), box, _zen_campaign_advance, true)
+func _zen_campaign_show_section() -> void:
+    var stage := _zen_campaign_stage()
+    var title := ZenCampaign.stage_title(language_code(), stage)
+    var art := ZenCampaign.stage_art(stage)
+    if stage == ZenCampaign.COMPLETE:
+        _zen_campaign_scene(title, art, _zen_campaign_text("complete_story"), "", Callable())
+    elif not bool(zen_campaign_progress.prologue_seen):
+        _zen_campaign_scene(_zen_campaign_text("prologue"), ZenCampaign.PROLOGUE,
+            _zen_campaign_text("prologue_story"), _zen_campaign_text("next"), _zen_campaign_finish_prologue)
+    elif _zen_campaign_slain_reveal_due():
+        _zen_campaign_scene(_zen_campaign_text("reveal_title"), art, _zen_campaign_branch("reveal_story"),
+            _zen_campaign_text("next"), _zen_campaign_finish_reveal)
+    elif board.winner != 0:
+        if not board.win_lines.is_empty():
+            focus_line(board.win_lines[0])
+        _zen_campaign_show_outcome(title, art)
+    elif zen_campaign_match_started:
+        _zen_campaign_scene(title, art, _zen_campaign_text("resume_story"), _zen_campaign_text("resume"), _zen_campaign_resume)
     else:
-        premium_button(ZenCampaign.text_for(language_code(), "again"), box, _zen_campaign_retry, true)
-    button(ZenCampaign.text_for(language_code(), "leave"), box, _zen_campaign_leave, true)
+        var key := "intro_%d" % stage
+        var body := _zen_campaign_branch(key) if stage >= ZenCampaign.LORD else _zen_campaign_text(key)
+        var action := "start_epilogue" if stage == ZenCampaign.EPILOGUE else "begin"
+        _zen_campaign_scene(title, art, body, _zen_campaign_text(action), _zen_campaign_begin)
+
+func _zen_campaign_scene(title: String, art: String, body: String, action: String, next: Callable) -> void:
+    close_modal()
+    chronicles.open_campaign_scene(language_code(), title, art, body, action, next, _zen_campaign_leave)
+
+func _zen_campaign_finish_prologue() -> void:
+    zen_campaign_progress.prologue_seen = true
+    if _zen_campaign_save_match():
+        _zen_campaign_show_section()
+
+func _zen_campaign_begin() -> void:
+    zen_campaign_match_started = true
+    if _zen_campaign_save_match():
+        _zen_campaign_resume()
+
+func _zen_campaign_resume() -> void:
+    close_modal()
+    chronicles.close_chronicles()
+    _zen_campaign_start_turn()
+
+func _zen_campaign_start_turn() -> void:
+    var now := Time.get_ticks_msec()
+    zen_campaign_player_since = now
+    if _zen_campaign_bot_turn():
+        zen_campaign_bot_ready_at = now + ZenCampaign.bot_delay(
+            _zen_campaign_stage(), Time.get_ticks_usec(), int(zen_campaign_progress.average_move_ms))
+
+func _zen_campaign_after_move(owner: int, cell: int) -> void:
+    var stage := _zen_campaign_stage()
+    if owner == 0 and stage < ZenCampaign.EPILOGUE:
+        # The Self remembers the player's first placement and their usual pace.
+        if board.cells.count(int(board.cells[cell])) == 1:
+            zen_campaign_progress.openings[cell] += 1
+        var samples := mini(int(zen_campaign_progress.moves_timed), 9999)
+        var elapsed := clampi(Time.get_ticks_msec() - zen_campaign_player_since, 200, 5000)
+        zen_campaign_progress.average_move_ms = roundi(
+            (float(zen_campaign_progress.average_move_ms) * samples + elapsed) / (samples + 1))
+        zen_campaign_progress.moves_timed = samples + 1
+    if stage == ZenCampaign.NIGHT:
+        if board.winner != 0:
+            zen_campaign_progress.night_result = _zen_campaign_outcome()
+        elif owner == 1:
+            zen_campaign_progress.seconds_left = ZenCampaign.TURN_SECONDS
+            _zen_campaign_refresh_clock()
+    _zen_campaign_start_turn()
+    _zen_campaign_save_match()
+    if board.winner != 0:
+        _zen_campaign_schedule_outcome()
+    elif _zen_campaign_slain_reveal_due():
+        _zen_campaign_show_section()
+
+func _zen_campaign_schedule_outcome() -> void:
+    # Give the player a moment to see the board and the actual winning line.
+    var finished_generation: int = generation
+    get_tree().create_timer(0.78).timeout.connect(func():
+        if zen_campaign_active and generation == finished_generation and not chronicles.is_open():
+            _zen_campaign_show_section()
+    )
+
+func _zen_campaign_slain_reveal_due() -> bool:
+    return _zen_campaign_stage() == ZenCampaign.SLAIN and not bool(zen_campaign_progress.slain_revealed) and (
+        board.move_count() >= 10 or _zen_campaign_outcome() == "win")
+
+func _zen_campaign_finish_reveal() -> void:
+    zen_campaign_progress.slain_revealed = true
+    if not _zen_campaign_save_match():
+        return
+    if board.winner != 0:
+        _zen_campaign_show_section()
+    else:
+        _zen_campaign_resume()
+
+func _zen_campaign_outcome() -> String:
+    if board.winner == 0:
+        return ""
+    if _zen_campaign_stage() == ZenCampaign.NIGHT and str(zen_campaign_progress.night_result) == "timeout":
+        return "timeout"
+    if board.winner == 3:
+        return "draw"
+    return "win" if int(board.owners[board.winner - 1]) == 0 else "loss"
+
+func _zen_campaign_show_outcome(title: String, art: String) -> void:
+    var stage := _zen_campaign_stage()
+    var outcome := _zen_campaign_outcome()
+    var body := ""
+    if stage == ZenCampaign.NIGHT:
+        title = _zen_campaign_branch("night")
+        body = _zen_campaign_text("result_" + outcome) + "\n\n" + _zen_campaign_branch("night_story")
+    elif stage == ZenCampaign.EPILOGUE:
+        title = ZenCampaign.stage_title(language_code(), ZenCampaign.COMPLETE)
+        body = _zen_campaign_text("complete_story")
+    else:
+        title = _zen_campaign_text("result_" + outcome) + " · " + title
+        body = _zen_campaign_text("draw_story" if outcome == "draw" else "%s_%d" % [outcome, stage])
+    var advance := ZenCampaign.can_advance(stage, board.winner, outcome == "win")
+    _zen_campaign_scene(title, art, body,
+        _zen_campaign_text("next" if advance else "again"), _zen_campaign_advance if advance else _zen_campaign_retry)
 
 func _zen_campaign_retry() -> void:
-    if not zen_campaign_active:
+    var stage := _zen_campaign_stage()
+    if stage >= ZenCampaign.EPILOGUE or stage == ZenCampaign.NIGHT or board.winner == 0 or _zen_campaign_outcome() == "win":
         return
-    close_modal()
-    _zen_campaign_reset_match()
-    _zen_campaign_intro(false)
+    var next := zen_campaign_progress.duplicate()
+    next.game = {}
+    if not _zen_campaign_write(next):
+        return
+    zen_campaign_progress = next
+    _zen_campaign_load_match()
+    _zen_campaign_show_section()
 
 func _zen_campaign_advance() -> void:
-    if not zen_campaign_active or board.winner == 0 or board.winner == 3:
+    var stage := _zen_campaign_stage()
+    if not ZenCampaign.can_advance(stage, board.winner, _zen_campaign_outcome() == "win"):
         return
-    if int(board.owners[board.winner - 1]) != 0:
+    var next := zen_campaign_progress.duplicate()
+    next.stage = stage + 1
+    next.game = {}
+    next.seconds_left = ZenCampaign.TURN_SECONDS
+    if not _zen_campaign_write(next):
         return
-    zen_campaign_stage += 1
-    if not ZenCampaign.save_progress(zen_campaign_stage, {}):
-        push_warning("Zen Campaign: Kapitelfortschritt konnte nicht gespeichert werden")
-    close_modal()
-    if zen_campaign_stage >= 2:
-        _zen_campaign_finished()
-    else:
-        _zen_campaign_reset_match()
-        _zen_campaign_intro(false)
+    zen_campaign_progress = next
+    _zen_campaign_load_match()
+    _zen_campaign_show_section()
 
-func _zen_campaign_finished() -> void:
-    var box: VBoxContainer = modal(ZenCampaign.text_for(language_code(), "chapter_done"))
-    box.get_child(1).hide()
-    label(ZenCampaign.text_for(language_code(), "done"), box, 18)
-    premium_button(ZenCampaign.text_for(language_code(), "chronicles"), box, _zen_campaign_leave, true)
+func _zen_campaign_tick(delta: float) -> void:
+    if _zen_campaign_stage() != ZenCampaign.NIGHT:
+        return
+    var before := ceili(float(zen_campaign_progress.seconds_left))
+    zen_campaign_progress.seconds_left = maxf(0.0, float(zen_campaign_progress.seconds_left) - delta)
+    if float(zen_campaign_progress.seconds_left) <= 0:
+        board.winner = board.owners.find(1) + 1
+        board.win_lines = []
+        zen_campaign_progress.night_result = "timeout"
+        generation += 1
+        refresh()
+        _zen_campaign_save_match()
+        _zen_campaign_schedule_outcome()
+    elif ceili(float(zen_campaign_progress.seconds_left)) != before:
+        _zen_campaign_refresh_clock()
+        _zen_campaign_save_match()
+
+func _zen_campaign_refresh_clock() -> void:
+    rank_label.text = _zen_campaign_text("turn_clock") % ceili(float(zen_campaign_progress.seconds_left))
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
+        zen_campaign_application_paused = true
+        if zen_campaign_active:
+            _zen_campaign_save_match()
+    elif what == NOTIFICATION_APPLICATION_RESUMED:
+        zen_campaign_application_paused = false
+        if zen_campaign_active:
+            _zen_campaign_start_turn()
+
+func _zen_campaign_save_match() -> bool:
+    if zen_campaign_match_started:
+        zen_campaign_progress.game = board.snapshot()
+    return _zen_campaign_write(zen_campaign_progress)
+
+func _zen_campaign_write(progress: Dictionary) -> bool:
+    if ZenCampaign.save_progress(progress):
+        return true
+    var error := _zen_campaign_text("save_error")
+    chronicles.show_campaign_error(error)
+    help_text.text = error
+    push_warning(error)
+    return false
 
 func _zen_campaign_leave() -> void:
-    if not zen_campaign_active:
+    if not zen_campaign_active or not _zen_campaign_save_match():
         return
     close_modal()
     generation += 1
+    ai_running = false
     zen_campaign_active = false
-    data.settings = zen_campaign_classic_settings.duplicate(true)
-    data.ascension.world = zen_campaign_classic_world
-    board = BoardModel.new()
-    board.restore(zen_campaign_classic_board)
-    board.history = zen_campaign_classic_history.duplicate(true)
-    renderer.selected = -1
-    renderer.reset_view()
-    zen_campaign_classic_board = {}
-    zen_campaign_classic_history = []
-    zen_campaign_classic_settings = {}
-    refresh()
-    get_node("/root/ZenChronicles").open_library()
-
+    zen_campaign_match_started = false
+    board = zen_campaign_classic.board
+    preview = zen_campaign_classic.preview
+    renderer.pivot.basis = zen_campaign_classic.orientation
+    renderer.camera.position = zen_campaign_classic.camera_position
+    world_background.texture = zen_campaign_classic.background
+    zen_campaign_classic = {}
+    zen_campaign_progress = {}
+    refresh(-1, false)
+    chronicles.set_campaign_board_active(false)
+    chronicles.open_campaign_overview()
