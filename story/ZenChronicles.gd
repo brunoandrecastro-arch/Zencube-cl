@@ -201,7 +201,18 @@ func _make_screen() -> VBoxContainer:
     margins.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     margins.add_theme_constant_override("margin_left", 13)
     margins.add_theme_constant_override("margin_right", 13)
-    margins.add_theme_constant_override("margin_top", 18)
+    # Keep navigation below the Android cutout/status-bar safe region.
+    # The game viewport may already be letterboxed; cap the additional inset
+    # so tall phones retain enough space for the chapter list and action.
+    var top_margin: int = 18
+    if OS.get_name() == "Android":
+        var safe: Rect2i = DisplayServer.get_display_safe_area()
+        var window: Vector2i = DisplayServer.window_get_size()
+        if window.y > 0 and safe.position.y > 0:
+            top_margin = maxi(28, mini(58, roundi(float(safe.position.y) * get_viewport().get_visible_rect().size.y / float(window.y)) + 12))
+        else:
+            top_margin = 28
+    margins.add_theme_constant_override("margin_top", top_margin)
     margins.add_theme_constant_override("margin_bottom", 18)
     var outer := VBoxContainer.new()
     margins.add_child(outer)
@@ -400,16 +411,20 @@ func open_campaign_overview() -> void:
     var outer := _make_screen()
     _screen.color = Color("#14171a")
     var nav := HBoxContainer.new()
-    nav.add_theme_constant_override("separation", 12)
+    nav.custom_minimum_size.y = 58
+    nav.add_theme_constant_override("separation", 10)
     outer.add_child(nav)
     _make_button("‹", nav, open_library).custom_minimum_size.x = 48
-    var title := _make_label(Campaign.text_for(_active_language, "title"), nav, 30, GOLD)
+    var title := _make_label(Campaign.text_for(_active_language, "title"), nav, 27, GOLD)
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", nav, close_chronicles).custom_minimum_size.x = 48
 
     var content := _campaign_scroll(outer)
-    # The poster carries German lettering. Its artwork crops cleanly for the three locales.
-    content.add_child(Campaign.artwork(Campaign.POSTER, 166, Rect2(0, 0, 820, 455)))
+    # The old fixed atlas crop cut Kuze's head off on taller Android screens.
+    # Show the complete text-free hero illustration in every language.
+    var hero := Campaign.artwork(Campaign.PROLOGUE_ART, 178)
+    hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    content.add_child(hero)
     _make_label(Campaign.text_for(_active_language, "campaign_desc"), content, 16, CREAM)
     var action := "start_campaign" if not bool(progress.prologue_seen) else "continue_campaign"
     if stage == Campaign.EPILOGUE:
