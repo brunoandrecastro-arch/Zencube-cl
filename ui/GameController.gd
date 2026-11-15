@@ -486,9 +486,9 @@ func refresh(animate: int = -1) -> void:
     renderer.selected = board.last_cell
     renderer.paint(board,(bool(data.settings.hints) or tutorial != null) and not challenge_active,preview,animate)
     if zen_campaign_active:
-        world_title_label.text = ZenCampaign.tr(language_code(), "title")
-        world_quote_label.text = ZenCampaign.tr(language_code(), "subtitle")
-        detail.text = ZenCampaign.tr(language_code(), "first" if zen_campaign_stage == 0 else "second") + " · " + str(board.move_count())
+        world_title_label.text = ZenCampaign.text_for(language_code(), "title")
+        world_quote_label.text = ZenCampaign.text_for(language_code(), "subtitle")
+        detail.text = ZenCampaign.text_for(language_code(), "first" if zen_campaign_stage == 0 else "second") + " · " + str(board.move_count())
     if tutorial == null and not challenge_active: persist()
     if net_active: update_net()
 func persist() -> void:
@@ -707,10 +707,10 @@ func close_modal() -> void:
         popup = null
 func open_menu() -> void:
     if zen_campaign_active:
-        var campaign_box: VBoxContainer = modal(ZenCampaign.tr(language_code(), "title"))
-        label(ZenCampaign.tr(language_code(), "first" if zen_campaign_stage == 0 else "second"), campaign_box, 19)
-        premium_button(ZenCampaign.tr(language_code(), "resume"), campaign_box, close_modal, true)
-        premium_button(ZenCampaign.tr(language_code(), "leave"), campaign_box, _zen_campaign_leave)
+        var campaign_box: VBoxContainer = modal(ZenCampaign.text_for(language_code(), "title"))
+        label(ZenCampaign.text_for(language_code(), "first" if zen_campaign_stage == 0 else "second"), campaign_box, 19)
+        premium_button(ZenCampaign.text_for(language_code(), "resume"), campaign_box, close_modal, true)
+        premium_button(ZenCampaign.text_for(language_code(), "leave"), campaign_box, _zen_campaign_leave)
         return
     var box = modal("Hauptmenü")
     popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.975), 26))
@@ -2064,30 +2064,30 @@ func _zen_campaign_reset_match() -> void:
 func _zen_campaign_intro(resuming: bool) -> void:
     if not zen_campaign_active or zen_campaign_stage >= 2:
         return
-    var box: VBoxContainer = modal(ZenCampaign.tr(language_code(), "first" if zen_campaign_stage == 0 else "second"))
+    var box: VBoxContainer = modal(ZenCampaign.text_for(language_code(), "first" if zen_campaign_stage == 0 else "second"))
     if not resuming and zen_campaign_stage == 0:
-        label(ZenCampaign.tr(language_code(), "start"), box, 17)
+        label(ZenCampaign.text_for(language_code(), "start"), box, 17)
     if not resuming:
-        label(ZenCampaign.tr(language_code(), "first_intro" if zen_campaign_stage == 0 else "second_intro"), box, 17)
-    premium_button(ZenCampaign.tr(language_code(), "resume" if resuming else "begin"), box, close_modal, true)
-    button(ZenCampaign.tr(language_code(), "leave"), box, _zen_campaign_leave, true)
+        label(ZenCampaign.text_for(language_code(), "first_intro" if zen_campaign_stage == 0 else "second_intro"), box, 17)
+    premium_button(ZenCampaign.text_for(language_code(), "resume" if resuming else "begin"), box, close_modal, true)
+    button(ZenCampaign.text_for(language_code(), "leave"), box, _zen_campaign_leave, true)
 
 func _zen_campaign_result() -> void:
     if not zen_campaign_active or board.winner == 0:
         return
     var human_won: bool = board.winner != 3 and int(board.owners[board.winner-1]) == 0
-    var headline: String = ZenCampaign.tr(language_code(), "result_draw" if board.winner == 3 else "result_win" if human_won else "result_loss")
+    var headline: String = ZenCampaign.text_for(language_code(), "result_draw" if board.winner == 3 else "result_win" if human_won else "result_loss")
     var box: VBoxContainer = modal(headline)
     popup.anchor_top = 0.48
     popup.anchor_bottom = 0.97
     popup.offset_top = 0
     var story_key: String = ("first_win" if zen_campaign_stage == 0 else "second_win") if human_won else ("first_loss" if zen_campaign_stage == 0 else "second_loss")
-    label(ZenCampaign.tr(language_code(), story_key), box, 17)
+    label(ZenCampaign.text_for(language_code(), story_key), box, 17)
     if human_won:
-        premium_button(ZenCampaign.tr(language_code(), "continue"), box, _zen_campaign_advance, true)
+        premium_button(ZenCampaign.text_for(language_code(), "continue"), box, _zen_campaign_advance, true)
     else:
-        premium_button(ZenCampaign.tr(language_code(), "again"), box, _zen_campaign_retry, true)
-    button(ZenCampaign.tr(language_code(), "leave"), box, _zen_campaign_leave, true)
+        premium_button(ZenCampaign.text_for(language_code(), "again"), box, _zen_campaign_retry, true)
+    button(ZenCampaign.text_for(language_code(), "leave"), box, _zen_campaign_leave, true)
 
 func _zen_campaign_retry() -> void:
     if not zen_campaign_active:
@@ -2112,9 +2112,9 @@ func _zen_campaign_advance() -> void:
         _zen_campaign_intro(false)
 
 func _zen_campaign_finished() -> void:
-    var box: VBoxContainer = modal(ZenCampaign.tr(language_code(), "chapter_done"))
-    label(ZenCampaign.tr(language_code(), "done"), box, 18)
-    premium_button(ZenCampaign.tr(language_code(), "chronicles"), box, _zen_campaign_leave, true)
+    var box: VBoxContainer = modal(ZenCampaign.text_for(language_code(), "chapter_done"))
+    label(ZenCampaign.text_for(language_code(), "done"), box, 18)
+    premium_button(ZenCampaign.text_for(language_code(), "chronicles"), box, _zen_campaign_leave, true)
 
 func _zen_campaign_leave() -> void:
     if not zen_campaign_active:
