@@ -41,6 +41,7 @@ func run() -> void:
     assert_ok(Story.save_progress(Story.defaults()),"seed empty Realm Chronicles to test combined gates")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
+    data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
     Realms.ensure(data)
     data.ascend.help_seen = true
     for realm in range(3):
