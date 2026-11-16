@@ -331,19 +331,18 @@ static func save_progress(data: Dictionary) -> bool:
 static func chapter(stage: int) -> int:
     return clampi(int(stage / CHAPTER_SIZE),0,3)
 
-## Only the separately installable Realm Chronicles debug APK sets this flag.
-## The public release retains the original strict eight-Challenge Realm gates.
+## QA previews are for local/headless development tests only, NEVER Android.
+## An accidentally exported QA project setting cannot unlock chapters on-device.
 static func qa_mode() -> bool:
-    return bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))
+    return OS.get_name() != "Android" and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))
 
 static func can_enter(data: Dictionary, stage: int) -> bool:
     if not ZenAscend.unlocked(data): return false
     if stage >= LAST_STAGE: return true
     if stage < 0: return false
     if qa_mode(): return true
-    # Every playable story chapter still respects the existing real 4x4 gate:
-    # Shadow first, 8 Shadow challenges for Ember, 8 Ember for Celestial, and
-    # 8 Celestial challenges for Satori. The test APK is separately isolated.
+    # Real 4x4 gate: eight previous-Realm challenges AND its three
+    # story bosses; no public or debug APK can bypass progression.
     return ZenAscendRealms.unlocked(data,chapter(stage))
 
 static func boss_level(stage: int) -> int:
