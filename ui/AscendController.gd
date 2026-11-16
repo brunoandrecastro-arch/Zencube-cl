@@ -6,6 +6,7 @@ const Locale = preload("res://core/ZenLocalization.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const WorldMusic = preload("res://core/ZenWorldMusic.gd")
 const RealmMusic = preload("res://core/ZenRealmMusic.gd")
+const BossMusic = preload("res://core/ZenRealmBossMusic.gd")
 const FullyAware = preload("res://ui/ZenFullyAwareCeremony.gd")
 const Achievements = preload("res://core/ZenAscendAchievements.gd")
 const UnlockCeremony = preload("res://ui/ZenUnlockCeremony.gd")
@@ -122,6 +123,12 @@ func _ready() -> void:
 # Existing shop IDs 0..13 always remain unchanged. In Base mode 4x4 uses
 # its own realm soundtrack; a manually owned track overrides it everywhere.
 func desired_realm_stream() -> AudioStream:
+    # Twelve original boss themes take precedence during the 4x4 story,
+    # independent of which Shop track the player has equipped. Outside a boss
+    # match, the original Realm/Shop choice is restored unchanged.
+    if realm_story_active:
+        var battle_theme: AudioStream = BossMusic.stream_for(realm_story_stage)
+        if battle_theme != null: return battle_theme
     if MusicPolicy.mode(data) == "base":
         return RealmMusic.stream_for(realm_index())
     var selected: int = MusicPolicy.selected_track(data)
