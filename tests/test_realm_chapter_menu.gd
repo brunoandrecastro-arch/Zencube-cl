@@ -52,6 +52,49 @@ func run() -> void:
             for chapter in range(4):
                 test(ResourceLoader.exists(Story.CHAPTER_ART[chapter]),"chapter hero art included "+str(chapter))
         chronicles.call("close_chronicles")
+    # Real 4x4 menu integration: the campaign must be the FIRST card, in the
+    # existing Realm list, not merely in the Chronicles library overlay.
+    var ascend_scene: PackedScene = load("res://Ascend.tscn") as PackedScene
+    test(ascend_scene != null,"4x4 Ascend scene is still loadable")
+    if ascend_scene != null and chronicles != null:
+        var controller: Node = ascend_scene.instantiate()
+        root.add_child(controller)
+        await process_frame
+        var ordinary_save: String = FileAccess.get_file_as_string(SaveManager.PATH)
+        controller.call("show_realms")
+        var modal: Node = controller.get("active_realm_dialog")
+        test(is_instance_valid(modal),"the normal 4x4 Realm menu opens")
+        if is_instance_valid(modal):
+            var card: Node = modal.find_child("RealmChroniclesCampaignCard",true,false)
+            var open_button: Node = modal.find_child("RealmChroniclesCampaignOpen",true,false)
+            var visual_previews: Node = modal.find_child("RealmChroniclesFourRealmPreviews",true,false)
+            test(card != null,"separate story campaign card is visible in Realm menu")
+            test(open_button is Button,"story campaign has a real button")
+            test(visual_previews != null and visual_previews.get_child_count()==4,
+                "campaign card shows all four realm preview pictures")
+            if card != null:
+                var direct_cards: Array = []
+                for item in card.get_parent().get_children():
+                    if item is PanelContainer:
+                        direct_cards.append(item)
+                test(direct_cards.size()==5 and direct_cards[0]==card,
+                    "story campaign appears above Shadow, Ember, Celestial and Satori")
+            if open_button is Button:
+                (open_button as Button).emit_signal("pressed")
+                test(chronicles.get("_screen_name")=="realm-story",
+                    "Realm-menu campaign button actually opens Zen Chronicles story overview")
+                test(bool(chronicles.get("_realm_story_from_realms")),
+                    "story overview remembers that user entered through Realm menu")
+                chronicles.call("_back_from_realm_story")
+                await process_frame
+                test(chronicles.get("_screen")==null,
+                    "back from story returns to 4x4 UI instead of the global library")
+                var restored: Node = controller.get("active_realm_dialog")
+                test(is_instance_valid(restored) and restored.find_child("RealmChroniclesCampaignCard",true,false)!=null,
+                    "back from story reopens the existing Realm menu")
+        test(FileAccess.get_file_as_string(SaveManager.PATH)==ordinary_save,
+            "opening story card and returning never changes normal player saves")
+        controller.queue_free()
     ProjectSettings.set_setting("application/config/realm_chronicles_qa",old_qa)
     if existed:
         var f := FileAccess.open(path,FileAccess.WRITE)
