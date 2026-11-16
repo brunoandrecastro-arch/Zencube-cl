@@ -58,7 +58,9 @@ func run() -> void:
     test(ascend_scene != null,"4x4 Ascend scene is still loadable")
     if ascend_scene != null and chronicles != null:
         var controller: Node = ascend_scene.instantiate()
+        var previous_scene: Node = current_scene
         root.add_child(controller)
+        current_scene = controller
         await process_frame
         var ordinary_save: String = FileAccess.get_file_as_string(SaveManager.PATH)
         controller.call("show_realms")
@@ -94,6 +96,7 @@ func run() -> void:
                     "back from story reopens the existing Realm menu")
         test(FileAccess.get_file_as_string(SaveManager.PATH)==ordinary_save,
             "opening story card and returning never changes normal player saves")
+        current_scene = previous_scene
         controller.queue_free()
     ProjectSettings.set_setting("application/config/realm_chronicles_qa",old_qa)
     if existed:
