@@ -1077,3 +1077,223 @@ func _replay_after_result(dialog: Control) -> void:
 func show_realm_rewards(_awards: Dictionary) -> void:
     # Compatibility: rewards are part of the single themed match result now.
     show_match_result()
+
+
+# -------- Realm Chronicles: isolated 4x4 playable story --------
+func start_realm_story() -> void:
+    if not Mode.unlocked(data):
+        return_home()
+        return
+    realm_story_progress = RealmStory.load_progress()
+    realm_story_stage = int(realm_story_progress.stage)
+    realm_story_active = true
+    realm_story_generation += 1
+    realm_story_last_human = -1
+    if realm_story_stage >= 6:
+        _realm_story_completed()
+        return
+    if not RealmStory.can_enter(data,realm_story_stage):
+        _realm_story_locked()
+        return
+    _realm_story_set_stage(realm_story_stage)
+    _realm_story_present_intro()
+
+func _realm_story_set_stage(stage: int) -> void:
+    realm_story_stage = clampi(stage,0,5)
+    match_realm = RealmStory.chapter(realm_story_stage)
+    bot_level = Realms.fixed_bot_level(match_realm)
+    realm_story_generation += 1
+    realm_story_last_human = -1
+    against_bot = true
+    owners = [0,1]
+    recorded = false
+    busy = false
+    var old: Dictionary = realm_story_progress.get("game",{})
+    if not RealmStory.valid_game(old): old = {}
+    if old.is_empty():
+        cells.fill(0)
+        turn = 1
+        result = 0
+    else:
+        cells = old.cells.duplicate()
+        turn = clampi(int(old.get("turn",1)),1,2)
+        result = clampi(int(old.get("result",0)),0,3)
+        recorded = result != 0
+        realm_story_last_human = int(old.get("last_human",-1))
+    cube.reset_view()
+    cube.set_boss_skin(realm_story_stage)
+    if realm_backdrop != null:
+        realm_backdrop.texture = load(RealmStory.CHAPTER_ART[match_realm])
+    draw()
+
+func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0) -> void:
+    var texture_path: String = RealmStory.BOSS_ART[stage]
+    if not ResourceLoader.exists(texture_path):
+        texture_path = RealmStory.CHAPTER_ART[RealmStory.chapter(stage)]
+    var art: Texture2D = load(texture_path) as Texture2D
+    if art == null: return
+    var picture: TextureRect = TextureRect.new()
+    picture.name = "RealmChroniclesBossArt"
+    picture.texture = art
+    picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    picture.custom_minimum_size.y = height
+    picture.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent.add_child(picture)
+
+func _realm_story_present_intro() -> void:
+    if not realm_story_active: return
+    if result != 0:
+        _realm_story_result()
+        return
+    var stage: int = realm_story_stage
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"boss_%d" % stage),680)
+    var body: VBoxContainer = parts.box
+    text(body,RealmStory.text_for(lang(),"shadow" if stage < 3 else "ember"),17,Color("#e7cd9b"))
+    _realm_story_art(body,stage,226)
+    text(body,RealmStory.text_for(lang(),"intro_%d" % stage),16)
+    text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
+    action(body,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin,true)
+    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
+    _open_realm_dialog(parts)
+
+func _realm_story_begin() -> void:
+    if not realm_story_active: return
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    var seen: Dictionary = realm_story_progress.get("introduced",{})
+    seen[str(realm_story_stage)] = true
+    realm_story_progress.introduced = seen
+    _realm_story_save()
+    if result == 0 and turn == 2 and not busy:
+        busy = true
+        call_deferred("bot_turn")
+    draw()
+
+func _realm_story_save() -> bool:
+    if not realm_story_active: return false
+    realm_story_progress.stage = realm_story_stage
+    realm_story_progress.game = {
+        "cells": cells.duplicate(),
+        "turn": turn,
+        "result": result,
+        "owners": owners.duplicate(),
+        "last_human": realm_story_last_human
+    }
+    var ok: bool = RealmStory.save_progress(realm_story_progress)
+    if not ok: push_warning("Realm Chronicles: save failed")
+    return ok
+
+func _realm_story_result() -> void:
+    if not realm_story_active or result == 0: return
+    var won: bool = result == 1
+    var key: String = "win_%d" % realm_story_stage if won else "loss_%d" % realm_story_stage
+    var title: String = RealmStory.text_for(lang(),"win" if won else ("draw" if result == 3 else "loss"))
+    var parts: Dictionary = _realm_dialog(title,590)
+    var body: VBoxContainer = parts.box
+    _realm_story_art(body,realm_story_stage,170)
+    text(body,RealmStory.text_for(lang(),key),17)
+    if won:
+        action(body,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
+    else:
+        action(body,RealmStory.text_for(lang(),"retry"),_realm_story_retry,true)
+    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
+    _open_realm_dialog(parts)
+
+func _realm_story_retry() -> void:
+    if not realm_story_active or realm_story_stage >= 6: return
+    realm_story_generation += 1
+    realm_story_progress.game = {}
+    _realm_story_set_stage(realm_story_stage)
+    _realm_story_save()
+    _realm_story_present_intro()
+
+func _realm_story_advance() -> void:
+    if not realm_story_active or result != 1: return
+    var prior: int = realm_story_stage
+    var next: int = mini(6,prior + 1)
+    var progress: Dictionary = realm_story_progress.duplicate(true)
+    progress.stage = next
+    progress.game = {}
+    if not RealmStory.save_progress(progress):
+        push_warning("Realm Chronicles: failed to save completed boss")
+        return
+    realm_story_progress = progress
+    realm_story_generation += 1
+    if prior == 2:
+        realm_story_stage = 3
+        _realm_story_chapter_outro(0)
+    elif prior == 5:
+        realm_story_stage = 6
+        cube.clear_boss_skin()
+        _realm_story_chapter_outro(1)
+    else:
+        _realm_story_set_stage(next)
+        _realm_story_present_intro()
+
+func _realm_story_chapter_outro(chapter: int) -> void:
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"chapter_complete"),700)
+    var body: VBoxContainer = parts.box
+    var picture: TextureRect = TextureRect.new()
+    picture.texture = load(RealmStory.CHAPTER_ART[chapter])
+    picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    picture.custom_minimum_size.y = 222
+    picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(picture)
+    text(body,RealmStory.text_for(lang(),"chapter1_end" if chapter == 0 else "chapter2_end"),17)
+    if chapter == 0 and RealmStory.can_enter(data,3):
+        action(body,RealmStory.text_for(lang(),"next"),_realm_story_start_ember,true)
+    elif chapter == 0:
+        text(body,RealmStory.text_for(lang(),"gate"),15,Color("#e4bd82"))
+    else:
+        text(body,RealmStory.text_for(lang(),"done"),15,Color("#e4bd82"))
+    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
+    _open_realm_dialog(parts)
+
+func _realm_story_start_ember() -> void:
+    if not RealmStory.can_enter(data,3):
+        _realm_story_locked()
+        return
+    realm_story_progress.game = {}
+    _realm_story_set_stage(3)
+    _realm_story_present_intro()
+
+func _realm_story_locked() -> void:
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"challenge_unlock"),570)
+    var body: VBoxContainer = parts.box
+    text(body,RealmStory.text_for(lang(),"gate" if realm_story_stage >= 3 else "gate_mode"),17)
+    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
+    _open_realm_dialog(parts)
+
+func _realm_story_completed() -> void:
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"chapter_complete"),570)
+    var body: VBoxContainer = parts.box
+    text(body,RealmStory.text_for(lang(),"chapter2_end"),17)
+    text(body,RealmStory.text_for(lang(),"done"),17,Color("#e6c68c"))
+    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
+    _open_realm_dialog(parts)
+
+func _realm_story_menu() -> void:
+    if not realm_story_active: return
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"menu"),520)
+    var body: VBoxContainer = parts.box
+    text(body,RealmStory.text_for(lang(),"boss_%d" % mini(realm_story_stage,5)),20,Color("#eddaae"))
+    action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
+    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
+    _open_realm_dialog(parts)
+
+func _realm_story_leave() -> void:
+    if not realm_story_active: return
+    _realm_story_save()
+    realm_story_active = false
+    realm_story_generation += 1
+    busy = false
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    # The shop's equipped skin ID was never changed. Restore its material
+    # in the same renderer before leaving the 4x4 scene.
+    cube.clear_boss_skin()
+    cube.set_skin(int(data.economy.get("equipped",0)))
+    return_home()
