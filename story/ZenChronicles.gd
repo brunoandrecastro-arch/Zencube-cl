@@ -553,6 +553,10 @@ func open_realm_story_overview(from_realms: bool = false) -> void:
         picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
         section.add_child(picture)
         _make_label(RealmStory.text_for(_active_language,key+"_sub"),section,13,MUTED)
+        var challenge_wins: int = Realms.count(saved,chapter)
+        var boss_wins: int = Realms.completed_story_bosses(chapter)
+        var noun: String = "Story-Bosse" if _active_language == "de" else "Chefes" if _active_language == "pt" else "Story bosses"
+        _make_label("✦ %d/8 Challenges  ·  ⚔ %d/3 %s" % [challenge_wins,boss_wins,noun],section,13,GOLD)
         var progress_label: String = RealmStory.text_for(_active_language,"completed" if completed else ("current" if allowed else "locked"))
         _make_label(progress_label,section,13,GOLD if allowed or completed else MUTED)
         if not allowed and not completed:
