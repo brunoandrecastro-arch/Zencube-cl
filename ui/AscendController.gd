@@ -1085,12 +1085,19 @@ func show_realm_rewards(_awards: Dictionary) -> void:
 # creates an unnecessary third exit next to X and "Return to main game".
 func _realm_story_compact(parts: Dictionary) -> void:
     var frame: PanelContainer = parts.frame
-    frame.anchor_top = 0.15
-    frame.anchor_bottom = 0.80
+    frame.anchor_left = 0.055
+    frame.anchor_right = 0.945
+    frame.anchor_top = 0.155
+    frame.anchor_bottom = 0.845
     frame.offset_top = 0
     frame.offset_bottom = 0
     var footer: Button = parts.back_button
-    footer.visible = false
+    # Remove redundant Back from the layout, rather than merely hiding it.
+    var footer_parent: VBoxContainer = footer.get_parent() as VBoxContainer
+    footer_parent.remove_child(footer)
+    footer.queue_free()
+    footer_parent.add_theme_constant_override("separation",8)
+    (parts.box as VBoxContainer).add_theme_constant_override("separation",9)
 
 # -------- Realm Chronicles: isolated 4x4 playable story --------
 func start_realm_story() -> void:
@@ -1157,7 +1164,8 @@ func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0) 
     picture.name = "RealmChroniclesBossArt"
     picture.texture = art
     picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    picture.clip_contents = true
     picture.custom_minimum_size.y = height
     picture.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1173,8 +1181,8 @@ func _realm_story_present_intro() -> void:
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
     text(body,RealmStory.text_for(lang(),"shadow" if stage < 3 else "ember"),17,Color("#e7cd9b"))
-    _realm_story_art(body,stage,226)
-    text(body,RealmStory.text_for(lang(),"intro_%d" % stage),16)
+    _realm_story_art(body,stage,195)
+    text(body,RealmStory.text_for(lang(),"intro_%d" % stage),15)
     text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
     action(body,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin,true)
     action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
