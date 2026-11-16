@@ -1205,13 +1205,18 @@ func _realm_story_begin() -> void:
 func _realm_story_save() -> bool:
     if not realm_story_active: return false
     realm_story_progress.stage = realm_story_stage
-    realm_story_progress.game = {
-        "cells": cells.duplicate(),
-        "turn": turn,
-        "result": result,
-        "owners": owners.duplicate(),
-        "last_human": realm_story_last_human
-    }
+    # Final cutscene must not accidentally resurrect the last boss match
+    # when leaving and reopening the completed Chapter 2 story.
+    if realm_story_stage >= 6:
+        realm_story_progress.game = {}
+    else:
+        realm_story_progress.game = {
+            "cells": cells.duplicate(),
+            "turn": turn,
+            "result": result,
+            "owners": owners.duplicate(),
+            "last_human": realm_story_last_human
+        }
     var ok: bool = RealmStory.save_progress(realm_story_progress)
     if not ok: push_warning("Realm Chronicles: save failed")
     return ok
