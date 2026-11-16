@@ -30,8 +30,14 @@ SETTINGS
 "$GODOT" --headless --path . --script tests/test_engine.gd
 
 campaign_test="${ZENCUBE_CAMPAIGN_TEST:-false}"
+realm_test="${ZENCUBE_REALM_CHRONICLES_TEST:-false}"
 campaign_package="com.zencube.game.campaign"
 campaign_label="ZenCube Campaign Test"
+if [[ "$realm_test" == true ]]; then
+  campaign_test=true
+  campaign_package="com.zencube.game.realmchronicles"
+  campaign_label="ZenCube Realm Chronicles Test"
+fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.
   preset_backup="$(mktemp)"
