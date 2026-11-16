@@ -508,8 +508,8 @@ func open_realm_story_overview() -> void:
     var body: VBoxContainer = _campaign_scroll(outer)
     _make_label(RealmStory.text_for(_active_language,"intro"), body, 15, CREAM)
     for chapter in range(4):
-        var allowed: bool = chapter < 2 and RealmStory.can_enter(saved, chapter*3)
-        var completed: bool = stage >= (chapter+1)*3 if chapter < 2 else false
+        var completed: bool = stage >= (chapter+1)*3
+        var allowed: bool = stage >= chapter*3 and RealmStory.can_enter(saved,chapter*3)
         var panel: PanelContainer = PanelContainer.new()
         var box_style: StyleBoxFlat = _style(Color("#252c35") if chapter % 2 == 0 else Color("#382c29"), 14)
         box_style.border_color = GOLD if int(stage / 3) == chapter else Color("#76624a")
@@ -524,18 +524,17 @@ func open_realm_story_overview() -> void:
         var picture: TextureRect = Campaign.artwork(RealmStory.CHAPTER_ART[chapter],105)
         section.add_child(picture)
         _make_label(RealmStory.text_for(_active_language,key+"_sub"),section,13,MUTED)
-        var progress_label: String = RealmStory.text_for(_active_language,"completed" if completed else ("current" if allowed and stage >= chapter*3 and chapter < 2 else "locked"))
-        if chapter >= 2: progress_label = RealmStory.text_for(_active_language,"coming")
-        _make_label(progress_label,section,13,GOLD if allowed else MUTED)
-        if chapter == 1 and not allowed:
-            _make_label(RealmStory.text_for(_active_language,"gate"),section,12,MUTED)
-        if chapter == 0 and not allowed:
-            _make_label(RealmStory.text_for(_active_language,"gate_mode"),section,12,MUTED)
-    if RealmStory.qa_mode() and stage != 6:
-        var test_ember: Button = _make_button(RealmStory.text_for(_active_language,"qa_ember"),outer,_launch_ember_qa)
-        test_ember.add_theme_stylebox_override("normal",_style(Color("#693524"),13))
-    if stage >= 6:
-        _make_label(RealmStory.text_for(_active_language,"done"),outer,15,CREAM)
+        var progress_label: String = RealmStory.text_for(_active_language,"completed" if completed else ("current" if allowed else "locked"))
+        _make_label(progress_label,section,13,GOLD if allowed or completed else MUTED)
+        if not allowed and not completed:
+            var lock_key: String = ["gate_mode","gate","gate_celestial","gate_satori"][chapter]
+            _make_label(RealmStory.text_for(_active_language,lock_key),section,12,MUTED)
+        if RealmStory.qa_mode() and chapter > 0:
+            var qa_key: String = ["","qa_ember","qa_celestial","qa_satori"][chapter]
+            var qa_button: Button = _make_button(RealmStory.text_for(_active_language,qa_key),section,_launch_chapter_qa.bind(chapter*RealmStory.CHAPTER_SIZE))
+            qa_button.add_theme_stylebox_override("normal",_style(Color("#693524") if chapter == 1 else Color("#36586a") if chapter == 2 else Color("#625079"),13))
+    if stage >= RealmStory.LAST_STAGE:
+        _make_label(RealmStory.text_for(_active_language,"realm_story_completed"),outer,15,CREAM)
     elif RealmStory.can_enter(saved,stage):
         _campaign_primary(RealmStory.text_for(_active_language,"continue"),outer,_launch_realm_story)
     else:
@@ -561,10 +560,11 @@ func _launch_realm_story() -> void:
     close_chronicles()
     get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
 
-# Test APK only: jump to the Ember Temple without granting ANY normal
-# Realm unlock, store currency or achievement. Uses the QA app's own save.
-func _launch_ember_qa() -> void:
-    if not RealmStory.qa_mode(): return
+# Test-APK only: preview specific chapters while preserving normal 4x4
+# progression, economy, scores, and an unfinished regular Ascend match.
+# Only this separately signed package sets the QA project setting.
+func _launch_chapter_qa(target_stage: int) -> void:
+    if not RealmStory.qa_mode() or target_stage not in [3,6,9]: return
     var active_scene: Node = get_tree().current_scene
     if active_scene != null and active_scene.scene_file_path == "res://Ascend.tscn" and active_scene.has_method("move_count"):
         if int(active_scene.call("move_count")) > 0 and int(active_scene.get("result")) == 0:
@@ -574,13 +574,17 @@ func _launch_ember_qa() -> void:
             _make_button(RealmStory.text_for(_active_language,"back"),warning,open_realm_story_overview)
             return
     var progress: Dictionary = RealmStory.load_progress()
-    if int(progress.stage) < 3 or int(progress.stage) >= 6:
-        progress.stage = 3
+    if int(progress.stage) < target_stage or int(progress.stage) >= target_stage+RealmStory.CHAPTER_SIZE:
+        progress.stage = target_stage
         progress.game = {}
         if not RealmStory.save_progress(progress):
-            push_warning("Realm Chronicles: failed to activate Chapter 2 preview")
+            push_warning("Realm Chronicles: could not start QA preview")
             return
     _launch_realm_story()
+
+# Kept for older scripts and callers from the Chapter 2 test build.
+func _launch_ember_qa() -> void:
+    _launch_chapter_qa(3)
 
 func consume_realm_story_launch() -> bool:
     var result: bool = _realm_story_requested
