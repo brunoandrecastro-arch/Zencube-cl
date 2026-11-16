@@ -68,6 +68,7 @@ func run() -> void:
         check(choice >= 0 and choice < 96,"legal opening for boss %d" % stage)
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
+    data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
     Realms.ensure(data)
     data.ascend.help_seen = true
     check(Story.can_enter(data,0),"Shadow opens with Zen Master entitlement")
