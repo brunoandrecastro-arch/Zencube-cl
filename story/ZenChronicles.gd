@@ -363,6 +363,7 @@ func _turn_page(dir: int) -> void:
     _update_page()
 
 func close_chronicles() -> void:
+    _realm_story_from_realms = false
     _active_chapter = -1
     _screen_name = ""
     if _screen != null:
