@@ -844,6 +844,38 @@ func show_realms() -> void:
     var body: VBoxContainer = ui_parts.box
     text(body,L("subtitle"),15,Color("567b72"))
     text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
+    # Realm Chronicles is a separate, playable 4x4 *story*, not a fifth realm.
+    # Keep the four normal Realm cards (and their gameplay/unlock rules) below.
+    var story_progress: Dictionary = RealmStory.load_progress()
+    var story_stage: int = clampi(int(story_progress.get("stage",0)),0,RealmStory.LAST_STAGE)
+    var story_card: PanelContainer = PanelContainer.new()
+    story_card.name = "RealmChroniclesCampaignCard"
+    story_card.add_theme_stylebox_override("panel",style(Color("34443e",0.98),18))
+    body.add_child(story_card)
+    var story_column: VBoxContainer = VBoxContainer.new()
+    story_column.add_theme_constant_override("separation",8)
+    story_card.add_child(story_column)
+    text(story_column,"📖 " + RealmStory.text_for(lang(),"menu"),20,Color("f9dba6"))
+    text(story_column,RealmStory.text_for(lang(),"realm_card_subtitle"),14,Color("e0d5b9"))
+    # Show the progression from Shadow to Satori in one visually coherent card.
+    var story_previews: HBoxContainer = HBoxContainer.new()
+    story_previews.name = "RealmChroniclesFourRealmPreviews"
+    story_previews.add_theme_constant_override("separation",3)
+    story_column.add_child(story_previews)
+    for chapter_id in range(4):
+        var preview: TextureRect = TextureRect.new()
+        preview.texture = load(RealmStory.CHAPTER_ART[chapter_id]) as Texture2D
+        preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        preview.custom_minimum_size = Vector2(0,74)
+        preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        story_previews.add_child(preview)
+    text(story_column,RealmStory.text_for(lang(),"story") + " · %d/%d " % [story_stage,RealmStory.LAST_STAGE] + RealmStory.text_for(lang(),"realm_card_bosses"),14,Color("d1ead3"))
+    if story_stage >= RealmStory.LAST_STAGE:
+        text(story_column,RealmStory.text_for(lang(),"realm_story_completed"),14,Color("f0d99c"))
+    var open_story: Button = action(story_column,RealmStory.text_for(lang(),"realm_card_open"),_open_realm_chronicles_from_realms,true)
+    open_story.name = "RealmChroniclesCampaignOpen"
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -876,6 +908,14 @@ func show_realms() -> void:
             choose.disabled = selected or (move_count() > 0 and result == 0)
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
+
+func _open_realm_chronicles_from_realms() -> void:
+    # The button is inside a modal; close it before opening the book. Returning
+    # from the book goes back to the four Realm cards, not the main library.
+    if realm_story_active: return
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_realm_story_overview(true)
 
 func _show_realm_requirements(realm: int) -> void:
     var parts: Dictionary = _realm_dialog(Realms.realm_name(realm,lang()),620)
