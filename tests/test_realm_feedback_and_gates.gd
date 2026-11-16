@@ -163,8 +163,21 @@ func run() -> void:
     root.add_child(fx)
     fx.present(Realms.REALM_ART[0],Realms.REALM_ART[1],"Ember Temple",true,false,[],"de")
     await process_frame
-    check(fx.find_child("EpicRealmScreenFracture",true,false)!=null,
-        "new realm breakthrough fractures the whole screen")
+    var glass: Node = fx.find_child("EpicRealmScreenFracture",true,false)
+    check(glass != null,"new Realm begins with a full-screen glass mirror")
+    if glass != null:
+        check(glass.get_child_count() >= 60,"dozens of actual textured glass fragments")
+        var shard: Polygon2D = glass.find_child("MirrorGlassShard_00",true,false) as Polygon2D
+        check(shard != null and shard.texture != null,"mirror shards preserve old Realm artwork")
+        if shard != null:
+            var before: Vector2 = shard.position
+            glass.set("crack_strength",1.0)
+            glass.set("break_progress",0.85)
+            check(shard.position.distance_to(before) > 10.0,
+                "shards really leave their starting position after impact")
+    var audio: AudioStreamPlayer = fx.get("_player") as AudioStreamPlayer
+    check(audio != null and audio.stream == load("res://assets/audio/zen_mirror_shatter.wav"),
+        "new realm breakthrough plays dedicated glass-break sound rather than gong")
     fx.close()
     controller.queue_free()
     current_scene = previous
