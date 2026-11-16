@@ -1164,8 +1164,9 @@ func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0) 
     picture.name = "RealmChroniclesBossArt"
     picture.texture = art
     picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-    picture.clip_contents = true
+    # Keep the full vertical portrait and its title legible; COVERED would
+    # crop the boss face and name on narrow Android screens.
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     picture.custom_minimum_size.y = height
     picture.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1181,7 +1182,7 @@ func _realm_story_present_intro() -> void:
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
     text(body,RealmStory.text_for(lang(),"shadow" if stage < 3 else "ember"),17,Color("#e7cd9b"))
-    _realm_story_art(body,stage,195)
+    _realm_story_art(body,stage,224)
     text(body,RealmStory.text_for(lang(),"intro_%d" % stage),15)
     text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
     action(body,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin,true)
