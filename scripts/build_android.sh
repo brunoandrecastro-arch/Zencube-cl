@@ -36,7 +36,7 @@ campaign_label="ZenCube Campaign Test"
 if [[ "$realm_test" == true ]]; then
   campaign_test=true
   campaign_package="com.zencube.game.realmchronicles"
-  campaign_label="ZenCube Realm Chronicles Test"
+  campaign_label="ZenCube 3D Preview"
 fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.
@@ -49,21 +49,11 @@ if [[ "$campaign_test" == true ]]; then
   }" export_presets.cfg
 fi
 
-# In the isolated Realm Chronicles DEBUG package only, expose the
-# Chapter 2 QA shortcut. project.godot is restored even if export fails.
-# The Android Play AAB preset and the normal project never contain this flag.
-if [[ "$realm_test" == true ]]; then
-  project_backup="$(mktemp)"
-  cp -p project.godot "$project_backup"
-  trap 'mv -f -- "$preset_backup" export_presets.cfg; mv -f -- "$project_backup" project.godot' EXIT
-  python3 - <<'PY'
-from pathlib import Path
-path = Path("project.godot")
-s = path.read_text(encoding="utf-8")
-assert "[application]\n" in s
-assert "realm_chronicles_qa" not in s
-path.write_text(s.replace("[application]\n", "[application]\nconfig/realm_chronicles_qa=true\n", 1), encoding="utf-8")
-PY
+# Android previews use the very same access gates as the future Play release.
+# No QA or chapter-skip setting may be embedded in the shipped APK.
+if grep -q 'config/realm_chronicles_qa=true' project.godot; then
+  echo 'ERROR: QA chapter override must not be exported to Android' >&2
+  exit 1
 fi
 
 apk_path=build/ZenCube-3D.apk
