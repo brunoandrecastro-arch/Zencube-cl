@@ -121,8 +121,16 @@ func run() -> void:
         check(view.find_child("DefeatedBoss_%02d" % stage,true,false) != null,"unique boss art %d" % stage)
         check(not Story.text_for("en","victory_story_%d" % stage).is_empty(),"narrative continues after boss %d" % stage)
         view.queue_free()
-    controller.call("_realm_story_return_to_ascend")
+    # Schedule one late story bot move and immediately exit. The timer must
+    # never place a marker on the restored ordinary Ascend 4x4 board.
+    controller.set("result",0)
+    controller.set("recorded",false)
+    controller.set("turn",2)
+    controller.call_deferred("bot_turn")
     await process_frame
+    controller.call("_realm_story_return_to_ascend")
+    await create_timer(1.2).timeout
+    check(int(controller.call("move_count"))==0,"pending story bot is cancelled after returning to Ascend")
     check(not bool(controller.get("realm_story_active")),"direct story exit returns to normal Zen Ascend")
     check(int(cube.get("boss_skin_id")) == -1,"normal 3D shop skin restored")
     check(FileAccess.get_file_as_string(SaveManager.PATH)==regular_save,"story does not alter normal stats, rank or money")
