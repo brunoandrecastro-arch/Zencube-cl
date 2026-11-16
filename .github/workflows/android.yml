@@ -167,6 +167,9 @@ jobs:
       - name: Celestial and Satori – six Master/Grandmaster battles and complete four-Realm finale
         run: |
           timeout 120 "$GODOT" --headless --path . --script tests/test_celestial_satori_chapters.gd
+      - name: Four Realm chapter cards and Celestial/Satori QA navigation
+        run: |
+          timeout 50 "$GODOT" --headless --path . --script tests/test_realm_chapter_menu.gd
       - name: Verify 100 tactical challenges on the 3D cube
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
