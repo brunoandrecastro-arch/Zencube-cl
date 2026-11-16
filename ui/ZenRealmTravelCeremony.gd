@@ -21,6 +21,55 @@ void fragment() {
     COLOR = scene;
 }
 """
+# Full-screen fracture: original procedural vector effect drawn in Godot.
+# Only used for a newly earned Realm, never for normal world switching.
+class RealmShatterCanvas:
+    extends Control
+    var amount: float = 0.0:
+        set(value):
+            amount = clampf(value,0.0,1.0)
+            queue_redraw()
+    var crack_color: Color = Color("#d5c7ff")
+    func _draw() -> void:
+        if amount <= 0.0 or size.x < 1.0 or size.y < 1.0: return
+        var middle: Vector2 = size*0.5
+        var radius: float = size.length()*0.72
+        var global_tint: Color = crack_color
+        global_tint.a = 0.95*minf(1.0,amount*2.8)
+        # 22 long cracks run from the impact to the edge, each with jagged
+        # offshoots like a shattered glass pane, not a circular portal only.
+        for shard in range(22):
+            var angle: float = float(shard)*TAU/22.0 + sin(float(shard)*5.2)*0.055
+            var direction: Vector2 = Vector2(cos(angle),sin(angle))
+            var tangent: Vector2 = Vector2(-direction.y,direction.x)
+            var points: PackedVector2Array = PackedVector2Array()
+            points.append(middle)
+            for segment in range(1,8):
+                var t: float = float(segment)/7.0
+                var crooked: float = sin(float(shard*17+segment*37))*18.0*(0.5+t)
+                points.append(middle+direction*(radius*t*amount)+tangent*crooked)
+            draw_polyline(points,global_tint,3.4 if shard%4==0 else 1.9,true)
+            for split in [2,4,6]:
+                var origin: Vector2 = points[split]
+                var offset: float = -1.0 if (shard+split)%2==0 else 1.0
+                var offshoot: Vector2 = (direction.rotated(offset*0.68))*radius*0.17*amount
+                draw_line(origin,origin+offshoot,global_tint.darkened(0.22),1.5,true)
+        # Irregular screen-spanning shards catch the portal light briefly.
+        for shard in range(14):
+            var angle: float = float(shard)*TAU/14.0+0.16
+            var d: Vector2 = Vector2(cos(angle),sin(angle))
+            var side: Vector2 = Vector2(-d.y,d.x)
+            var dist: float = radius*(0.23+float(shard%5)*0.1)*amount
+            var base: Vector2 = middle + d*dist
+            var tri: PackedVector2Array = PackedVector2Array([
+                base + side*13.0,
+                base + d*minf(110.0,radius*0.12) + side*24.0,
+                base + d*minf(98.0,radius*0.11) - side*28.0
+            ])
+            var shard_tint: Color = crack_color
+            shard_tint.a = 0.04 + 0.08*amount
+            draw_colored_polygon(tri,shard_tint)
+
 var _closed: bool = false
 var _backdrop: Control
 var _player: AudioStreamPlayer
@@ -67,7 +116,31 @@ func present(previous_art: String, destination_art: String, destination_name: St
     material.set_shader_parameter("reveal", 0.0)
     revealed.material = material
     var transition: Tween = create_tween()
-    transition.tween_property(material, "shader_parameter/reveal", 1.0, 3.1 if breakthrough else 1.75).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+    if breakthrough:
+        transition.tween_interval(0.48)
+    transition.tween_property(material, "shader_parameter/reveal", 1.0, 2.75 if breakthrough else 1.75).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+    if breakthrough:
+        var crack: RealmShatterCanvas = RealmShatterCanvas.new()
+        crack.name = "EpicRealmScreenFracture"
+        crack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        var lower: String = destination_name.to_lower()
+        crack.crack_color = Color("#ffb668") if "ember" in lower or "glut" in lower else (Color("#b4dcff") if "celestial" in lower or "himml" in lower else Color("#e7c4ff"))
+        _backdrop.add_child(crack)
+        crack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        var fracture: Tween = crack.create_tween()
+        fracture.tween_property(crack,"amount",1.0,0.55).set_trans(Tween.TRANS_CUBIC)
+        fracture.tween_interval(0.48)
+        fracture.tween_property(crack,"modulate:a",0.0,1.0).set_trans(Tween.TRANS_CUBIC)
+        var flash: ColorRect = ColorRect.new()
+        flash.name = "RealmBreakthroughFlash"
+        flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        flash.color = Color(1.0,0.94,0.76,0.0)
+        _backdrop.add_child(flash)
+        flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        var glow: Tween = flash.create_tween()
+        glow.tween_interval(0.42)
+        glow.tween_property(flash,"color:a",0.71,0.11)
+        glow.tween_property(flash,"color:a",0.0,0.74).set_trans(Tween.TRANS_CUBIC)
 
     # A warm gold ripple adds depth without covering the Realm artwork.
     var halo: TextureRect = TextureRect.new()
