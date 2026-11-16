@@ -1,5 +1,6 @@
 class_name ZenAscendRealms
 extends RefCounted
+const StoryGate = preload("res://core/ZenRealmStoryGate.gd")
 # Isolated 4x4 progression. Never changes Classic 3x3, legacy stats, music IDs or save version.
 const REALM_NAMES: Array[String] = ["Shadow Realm", "Ember Temple", "Celestial Realm", "Satori Realm"]
 # Fixed Zen Ascend bot tiers; Classic bot progression is separate and unchanged.
@@ -258,13 +259,19 @@ static func total_count(data: Dictionary) -> int:
 
 static func unlocked(data: Dictionary, realm: int) -> bool:
     if realm < 0 or realm >= 4 or not ZenAscend.unlocked(data): return false
-    var st: Dictionary = state(data)
     if realm == 0: return true
-    # A following Realm becomes accessible ONLY after all eight challenges
-    # in the preceding Realm. Previous early-unlock shortcuts are removed.
-    for required_realm in range(realm):
-        if count(data,required_realm) < 8: return false
+    # Both paths are mandatory. The original four Realms and all of their
+    # shop skins / 204 cube lines stay unchanged.
+    for prior in range(realm):
+        if count(data,prior) < 8 or not StoryGate.defeated_all(prior):
+            return false
     return true
+
+static func completed_story_bosses(realm: int) -> int:
+    return StoryGate.defeated_bosses(realm)
+
+static func ready_for_breakthrough(data: Dictionary, from_realm: int) -> bool:
+    return from_realm >= 0 and from_realm < 3 and count(data,from_realm) == 8 and StoryGate.defeated_all(from_realm) and unlocked(data,from_realm+1)
 
 static func select(data: Dictionary, realm: int) -> bool:
     if not unlocked(data,realm): return false
@@ -288,13 +295,18 @@ static func overall_title(data: Dictionary) -> String:
 
 static func missing_reason(data: Dictionary, realm: int, language: String) -> String:
     if realm <= 0 or realm >= 4: return ""
-    var first_missing: int = realm - 1
+    var source: int = realm-1
     for earlier in range(realm):
-        if count(data,earlier) < 8:
-            first_missing = earlier
+        if count(data,earlier) < 8 or not StoryGate.defeated_all(earlier):
+            source = earlier
             break
-    var key: String = ["ember_unlock", "celestial_unlock", "satori_unlock"][first_missing]
-    return t(key, language)
+    var challenges: int = count(data,source)
+    var bosses: int = StoryGate.defeated_bosses(source)
+    if language == "de":
+        return "%s: %d/8 Challenges + %d/3 Story-Bosse" % [realm_name(source,language),challenges,bosses]
+    if language == "pt":
+        return "%s: %d/8 desafios + %d/3 chefes da história" % [realm_name(source,language),challenges,bosses]
+    return "%s: %d/8 challenges + %d/3 story bosses" % [realm_name(source,language),challenges,bosses]
 
 # Does placing at this cell block an opponent's immediate four-in-a-row?
 static func prevents_immediate_win(cells: Array, lines: Array, human_turn: int, cell: int) -> bool:
