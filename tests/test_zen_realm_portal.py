@@ -28,7 +28,15 @@ assert 'func _show_manual_realm_journey(from_realm: int, to_realm: int, breakthr
 assert 'call_deferred("_show_manual_realm_journey",transition_from,number,first_open)' in ui
 assert 'shader.code = PORTAL_SHADER' in portal and 'shader_parameter/reveal' in portal
 assert 'PORTAL_SOUND = preload("res://assets/audio/zen_realm_breakthrough.wav")' in portal
-assert 'if sound_enabled: _player.play()' in portal and 'finished.emit()' in portal
+assert 'MIRROR_SOUND = preload("res://assets/audio/zen_mirror_shatter.wav")' in portal
+assert 'class MirrorGlassShatter:' in portal and 'class GlassCrackWeb:' in portal
+assert 'var shard: Polygon2D = Polygon2D.new()' in portal
+assert 'glass.build_glass(previous_texture,get_viewport().get_visible_rect().size)' in portal
+assert 'tween_property(glass,"break_progress",1.0,1.55)' in portal
+assert '_player.stream = MIRROR_SOUND if breakthrough else PORTAL_SOUND' in portal
+assert 'get_tree().create_timer(0.38).timeout.connect' in portal
+assert 'if sound_enabled:' in portal and '_player.play()' in portal and 'finished.emit()' in portal
+assert (root/'assets/audio/zen_mirror_shatter.wav').is_file(), 'glass-break audio must be in APK source'
 assert 'test_zen_realm_portal.gd' in workflow
 assert 'const VERSION = 3' in (root/'core/SaveManager.gd').read_text()
 print('PASS: combined 8/8 + 3/3 gates, 32 achievable tasks, cinematic portal, manual travel, preserved saves')
