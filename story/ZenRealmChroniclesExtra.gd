@@ -4,6 +4,9 @@ extends RefCounted
 const TEXT: Dictionary = {
     "de": {
         "realm_card_title":"Realm Chronicles – Story-Kampagne",
+        "return_ascend":"Zurück zu Zen Ascend 4×4",
+        "victory_scene":"Kuzes Weg · Nach dem Sieg",
+        "realm_gate_both":"Erforderlich: 8 Challenges und 3 besiegte Story-Bosse",
         "realm_card_open":"Kampagne öffnen",
         "realm_card_subtitle":"Kuzes Weg durch Shadow, Ember, Celestial und Satori",
         "realm_card_bosses":"Bosse",
@@ -59,6 +62,9 @@ const TEXT: Dictionary = {
     },
     "en": {
         "realm_card_title":"Realm Chronicles – Story Campaign",
+        "return_ascend":"Return to Zen Ascend 4×4",
+        "victory_scene":"Kuze’s journey · After the victory",
+        "realm_gate_both":"Required: 8 challenges and 3 defeated story bosses",
         "realm_card_open":"Open story campaign",
         "realm_card_subtitle":"Kuze's journey through Shadow, Ember, Celestial and Satori",
         "realm_card_bosses":"bosses",
@@ -114,6 +120,9 @@ const TEXT: Dictionary = {
     },
     "pt": {
         "realm_card_title":"Realm Chronicles – Campanha",
+        "return_ascend":"Voltar a Zen Ascend 4×4",
+        "victory_scene":"O caminho de Kuze · Após a vitória",
+        "realm_gate_both":"Necessário: 8 desafios e 3 chefes vencidos",
         "realm_card_open":"Abrir campanha",
         "realm_card_subtitle":"A viagem de Kuze por Shadow, Ember, Celestial e Satori",
         "realm_card_bosses":"chefes",
