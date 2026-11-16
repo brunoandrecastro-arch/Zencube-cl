@@ -12,6 +12,7 @@ const UnlockCeremony = preload("res://ui/ZenUnlockCeremony.gd")
 const RealmPortal = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
+const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
 var data: Dictionary = {}
 var lines: Array = []
@@ -53,6 +54,11 @@ var touched_cell: int = -1
 var dragged: bool = false
 var mouse_pressed: bool = false
 var heard_touch: bool = false
+var realm_story_active: bool = false
+var realm_story_progress: Dictionary = {}
+var realm_story_stage: int = 0
+var realm_story_last_human: int = -1
+var realm_story_generation: int = 0
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -100,6 +106,10 @@ func _ready() -> void:
     cube.set_skin(int(data.economy.get("equipped",0)))
     start_world_music()
     draw()
+    if ZenChronicles.consume_realm_story_launch():
+        # Scene is loaded; do not toggle normal 4x4 help_seen or rankings.
+        call_deferred("start_realm_story")
+        return
     # The explanation is guaranteed on first entry, including in the test build.
     if not bool(data.ascend.help_seen):
         data.ascend.help_seen = true
@@ -370,6 +380,9 @@ func zen_ascend_bot_name() -> String:
     return "Zen Ascend Bot · " + _bot_difficulty_name()
 
 func show_ascend_menu() -> void:
+    if realm_story_active:
+        _realm_story_menu()
+        return
     var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",520)
     var body: VBoxContainer = parts.box
     action(body,Z("Neue Partie"),show_mode_picker,true)
@@ -409,6 +422,12 @@ func draw() -> void:
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
+    if realm_story_active:
+        rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
+        if result == 0:
+            status_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage) if busy else RealmStory.text_for(lang(),"story")+" · "+str(move_count())+"/96"
+        quote_label.text = RealmStory.text_for(lang(),"react_%d" % realm_story_stage)
+        details_label.text = RealmStory.text_for(lang(),"skin")+" · "+str(move_count())+"/96"
 
 func _pick_position(pos: Vector2) -> int:
     if cube_surface == null or cube == null: return -1
@@ -472,6 +491,9 @@ func cube_input(event: InputEvent) -> void:
         if dragged: cube.rotate_cube(event.relative)
 
 func start_game(bot: bool, level: int = -1) -> void:
+    if realm_story_active:
+        _realm_story_retry()
+        return
     against_bot = bot
     # Explicit level choices never override fixed Realm difficulty.
     match_realm = realm_index()
@@ -491,7 +513,9 @@ func start_game(bot: bool, level: int = -1) -> void:
 func play(cell: int) -> void:
     if result != 0 or busy or cell < 0 or cell >= Mode.CELLS or int(cells[cell]) != 0: return
     if against_bot and turn == 2: return
+    if realm_story_active: realm_story_last_human = cell
     _commit(cell)
+    if realm_story_active and result == 0: _realm_story_save()
     if against_bot and result == 0 and turn == 2:
         busy = true
         draw()
@@ -510,14 +534,24 @@ func _commit(cell: int) -> void:
     draw()
 
 func bot_turn() -> void:
-    await get_tree().create_timer(0.26).timeout
-    if not is_inside_tree() or result != 0 or not against_bot: return
-    var cell: int = RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)
+    var generation: int = realm_story_generation
+    var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55][realm_story_stage] if realm_story_active else 0.26
+    await get_tree().create_timer(delay).timeout
+    if not is_inside_tree() or result != 0 or not against_bot or (realm_story_active and generation != realm_story_generation): return
+    var cell: int = RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)
     busy = false
     if cell >= 0: _commit(cell)
+    if realm_story_active and result == 0: _realm_story_save()
     draw()
 
 func finish() -> void:
+    if realm_story_active:
+        if recorded: return
+        recorded = true
+        busy = false
+        _realm_story_save()
+        call_deferred("_realm_story_result")
+        return
     if recorded: return
     recorded = true
     Mode.ensure(data)
@@ -657,6 +691,9 @@ func _start_picker_after_rules(dialog: Control) -> void:
     show_mode_picker()
 
 func show_mode_picker() -> void:
+    if realm_story_active:
+        _realm_story_menu()
+        return
     var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
     var dialog: Control = parts.dialog
     var body: VBoxContainer = parts.box
@@ -705,6 +742,9 @@ func show_statistics() -> void:
     _open_realm_dialog(parts)
 
 func return_home() -> void:
+    if realm_story_active:
+        _realm_story_leave()
+        return
     if get_tree() != null: get_tree().change_scene_to_file("res://Main.tscn")
 
 # ---- Standalone 4x4 Realms UI; all original Classic screens remain untouched. ----
@@ -726,6 +766,7 @@ func _progress_meter(parent: Node, current: int, goal: int) -> void:
     parent.add_child(bar)
 
 func realm_index() -> int:
+    if realm_story_active: return int(RealmStory.chapter(realm_story_stage))
     return int(Realms.state(data).selected)
 
 func _realm_dialog(title: String, height: int = 660) -> Dictionary:
@@ -795,6 +836,9 @@ func _realm_unlocked_hint(realm: int) -> String:
     return Realms.missing_reason(data,realm,lang())
 
 func show_realms() -> void:
+    if realm_story_active:
+        _realm_story_menu()
+        return
     Realms.ensure(data)
     var ui_parts: Dictionary = _realm_dialog("Zen Ascend · " + L("realms"))
     var body: VBoxContainer = ui_parts.box
@@ -860,6 +904,7 @@ func _choose_realm_from_dialog(number: int, dialog: Control) -> void:
     if select_realm(number): dialog.queue_free()
 
 func select_realm(number: int) -> bool:
+    if realm_story_active: return false
     if move_count() > 0 and result == 0: return false
     var from_realm: int = realm_index()
     if not Realms.select(data,number): return false
@@ -994,6 +1039,9 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     _open_realm_dialog(parts)
 
 func show_match_result() -> void:
+    if realm_story_active:
+        _realm_story_result()
+        return
     if not is_inside_tree(): return
     var human_won: bool = result in [1,2] and int(owners[result-1]) == 0
     var title: String = Z("Unentschieden!") if result == 3 else (Z("Gewonnen!") if human_won else zen_ascend_bot_name() + " · " + Z("hat gewonnen!"))
