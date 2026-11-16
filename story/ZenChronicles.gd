@@ -531,6 +531,9 @@ func open_realm_story_overview() -> void:
             _make_label(RealmStory.text_for(_active_language,"gate"),section,12,MUTED)
         if chapter == 0 and not allowed:
             _make_label(RealmStory.text_for(_active_language,"gate_mode"),section,12,MUTED)
+    if RealmStory.qa_mode() and stage != 6:
+        var test_ember: Button = _make_button(RealmStory.text_for(_active_language,"qa_ember"),outer,_launch_ember_qa)
+        test_ember.add_theme_stylebox_override("normal",_style(Color("#693524"),13))
     if stage >= 6:
         _make_label(RealmStory.text_for(_active_language,"done"),outer,15,CREAM)
     elif RealmStory.can_enter(saved,stage):
@@ -557,6 +560,27 @@ func _launch_realm_story() -> void:
     _realm_story_requested = true
     close_chronicles()
     get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+# Test APK only: jump to the Ember Temple without granting ANY normal
+# Realm unlock, store currency or achievement. Uses the QA app's own save.
+func _launch_ember_qa() -> void:
+    if not RealmStory.qa_mode(): return
+    var active_scene: Node = get_tree().current_scene
+    if active_scene != null and active_scene.scene_file_path == "res://Ascend.tscn" and active_scene.has_method("move_count"):
+        if int(active_scene.call("move_count")) > 0 and int(active_scene.get("result")) == 0:
+            var warning: VBoxContainer = _make_screen()
+            _screen_name = "realm-story"
+            _make_label(RealmStory.text_for(_active_language,"finish_active"),warning,18,CREAM)
+            _make_button(RealmStory.text_for(_active_language,"back"),warning,open_realm_story_overview)
+            return
+    var progress: Dictionary = RealmStory.load_progress()
+    if int(progress.stage) < 3 or int(progress.stage) >= 6:
+        progress.stage = 3
+        progress.game = {}
+        if not RealmStory.save_progress(progress):
+            push_warning("Realm Chronicles: failed to activate Chapter 2 preview")
+            return
+    _launch_realm_story()
 
 func consume_realm_story_launch() -> bool:
     var result: bool = _realm_story_requested
