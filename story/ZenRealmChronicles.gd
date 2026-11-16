@@ -121,6 +121,7 @@ const LOCALE: Dictionary = {
         "chapter_complete": "Kapitel abgeschlossen",
         "story": "Realm Chronicles",
         "finish_active": "Beende zuerst deine laufende 4×4-Partie, bevor du die Story startest.",
+        "qa_ember": "🔥 Kapitel 2 testen (nur Test-APK)",
         "menu_button": "Zen Ascend · Realm Chronicles (4×4)"
     },
     "en": {
@@ -190,6 +191,7 @@ const LOCALE: Dictionary = {
         "chapter_complete": "Chapter complete",
         "story": "Realm Chronicles",
         "finish_active": "Finish your current 4×4 match before starting the story.",
+        "qa_ember": "🔥 Test Chapter 2 (test APK only)",
         "menu_button": "Zen Ascend · Realm Chronicles (4×4)"
     },
     "pt": {
@@ -259,6 +261,7 @@ const LOCALE: Dictionary = {
         "chapter_complete": "Capítulo concluído",
         "story": "Realm Chronicles",
         "finish_active": "Termina primeiro a tua partida 4×4 antes de iniciares a história.",
+        "qa_ember": "🔥 Testar o capítulo 2 (só APK de teste)",
         "menu_button": "Zen Ascend · Realm Chronicles (4×4)"
     }
 }
@@ -308,8 +311,14 @@ static func save_progress(data: Dictionary) -> bool:
 static func chapter(stage: int) -> int:
     return 0 if stage < 3 else 1 if stage < 6 else 2
 
+## Only the separately installable Realm Chronicles debug APK sets this flag.
+## The public release retains the original strict eight-Challenge Realm gates.
+static func qa_mode() -> bool:
+    return bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))
+
 static func can_enter(data: Dictionary, stage: int) -> bool:
     if not ZenAscend.unlocked(data): return false
+    if qa_mode() and stage >= 0 and stage < 6: return true
     if stage < 3: return ZenAscendRealms.unlocked(data,0)
     if stage < 6: return ZenAscendRealms.unlocked(data,1)
     return true
