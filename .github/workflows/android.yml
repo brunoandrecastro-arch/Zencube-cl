@@ -178,6 +178,8 @@ jobs:
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_feedback_and_gates.gd
       - name: Validate twelve original Boss track mappings and audio checksums
         run: python3 tests/test_realm_boss_audio.py
+      - name: Play candidate onboarding, live cube, release entitlement and QA isolation
+        run: python3 tests/test_release_intro_and_play.py
       - name: Verify 100 tactical challenges on the 3D cube
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd

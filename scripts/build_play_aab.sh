@@ -16,6 +16,17 @@ if [[ ! -f "$templates/android_source.zip" || ! -f "$android_sdk/platforms/andro
   exit 1
 fi
 
+# Never package the story debug shortcuts in an Android Play AAB.
+# Confirm that this is an update of the user's EXISTING Play listing.
+python3 - <<'PY'
+from pathlib import Path
+project = Path("project.godot").read_text(encoding="utf-8")
+preset = Path("export_presets.cfg").read_text(encoding="utf-8").split("[preset.1.options]",1)[1]
+assert "realm_chronicles_qa" not in project, "QA shortcuts must never be built into Play"
+assert 'package/unique_name="com.zencube.game.play"' in preset, "Play package must match installed Alpha listing"
+assert "version/code=24" in preset and 'version/name="2.4"' in preset
+assert 'const TEST_UNLOCKED: bool = false' in Path("core/ZenAscend.gd").read_text(encoding="utf-8")
+PY
 mkdir -p build
 exec 9>build/.play-build.lock
 flock -n 9 || { echo 'An Android App Bundle build is already running.' >&2; exit 1; }
