@@ -1475,6 +1475,9 @@ func _realm_story_return_to_ascend() -> void:
     against_bot = true
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+    # Leaving a boss restores the normal Realm/Shop soundtrack immediately.
+    # Reuse the existing 1.8-second crossfade; keep the selected music intact.
+    sync_realm_music()
     draw()
     call_deferred("show_realms")
 
