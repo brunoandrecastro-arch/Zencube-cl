@@ -536,9 +536,15 @@ func _commit(cell: int) -> void:
 
 func bot_turn() -> void:
     var generation: int = realm_story_generation
+    var began_in_story: bool = realm_story_active
     var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55,0.44,0.55,0.75,0.88,0.74,1.05][clampi(realm_story_stage,0,11)] if realm_story_active else 0.26
     await get_tree().create_timer(delay).timeout
-    if not is_inside_tree() or result != 0 or not against_bot or (realm_story_active and generation != realm_story_generation): return
+    if not is_inside_tree() or result != 0 or not against_bot: return
+    # After leaving a story, realm_story_active becomes false. Check the
+    # launch context TOO, otherwise an awaited story bot could continue on
+    # the restored ordinary 4x4 board after the player has left.
+    if began_in_story and (not realm_story_active or generation != realm_story_generation): return
+    if not began_in_story and realm_story_active: return
     var cell: int = RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)
     busy = false
     if cell >= 0: _commit(cell)
