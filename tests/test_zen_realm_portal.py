@@ -24,6 +24,10 @@ assert '"metric":"edge_wins","need":2' in next(s for s in model.splitlines() if 
 assert 'while match_realm > 0 and not Realms.unlocked(data,match_realm)' in ui
 assert 'Realms.ready_for_breakthrough(data,match_realm)' in ui
 assert 'var journey: ZenRealmTravelCeremony = RealmPortal.new()' in ui
+assert 'func _preview_mirror_shatter_qa() -> void:' in ui
+assert 'if not RealmStory.qa_mode(): return' in ui
+assert 'preview.name = "RealmMirrorShatterPreviewQA"' in ui
+assert 'preview.present(Realms.REALM_ART[0],Realms.REALM_ART[1]' in ui
 assert 'func _show_manual_realm_journey(from_realm: int, to_realm: int, breakthrough: bool = false) -> void:' in ui
 assert 'call_deferred("_show_manual_realm_journey",transition_from,number,first_open)' in ui
 assert 'shader.code = PORTAL_SHADER' in portal and 'shader_parameter/reveal' in portal
