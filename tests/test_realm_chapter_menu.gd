@@ -27,6 +27,7 @@ func run() -> void:
     if existed: save_backup = FileAccess.get_file_as_bytes(path)
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
+    data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
     data.settings.language = "de"
     SaveManager.save_data(data)
     old_qa = bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))
