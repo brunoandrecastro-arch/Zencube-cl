@@ -186,6 +186,15 @@ jobs:
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim
           /tmp/zencube-sim reports/lines.json > reports/simulation.json
+      # A stable debug key lets future Realm Chronicles test builds update
+      # the SAME separately installed app, instead of creating a new signature
+      # on every ephemeral runner. No Google Play/upload key is involved.
+      - name: Reuse Realm Chronicles debug signing key
+        if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/zencube-debug.keystore
+          key: zencube-realmchronicles-debug-key-v1
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
