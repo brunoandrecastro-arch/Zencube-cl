@@ -44,6 +44,7 @@ func run() -> void:
     ProjectSettings.set_setting(qkey,false)
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
+    data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
     data.ascend.help_seen = true
     data.settings.language = "de"
     Realms.ensure(data)
