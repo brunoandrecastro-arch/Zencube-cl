@@ -1298,7 +1298,7 @@ func _realm_story_chapter_outro(chapter: int) -> void:
     else:
         var target_stage: int = (chapter+1)*RealmStory.CHAPTER_SIZE
         if RealmStory.can_enter(data,target_stage):
-            var label: String = ["next","next","continue_celestial","continue_satori"][chapter]
+            var label: String = ["next","continue_celestial","continue_satori"][chapter]
             action(body,RealmStory.text_for(lang(),label),_realm_story_start_chapter.bind(target_stage),true)
         else:
             var gate: String = ["gate","gate_celestial","gate_satori"][chapter]
