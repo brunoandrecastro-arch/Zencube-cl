@@ -1208,6 +1208,9 @@ func _realm_story_set_stage(stage: int) -> void:
     if realm_backdrop != null:
         realm_backdrop.texture = load(RealmStory.CHAPTER_ART[match_realm])
     draw()
+    # Follow the new Realm's EXISTING song on actual chapter travel.
+    # No new music and no modification to the Classic soundtrack.
+    sync_realm_music()
 
 func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0) -> void:
     # Use approved cinematic boss portraits shipped in JSON + base64 WebP.
