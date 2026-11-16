@@ -38,6 +38,7 @@ func run() -> void:
     var qa_key: String = "application/config/realm_chronicles_qa"
     var previous_qa: bool = bool(ProjectSettings.get_setting(qa_key,false))
     ProjectSettings.set_setting(qa_key,false)
+    assert_ok(Story.save_progress(Story.defaults()),"seed empty Realm Chronicles to test combined gates")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     Realms.ensure(data)
@@ -46,7 +47,11 @@ func run() -> void:
         assert_ok(not Story.can_enter(data,(realm+1)*3),"story chapter %d truly gated before previous challenges" % (realm+2))
         for task in Realms.TASKS[realm]:
             Realms.state(data).completed[str(task.id)] = true
-        assert_ok(Story.can_enter(data,(realm+1)*3),"story chapter %d unlocks after 8 preceding challenges" % (realm+2))
+        assert_ok(not Story.can_enter(data,(realm+1)*3),"8/8 alone cannot open story realm %d" % (realm+2))
+        var past: Dictionary = Story.load_progress()
+        past.stage = (realm+1)*3
+        assert_ok(Story.save_progress(past),"record three boss wins before next realm")
+        assert_ok(Story.can_enter(data,(realm+1)*3),"chapter %d unlocks after challenges plus bosses" % (realm+2))
     assert_ok(Story.LAST_STAGE==12 and Story.BOSS_IDS.size()==12,"all four chapters have 12 bosses")
     assert_ok(BossSkins.PROFILES.size()==12,"twelve boss-specific 3D material profiles")
     assert_ok(Extra.TEXT["de"].size()==Extra.TEXT["en"].size() and Extra.TEXT["en"].size()==Extra.TEXT["pt"].size(),"complete chapter 3+4 localization")
@@ -57,6 +62,9 @@ func run() -> void:
     assert_ok(Story.save_progress(progress),"store legacy Ember-complete progress at stage 6")
     var migrated: Dictionary = Story.load_progress()
     assert_ok(int(migrated.stage)==6 and bool(migrated.introduced.get("5",false)),"existing Chapter 2 progress is preserved")
+    # Do not launch the cinematic transition during the deterministic
+    # six-boss engine test; transitions have their own dedicated tests.
+    Realms.state(data)["auto_transitions"] = {"0":true,"1":true,"2":true}
     assert_ok(SaveManager.save_data(data),"seed ordinary stats for no-reward regression")
     var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     assert_ok(scene!=null,"existing 4x4 game scene loads")
