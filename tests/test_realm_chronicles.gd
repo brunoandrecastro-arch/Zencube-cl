@@ -30,6 +30,7 @@ func _restore() -> void:
 func run() -> void:
     _keep(SaveManager.PATH)
     _keep(Story.SAVE)
+    check(Story.save_progress(Story.defaults()),"seed empty story for combined gates")
     check(Story.BOSS_IDS.size()==12,"twelve unique story bosses")
     check(BossSkins.PROFILES.size()==12,"twelve unique 3D material profiles")
     check(Story.CHAPTER_ART.size()==4,"four realm overview previews")
@@ -73,15 +74,25 @@ func run() -> void:
     check(not Story.can_enter(data,3),"Ember must not skip 8/8 existing Shadow challenges")
     for task in Realms.TASKS[0]:
         Realms.state(data).completed[str(task.id)] = true
-    check(Story.can_enter(data,3),"Ember unlocks after existing 8/8 Shadow requirements")
+    check(not Story.can_enter(data,3),"8/8 Shadow challenges do not skip story bosses")
+    var gates: Dictionary = Story.defaults()
+    gates.stage = 3
+    check(Story.save_progress(gates),"record Shadow boss trio")
+    check(Story.can_enter(data,3),"Ember requires Shadow 8/8 + 3/3")
     check(not Story.can_enter(data,6),"Celestial remains locked without 8/8 Ember challenges")
     for task in Realms.TASKS[1]:
         Realms.state(data).completed[str(task.id)] = true
-    check(Story.can_enter(data,6),"Celestial unlocks after existing 8/8 Ember requirements")
+    check(not Story.can_enter(data,6),"Ember 8/8 alone not enough")
+    gates.stage = 6
+    check(Story.save_progress(gates),"record Ember boss trio")
+    check(Story.can_enter(data,6),"Celestial requires Ember 8/8 + 3/3")
     check(not Story.can_enter(data,9),"Satori remains locked without 8/8 Celestial challenges")
     for task in Realms.TASKS[2]:
         Realms.state(data).completed[str(task.id)] = true
-    check(Story.can_enter(data,9),"Satori unlocks after existing 8/8 Celestial requirements")
+    check(not Story.can_enter(data,9),"Celestial 8/8 alone not enough")
+    gates.stage = 9
+    check(Story.save_progress(gates),"record Celestial boss trio")
+    check(Story.can_enter(data,9),"Satori requires Celestial 8/8 + 3/3")
     check(SaveManager.save_data(data),"set up isolated test save")
     check(Story.save_progress(Story.defaults()),"seed independent Realm Chronicles progress")
     var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
