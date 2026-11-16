@@ -49,6 +49,8 @@ var _screen_name := ""
 var _campaign_board_active := false
 var _realm_story_requested: bool = false
 var _realm_story_from_realms: bool = false
+var _realm_chapter_scroll: ScrollContainer
+var _realm_chapter_dragging: bool = false
 
 func _ready() -> void:
     layer = 90
@@ -189,6 +191,8 @@ func _make_button(value: String, parent: Node, callback: Callable) -> Button:
     return b
 
 func _make_screen() -> VBoxContainer:
+    _realm_chapter_scroll = null
+    _realm_chapter_dragging = false
     if _screen != null:
         _screen.hide()
         _screen.queue_free()
@@ -243,7 +247,6 @@ func open_library() -> void:
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _make_button(Campaign.text_for(_active_language, "play"), outer, open_campaign_overview)
-    _make_button(RealmStory.text_for(_active_language, "menu_button"), outer, open_realm_story_overview)
     _make_button(Campaign.text_for(_active_language, "webcomic"), outer, open_comic_library)
 
 func open_comic_library() -> void:
@@ -383,6 +386,19 @@ func is_open() -> bool:
 func _input(event: InputEvent) -> void:
     if _screen == null:
         return
+    # Godot's nested PanelContainers/TextureRects can intercept touch
+    # gestures before ScrollContainer on Android. Drive this ONE chapter list
+    # from native drag deltas; never change the campaign reader or 3D cube.
+    if _screen_name == "realm-story" and is_instance_valid(_realm_chapter_scroll):
+        if event is InputEventScreenTouch:
+            if event.pressed:
+                _realm_chapter_dragging = _realm_chapter_scroll.get_global_rect().has_point(event.position)
+            else:
+                _realm_chapter_dragging = false
+        elif event is InputEventScreenDrag and _realm_chapter_dragging:
+            _realm_chapter_scroll.scroll_vertical = maxi(0, _realm_chapter_scroll.scroll_vertical - roundi(event.relative.y))
+            get_viewport().set_input_as_handled()
+            return
     if event is InputEventScreenTouch:
         if event.pressed:
             _touch_start = event.position
@@ -512,6 +528,10 @@ func open_realm_story_overview(from_realms: bool = false) -> void:
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", navigation, close_chronicles).custom_minimum_size.x = 48
     var body: VBoxContainer = _campaign_scroll(outer)
+    _realm_chapter_scroll = body.get_parent() as ScrollContainer
+    _realm_chapter_scroll.name = "RealmChroniclesChapterScroll"
+    _realm_chapter_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+    body.mouse_filter = Control.MOUSE_FILTER_PASS
     _make_label(RealmStory.text_for(_active_language,"intro"), body, 15, CREAM)
     for chapter in range(4):
         var completed: bool = stage >= (chapter+1)*3
@@ -521,13 +541,16 @@ func open_realm_story_overview(from_realms: bool = false) -> void:
         box_style.border_color = GOLD if int(stage / 3) == chapter else Color("#76624a")
         box_style.set_border_width_all(1)
         panel.add_theme_stylebox_override("panel", box_style)
+        panel.mouse_filter = Control.MOUSE_FILTER_PASS
         body.add_child(panel)
         var section: VBoxContainer = VBoxContainer.new()
+        section.mouse_filter = Control.MOUSE_FILTER_PASS
         section.add_theme_constant_override("separation",7)
         panel.add_child(section)
         var key: String = ["shadow","ember","celestial","satori"][chapter]
         _make_label(RealmStory.text_for(_active_language,key), section, 19, GOLD)
         var picture: TextureRect = Campaign.artwork(RealmStory.CHAPTER_ART[chapter],105)
+        picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
         section.add_child(picture)
         _make_label(RealmStory.text_for(_active_language,key+"_sub"),section,13,MUTED)
         var progress_label: String = RealmStory.text_for(_active_language,"completed" if completed else ("current" if allowed else "locked"))
