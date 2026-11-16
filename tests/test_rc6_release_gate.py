@@ -14,6 +14,7 @@ assert len(parts)==2, "Exactly two export profiles needed"
 assert 'name="Android"' in parts[0] and 'custom_features=""' in parts[0]
 assert 'name="Android Play"' in parts[1] and 'custom_features=""' in parts[1]
 assert "zencube_ascend_test" not in preset
+assert 'package/unique_name="com.zencube.game.play"' in preset.split('[preset.1.options]',1)[1], "Existing Play Store package must be preserved"
 assert "--export-debug Android " in build
 assert 'const TEST_UNLOCKED: bool = false' in mode
 assert 'static func test_access_enabled() -> bool:' in mode
