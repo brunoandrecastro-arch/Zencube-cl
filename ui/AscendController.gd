@@ -1141,7 +1141,11 @@ func _realm_story_set_stage(stage: int) -> void:
     draw()
 
 func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0) -> void:
-    var texture_path: String = RealmStory.BOSS_ART[stage]
+    # Prefer the six original approved fantasy portraits if their optimized
+    # WebP assets have been uploaded. SVG placeholder is only a fallback.
+    var texture_path: String = "res://assets/realm_chronicles/boss_%s_hd.webp" % RealmStory.BOSS_IDS[stage]
+    if not ResourceLoader.exists(texture_path):
+        texture_path = RealmStory.BOSS_ART[stage]
     if not ResourceLoader.exists(texture_path):
         texture_path = RealmStory.CHAPTER_ART[RealmStory.chapter(stage)]
     var art: Texture2D = load(texture_path) as Texture2D
