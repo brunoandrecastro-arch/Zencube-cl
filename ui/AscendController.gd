@@ -825,7 +825,7 @@ func _realm_dialog(title: String, height: int = 660) -> Dictionary:
     back.custom_minimum_size.y = 53
     active_realm_dialog = root
     active_realm_scroll = scroll
-    return {"dialog":root,"box":content,"scroller":scroll}
+    return {"dialog":root,"box":content,"scroller":scroll,"back_button":back,"frame":frame}
 
 func _open_realm_dialog(items: Dictionary) -> void:
     # An in-scene overlay is immediately visible, already sized to the viewport.
@@ -1079,6 +1079,19 @@ func show_realm_rewards(_awards: Dictionary) -> void:
     show_match_result()
 
 
+# Compact story dialogue: keep the existing beautiful theme and scroll
+# behavior, but do not reserve 80% of a tall Android screen for a short intro.
+# The dedicated story actions already offer navigation; a second Back footer
+# creates an unnecessary third exit next to X and "Return to main game".
+func _realm_story_compact(parts: Dictionary) -> void:
+    var frame: PanelContainer = parts.frame
+    frame.anchor_top = 0.15
+    frame.anchor_bottom = 0.80
+    frame.offset_top = 0
+    frame.offset_bottom = 0
+    var footer: Button = parts.back_button
+    footer.visible = false
+
 # -------- Realm Chronicles: isolated 4x4 playable story --------
 func start_realm_story() -> void:
     if not Mode.unlocked(data):
@@ -1151,6 +1164,7 @@ func _realm_story_present_intro() -> void:
     var stage: int = realm_story_stage
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"boss_%d" % stage),680)
     var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
     text(body,RealmStory.text_for(lang(),"shadow" if stage < 3 else "ember"),17,Color("#e7cd9b"))
     _realm_story_art(body,stage,226)
     text(body,RealmStory.text_for(lang(),"intro_%d" % stage),16)
@@ -1193,6 +1207,7 @@ func _realm_story_result() -> void:
     var title: String = RealmStory.text_for(lang(),"win" if won else ("draw" if result == 3 else "loss"))
     var parts: Dictionary = _realm_dialog(title,590)
     var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
     _realm_story_art(body,realm_story_stage,170)
     text(body,RealmStory.text_for(lang(),key),17)
     if won:
@@ -1236,6 +1251,7 @@ func _realm_story_advance() -> void:
 func _realm_story_chapter_outro(chapter: int) -> void:
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"chapter_complete"),700)
     var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
     var picture: TextureRect = TextureRect.new()
     picture.texture = load(RealmStory.CHAPTER_ART[chapter])
     picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -1264,6 +1280,7 @@ func _realm_story_start_ember() -> void:
 func _realm_story_locked() -> void:
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"challenge_unlock"),570)
     var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
     text(body,RealmStory.text_for(lang(),"gate" if realm_story_stage >= 3 else "gate_mode"),17)
     action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
     _open_realm_dialog(parts)
@@ -1271,6 +1288,7 @@ func _realm_story_locked() -> void:
 func _realm_story_completed() -> void:
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"chapter_complete"),570)
     var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
     text(body,RealmStory.text_for(lang(),"chapter2_end"),17)
     text(body,RealmStory.text_for(lang(),"done"),17,Color("#e6c68c"))
     action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
@@ -1280,6 +1298,7 @@ func _realm_story_menu() -> void:
     if not realm_story_active: return
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"menu"),520)
     var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
     text(body,RealmStory.text_for(lang(),"boss_%d" % mini(realm_story_stage,5)),20,Color("#eddaae"))
     action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
     action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
