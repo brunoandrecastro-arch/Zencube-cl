@@ -50,7 +50,11 @@ func run() -> void:
     check(not Story.can_enter(data,3),"QA preview cannot leak into normal release")
     for task in Realms.TASKS[0]:
         Realms.state(data).completed[str(task.id)] = true
-    check(Story.can_enter(data,3),"eight completed challenges grant legitimate Ember access")
+    check(not Story.can_enter(data,3),"8/8 Shadow challenges alone do not unlock Ember")
+    var story_start: Dictionary = Story.defaults()
+    story_start.stage = 3
+    check(Story.save_progress(story_start),"seed three Shadow victories for legitimate Ember gate")
+    check(Story.can_enter(data,3),"eight challenges plus three bosses grant Ember access")
     check(SaveManager.save_data(data),"seed normal game safely")
     var progress: Dictionary = Story.defaults()
     progress.stage = 3
