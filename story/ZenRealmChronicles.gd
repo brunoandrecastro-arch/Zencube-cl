@@ -8,12 +8,12 @@ const BOSS_IDS: Array[String] = [
     "ash_runner", "banner_guardian", "ember_high_priest"
 ]
 const BOSS_ART: Array[String] = [
-    "res://assets/realm_chronicles/boss_mist_guardian.webp",
-    "res://assets/realm_chronicles/boss_mirror_novice.webp",
-    "res://assets/realm_chronicles/boss_veil_monk.webp",
-    "res://assets/realm_chronicles/boss_ash_runner.webp",
-    "res://assets/realm_chronicles/boss_banner_guardian.webp",
-    "res://assets/realm_chronicles/boss_ember_high_priest.webp"
+    "res://assets/realm_chronicles/boss_mist_guardian.svg",
+    "res://assets/realm_chronicles/boss_mirror_novice.svg",
+    "res://assets/realm_chronicles/boss_veil_monk.svg",
+    "res://assets/realm_chronicles/boss_ash_runner.svg",
+    "res://assets/realm_chronicles/boss_banner_guardian.svg",
+    "res://assets/realm_chronicles/boss_ember_high_priest.svg"
 ]
 const CHAPTER_ART: Array[String] = [
     "res://assets/realms/shadow_realm.webp",
