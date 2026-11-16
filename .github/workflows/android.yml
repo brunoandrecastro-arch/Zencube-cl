@@ -161,6 +161,9 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Ember Temple – three real boss battles, chapter finale and QA-only gate
+        run: |
+          timeout 110 "$GODOT" --headless --path . --script tests/test_ember_chapter.gd
       - name: Verify 100 tactical challenges on the 3D cube
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
