@@ -197,6 +197,9 @@ jobs:
             grep -Fx "assets/story/$file" <<< "$apk_contents"
           done
           grep -Fx 'assets/story/zen_campaign.json' <<< "$apk_contents"
+          for boss in mist_guardian mirror_novice veil_monk ash_runner banner_guardian ember_high_priest; do
+            grep -Fx "assets/assets/realm_chronicles/boss_${boss}.json" <<< "$apk_contents"
+          done
           for file in $(git ls-files 'assets/zen_campaign/*.webp'); do
             grep -Fx "assets/$file.import" <<< "$apk_contents"
           done
