@@ -1087,6 +1087,7 @@ func start_realm_story() -> void:
     realm_story_progress = RealmStory.load_progress()
     realm_story_stage = int(realm_story_progress.stage)
     realm_story_active = true
+    ZenChronicles.set_campaign_board_active(true)
     realm_story_generation += 1
     realm_story_last_human = -1
     if realm_story_stage >= 6:
@@ -1288,6 +1289,7 @@ func _realm_story_leave() -> void:
     if not realm_story_active: return
     _realm_story_save()
     realm_story_active = false
+    ZenChronicles.set_campaign_board_active(false)
     realm_story_generation += 1
     busy = false
     if is_instance_valid(active_realm_dialog):
