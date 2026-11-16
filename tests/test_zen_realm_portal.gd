@@ -1,5 +1,6 @@
 extends SceneTree
 # Runtime animation smoke check, no data or game states changed.
+const Story = preload("res://story/ZenRealmChronicles.gd")
 var failures: int = 0
 func check(ok: bool, reason: String) -> void:
     if not ok:
@@ -8,6 +9,9 @@ func check(ok: bool, reason: String) -> void:
 func _initialize() -> void:
     call_deferred("run")
 func run() -> void:
+    var existed: bool = FileAccess.file_exists(Story.SAVE)
+    var previous: PackedByteArray = FileAccess.get_file_as_bytes(Story.SAVE) if existed else PackedByteArray()
+    check(Story.save_progress(Story.defaults()),"start with zero defeated bosses")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     ZenAscendRealms.ensure(data)
@@ -16,7 +20,11 @@ func run() -> void:
     for i in range(7): earned[str(ZenAscendRealms.TASKS[0][i].id)] = true
     check(not ZenAscendRealms.unlocked(data,1), "Ember locked at 7/8")
     earned[str(ZenAscendRealms.TASKS[0][7].id)] = true
-    check(ZenAscendRealms.unlocked(data,1), "Ember unlocked at 8/8")
+    check(not ZenAscendRealms.unlocked(data,1), "Ember still locked at 8/8 without story bosses")
+    var p: Dictionary = Story.defaults()
+    p.stage = 3
+    check(Story.save_progress(p),"three Shadow victories recorded")
+    check(ZenAscendRealms.unlocked(data,1), "Ember unlocked at 8/8 challenges plus 3/3 bosses")
     var fx: ZenRealmTravelCeremony = ZenRealmTravelCeremony.new()
     root.add_child(fx)
     fx.present(ZenAscendRealms.REALM_ART[0],ZenAscendRealms.REALM_ART[1],"Ember Temple",true,false,[],"en")
@@ -25,5 +33,11 @@ func run() -> void:
     fx.close()
     await process_frame
     check(not is_instance_valid(fx) or fx.is_queued_for_deletion(), "portal skippable")
+    if existed:
+        var restored := FileAccess.open(Story.SAVE,FileAccess.WRITE)
+        restored.store_buffer(previous)
+        restored.close()
+    elif FileAccess.file_exists(Story.SAVE):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(Story.SAVE))
     print("ZEN REALM PORTAL FAILURES=", failures)
     quit(0 if failures == 0 else 1)
