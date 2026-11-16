@@ -1,7 +1,8 @@
 class_name ZenAscend
 extends RefCounted
 # Separate 4x4 mode: the existing Classic 3x3 rules and saves are untouched.
-# Release requires rank 3 or permanent purchase. Debug builds may test for free.
+# Production AND the end-user acceptance APK require rank 3 or a permanent purchase.
+# Only an isolated QA app with an explicit flag may bypass progression.
 # Historic debug flag retained as disabled constant for backwards compatibility.
 const TEST_UNLOCKED: bool = false
 const PRICE: int = 850
@@ -70,8 +71,8 @@ static func unlocked_for_release(data: Dictionary) -> bool:
     return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 3
 
 static func test_access_enabled() -> bool:
-    # Safe temporary test access: never active in a release export.
-    return OS.has_feature("debug")
+    # Debug signing must never grant a game unlock by itself.
+    return OS.has_feature("debug") and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))
 
 static func unlocked(data: Dictionary) -> bool:
     return unlocked_for_release(data) or test_access_enabled()
