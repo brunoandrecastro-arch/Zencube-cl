@@ -5,6 +5,7 @@ extends SceneTree
 const Story = preload("res://story/ZenRealmChronicles.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const Artwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
+const BossMusic = preload("res://core/ZenRealmBossMusic.gd")
 var failures: int = 0
 var backups: Dictionary = {}
 
@@ -89,8 +90,13 @@ func run() -> void:
     current_scene = controller
     await process_frame
     var regular_save: String = FileAccess.get_file_as_string(SaveManager.PATH)
+    var normal_music: AudioStream = controller.call("desired_realm_stream")
+    check(normal_music != null,"normal Realm/Shop soundtrack available before boss")
     controller.call("start_realm_story")
     check(bool(controller.get("realm_story_active")),"first boss starts in existing Ascend scene")
+    var boss_player: AudioStreamPlayer = controller.get("world_music") as AudioStreamPlayer
+    check(boss_player != null and boss_player.stream == BossMusic.stream_for(0),
+        "starting a boss switches to its exclusive soundtrack")
     var cube: Node = controller.get("cube")
     check(int(cube.get("boss_skin_id"))==0,"real story skin active")
     var board: Array = controller.get("cells")
@@ -129,6 +135,9 @@ func run() -> void:
     controller.call_deferred("bot_turn")
     await process_frame
     controller.call("_realm_story_return_to_ascend")
+    var restored_music: AudioStreamPlayer = controller.get("world_music") as AudioStreamPlayer
+    check(restored_music != null and restored_music.stream == normal_music,
+        "leaving a boss restores normal Realm/Shop soundtrack instead of looping boss theme")
     await create_timer(1.2).timeout
     check(int(controller.call("move_count"))==0,"pending story bot is cancelled after returning to Ascend")
     check(not bool(controller.get("realm_story_active")),"direct story exit returns to normal Zen Ascend")
