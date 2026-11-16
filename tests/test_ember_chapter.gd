@@ -37,6 +37,7 @@ func run() -> void:
     # *no* completed Shadow challenges. The release gate must stay locked.
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
+    data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
     Realms.ensure(data)
     data.ascend.help_seen = true
     var qa_key: String = "application/config/realm_chronicles_qa"
