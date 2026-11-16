@@ -42,6 +42,17 @@ func run() -> void:
         var tex: Texture2D = load(art_path) as Texture2D
         check(tex != null and tex.get_width() >= 600 and tex.get_height() >= 600,
             "full portrait artwork is imported: "+art_path)
+        var hd_path: String = Story.BOSS_HD_ART[stage]
+        check(FileAccess.file_exists(hd_path),"approved HD boss art stored in repository: "+hd_path)
+        if FileAccess.file_exists(hd_path):
+            var record: Variant = JSON.parse_string(FileAccess.get_file_as_string(hd_path))
+            check(record is Dictionary and str(record.get("format",""))=="webp-base64","correct HD portrait payload "+hd_path)
+            if record is Dictionary:
+                var raw: PackedByteArray = Marshalls.base64_to_raw(str(record.get("data","")))
+                var img: Image = Image.new()
+                check(img.load_webp_from_buffer(raw)==OK and img.get_width()>=300,"approved picture decodes as WebP "+hd_path)
+                var used: Texture2D = Story.boss_texture(stage)
+                check(used is ImageTexture,"game uses cinematic ImageTexture not vector fallback "+hd_path)
         var procedural: Texture2D = BossSkins.make_surface(stage)
         check(procedural != null and procedural.get_width()==160,"Boss tile surface %d" % stage)
     var lines: Array = ZenAscend.generate_lines()
