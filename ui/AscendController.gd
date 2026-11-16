@@ -895,7 +895,9 @@ func show_realms() -> void:
         thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
         column.add_child(thumb)
         var amount: int = Realms.count(data,i)
+        var boss_wins: int = Realms.completed_story_bosses(i)
         text(column,L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
+        text(column,("Story-Bosse" if lang()=="de" else "Chefes da história" if lang()=="pt" else "Story bosses") + ": %d/3" % boss_wins,14,Color("#e8d1a5"))
         var rank_name: String = Realms.title_for_realm(data,i,lang())
         if rank_name != "—": text(column,rank_name,14,Color("e2ca8c"))
         if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
@@ -931,13 +933,16 @@ func _show_realm_requirements(realm: int) -> void:
     text(body,"🔒  " + Realms.missing_reason(data,realm,lang()),17,Color("f6daa0"))
     var source_realm: int = realm - 1
     for previous in range(realm):
-        if Realms.count(data,previous) < 8:
+        if Realms.count(data,previous) < 8 or Realms.completed_story_bosses(previous) < 3:
             source_realm = previous
             break
     if source_realm >= 0:
         var done: int = Realms.count(data,source_realm)
         text(body,Realms.realm_name(source_realm,lang()) + " · %d/8 " % done + L("challenges"),16)
         _progress_meter(body,done,8)
+        var defeated: int = Realms.completed_story_bosses(source_realm)
+        text(body,("Story-Bosse" if lang()=="de" else "Chefes da história" if lang()=="pt" else "Story bosses") + ": %d/3" % defeated,16)
+        _progress_meter(body,defeated,3)
     action(body,L("realms"),show_realms,true)
     _open_realm_dialog(parts)
 
@@ -1418,9 +1423,13 @@ func _realm_story_completed() -> void:
 
 func _realm_story_menu() -> void:
     if not realm_story_active: return
-    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"menu"),520)
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"menu"),430)
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
+    # The story pause menu holds only two actions: size it accordingly.
+    var frame: PanelContainer = parts.frame
+    frame.anchor_top = 0.33
+    frame.anchor_bottom = 0.67
     var current_boss: String = RealmStory.text_for(lang(),"final_title") if realm_story_stage >= RealmStory.LAST_STAGE else RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
     text(body,current_boss,20,Color("#eddaae"))
     action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
