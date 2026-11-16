@@ -15,6 +15,38 @@ const BOSS_ART: Array[String] = [
     "res://assets/realm_chronicles/boss_banner_guardian.svg",
     "res://assets/realm_chronicles/boss_ember_high_priest.svg"
 ]
+## Approved concept art is shipped as compressed WebP inside a UTF-8 JSON
+## resource. The GitHub connector only writes text, so this keeps the actual
+## cinematic images in the game instead of swapping in vector placeholders.
+## Decoded textures are cached per boss and never touch normal cube skin IDs.
+const BOSS_HD_ART: Array[String] = [
+    "res://assets/realm_chronicles/boss_mist_guardian.json",
+    "res://assets/realm_chronicles/boss_mirror_novice.json",
+    "res://assets/realm_chronicles/boss_veil_monk.json",
+    "res://assets/realm_chronicles/boss_ash_runner.json",
+    "res://assets/realm_chronicles/boss_banner_guardian.json",
+    "res://assets/realm_chronicles/boss_ember_high_priest.json"
+]
+static var _hd_cache: Dictionary = {}
+
+static func boss_texture(stage: int) -> Texture2D:
+    if stage < 0 or stage >= BOSS_HD_ART.size(): return null
+    if _hd_cache.has(stage): return _hd_cache[stage] as Texture2D
+    var path: String = BOSS_HD_ART[stage]
+    if FileAccess.file_exists(path):
+        var record: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+        if record is Dictionary and str(record.get("format","")) == "webp-base64":
+            var bytes: PackedByteArray = Marshalls.base64_to_raw(str(record.get("data","")))
+            var decoded: Image = Image.new()
+            if decoded.load_webp_from_buffer(bytes) == OK and decoded.get_width() >= 300:
+                var texture: ImageTexture = ImageTexture.create_from_image(decoded)
+                _hd_cache[stage] = texture
+                return texture
+    # A visible fallback is preferable to a blank card if an export is broken.
+    var fallback: Texture2D = load(BOSS_ART[stage]) as Texture2D
+    if fallback != null: _hd_cache[stage] = fallback
+    return fallback
+
 const CHAPTER_ART: Array[String] = [
     "res://assets/realms/shadow_realm.webp",
     "res://assets/realms/ember_temple.webp",
