@@ -2,6 +2,7 @@ extends SceneTree
 # Test new 4x4 realm progression on headless Godot without changing user save data.
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const Bot = preload("res://core/ZenAscendRealmBot.gd")
+const Story = preload("res://story/ZenRealmChronicles.gd")
 var fail: int = 0
 func check(value: bool, reason: String) -> void:
     if not value:
@@ -10,6 +11,9 @@ func check(value: bool, reason: String) -> void:
 func _initialize() -> void:
     call_deferred("run")
 func run() -> void:
+    var existed: bool = FileAccess.file_exists(Story.SAVE)
+    var previous: PackedByteArray = FileAccess.get_file_as_bytes(Story.SAVE) if existed else PackedByteArray()
+    check(Story.save_progress(Story.defaults()),"seed locked story stages")
     var count_all: int = 0
     var keys: Dictionary = {}
     for realm in range(4):
@@ -70,19 +74,29 @@ func run() -> void:
         earned[str(Realms.TASKS[0][i].id)] = true
     check(not Realms.unlocked(gate_data,1),"Shadow 7/8 stays locked")
     earned[str(Realms.TASKS[0][7].id)] = true
-    check(Realms.unlocked(gate_data,1),"Ember unlocks at Shadow 8/8")
+    check(not Realms.unlocked(gate_data,1),"8/8 challenges alone cannot skip Shadow bosses")
+    var p: Dictionary = Story.defaults()
+    p.stage = 3
+    check(Story.save_progress(p),"record three defeated Shadow bosses")
+    check(Realms.unlocked(gate_data,1),"Ember unlocks at Shadow 8/8 + 3/3")
     check(Realms.select(gate_data,1),"select unlocked Ember Temple")
     check(int(Realms.state(gate_data).selected)==1,"Ember selection persisted")
     for i in range(7): earned[str(Realms.TASKS[1][i].id)] = true
     Realms.state(gate_data).stats[1]["wins"] = 30
     check(not Realms.unlocked(gate_data,2),"Ember 7/8 stays locked even after many wins")
     earned[str(Realms.TASKS[1][7].id)] = true
-    check(Realms.unlocked(gate_data,2),"Celestial unlocks at Ember 8/8")
+    check(not Realms.unlocked(gate_data,2),"8/8 Ember challenges alone cannot skip three Ember bosses")
+    p.stage = 6
+    check(Story.save_progress(p),"record six defeated bosses")
+    check(Realms.unlocked(gate_data,2),"Celestial unlocks at Ember 8/8 + 3/3")
     for i in range(7): earned[str(Realms.TASKS[2][i].id)] = true
     Realms.state(gate_data).stats[2]["wins"] = 30
     check(not Realms.unlocked(gate_data,3),"Celestial 7/8 stays locked regardless of wins")
     earned[str(Realms.TASKS[2][7].id)] = true
-    check(Realms.unlocked(gate_data,3),"Satori unlocks at Celestial 8/8")
+    check(not Realms.unlocked(gate_data,3),"8/8 Celestial challenges alone cannot skip its bosses")
+    p.stage = 9
+    check(Story.save_progress(p),"record nine defeated bosses")
+    check(Realms.unlocked(gate_data,3),"Satori unlocks at Celestial 8/8 + 3/3")
     for task in Realms.TASKS[0]:
         Realms.state(data).completed[str(task.id)] = true
     check(Realms.select(data,1),"original save can still select completed Shadow destination")
@@ -97,5 +111,11 @@ func run() -> void:
         check(int(loaded.economy.leaves)==int(data.economy.leaves),"leaves survive JSON restoration")
     var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     check(scene!=null,"4x4 scene retained")
+    if existed:
+        var restored := FileAccess.open(Story.SAVE,FileAccess.WRITE)
+        restored.store_buffer(previous)
+        restored.close()
+    elif FileAccess.file_exists(Story.SAVE):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(Story.SAVE))
     print("ZEN ASCEND REALMS FAILURES=",fail)
     quit(1 if fail>0 else 0)
