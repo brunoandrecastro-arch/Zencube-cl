@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
-      ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' || startsWith(github.head_ref, 'release/play-candidate-') || startsWith(github.ref_name, 'release/play-candidate-') }}
+      ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
+      ZENCUBE_ENDUSER_PREVIEW: ${{ startsWith(github.head_ref, 'release/play-candidate-') || startsWith(github.ref_name, 'release/play-candidate-') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -206,7 +207,7 @@ jobs:
       # the SAME separately installed app, instead of creating a new signature
       # on every ephemeral runner. No Google Play/upload key is involved.
       - name: Reuse Realm Chronicles debug signing key
-        if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
+        if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true' || env.ZENCUBE_ENDUSER_PREVIEW == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.android/zencube-debug.keystore
@@ -251,8 +252,29 @@ jobs:
           name: ZenCube-3D-RealmChronicles-Test
           path: build/ZenCube-3D-RealmChronicles-Test.apk
           if-no-files-found: error
+      # Acceptance build: release behaviour, clean local save ID, no QA flag.
+      # It is NOT a separately published Google Play application.
+      - name: Verify end-user APK identity and no QA bypass
+        if: env.ZENCUBE_ENDUSER_PREVIEW == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          badging=$("$ANDROID_SDK_ROOT/build-tools/35.0.0/aapt2" dump badging build/ZenCube-3D.apk)
+          grep -F "package: name='com.zencube.game.enduserpreview' " <<< "$badging"
+          grep -Fx "application-label:'ZenCube 3D'" <<< "$badging"
+          python3 tests/test_enduser_preview_gate.py
+      - name: Name ZenCube 3D end-user preview
+        if: env.ZENCUBE_ENDUSER_PREVIEW == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-Enduser-Preview.apk
+      - name: Upload ZenCube 3D end-user preview
+        if: env.ZENCUBE_ENDUSER_PREVIEW == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-Enduser-Preview
+          path: build/ZenCube-3D-Enduser-Preview.apk
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true'
+        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_ENDUSER_PREVIEW != 'true'
         with:
           name: ZenCube-3D-debug
           path: |
