@@ -30,7 +30,7 @@ func run() -> void:
     var preexisting_classic: Dictionary = data.stats.duplicate(true)
     Realms.ensure(data)
     check(int(Realms.state(data).selected)==0,"shadow selected by default")
-    check(Realms.unlocked(data,0) == ZenAscend.test_access_enabled(),"free Shadow Realm only in debug")
+    check(not Realms.unlocked(data,0),"Shadow locked before Zen Ascend ownership on all builds")
     check(not ZenAscend.unlocked_for_release(data),"release keeps its unlock requirement")
     data.ascension.rank = 3
     check(Realms.unlocked(data,0),"shadow entry after Zen Master")
