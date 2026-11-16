@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
+      ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -157,6 +158,9 @@ jobs:
       - name: Verify playable Zen Campaign and demon AI
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_zen_campaign.gd
+      - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
+        run: |
+          timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
       - name: Verify 100 tactical challenges on the 3D cube
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
@@ -206,8 +210,18 @@ jobs:
           name: ZenCube-3D-Campaign-Test
           path: build/ZenCube-3D-Campaign-Test.apk
           if-no-files-found: error
+      - name: Name Realm Chronicles test APK
+        if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-RealmChronicles-Test.apk
+      - name: Upload Realm Chronicles test APK
+        if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-RealmChronicles-Test
+          path: build/ZenCube-3D-RealmChronicles-Test.apk
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: env.ZENCUBE_CAMPAIGN_TEST != 'true'
+        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true'
         with:
           name: ZenCube-3D-debug
           path: |
