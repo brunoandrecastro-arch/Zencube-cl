@@ -4,9 +4,9 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
-    "🌐  ZenCube 3D": "🌐  ZenCube 3D",
+    "🌐  ZenCube 3D": "🌐  ZenCube 3D · Language",
     "千里の道も一歩から": "千里の道も一歩から",
-    "Senri no michi mo ippo kara": "Senri no michi mo ippo kara",
+    "Senri no michi mo ippo kara": "Senri no michi mo ippo kara · Japanese proverb",
     "Zen-Chroniken 📖": "Zen Chronicles 📖",
     "A purchased hint stays with you. Achievements must still be earned in battle.": "Purchased hints are permanent. Achievements must still be earned through play.",
     "Buy a hint · 🍃 %d": "Unlock a hint · 🍃 %d",
@@ -346,9 +346,9 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
-    "🌐  ZenCube 3D": "🌐  ZenCube 3D",
+    "🌐  ZenCube 3D": "🌐  ZenCube 3D · Idioma",
     "千里の道も一歩から": "千里の道も一歩から",
-    "Senri no michi mo ippo kara": "Senri no michi mo ippo kara",
+    "Senri no michi mo ippo kara": "Senri no michi mo ippo kara · provérbio japonês",
     "Zen-Chroniken 📖": "Crónicas Zen 📖",
     "A purchased hint stays with you. Achievements must still be earned in battle.": "As dicas compradas ficam para sempre. As conquistas têm de ser alcançadas a jogar.",
     "Buy a hint · 🍃 %d": "Comprar uma dica · 🍃 %d",
