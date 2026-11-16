@@ -855,7 +855,7 @@ func show_realms() -> void:
     var story_column: VBoxContainer = VBoxContainer.new()
     story_column.add_theme_constant_override("separation",8)
     story_card.add_child(story_column)
-    text(story_column,"📖 " + RealmStory.text_for(lang(),"menu"),20,Color("f9dba6"))
+    text(story_column,"📖 " + RealmStory.text_for(lang(),"realm_card_title"),20,Color("f9dba6"))
     text(story_column,RealmStory.text_for(lang(),"realm_card_subtitle"),14,Color("e0d5b9"))
     # Show the progression from Shadow to Satori in one visually coherent card.
     var story_previews: HBoxContainer = HBoxContainer.new()
