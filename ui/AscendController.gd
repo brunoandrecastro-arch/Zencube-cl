@@ -1229,7 +1229,7 @@ func _realm_story_present_intro() -> void:
     text(body,RealmStory.text_for(lang(),"intro_%d" % stage),15)
     text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
     action(body,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin,true)
-    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _open_realm_dialog(parts)
 
 func _realm_story_begin() -> void:
@@ -1278,7 +1278,7 @@ func _realm_story_result() -> void:
         action(body,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
     else:
         action(body,RealmStory.text_for(lang(),"retry"),_realm_story_retry,true)
-    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _open_realm_dialog(parts)
 
 func _realm_story_retry() -> void:
@@ -1343,7 +1343,7 @@ func _realm_story_chapter_outro(chapter: int) -> void:
         else:
             var gate: String = ["gate","gate_celestial","gate_satori"][chapter]
             text(body,RealmStory.text_for(lang(),gate),14,Color("#e4bd82"))
-    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend,true)
     _open_realm_dialog(parts)
 
 func _realm_story_start_chapter(stage: int) -> void:
@@ -1368,7 +1368,7 @@ func _realm_story_locked() -> void:
     elif realm_story_stage >= 6: gate = "gate_celestial"
     elif realm_story_stage >= 3: gate = "gate"
     text(body,RealmStory.text_for(lang(),gate),17)
-    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend,true)
     _open_realm_dialog(parts)
 
 func _realm_story_completed() -> void:
@@ -1382,8 +1382,34 @@ func _realm_story_menu() -> void:
     var current_boss: String = RealmStory.text_for(lang(),"final_title") if realm_story_stage >= RealmStory.LAST_STAGE else RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
     text(body,current_boss,20,Color("#eddaae"))
     action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
-    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _open_realm_dialog(parts)
+
+# Exit the story without returning to Main. The ordinary Ascend 4x4
+# renderer, equipped shop skin and four Realm cards are restored in place.
+func _realm_story_return_to_ascend() -> void:
+    if not realm_story_active: return
+    _realm_story_save()
+    realm_story_generation += 1
+    realm_story_active = false
+    ZenChronicles.set_campaign_board_active(false)
+    busy = false
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    cube.clear_boss_skin()
+    cube.set_skin(int(data.economy.get("equipped",0)))
+    match_realm = int(Realms.state(data).selected)
+    bot_level = Realms.fixed_bot_level(match_realm)
+    cells.fill(0)
+    turn = 1
+    result = 0
+    recorded = false
+    realm_story_last_human = -1
+    against_bot = true
+    if realm_backdrop != null:
+        realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+    draw()
+    call_deferred("show_realms")
 
 func _realm_story_leave() -> void:
     if not realm_story_active: return
