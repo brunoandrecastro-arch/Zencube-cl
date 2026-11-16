@@ -595,7 +595,7 @@ func finish() -> void:
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":Achievements.MAIN_TITLES[match_realm],"quote":Achievements.main_quote(match_realm)})
         # Realm access may unlock earlier, but AUTOMATIC travel requires all 8
         # challenges completed in the current Realm. Once-only persisted gate.
-        if match_realm < 3 and Realms.count(data,match_realm) == 8 and Realms.unlocked(data,match_realm+1):
+        if Realms.ready_for_breakthrough(data,match_realm):
             var journey: Dictionary = Realms.state(data)
             if not journey.get("auto_transitions") is Dictionary:
                 journey["auto_transitions"] = {}
@@ -954,15 +954,25 @@ func select_realm(number: int) -> bool:
     bot_level = Realms.fixed_bot_level(number)
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[number])
+    var first_open: bool = false
+    var transition_from: int = from_realm
+    if number > 0 and Realms.ready_for_breakthrough(data,number-1):
+        var state: Dictionary = Realms.state(data)
+        if not state.get("auto_transitions") is Dictionary:
+            state["auto_transitions"] = {}
+        if not bool(state.auto_transitions.get(str(number-1),false)):
+            state.auto_transitions[str(number-1)] = true
+            first_open = true
+            transition_from = number-1
     SaveManager.save_data(data)
     draw()
-    if from_realm != number:
-        call_deferred("_show_manual_realm_journey",from_realm,number)
+    if from_realm != number or first_open:
+        call_deferred("_show_manual_realm_journey",transition_from,number,first_open)
     else:
         sync_realm_music()
     return true
 
-func _show_manual_realm_journey(from_realm: int, to_realm: int) -> void:
+func _show_manual_realm_journey(from_realm: int, to_realm: int, breakthrough: bool = false) -> void:
     if not is_inside_tree(): return
     var journey: ZenRealmTravelCeremony = RealmPortal.new()
     add_child(journey)
@@ -970,7 +980,7 @@ func _show_manual_realm_journey(from_realm: int, to_realm: int) -> void:
         if is_inside_tree(): sync_realm_music()
     )
     journey.present(Realms.REALM_ART[from_realm],Realms.REALM_ART[to_realm],
-        Realms.realm_name(to_realm,lang()),false,
+        Realms.realm_name(to_realm,lang()),breakthrough,
         bool(data.settings.get("sound",true)),[world_music],lang())
 
 func _challenge_items(list: VBoxContainer, realm: int) -> void:
@@ -1361,6 +1371,29 @@ func _realm_story_start_chapter(stage: int) -> void:
         realm_story_stage = stage
         _realm_story_locked()
         return
+    var destination: int = int(stage / RealmStory.CHAPTER_SIZE)
+    if destination > 0 and Realms.ready_for_breakthrough(data,destination-1):
+        var state: Dictionary = Realms.state(data)
+        if not state.get("auto_transitions") is Dictionary:
+            state["auto_transitions"] = {}
+        if not bool(state.auto_transitions.get(str(destination-1),false)):
+            state.auto_transitions[str(destination-1)] = true
+            state["selected"] = destination
+            SaveManager.save_data(data)
+            if is_instance_valid(active_realm_dialog):
+                _close_realm_dialog(active_realm_dialog)
+            var epic: ZenRealmTravelCeremony = RealmPortal.new()
+            add_child(epic)
+            epic.finished.connect(_realm_story_open_after_breakthrough.bind(stage))
+            epic.present(Realms.REALM_ART[destination-1],Realms.REALM_ART[destination],
+                Realms.realm_name(destination,lang()),true,
+                bool(data.settings.get("sound",true)),[world_music],lang())
+            return
+    _realm_story_open_after_breakthrough(stage)
+
+func _realm_story_open_after_breakthrough(stage: int) -> void:
+    if not realm_story_active or not is_inside_tree(): return
+    if not RealmStory.can_enter(data,stage): return
     realm_story_progress.game = {}
     _realm_story_set_stage(stage)
     _realm_story_present_intro()
