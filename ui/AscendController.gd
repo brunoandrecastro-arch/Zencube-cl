@@ -535,7 +535,7 @@ func _commit(cell: int) -> void:
 
 func bot_turn() -> void:
     var generation: int = realm_story_generation
-    var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55][realm_story_stage] if realm_story_active else 0.26
+    var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55,0.44,0.55,0.75,0.88,0.74,1.05][clampi(realm_story_stage,0,11)] if realm_story_active else 0.26
     await get_tree().create_timer(delay).timeout
     if not is_inside_tree() or result != 0 or not against_bot or (realm_story_active and generation != realm_story_generation): return
     var cell: int = RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)
@@ -1110,7 +1110,7 @@ func start_realm_story() -> void:
     ZenChronicles.set_campaign_board_active(true)
     realm_story_generation += 1
     realm_story_last_human = -1
-    if realm_story_stage >= 6:
+    if realm_story_stage >= RealmStory.LAST_STAGE:
         _realm_story_completed()
         return
     if not RealmStory.can_enter(data,realm_story_stage):
@@ -1120,7 +1120,7 @@ func start_realm_story() -> void:
     _realm_story_present_intro()
 
 func _realm_story_set_stage(stage: int) -> void:
-    realm_story_stage = clampi(stage,0,5)
+    realm_story_stage = clampi(stage,0,RealmStory.LAST_STAGE-1)
     match_realm = RealmStory.chapter(realm_story_stage)
     bot_level = Realms.fixed_bot_level(match_realm)
     realm_story_generation += 1
@@ -1181,7 +1181,10 @@ func _realm_story_present_intro() -> void:
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"boss_%d" % stage),680)
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
-    text(body,RealmStory.text_for(lang(),"shadow" if stage < 3 else "ember"),17,Color("#e7cd9b"))
+    var chapter_key: String = ["shadow","ember","celestial","satori"][RealmStory.chapter(stage)]
+    text(body,RealmStory.text_for(lang(),chapter_key),17,Color("#e7cd9b"))
+    if stage in [6,9]:
+        text(body,RealmStory.text_for(lang(),"chapter%d_open" % (RealmStory.chapter(stage)+1)),14,Color("#b6d8ed"))
     _realm_story_art(body,stage,224)
     text(body,RealmStory.text_for(lang(),"intro_%d" % stage),15)
     text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
@@ -1207,7 +1210,7 @@ func _realm_story_save() -> bool:
     realm_story_progress.stage = realm_story_stage
     # Final cutscene must not accidentally resurrect the last boss match
     # when leaving and reopening the completed Chapter 2 story.
-    if realm_story_stage >= 6:
+    if realm_story_stage >= RealmStory.LAST_STAGE or (result == 0 and move_count() == 0):
         realm_story_progress.game = {}
     else:
         realm_story_progress.game = {
@@ -1239,7 +1242,7 @@ func _realm_story_result() -> void:
     _open_realm_dialog(parts)
 
 func _realm_story_retry() -> void:
-    if not realm_story_active or realm_story_stage >= 6: return
+    if not realm_story_active or realm_story_stage >= RealmStory.LAST_STAGE: return
     realm_story_generation += 1
     realm_story_progress.game = {}
     _realm_story_set_stage(realm_story_stage)
@@ -1249,78 +1252,95 @@ func _realm_story_retry() -> void:
 func _realm_story_advance() -> void:
     if not realm_story_active or result != 1: return
     var prior: int = realm_story_stage
-    var next: int = mini(6,prior + 1)
+    var next_stage: int = mini(RealmStory.LAST_STAGE,prior + 1)
     var progress: Dictionary = realm_story_progress.duplicate(true)
-    progress.stage = next
+    progress.stage = next_stage
     progress.game = {}
     if not RealmStory.save_progress(progress):
         push_warning("Realm Chronicles: failed to save completed boss")
         return
     realm_story_progress = progress
     realm_story_generation += 1
-    if prior == 2:
-        realm_story_stage = 3
-        _realm_story_chapter_outro(0)
-    elif prior == 5:
-        realm_story_stage = 6
+    if (prior+1) % RealmStory.CHAPTER_SIZE == 0:
+        # Crucial: avoid re-saving the previous winning board under a new
+        # chapter stage when the player leaves the closing cutscene.
+        realm_story_stage = next_stage
+        cells.fill(0)
+        turn = 1
+        result = 0
+        recorded = false
+        busy = false
         cube.clear_boss_skin()
-        _realm_story_chapter_outro(1)
+        _realm_story_chapter_outro(RealmStory.chapter(prior))
     else:
-        _realm_story_set_stage(next)
+        _realm_story_set_stage(next_stage)
         _realm_story_present_intro()
 
 func _realm_story_chapter_outro(chapter: int) -> void:
-    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"chapter_complete"),700)
+    var is_final: bool = chapter == 3
+    var title_key: String = "chapter_complete_final" if is_final else "chapter_complete"
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),title_key),700)
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
     var picture: TextureRect = TextureRect.new()
-    picture.texture = load(RealmStory.CHAPTER_ART[chapter])
+    picture.texture = load(RealmStory.CHAPTER_ART[clampi(chapter,0,3)])
     picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    picture.custom_minimum_size.y = 222
+    picture.custom_minimum_size.y = 213
     picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body.add_child(picture)
-    text(body,RealmStory.text_for(lang(),"chapter1_end" if chapter == 0 else "chapter2_end"),17)
-    if chapter == 0 and RealmStory.can_enter(data,3):
-        action(body,RealmStory.text_for(lang(),"next"),_realm_story_start_ember,true)
-    elif chapter == 0:
-        text(body,RealmStory.text_for(lang(),"gate"),15,Color("#e4bd82"))
+    var chapter_key: String = "chapter%d_end" % (chapter+1)
+    text(body,RealmStory.text_for(lang(),chapter_key),16)
+    if is_final:
+        # Story conclusion only: does not forge the normal 4x4 Satori title.
+        text(body,RealmStory.text_for(lang(),"final_title"),23,Color("#ffdc89"))
+        text(body,RealmStory.text_for(lang(),"final_detail"),14,Color("#e6ddb9"))
     else:
-        text(body,RealmStory.text_for(lang(),"done"),15,Color("#e4bd82"))
+        var target_stage: int = (chapter+1)*RealmStory.CHAPTER_SIZE
+        if RealmStory.can_enter(data,target_stage):
+            var label: String = ["next","next","continue_celestial","continue_satori"][chapter]
+            action(body,RealmStory.text_for(lang(),label),_realm_story_start_chapter.bind(target_stage),true)
+        else:
+            var gate: String = ["gate","gate_celestial","gate_satori"][chapter]
+            text(body,RealmStory.text_for(lang(),gate),14,Color("#e4bd82"))
     action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
     _open_realm_dialog(parts)
 
-func _realm_story_start_ember() -> void:
-    if not RealmStory.can_enter(data,3):
+func _realm_story_start_chapter(stage: int) -> void:
+    if stage < 0 or stage >= RealmStory.LAST_STAGE: return
+    if not RealmStory.can_enter(data,stage):
+        realm_story_stage = stage
         _realm_story_locked()
         return
     realm_story_progress.game = {}
-    _realm_story_set_stage(3)
+    _realm_story_set_stage(stage)
     _realm_story_present_intro()
+
+func _realm_story_start_ember() -> void:
+    _realm_story_start_chapter(3)
 
 func _realm_story_locked() -> void:
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"challenge_unlock"),570)
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
-    text(body,RealmStory.text_for(lang(),"gate" if realm_story_stage >= 3 else "gate_mode"),17)
+    var gate: String = "gate_mode"
+    if realm_story_stage >= 9: gate = "gate_satori"
+    elif realm_story_stage >= 6: gate = "gate_celestial"
+    elif realm_story_stage >= 3: gate = "gate"
+    text(body,RealmStory.text_for(lang(),gate),17)
     action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
     _open_realm_dialog(parts)
 
 func _realm_story_completed() -> void:
-    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"chapter_complete"),570)
-    var body: VBoxContainer = parts.box
-    _realm_story_compact(parts)
-    text(body,RealmStory.text_for(lang(),"chapter2_end"),17)
-    text(body,RealmStory.text_for(lang(),"done"),17,Color("#e6c68c"))
-    action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave,true)
-    _open_realm_dialog(parts)
+    _realm_story_chapter_outro(3)
 
 func _realm_story_menu() -> void:
     if not realm_story_active: return
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"menu"),520)
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
-    text(body,RealmStory.text_for(lang(),"boss_%d" % mini(realm_story_stage,5)),20,Color("#eddaae"))
+    var current_boss: String = RealmStory.text_for(lang(),"final_title") if realm_story_stage >= RealmStory.LAST_STAGE else RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
+    text(body,current_boss,20,Color("#eddaae"))
     action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
     action(body,RealmStory.text_for(lang(),"leave"),_realm_story_leave)
     _open_realm_dialog(parts)
