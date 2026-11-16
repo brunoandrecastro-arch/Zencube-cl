@@ -48,6 +48,7 @@ var _show_quick: bool = true
 var _screen_name := ""
 var _campaign_board_active := false
 var _realm_story_requested: bool = false
+var _realm_story_from_realms: bool = false
 
 func _ready() -> void:
     layer = 90
@@ -231,6 +232,7 @@ func _chapter_accessible(i: int) -> bool:
     return ascension.world_unlocked(saved, i)
 
 func open_library() -> void:
+    _realm_story_from_realms = false
     _sync_language()
     _active_chapter = -1
     _screen_name = "library"
@@ -393,8 +395,10 @@ func _input(event: InputEvent) -> void:
             match _screen_name:
                 "reader":
                     open_comic_library()
-                "comics", "campaign", "realm-story":
+                "comics", "campaign":
                     open_library()
+                "realm-story":
+                    _back_from_realm_story()
                 _:
                     close_chronicles()
             get_viewport().set_input_as_handled()
@@ -489,7 +493,8 @@ func _launch_campaign() -> void:
 
 # Realm Chronicles – optional 4x4 chapter campaign, never affects the existing
 # 3x3 campaign or Webcomic. The actual gameplay takes place in Ascend.tscn.
-func open_realm_story_overview() -> void:
+func open_realm_story_overview(from_realms: bool = false) -> void:
+    _realm_story_from_realms = from_realms
     _sync_language()
     _active_chapter = -1
     _screen_name = "realm-story"
@@ -501,7 +506,7 @@ func open_realm_story_overview() -> void:
     var navigation: HBoxContainer = HBoxContainer.new()
     navigation.custom_minimum_size.y = 56
     outer.add_child(navigation)
-    _make_button("‹", navigation, open_library).custom_minimum_size.x = 48
+    _make_button("‹", navigation, _back_from_realm_story).custom_minimum_size.x = 48
     var title: Label = _make_label(RealmStory.text_for(_active_language,"story"), navigation, 24, GOLD)
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", navigation, close_chronicles).custom_minimum_size.x = 48
@@ -540,6 +545,17 @@ func open_realm_story_overview() -> void:
     else:
         _make_label(RealmStory.text_for(_active_language,"challenge_unlock"),outer,13,MUTED)
 
+# A Realm-menu entry returns to the four 4x4 Realm cards; the existing
+# Chronicles library entry still returns to the library as before.
+func _back_from_realm_story() -> void:
+    if not _realm_story_from_realms:
+        open_library()
+        return
+    close_chronicles()
+    var active_scene: Node = get_tree().current_scene
+    if active_scene != null and active_scene.scene_file_path == "res://Ascend.tscn" and active_scene.has_method("show_realms"):
+        active_scene.call_deferred("show_realms")
+
 func _launch_realm_story() -> void:
     # Do not discard an unfinished ordinary Ascend match.
     var active_scene: Node = get_tree().current_scene
@@ -553,7 +569,7 @@ func _launch_realm_story() -> void:
     var saved: Dictionary = SaveManager.load_data()
     var progress: Dictionary = RealmStory.load_progress()
     if not RealmStory.can_enter(saved,int(progress.stage)):
-        open_realm_story_overview()
+        open_realm_story_overview(_realm_story_from_realms)
         return
     # One-use handoff avoids touching the 4x4 Classic/Ascend save data.
     _realm_story_requested = true
