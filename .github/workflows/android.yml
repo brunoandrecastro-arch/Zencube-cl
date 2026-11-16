@@ -170,6 +170,9 @@ jobs:
       - name: Four Realm chapter cards and Celestial/Satori QA navigation
         run: |
           timeout 50 "$GODOT" --headless --path . --script tests/test_realm_chapter_menu.gd
+      - name: Verify user-approved Realm feedback: swipe, 4x4 return, victory pictures and shatter unlocks
+        run: |
+          timeout 90 "$GODOT" --headless --path . --script tests/test_realm_feedback_and_gates.gd
       - name: Verify 100 tactical challenges on the 3D cube
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
