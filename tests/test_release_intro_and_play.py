@@ -19,8 +19,8 @@ assert intro.index('_zen_onboarding_hero(box)') < intro.index('button("Deutsch"'
 welcome=ui.split("func open_welcome()",1)[1].split("func add_rule_example(",1)[0]
 assert '_zen_onboarding_hero(box,language_code())' in welcome
 assert welcome.index('button("Mini-Tutorial starten"') < welcome.index('add_rule_example(')
-assert 'return OS.has_feature("debug")' in mode
-assert 'return bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))' in story
+assert 'return OS.has_feature("debug") and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))' in mode
+assert 'return OS.has_feature("debug") and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))' in story
 assert "realm_chronicles_qa" not in (root/"project.godot").read_text(encoding="utf-8")
 assert 'package/unique_name="com.zencube.game.play"' in p.split("[preset.1.options]",1)[1]
 assert "assert \"realm_chronicles_qa\" not in project" in build

@@ -17,3 +17,6 @@ Before Play release: verify package, increasing versionCode, upload key SHA-256,
 ## 2026-11-16 – Original HD boss portraits integrated
 
 The six approved 600×900 WebP images are committed as direct game resources. The application now loads them ahead of the low-quality JSON fallbacks, via `_realm_story_art`. Preflight `tests/test_release_hd_boss_assets.py --release` checks all six. The original concept pictures were not altered or substituted. This draft remains unmerged and unpublished.
+
+## End-user APK correction – 16 November 2026
+The previous Android download was an **isolated QA app** with all Realms and 4×4 open, so it was not an end-user build. End-user acceptance now uses `ZENCUBE_ENDUSER_PREVIEW=true` on this PR, isolated package `com.zencube.game.enduserpreview` (fresh independent local save; no Play Console listing). The Android *debug* signing key permits local installation but no longer enables gameplay skips. The QA bypass requires BOTH Godot debug and an explicit QA-only project flag. The Play app remains `com.zencube.game.play`, untouched. Only after S23 acceptance do we hand off Play AAB/signing tasks. **Do not publish this preview APK as a new Google Play app.**

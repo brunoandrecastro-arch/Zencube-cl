@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Debug can test 4x4 freely. Release requires rank >=3 or 850 leaves.
+# Only an explicit QA build can skip 4x4. End-user preview and release require rank >=3 or 850 leaves.
 from pathlib import Path
 import re
 root = Path(__file__).resolve().parents[1]
@@ -20,7 +20,7 @@ assert "zencube_ascend_test" not in preset
 assert "--export-debug Android " in build
 assert 'const TEST_UNLOCKED: bool = false' in mode
 assert 'static func test_access_enabled() -> bool:' in mode
-assert 'return OS.has_feature("debug")' in mode
+assert 'return OS.has_feature("debug") and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))' in mode
 assert 'static func unlocked(data: Dictionary) -> bool:\n    return unlocked_for_release(data) or test_access_enabled()' in mode
 assert 'get("rank",0)) >= 3' in mode
 assert 'get("ascend_owned",false)' in mode
@@ -34,4 +34,4 @@ assert "test_rc6_release_gate.py" in workflow
 def allowed(rank=0, bought=False): return rank >= 3 or bought
 assert not allowed(0) and not allowed(1) and not allowed(2)
 assert allowed(3) and allowed(4) and allowed(0, True)
-print("PASS: free debug-only access; release still needs rank 3 or 850-leaf purchase")
+print("PASS: flagged QA-only bypass; end-user preview + release require rank 3 or 850-leaf purchase")

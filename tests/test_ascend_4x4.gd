@@ -42,13 +42,13 @@ func run() -> void:
     check(ZenAscend.next_move(cells,lines,2) == int(lines[0][3]), "bot blocks immediate loss")
     var data: Dictionary = SaveManager.defaults()
     ZenAscend.ensure(data)
-    # Debug APK grants free testing, but Play AAB still enforces progression.
+    # QA is explicit opt-in; the ordinary debug-signed end-user preview stays locked.
     check(not ZenAscend.TEST_UNLOCKED, "free debug access disabled")
-    check(ZenAscend.test_access_enabled() == OS.has_feature("debug"), "test override only during debug")
-    check(ZenAscend.unlocked(data) == OS.has_feature("debug"), "beginner free only in debug")
+    check(ZenAscend.test_access_enabled() == (OS.has_feature("debug") and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))), "QA override must require explicit QA feature flag")
+    check(ZenAscend.unlocked(data) == (OS.has_feature("debug") and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))), "beginner gated unless explicit QA feature is active")
     check(not ZenAscend.unlocked_for_release(data), "production beginner locked")
     data.ascension.rank = 2
-    check(ZenAscend.unlocked(data) == OS.has_feature("debug"), "rank 2 free only in debug")
+    check(ZenAscend.unlocked(data) == (OS.has_feature("debug") and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))), "rank 2 gated unless explicit QA feature is active")
     check(not ZenAscend.unlocked_for_release(data), "production rank 2 still locked")
     data.ascension.rank = 3
     check(ZenAscend.unlocked_for_release(data), "production: Zen Master unlocks 4x4")
