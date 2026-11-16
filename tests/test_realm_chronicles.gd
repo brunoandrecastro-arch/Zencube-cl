@@ -30,12 +30,14 @@ func _restore() -> void:
 func run() -> void:
     _keep(SaveManager.PATH)
     _keep(Story.SAVE)
-    check(Story.BOSS_IDS.size()==6,"six unique bosses")
-    check(BossSkins.PROFILES.size()==6,"six 3D material profiles")
+    check(Story.BOSS_IDS.size()==12,"twelve unique story bosses")
+    check(BossSkins.PROFILES.size()==12,"twelve unique 3D material profiles")
     check(Story.CHAPTER_ART.size()==4,"four realm overview previews")
-    check(Story.LOCALE["en"].size()==Story.LOCALE["de"].size() and Story.LOCALE["en"].size()==Story.LOCALE["pt"].size(),"complete DE EN PT keys")
-    for stage in range(6):
-        check(Story.boss_level(stage) == (1 if stage < 3 else 2),"fixed Medium/Hard chapter bot tier")
+    check(Story.LOCALE["en"].size()==Story.LOCALE["de"].size() and Story.LOCALE["en"].size()==Story.LOCALE["pt"].size(),"complete old DE EN PT keys")
+    var extra: Dictionary = load("res://story/ZenRealmChroniclesExtra.gd").TEXT
+    check(extra["en"].size()==extra["de"].size() and extra["en"].size()==extra["pt"].size(),"complete new chapters DE EN PT keys")
+    for stage in range(12):
+        check(Story.boss_level(stage) == [1,2,3,4][int(stage/3)],"fixed Medium/Hard/Master/Grandmaster chapter bot tier")
         check(Story.BOSS_IDS.count(Story.BOSS_IDS[stage])==1,"unique boss skin identifier")
         var art_path: String = Story.BOSS_ART[stage]
         check(ResourceLoader.exists(art_path),"Boss illustration included: "+art_path)
@@ -60,7 +62,7 @@ func run() -> void:
     var empty: Array = []
     empty.resize(96)
     empty.fill(0)
-    for stage in range(6):
+    for stage in range(12):
         var choice: int = Story.choose_move(empty,lines,stage)
         check(choice >= 0 and choice < 96,"legal opening for boss %d" % stage)
     var data: Dictionary = SaveManager.defaults()
@@ -72,6 +74,14 @@ func run() -> void:
     for task in Realms.TASKS[0]:
         Realms.state(data).completed[str(task.id)] = true
     check(Story.can_enter(data,3),"Ember unlocks after existing 8/8 Shadow requirements")
+    check(not Story.can_enter(data,6),"Celestial remains locked without 8/8 Ember challenges")
+    for task in Realms.TASKS[1]:
+        Realms.state(data).completed[str(task.id)] = true
+    check(Story.can_enter(data,6),"Celestial unlocks after existing 8/8 Ember requirements")
+    check(not Story.can_enter(data,9),"Satori remains locked without 8/8 Celestial challenges")
+    for task in Realms.TASKS[2]:
+        Realms.state(data).completed[str(task.id)] = true
+    check(Story.can_enter(data,9),"Satori unlocks after existing 8/8 Celestial requirements")
     check(SaveManager.save_data(data),"set up isolated test save")
     check(Story.save_progress(Story.defaults()),"seed independent Realm Chronicles progress")
     var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
@@ -126,10 +136,10 @@ func run() -> void:
     controller.call("_realm_story_advance")
     check(int(Story.load_progress().stage)==1,"stage advances after an actual win")
     check(int(renderer.get("boss_skin_id"))==1,"Mirror Novice automatically gets new skin")
-    for stage in range(6):
+    for stage in range(12):
         controller.call("_realm_story_set_stage",stage)
         check(int(renderer.get("boss_skin_id"))==stage,"skin swapped to boss %d" % stage)
-        check(int(controller.get("bot_level"))==(1 if stage < 3 else 2),"fixed Realm bot tier remains unchanged")
+        check(int(controller.get("bot_level"))==[1,2,3,4][int(stage/3)],"fixed Realm bot tier remains unchanged")
     renderer.call("clear_boss_skin")
     check(int(renderer.get("boss_skin_id"))==-1,"normal player skin can be restored")
     controller.call("_realm_story_leave")
