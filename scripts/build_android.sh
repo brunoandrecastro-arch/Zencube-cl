@@ -31,12 +31,28 @@ SETTINGS
 
 campaign_test="${ZENCUBE_CAMPAIGN_TEST:-false}"
 realm_test="${ZENCUBE_REALM_CHRONICLES_TEST:-false}"
+enduser_preview="${ZENCUBE_ENDUSER_PREVIEW:-false}"
+if [[ "$realm_test" == true && "$enduser_preview" == true ]]; then
+  echo 'Incompatible QA and end-user preview build modes' >&2
+  exit 1
+fi
 campaign_package="com.zencube.game.campaign"
 campaign_label="ZenCube Campaign Test"
 if [[ "$realm_test" == true ]]; then
   campaign_test=true
   campaign_package="com.zencube.game.realmchronicles"
   campaign_label="ZenCube Realm Chronicles Test"
+fi
+if [[ "$enduser_preview" == true ]]; then
+  # Separate clean install protects the actual Play app and its private data.
+  # Debug signing does not enable QA or 4x4 after the entitlement fix.
+  campaign_test=true
+  campaign_package="com.zencube.game.enduserpreview"
+  campaign_label="ZenCube 3D"
+  if grep -Fq 'realm_chronicles_qa' project.godot; then
+    echo 'End-user APK must not include any QA bypass' >&2
+    exit 1
+  fi
 fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.

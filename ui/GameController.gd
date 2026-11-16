@@ -119,11 +119,47 @@ func change_language(code: String) -> void:
     choose_language(code)
     if bool(data.settings.get("intro_seen", false)):
         open_settings()
+# Live 3D hero, not a static mock-up. The same playable 3x3 cube scene
+# is shown in a read-only TextureRect; touches never alter the game board.
+func _zen_onboarding_hero(parent: VBoxContainer, selected_language: String = "") -> void:
+    var hero: PanelContainer = PanelContainer.new()
+    hero.name = "ZenCubeOnboardingHero"
+    hero.add_theme_stylebox_override("panel",theme_style(Color("#263d35"),22))
+    hero.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    parent.add_child(hero)
+    var content: VBoxContainer = VBoxContainer.new()
+    content.alignment = BoxContainer.ALIGNMENT_CENTER
+    content.add_theme_constant_override("separation",5)
+    hero.add_child(content)
+    var live_cube: TextureRect = TextureRect.new()
+    live_cube.name = "ZenCubeOnboardingLive3D"
+    live_cube.texture = viewport.get_texture()
+    live_cube.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    live_cube.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    live_cube.custom_minimum_size = Vector2(0,250 if selected_language == "" else 155)
+    live_cube.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    live_cube.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    content.add_child(live_cube)
+    var japanese: Label = label("千里の道も一歩から",content,21,Color("#ffecb9"))
+    japanese.name = "ZenJapaneseProverb"
+    japanese.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var romaji: Label = label("Senri no michi mo ippo kara",content,13,Color("#c9dcce"))
+    romaji.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var translation: String = "Every great journey begins with a single step."
+    match selected_language:
+        "de": translation = "Jeder große Weg beginnt mit einem einzigen Schritt."
+        "pt": translation = "Toda a grande jornada começa com um único passo."
+        "en": translation = "Every great journey begins with a single step."
+    var meaning: Label = label(translation,content,15,Color("#fff2d4"))
+    meaning.name = "ZenIntroLocalizedQuote"
+    meaning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
 func open_language_choice() -> void:
-    # Before a language is chosen, show only endonyms and the language icon.
-    var box = modal("🌐")
+    var box: VBoxContainer = modal("🌐  ZenCube 3D")
     box.get_child(1).hide()
-    label("Deutsch  ·  English  ·  Português", box, 17)
+    var heading: Label = label("Deutsch  ·  English  ·  Português",box,17,Color("#5b4934"))
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _zen_onboarding_hero(box)
     button("Deutsch", box, choose_language.bind("de"), false, true)
     button("English", box, choose_language.bind("en"), false, true)
     button("Português", box, choose_language.bind("pt"), false, true)
@@ -1704,9 +1740,10 @@ func allow_welcome_scroll(node: Node) -> void:
 func open_welcome() -> void:
     welcome_open = true
     var box = modal("Willkommen im Zen-Garten")
-    popup.anchor_top = 0.35
+    popup.anchor_top = 0.20
     popup.offset_top = 0
     box.get_child(1).hide()
+    _zen_onboarding_hero(box,language_code())
     label("Atme durch. Drehe den Würfel. Entdecke neue Wege zu gewinnen.",box,15,Color("6d6550"))
     # First-screen actions must be visible WITHOUT scrolling.
     button("Mini-Tutorial starten",box,func(): start_tutorial(true),false,true)
