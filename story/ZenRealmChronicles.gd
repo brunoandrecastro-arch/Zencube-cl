@@ -88,6 +88,7 @@ const LOCALE: Dictionary = {
         "new": "Nächster Kampf",
         "chapter_complete": "Kapitel abgeschlossen",
         "story": "Realm Chronicles",
+        "finish_active": "Beende zuerst deine laufende 4×4-Partie, bevor du die Story startest.",
         "menu_button": "Zen Ascend · Realm Chronicles (4×4)"
     },
     "en": {
@@ -156,6 +157,7 @@ const LOCALE: Dictionary = {
         "new": "Next battle",
         "chapter_complete": "Chapter complete",
         "story": "Realm Chronicles",
+        "finish_active": "Finish your current 4×4 match before starting the story.",
         "menu_button": "Zen Ascend · Realm Chronicles (4×4)"
     },
     "pt": {
@@ -224,6 +226,7 @@ const LOCALE: Dictionary = {
         "new": "Próximo combate",
         "chapter_complete": "Capítulo concluído",
         "story": "Realm Chronicles",
+        "finish_active": "Termina primeiro a tua partida 4×4 antes de iniciares a história.",
         "menu_button": "Zen Ascend · Realm Chronicles (4×4)"
     }
 }
