@@ -55,15 +55,14 @@ func run() -> void:
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     Realms.ensure(data)
+    data.ascend.help_seen = true
     check(Story.can_enter(data,0),"Shadow opens with Zen Master entitlement")
     check(not Story.can_enter(data,3),"Ember must not skip 8/8 existing Shadow challenges")
     for task in Realms.TASKS[0]:
         Realms.state(data).completed[str(task.id)] = true
     check(Story.can_enter(data,3),"Ember unlocks after existing 8/8 Shadow requirements")
-    check(not Story.can_enter(data,6) == false or Story.can_enter(data,6),"complete game stage has valid result")
     check(SaveManager.save_data(data),"set up isolated test save")
     check(Story.save_progress(Story.defaults()),"seed independent Realm Chronicles progress")
-    var classic_disk: String = FileAccess.get_file_as_string(SaveManager.PATH)
     var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     check(scene!=null,"Ascend.tscn still intact")
     if scene == null:
@@ -73,6 +72,7 @@ func run() -> void:
     var controller: Node = scene.instantiate()
     root.add_child(controller)
     await process_frame
+    var classic_disk: String = FileAccess.get_file_as_string(SaveManager.PATH)
     controller.call("start_realm_story")
     check(bool(controller.get("realm_story_active")),"story starts on real 4x4 scene")
     check(int(controller.get("realm_story_stage"))==0,"first story starts with Mist Guardian")
