@@ -9,6 +9,8 @@ const GOLD = Color(0.86, 0.72, 0.47)
 const CREAM = Color(0.98, 0.94, 0.84)
 const MUTED = Color(0.75, 0.78, 0.77)
 const Campaign = preload("res://story/ZenCampaign.gd")
+const RealmStory = preload("res://story/ZenRealmChronicles.gd")
+const Realms = preload("res://core/ZenAscendRealms.gd")
 # German is the authored source language; EN and PT-PT live in a separate JSON.
 const UI_DE: Dictionary = {
     "library_tip": "Zen-Chroniken",
@@ -45,6 +47,7 @@ var _preview_all: bool = false
 var _show_quick: bool = true
 var _screen_name := ""
 var _campaign_board_active := false
+var _realm_story_requested: bool = false
 
 func _ready() -> void:
     layer = 90
@@ -238,6 +241,7 @@ func open_library() -> void:
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _make_button(Campaign.text_for(_active_language, "play"), outer, open_campaign_overview)
+    _make_button(RealmStory.text_for(_active_language, "menu_button"), outer, open_realm_story_overview)
     _make_button(Campaign.text_for(_active_language, "webcomic"), outer, open_comic_library)
 
 func open_comic_library() -> void:
@@ -389,7 +393,7 @@ func _input(event: InputEvent) -> void:
             match _screen_name:
                 "reader":
                     open_comic_library()
-                "comics", "campaign":
+                "comics", "campaign", "realm-story":
                     open_library()
                 _:
                     close_chronicles()
@@ -482,3 +486,70 @@ func _launch_campaign() -> void:
     var game: Node = get_tree().current_scene
     if game != null and game.has_method("start_zen_campaign"):
         game.call("start_zen_campaign")
+
+# Realm Chronicles – optional 4x4 chapter campaign, never affects the existing
+# 3x3 campaign or Webcomic. The actual gameplay takes place in Ascend.tscn.
+func open_realm_story_overview() -> void:
+    _sync_language()
+    _active_chapter = -1
+    _screen_name = "realm-story"
+    var saved: Dictionary = SaveManager.load_data()
+    var progress: Dictionary = RealmStory.load_progress()
+    var stage: int = int(progress.stage)
+    var outer: VBoxContainer = _make_screen()
+    _screen.color = Color("#151b25")
+    var navigation: HBoxContainer = HBoxContainer.new()
+    navigation.custom_minimum_size.y = 56
+    outer.add_child(navigation)
+    _make_button("‹", navigation, open_library).custom_minimum_size.x = 48
+    var title: Label = _make_label(RealmStory.text_for(_active_language,"story"), navigation, 24, GOLD)
+    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _make_button("✕", navigation, close_chronicles).custom_minimum_size.x = 48
+    var body: VBoxContainer = _campaign_scroll(outer)
+    _make_label(RealmStory.text_for(_active_language,"intro"), body, 15, CREAM)
+    for chapter in range(4):
+        var allowed: bool = chapter < 2 and RealmStory.can_enter(saved, chapter*3)
+        var completed: bool = stage >= (chapter+1)*3 if chapter < 2 else false
+        var panel: PanelContainer = PanelContainer.new()
+        var box_style: StyleBoxFlat = _style(Color("#252c35") if chapter % 2 == 0 else Color("#382c29"), 14)
+        box_style.border_color = GOLD if int(stage / 3) == chapter else Color("#76624a")
+        box_style.set_border_width_all(1)
+        panel.add_theme_stylebox_override("panel", box_style)
+        body.add_child(panel)
+        var section: VBoxContainer = VBoxContainer.new()
+        section.add_theme_constant_override("separation",7)
+        panel.add_child(section)
+        var key: String = ["shadow","ember","celestial","satori"][chapter]
+        _make_label(RealmStory.text_for(_active_language,key), section, 19, GOLD)
+        var picture: TextureRect = Campaign.artwork(RealmStory.CHAPTER_ART[chapter],105)
+        section.add_child(picture)
+        _make_label(RealmStory.text_for(_active_language,key+"_sub"),section,13,MUTED)
+        var progress_label: String = RealmStory.text_for(_active_language,"completed" if completed else ("current" if allowed and stage >= chapter*3 and chapter < 2 else "locked"))
+        if chapter >= 2: progress_label = RealmStory.text_for(_active_language,"coming")
+        _make_label(progress_label,section,13,GOLD if allowed else MUTED)
+        if chapter == 1 and not allowed:
+            _make_label(RealmStory.text_for(_active_language,"gate"),section,12,MUTED)
+        if chapter == 0 and not allowed:
+            _make_label(RealmStory.text_for(_active_language,"gate_mode"),section,12,MUTED)
+    if stage >= 6:
+        _make_label(RealmStory.text_for(_active_language,"done"),outer,15,CREAM)
+    elif RealmStory.can_enter(saved,stage):
+        _campaign_primary(RealmStory.text_for(_active_language,"continue"),outer,_launch_realm_story)
+    else:
+        _make_label(RealmStory.text_for(_active_language,"challenge_unlock"),outer,13,MUTED)
+
+func _launch_realm_story() -> void:
+    var saved: Dictionary = SaveManager.load_data()
+    var progress: Dictionary = RealmStory.load_progress()
+    if not RealmStory.can_enter(saved,int(progress.stage)):
+        open_realm_story_overview()
+        return
+    # One-use handoff avoids touching the 4x4 Classic/Ascend save data.
+    _realm_story_requested = true
+    close_chronicles()
+    get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+func consume_realm_story_launch() -> bool:
+    var result: bool = _realm_story_requested
+    _realm_story_requested = false
+    return result
