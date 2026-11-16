@@ -13,6 +13,7 @@ const RealmPortal = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
+const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
 var data: Dictionary = {}
 var lines: Array = []
@@ -1272,8 +1273,16 @@ func _realm_story_result() -> void:
     var parts: Dictionary = _realm_dialog(title,590)
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
-    _realm_story_art(body,realm_story_stage,170)
-    text(body,RealmStory.text_for(lang(),key),17)
+    if won:
+        # A complete Kuze-with-defeated-boss illustration after EACH of 12
+        # actual victories; never triggered on a loss or draw.
+        var scene_art: PanelContainer = VictoryArtwork.new()
+        body.add_child(scene_art)
+        scene_art.call("present",realm_story_stage,lang())
+        text(body,RealmStory.text_for(lang(),"victory_story_%d" % realm_story_stage),15,Color("#e7d3ab"))
+    else:
+        _realm_story_art(body,realm_story_stage,170)
+    text(body,RealmStory.text_for(lang(),key),16)
     if won:
         action(body,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
     else:
