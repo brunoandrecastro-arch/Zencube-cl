@@ -42,13 +42,13 @@ func run() -> void:
     check(ZenAscend.next_move(cells,lines,2) == int(lines[0][3]), "bot blocks immediate loss")
     var data: Dictionary = SaveManager.defaults()
     ZenAscend.ensure(data)
-    # Debug APK grants free testing, but Play AAB still enforces progression.
+    # Final player rules must be identical in debug APK and Play AAB.
     check(not ZenAscend.TEST_UNLOCKED, "free debug access disabled")
-    check(ZenAscend.test_access_enabled() == OS.has_feature("debug"), "test override only during debug")
-    check(ZenAscend.unlocked(data) == OS.has_feature("debug"), "beginner free only in debug")
+    check(not ZenAscend.test_access_enabled(), "no debug unlock override")
+    check(not ZenAscend.unlocked(data), "beginner locked even in debug")
     check(not ZenAscend.unlocked_for_release(data), "production beginner locked")
     data.ascension.rank = 2
-    check(ZenAscend.unlocked(data) == OS.has_feature("debug"), "rank 2 free only in debug")
+    check(not ZenAscend.unlocked(data), "rank 2 locked even in debug")
     check(not ZenAscend.unlocked_for_release(data), "production rank 2 still locked")
     data.ascension.rank = 3
     check(ZenAscend.unlocked_for_release(data), "production: Zen Master unlocks 4x4")
