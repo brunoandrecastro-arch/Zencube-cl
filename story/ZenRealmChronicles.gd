@@ -364,6 +364,26 @@ static func choose_move(cells: Array, lines: Array, stage: int, last_player_cell
         var col: int = last_player_cell % 4
         var opposite: int = face * 16 + (3-row) * 4 + (3-col)
         if int(cells[opposite]) == 0: return opposite
+    # Banner Guardian is a patient defensive Hard bot: when no immediate
+    # win or forced block exists, he weighs threats to *both* players and
+    # slightly prefers edge guard positions (including 4x4 face corners).
+    # This makes his match visually/tactically distinct from the Ash Runner.
+    if stage == 4:
+        var guard: int = standard
+        var guard_value: float = -1e20
+        for candidate in range(cells.size()):
+            if int(cells[candidate]) != 0: continue
+            var square: int = candidate % 16
+            var row: int = int(square / 4)
+            var col: int = square % 4
+            var border: bool = row == 0 or row == 3 or col == 0 or col == 3
+            var own_score: float = ZenAscendRealmBot._score(cells,lines,2,candidate)
+            var protect_score: float = ZenAscendRealmBot._score(cells,lines,1,candidate)
+            var worth: float = own_score * 0.45 + protect_score * 0.55 + (10.0 if border else 0.0)
+            if worth > guard_value:
+                guard_value = worth
+                guard = candidate
+        if randf() < 0.70: return guard
     # Ash Runner: prioritise own open three-mark threats; still respects
     # immediate win/block rules above and keeps the realm's Hard difficulty.
     if stage == 3 or stage == 5:
