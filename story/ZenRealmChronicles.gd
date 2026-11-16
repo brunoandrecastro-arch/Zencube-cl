@@ -225,7 +225,7 @@ const LOCALE: Dictionary = {
         "menu_button": "Zen Ascend · Realm Chronicles (4×4)"
     }
 }
-static func tr(lang: String, key: String) -> String:
+static func text_for(lang: String, key: String) -> String:
     var language: Dictionary = LOCALE.get(lang, LOCALE["en"])
     return str(language.get(key, LOCALE["en"].get(key, key)))
 
