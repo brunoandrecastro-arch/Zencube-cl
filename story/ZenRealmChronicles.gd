@@ -1,11 +1,16 @@
 extends RefCounted
+const Extra = preload("res://story/ZenRealmChroniclesExtra.gd")
+const LAST_STAGE := 12
+const CHAPTER_SIZE := 3
 ## Realm Chronicles is an *additional* 4x4 story. Never edits normal Ascend
 ## ranks, challenges, economy, equipped shop skins or the existing 3x3 campaign.
 const SAVE := "user://zencube_realm_chronicles_v1.json"
 const VERSION := 1
 const BOSS_IDS: Array[String] = [
     "mist_guardian", "mirror_novice", "veil_monk",
-    "ash_runner", "banner_guardian", "ember_high_priest"
+    "ash_runner", "banner_guardian", "ember_high_priest",
+    "wind_scribe", "bridge_sentinel", "sky_archivist",
+    "lotus_witness", "halo_keeper", "fully_aware"
 ]
 const BOSS_ART: Array[String] = [
     "res://assets/realm_chronicles/boss_mist_guardian.svg",
@@ -13,7 +18,13 @@ const BOSS_ART: Array[String] = [
     "res://assets/realm_chronicles/boss_veil_monk.svg",
     "res://assets/realm_chronicles/boss_ash_runner.svg",
     "res://assets/realm_chronicles/boss_banner_guardian.svg",
-    "res://assets/realm_chronicles/boss_ember_high_priest.svg"
+    "res://assets/realm_chronicles/boss_ember_high_priest.svg",
+    "res://assets/realms/celestial_realm.webp",
+    "res://assets/realms/celestial_realm.webp",
+    "res://assets/realms/celestial_realm.webp",
+    "res://assets/realms/satori_realm.webp",
+    "res://assets/realms/satori_realm.webp",
+    "res://assets/realms/satori_realm.webp"
 ]
 ## Approved concept art is shipped as compressed WebP inside a UTF-8 JSON
 ## resource. The GitHub connector only writes text, so this keeps the actual
@@ -25,7 +36,13 @@ const BOSS_HD_ART: Array[String] = [
     "res://assets/realm_chronicles/boss_veil_monk.json",
     "res://assets/realm_chronicles/boss_ash_runner.json",
     "res://assets/realm_chronicles/boss_banner_guardian.json",
-    "res://assets/realm_chronicles/boss_ember_high_priest.json"
+    "res://assets/realm_chronicles/boss_ember_high_priest.json",
+    "res://assets/realm_chronicles/boss_wind_scribe.json",
+    "res://assets/realm_chronicles/boss_bridge_sentinel.json",
+    "res://assets/realm_chronicles/boss_sky_archivist.json",
+    "res://assets/realm_chronicles/boss_lotus_witness.json",
+    "res://assets/realm_chronicles/boss_halo_keeper.json",
+    "res://assets/realm_chronicles/boss_fully_aware.json"
 ]
 static var _hd_cache: Dictionary = {}
 
@@ -266,6 +283,9 @@ const LOCALE: Dictionary = {
     }
 }
 static func text_for(lang: String, key: String) -> String:
+    var local: Dictionary = Extra.TEXT.get(lang, Extra.TEXT["en"])
+    if local.has(key) or Extra.TEXT["en"].has(key):
+        return Extra.text_for(lang,key)
     var language: Dictionary = LOCALE.get(lang, LOCALE["en"])
     return str(language.get(key, LOCALE["en"].get(key, key)))
 
@@ -279,7 +299,7 @@ static func load_progress() -> Dictionary:
     var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(SAVE))
     if not parsed is Dictionary or int(parsed.get("version", -1)) != VERSION:
         return data
-    data.stage = clampi(int(parsed.get("stage",0)),0,6)
+    data.stage = clampi(int(parsed.get("stage",0)),0,LAST_STAGE)
     data.introduced = parsed.get("introduced",{}) if parsed.get("introduced",{}) is Dictionary else {}
     data.game = parsed.get("game",{}) if parsed.get("game",{}) is Dictionary else {}
     if not valid_game(data.game): data.game = {}
@@ -295,7 +315,7 @@ static func valid_game(game: Dictionary) -> bool:
 static func save_progress(data: Dictionary) -> bool:
     var progress: Dictionary = {
         "version": VERSION,
-        "stage": clampi(int(data.get("stage",0)),0,6),
+        "stage": clampi(int(data.get("stage",0)),0,LAST_STAGE),
         "introduced": data.get("introduced",{}),
         "game": data.get("game",{})
     }
@@ -309,7 +329,7 @@ static func save_progress(data: Dictionary) -> bool:
         ProjectSettings.globalize_path(SAVE)) == OK
 
 static func chapter(stage: int) -> int:
-    return 0 if stage < 3 else 1 if stage < 6 else 2
+    return clampi(int(stage / CHAPTER_SIZE),0,3)
 
 ## Only the separately installable Realm Chronicles debug APK sets this flag.
 ## The public release retains the original strict eight-Challenge Realm gates.
@@ -318,13 +338,16 @@ static func qa_mode() -> bool:
 
 static func can_enter(data: Dictionary, stage: int) -> bool:
     if not ZenAscend.unlocked(data): return false
-    if qa_mode() and stage >= 0 and stage < 6: return true
-    if stage < 3: return ZenAscendRealms.unlocked(data,0)
-    if stage < 6: return ZenAscendRealms.unlocked(data,1)
-    return true
+    if stage >= LAST_STAGE: return true
+    if stage < 0: return false
+    if qa_mode(): return true
+    # Every playable story chapter still respects the existing real 4x4 gate:
+    # Shadow first, 8 Shadow challenges for Ember, 8 Ember for Celestial, and
+    # 8 Celestial challenges for Satori. The test APK is separately isolated.
+    return ZenAscendRealms.unlocked(data,chapter(stage))
 
 static func boss_level(stage: int) -> int:
-    return ZenAscendRealms.fixed_bot_level(chapter(stage)) if stage < 6 else 2
+    return ZenAscendRealms.fixed_bot_level(chapter(stage))
 
 static func _moves(cells: Array, lines: Array, player: int) -> Array:
     var free: Array = []
@@ -353,7 +376,7 @@ static func choose_move(cells: Array, lines: Array, stage: int, last_player_cell
     if not wins.is_empty(): return int(wins[0])
     var blocks: Array = _moves(cells,lines,1)
     if not blocks.is_empty():
-        if stage in [0,2,4,5] or randf() < (0.84 if level == 1 else 0.92):
+        if stage >= 6 or stage in [0,2,4,5] or randf() < (0.84 if level == 1 else 0.92):
             return int(blocks[0])
     var standard: int = ZenAscendRealmBot.next_move(cells,lines,2,level,stage < 3)
     if standard < 0: return -1
@@ -395,6 +418,34 @@ static func choose_move(cells: Array, lines: Array, stage: int, last_player_cell
             if stage == 5: score += ZenAscendRealmBot._fork_score(cells,lines,2,cell)
             if score > best: best = score; favorite = cell
         if randf() < 0.6: return favorite
+    # Celestial is fixed Master. A style bonus can break near-ties but never
+    # overrule an immediate win/block; the tactical baseline is always kept.
+    if stage in [6,7,8]:
+        var baseline: float = ZenAscendRealmBot._score(cells,lines,2,standard)
+        baseline += ZenAscendRealmBot._fork_score(cells,lines,2,standard)
+        var preferred: int = standard
+        var preferred_score: float = -1e20
+        for candidate in range(cells.size()):
+            if int(cells[candidate]) != 0: continue
+            var score: float = ZenAscendRealmBot._score(cells,lines,2,candidate)
+            score += ZenAscendRealmBot._fork_score(cells,lines,2,candidate)
+            if score < baseline - 12.0: continue
+            var face_square: int = candidate % 16
+            var row: int = int(face_square / 4)
+            var col: int = face_square % 4
+            var is_middle: bool = row in [1,2] and col in [1,2]
+            var is_edge: bool = row in [0,3] or col in [0,3]
+            if stage == 6 and is_edge: score += 10.0 # Wind Scribe: long edge horizons
+            if stage == 7 and is_middle: score += 16.0 # Bridge Sentinel: holds center
+            if stage == 8: score += ZenAscendRealmBot._fork_score(cells,lines,2,candidate)*0.30 # Archivist: planning ahead
+            if score > preferred_score: preferred_score = score; preferred = candidate
+        return preferred
+    # Satori is fixed Grand Master. Keep the strongest available tactical
+    # baseline: defensive fork prevention and exact winning lines take priority.
+    # Lotus Witness, Halo Keeper, and Fully Aware differ through character,
+    # timing, dialog, and skins without silently downgrading Grand Master.
+    if stage in [9,10,11]:
+        return standard
     # Veil Monk adds strategic fork preference at Medium, avoiding a forced
     # full difficulty bump to Master.
     if stage == 2 and randf() < 0.65:
