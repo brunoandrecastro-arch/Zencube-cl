@@ -440,12 +440,39 @@ static func choose_move(cells: Array, lines: Array, stage: int, last_player_cell
             if stage == 8: score += ZenAscendRealmBot._fork_score(cells,lines,2,candidate)*0.30 # Archivist: planning ahead
             if score > preferred_score: preferred_score = score; preferred = candidate
         return preferred
-    # Satori is fixed Grand Master. Keep the strongest available tactical
-    # baseline: defensive fork prevention and exact winning lines take priority.
-    # Lotus Witness, Halo Keeper, and Fully Aware differ through character,
-    # timing, dialog, and skins without silently downgrading Grand Master.
+    # Satori is fixed Grand Master. Each opponent gets a specific late-game
+    # preference while preserving near-optimal baseline score and mandatory
+    # Grandmaster fork prevention.
     if stage in [9,10,11]:
-        return standard
+        var base_strength: float = ZenAscendRealmBot._score(cells,lines,2,standard)
+        base_strength += ZenAscendRealmBot._fork_score(cells,lines,2,standard)
+        var base_fork_guard: bool = ZenAscendRealmBot._fork_score(cells,lines,1,standard) >= 250.0
+        var preferred_move: int = standard
+        var best_priority: float = -1e20
+        for candidate in range(cells.size()):
+            if int(cells[candidate]) != 0: continue
+            var own: float = ZenAscendRealmBot._score(cells,lines,2,candidate)
+            var own_fork: float = ZenAscendRealmBot._fork_score(cells,lines,2,candidate)
+            var enemy_fork: float = ZenAscendRealmBot._fork_score(cells,lines,1,candidate)
+            if base_fork_guard and enemy_fork < 250.0: continue
+            # A personality cannot substitute a significantly weaker move.
+            if own + own_fork < base_strength - 8.0: continue
+            var priority: float = own + own_fork
+            if stage == 9:
+                # Lotus Witness: patient, balanced protection of exposed lines.
+                priority += 0.06*ZenAscendRealmBot._score(cells,lines,1,candidate)
+            elif stage == 10:
+                # Keeper of the Halo: secure the middle square of each face.
+                var sub: int = candidate % 16
+                if int(sub / 4) in [1,2] and sub % 4 in [1,2]: priority += 16.0
+                priority += 0.025*ZenAscendRealmBot._score(cells,lines,1,candidate)
+            else:
+                # Fully Aware: exact two-threat forecasting and fork defense.
+                priority += 0.20*own_fork + 0.075*enemy_fork
+            if priority > best_priority:
+                best_priority = priority
+                preferred_move = candidate
+        return preferred_move
     # Veil Monk adds strategic fork preference at Medium, avoiding a forced
     # full difficulty bump to Master.
     if stage == 2 and randf() < 0.65:
