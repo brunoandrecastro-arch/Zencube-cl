@@ -239,15 +239,15 @@ jobs:
           name: ZenCube-3D-Campaign-Test
           path: build/ZenCube-3D-Campaign-Test.apk
           if-no-files-found: error
-      - name: Name Realm Chronicles test APK
+      - name: Name end-user preview APK
         if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
-        run: mv build/ZenCube-3D.apk build/ZenCube-3D-RealmChronicles-Test.apk
-      - name: Upload Realm Chronicles test APK
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-Enduser-Preview.apk
+      - name: Upload end-user preview APK
         if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ZenCube-3D-RealmChronicles-Test
-          path: build/ZenCube-3D-RealmChronicles-Test.apk
+          name: ZenCube-3D-Enduser-Preview
+          path: build/ZenCube-3D-Enduser-Preview.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true'
