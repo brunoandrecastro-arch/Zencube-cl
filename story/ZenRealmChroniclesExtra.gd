@@ -3,6 +3,9 @@ extends RefCounted
 ## module so existing Chapter 1/2 dialog keys and save files remain unchanged.
 const TEXT: Dictionary = {
     "de": {
+        "realm_card_open":"Kampagne öffnen",
+        "realm_card_subtitle":"Kuzes Weg durch Shadow, Ember, Celestial und Satori",
+        "realm_card_bosses":"Bosse",
         "boss_6":"Windschreiber",
         "boss_7":"Brückensentinel",
         "boss_8":"Archivar des Himmels",
@@ -54,6 +57,9 @@ const TEXT: Dictionary = {
         "chapter_status_wait":"Noch nicht freigeschaltet"
     },
     "en": {
+        "realm_card_open":"Open story campaign",
+        "realm_card_subtitle":"Kuze's journey through Shadow, Ember, Celestial and Satori",
+        "realm_card_bosses":"bosses",
         "boss_6":"Wind Scribe",
         "boss_7":"Bridge Sentinel",
         "boss_8":"Archivist of the Sky",
@@ -105,6 +111,9 @@ const TEXT: Dictionary = {
         "chapter_status_wait":"Not yet unlocked"
     },
     "pt": {
+        "realm_card_open":"Abrir campanha",
+        "realm_card_subtitle":"A viagem de Kuze por Shadow, Ember, Celestial e Satori",
+        "realm_card_bosses":"chefes",
         "boss_6":"Escriba dos Ventos",
         "boss_7":"Sentinela da Ponte",
         "boss_8":"Arquivista do Céu",
