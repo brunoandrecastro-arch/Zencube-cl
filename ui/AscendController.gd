@@ -890,6 +890,12 @@ func show_realms() -> void:
         text(story_column,RealmStory.text_for(lang(),"realm_story_completed"),14,Color("f0d99c"))
     var open_story: Button = action(story_column,RealmStory.text_for(lang(),"realm_card_open"),_open_realm_chronicles_from_realms,true)
     open_story.name = "RealmChroniclesCampaignOpen"
+    # Debug build ONLY: inspect the real glass-break ceremony without changing
+    # Challenges, boss victories, unlock flags, ranks or save files.
+    if RealmStory.qa_mode():
+        var preview_label: String = "🪞 Spiegelbruch testen (Test-APK)" if lang() == "de" else ("🪞 Testar vidro partido (APK de teste)" if lang() == "pt" else "🪞 Preview mirror shatter (test APK)")
+        var preview: Button = action(story_column,preview_label,_preview_mirror_shatter_qa,true)
+        preview.name = "RealmMirrorShatterPreviewQA"
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -924,6 +930,19 @@ func show_realms() -> void:
             choose.disabled = selected or (move_count() > 0 and result == 0)
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
+
+func _preview_mirror_shatter_qa() -> void:
+    if not RealmStory.qa_mode(): return
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    var preview: ZenRealmTravelCeremony = RealmPortal.new()
+    add_child(preview)
+    preview.finished.connect(func():
+        if is_inside_tree(): call_deferred("show_realms")
+    )
+    preview.present(Realms.REALM_ART[0],Realms.REALM_ART[1],
+        Realms.realm_name(1,lang()),true,bool(data.settings.get("sound",true)),
+        [world_music],lang())
 
 func _open_realm_chronicles_from_realms() -> void:
     # The button is inside a modal; close it before opening the book. Returning
