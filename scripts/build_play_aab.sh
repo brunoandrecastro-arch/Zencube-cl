@@ -27,6 +27,7 @@ assert 'package/unique_name="com.zencube.game.play"' in preset, "Play package mu
 assert "version/code=24" in preset and 'version/name="2.4"' in preset
 assert 'const TEST_UNLOCKED: bool = false' in Path("core/ZenAscend.gd").read_text(encoding="utf-8")
 PY
+python3 tests/test_release_hd_boss_assets.py --release
 mkdir -p build
 exec 9>build/.play-build.lock
 flock -n 9 || { echo 'An Android App Bundle build is already running.' >&2; exit 1; }

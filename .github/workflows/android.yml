@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
-      ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
+      ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' || startsWith(github.head_ref, 'release/play-candidate-') || startsWith(github.ref_name, 'release/play-candidate-') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
