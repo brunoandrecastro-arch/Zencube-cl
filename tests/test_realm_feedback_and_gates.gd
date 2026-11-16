@@ -179,6 +179,25 @@ func run() -> void:
     check(audio != null and audio.stream == load("res://assets/audio/zen_mirror_shatter.wav"),
         "new realm breakthrough plays dedicated glass-break sound rather than gong")
     fx.close()
+    # QA preview must be reachable without completing all 8 challenges and
+    # must NEVER fake Realm unlocks, victories, or saved progression.
+    ProjectSettings.set_setting(qkey,true)
+    controller.call("show_realms")
+    await process_frame
+    var qa_menu: Node = controller.get("active_realm_dialog")
+    check(qa_menu != null and qa_menu.find_child("RealmMirrorShatterPreviewQA",true,false) != null,
+        "test APK offers a one-tap mirror shatter preview")
+    var normal_before: String = FileAccess.get_file_as_string(SaveManager.PATH)
+    var story_before: String = FileAccess.get_file_as_string(Story.SAVE)
+    controller.call("_preview_mirror_shatter_qa")
+    await process_frame
+    var preview_glass: Node = controller.find_child("EpicRealmScreenFracture",true,false)
+    check(preview_glass != null,"preview invokes the real, shattering Realm animation")
+    check(FileAccess.get_file_as_string(SaveManager.PATH) == normal_before and FileAccess.get_file_as_string(Story.SAVE) == story_before,
+        "preview never mutates actual player saves")
+    if preview_glass != null:
+        preview_glass.get_parent().get_parent().call("close")
+    ProjectSettings.set_setting(qkey,false)
     controller.queue_free()
     current_scene = previous
     ProjectSettings.set_setting(qkey,oldqa)
