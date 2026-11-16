@@ -539,6 +539,15 @@ func open_realm_story_overview() -> void:
         _make_label(RealmStory.text_for(_active_language,"challenge_unlock"),outer,13,MUTED)
 
 func _launch_realm_story() -> void:
+    # Do not discard an unfinished ordinary Ascend match.
+    var active_scene: Node = get_tree().current_scene
+    if active_scene != null and active_scene.scene_file_path == "res://Ascend.tscn" and active_scene.has_method("move_count"):
+        if int(active_scene.call("move_count")) > 0 and int(active_scene.get("result")) == 0:
+            var warning: VBoxContainer = _make_screen()
+            _screen_name = "realm-story"
+            _make_label(RealmStory.text_for(_active_language,"finish_active"),warning,18,CREAM)
+            _make_button(RealmStory.text_for(_active_language,"back"),warning,open_realm_story_overview)
+            return
     var saved: Dictionary = SaveManager.load_data()
     var progress: Dictionary = RealmStory.load_progress()
     if not RealmStory.can_enter(saved,int(progress.stage)):
