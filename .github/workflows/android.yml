@@ -158,6 +158,9 @@ jobs:
       - name: Verify playable Zen Campaign and demon AI
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_zen_campaign.gd
+      - name: Verify 12 original Realm boss music mappings and OGG import
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_realm_boss_music.gd
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
