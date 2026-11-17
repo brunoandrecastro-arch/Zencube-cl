@@ -9,6 +9,20 @@ const CELLS: int = 96
 const SIDE: int = 4
 
 const WORDS: Dictionary = {
+    "Menü": ["Menu", "Menu"],
+    "Nächster Rang · %d / %d": ["Next rank · %d / %d", "Próximo nível · %d / %d"],
+    "Partien %d · Siege %d · Unentschieden %d": ["Matches %d · Wins %d · Draws %d", "Partidas %d · Vitórias %d · Empates %d"],
+    "Siegquote %.1f%% · Beste Serie %d": ["Win rate %.1f%% · Best streak %d", "Taxa de vitórias %.1f%% · Melhor série %d"],
+    "Aktuelle Serie %d · Züge gesamt %d": ["Current streak %d · Total moves %d", "Série atual %d · Jogadas totais %d"],
+    "Schnellster Sieg %d · Ø Züge %.1f": ["Fastest win %d · Average moves %.1f", "Vitória mais rápida %d · Média de jogadas %.1f"],
+    "Geheime Erfolge · %d / %d": ["Secret achievements · %d / %d", "Conquistas secretas · %d / %d"],
+    "Realm-Titel ansehen": ["View Realm title", "Ver título do reino"],
+    "Geheimer Erfolg": ["Secret achievement", "Conquista secreta"],
+    "Erfolg freigeschaltet": ["Achievement unlocked", "Conquista desbloqueada"],
+    "Freischaltbedingung verborgen. Entdecke das Geheimnis beim Spielen.": ["Unlock condition hidden. Discover the secret in play.", "Condição de desbloqueio oculta. Descobre o segredo ao jogar."],
+    "Hinweis: %s": ["Hint: %s", "Dica: %s"],
+    "Kaufe einen Hinweis im Hauptmenü → Zen-Shop → Hinweise (🍃 %d).": ["Get a hint in Main menu → Zen Shop → Hints (🍃 %d).", "Obtém uma dica em Menu principal → Loja Zen → Dicas (🍃 %d)."],
+    "Freischaltung ansehen": ["View unlock requirements", "Ver requisitos de desbloqueio"],
     "Zen Ascend 4×4": ["Zen Ascend 4×4", "Zen Ascend 4×4"],
     "Testversion: direkt spielbar": ["Test build: playable immediately", "Versão de teste: disponível já"],
     "Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).": ["New mode: six 4×4 faces (96 cells).", "Novo modo: seis faces 4×4 (96 casas)."],
