@@ -200,6 +200,7 @@ func _make_campaign_ui() -> void:
     map_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     map_scroll.add_theme_constant_override("separation",5)
     scroll.add_child(map_scroll)
+    map_col.add_child(_ui_button("Satori-Eisbruch erneut testen",_return_to_satori))
     map_col.add_child(_ui_button("Zurück zum Würfel",_close_map))
     map_layer.visible = false
 
@@ -309,7 +310,7 @@ func _play_move(cell: int) -> void:
             _write_save()
         var was_win: bool = winner == 1
         get_tree().create_timer(0.85).timeout.connect(func() -> void:
-            if is_inside_tree():
+            if is_inside_tree() and winner != 0:
                 _show_result(was_win)
         )
 
