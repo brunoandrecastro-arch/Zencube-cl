@@ -58,6 +58,8 @@ var mouse_pressed: bool = false
 var heard_touch: bool = false
 var realm_story_active: bool = false
 var realm_story_progress: Dictionary = {}
+# Prevent delayed bot replies from bleeding into later normal/Chronicles matches.
+var match_generation: int = 0
 var realm_story_stage: int = 0
 var realm_story_last_human: int = -1
 var realm_story_generation: int = 0
@@ -503,6 +505,7 @@ func start_game(bot: bool, level: int = -1) -> void:
         _realm_story_retry()
         return
     against_bot = bot
+    match_generation += 1
     # Explicit level choices never override fixed Realm difficulty.
     match_realm = realm_index()
     bot_level = Realms.fixed_bot_level(match_realm)
@@ -515,8 +518,19 @@ func start_game(bot: bool, level: int = -1) -> void:
     turn = 1
     owners = [0,1] if bot else [int(data.ascend.next_start),1-int(data.ascend.next_start)]
     busy = false
+    if bot:
+        # Alternate real matches with the Realm bot, including rematches.
+        # Persist across sessions; puzzle challenges are not bot matches.
+        var count: int = int(data.ascend.get("normal_bot_start_counter",0))
+        turn = 1 if count % 2 == 0 else 2
+        data.ascend.normal_bot_start_counter = count+1
+        SaveManager.save_data(data)
     cube.reset_view()
     draw()
+    if bot and turn == 2:
+        busy = true
+        draw()
+        call_deferred("bot_turn")
 
 func play(cell: int) -> void:
     if result != 0 or busy or cell < 0 or cell >= Mode.CELLS or int(cells[cell]) != 0: return
@@ -542,11 +556,12 @@ func _commit(cell: int) -> void:
     draw()
 
 func bot_turn() -> void:
+    var started_match: int = match_generation
     var generation: int = realm_story_generation
     var began_in_story: bool = realm_story_active
     var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55,0.44,0.55,0.75,0.88,0.74,1.05][clampi(realm_story_stage,0,11)] if realm_story_active else 0.26
     await get_tree().create_timer(delay).timeout
-    if not is_inside_tree() or result != 0 or not against_bot: return
+    if not is_inside_tree() or result != 0 or not against_bot or started_match != match_generation: return
     # After leaving a story, realm_story_active becomes false. Check the
     # launch context TOO, otherwise an awaited story bot could continue on
     # the restored ordinary 4x4 board after the player has left.
@@ -1208,6 +1223,7 @@ func start_realm_story() -> void:
     _realm_story_present_intro()
 
 func _realm_story_set_stage(stage: int) -> void:
+    match_generation += 1
     realm_story_stage = clampi(stage,0,RealmStory.LAST_STAGE-1)
     match_realm = RealmStory.chapter(realm_story_stage)
     bot_level = Realms.fixed_bot_level(match_realm)
@@ -1486,6 +1502,7 @@ func _realm_story_menu() -> void:
 # renderer, equipped shop skin and four Realm cards are restored in place.
 func _realm_story_return_to_ascend() -> void:
     if not realm_story_active: return
+    match_generation += 1
     _realm_story_save()
     realm_story_generation += 1
     realm_story_active = false
@@ -1513,6 +1530,7 @@ func _realm_story_return_to_ascend() -> void:
 
 func _realm_story_leave() -> void:
     if not realm_story_active: return
+    match_generation += 1
     _realm_story_save()
     realm_story_active = false
     ZenChronicles.set_campaign_board_active(false)
