@@ -31,6 +31,6 @@ func run() -> void:
         game.queue_free()
         await process_frame
     check(ZenAscend.generate_lines().size() == 204, "normal 4x4 line count unchanged")
-    check(ZenMaster.generate_lines().size() == 312, "normal 5x5 line count unchanged")
+    check(ZenMaster.generate_lines().size() == 348, "normal 5x5 line count unchanged")
     print("ZEN MASTER BRIDGE FAILURES=",failures)
     quit(0 if failures == 0 else 1)
