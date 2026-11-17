@@ -1,4 +1,4 @@
-name: Zen Master 5x5 prototype checks
+name: Zen Master 5x5 campaign QA
 on:
   push:
     branches:
@@ -32,6 +32,12 @@ jobs:
       - name: Verify easy 4x4 Satori victory triggers real mirror break
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_zen_master_bridge.gd
+      - name: Test full Zen Master campaign (16 bosses, unique backgrounds, unlocks)
+        run: |
+          timeout 150 "$GODOT" --headless --path . --script tests/test_zen_master_campaign.gd
+      - name: Launch standalone boss campaign scene (headless smoke)
+        run: |
+          timeout 40 "$GODOT" --headless --path . --quit-after 12 res://ZenMasterCampaign.tscn
       - name: Launch final Satori bridge and 5x5 scenes (headless smoke)
         run: |
           timeout 40 "$GODOT" --headless --path . --quit-after 12 res://ZenMasterBridgeTest.tscn
@@ -79,7 +85,7 @@ jobs:
           needle = 'package/unique_name="com.zencube.game"'
           assert source.count(needle) == 1
           source = source.replace(needle, 'package/unique_name="com.zencube.game.zenmaster"', 1)
-          source = source.replace('package/name="ZenCube 3D"', 'package/name="Zen Master 5x5 Test"', 1)
+          source = source.replace('package/name="ZenCube 3D"', 'package/name="Zen Master 16 Boss QA"', 1)
           preset.write_text(source)
           assert 'package/unique_name="com.zencube.game.play"' in source
           print("Temporary Android debug package: com.zencube.game.zenmaster")
@@ -87,9 +93,9 @@ jobs:
       - name: Export signed isolated debug APK
         run: |
           bash scripts/build_android.sh
-          mv build/ZenCube-3D.apk build/ZenMaster-Satori-Void-Test.apk
+          mv build/ZenCube-3D.apk build/ZenMaster-16Boss-Campaign-QA.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: ZenMaster-Satori-Void-Android-Test
+          name: ZenMaster-16Boss-Campaign-Android-APK
           path: build/ZenMaster-Satori-Void-Test.apk
           if-no-files-found: error
