@@ -1590,6 +1590,8 @@ func open_help() -> void:
         return
     var box = modal("Ein wenig Orientierung")
     var hints = CheckButton.new()
+    hints.name = "SettingsHints"
+    UiTest.settings_switch(hints)
     hints.text = T("Unmittelbare Gewinnfelder markieren")
     hints.button_pressed = bool(data.settings.hints)
     hints.toggled.connect(func(v):
@@ -1802,6 +1804,7 @@ func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> vo
 
 func open_settings() -> void:
     var box = modal("Deine Einstellungen")
+    box.add_theme_constant_override("separation",9)
     label("Spiele in deinem Tempo.",box,15,Color("806c54"))
     for i in range(2):
         var idx: int = i
@@ -1810,13 +1813,15 @@ func open_settings() -> void:
         name_field.max_length = 24
         name_field.text = str(data.settings.names[i])
         name_field.placeholder_text = ZMode.t("Spieler 1" if i==0 else "Spieler 2",language_code())
-        name_field.custom_minimum_size.y = 49
+        name_field.name = "SettingsPlayerName%d" % (i+1)
+        UiTest.settings_field(name_field)
         name_field.text_submitted.connect(func(value: String): save_player_name(idx,value))
         name_field.focus_exited.connect(func(): save_player_name(idx,name_field.text))
         box.add_child(name_field)
     label("Sprache",box,15)
     var language_picker = OptionButton.new()
-    language_picker.custom_minimum_size.y = 52
+    language_picker.name = "SettingsLanguage"
+    UiTest.settings_picker(language_picker)
     language_picker.add_item("Deutsch", 0)
     language_picker.add_item("English", 1)
     language_picker.add_item("Português", 2)
@@ -1824,12 +1829,14 @@ func open_settings() -> void:
     language_picker.select(maxi(0, selected_language))
     language_picker.item_selected.connect(func(index): change_language(["de","en","pt"][index]))
     box.add_child(language_picker)
+    label("Bot-Schwierigkeit",box,15)
     var level = OptionButton.new()
+    level.name = "SettingsBotDifficulty"
+    UiTest.settings_picker(level)
     for title in ["Bot: Leicht","Bot: Mittel","Bot: Schwer","Bot: Meister","Bot: Großmeister"]: level.add_item(T(title))
     for index in range(5):
         level.set_item_disabled(index, not Asc.level_unlocked(data,index))
     level.selected = clampi(int(data.settings.level),0,4)
-    level.custom_minimum_size.y = 52
     level.item_selected.connect(func(index):
         # Difficulty can be selected only after its previous rank is achieved.
         if Asc.level_unlocked(data,index):
@@ -1841,6 +1848,8 @@ func open_settings() -> void:
     )
     box.add_child(level)
     var music = CheckButton.new()
+    music.name = "SettingsBackgroundMusic"
+    UiTest.settings_switch(music)
     music.text = T("Ruhige Zen-Garten-Musik")
     music.button_pressed = bool(data.settings.get("music",false))
     music.toggled.connect(func(enabled):
@@ -1851,6 +1860,8 @@ func open_settings() -> void:
     box.add_child(music)
     label("Musiktitel", box, 15)
     var tracks: OptionButton = OptionButton.new()
+    tracks.name = "SettingsMusicTrack"
+    UiTest.settings_picker(tracks)
     tracks.add_item(MusicPolicy.base_label(language_code()))
     var music_names: Array = ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Nebelpfad", "Stein und Wasser", "Regentropfen im Zen-Garten", "Sternenlicht am Tempel"] + NEW_MUSIC_TITLES
     # Hide Misty Path (3), Stone and Water (4), Whispers (7) from manual selection.
@@ -1877,7 +1888,6 @@ func open_settings() -> void:
                 selected_option = i
                 break
     tracks.select(selected_option)
-    tracks.custom_minimum_size.y = 48
     tracks.item_selected.connect(func(index):
         if index == 0:
             select_base_music()
@@ -1886,6 +1896,8 @@ func open_settings() -> void:
     )
     box.add_child(tracks)
     var sounds = CheckButton.new()
+    sounds.name = "SettingsSoundEffects"
+    UiTest.settings_switch(sounds)
     sounds.text = T("Sanfte Spieltöne")
     sounds.button_pressed = bool(data.settings.sound)
     sounds.toggled.connect(func(enabled):
@@ -1894,6 +1906,8 @@ func open_settings() -> void:
     )
     box.add_child(sounds)
     var vibration = CheckButton.new()
+    vibration.name = "SettingsVibration"
+    UiTest.settings_switch(vibration)
     vibration.text = T("Vibration bei Spielzügen")
     vibration.button_pressed = bool(data.settings.get("haptics", true))
     vibration.toggled.connect(func(enabled):
@@ -1910,6 +1924,8 @@ func open_settings() -> void:
     )
     box.add_child(hints)
     var alternate = CheckButton.new()
+    alternate.name = "SettingsAlternateStarter"
+    UiTest.settings_switch(alternate)
     alternate.text = T("Startspieler nach jeder Runde wechseln")
     alternate.button_pressed = bool(data.settings.alternate)
     alternate.toggled.connect(func(enabled):
@@ -1918,6 +1934,8 @@ func open_settings() -> void:
     )
     box.add_child(alternate)
     var swap = CheckButton.new()
+    swap.name = "SettingsSymbolSwap"
+    UiTest.settings_switch(swap)
     swap.text = T("Farbtausch erlauben (nur lokaler Modus)")
     swap.button_pressed = bool(data.settings.swap)
     swap.toggled.connect(func(enabled):
@@ -1926,7 +1944,26 @@ func open_settings() -> void:
     )
     box.add_child(swap)
     button("Musikprobe abspielen",box,music_preview)
-    button("Fertig",box,close_modal,false,true)
+    # Keep Done ALWAYS visible while scrolling the settings fields.
+    # The shared modal() hierarchy is left intact for all other screens.
+    var scroll: ScrollContainer = box.get_parent() as ScrollContainer
+    var layout := VBoxContainer.new()
+    layout.name = "SettingsDialogLayout"
+    layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    layout.add_theme_constant_override("separation",6)
+    popup.add_child(layout)
+    scroll.reparent(layout)
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var footer := MarginContainer.new()
+    footer.name = "SettingsStickyFooter"
+    footer.add_theme_constant_override("margin_left",12)
+    footer.add_theme_constant_override("margin_right",12)
+    footer.add_theme_constant_override("margin_top",6)
+    footer.add_theme_constant_override("margin_bottom",10)
+    layout.add_child(footer)
+    var finish: Button = button("Fertig",footer,close_modal,false,true)
+    finish.name = "SettingsDoneSticky"
 
 func build_sound() -> void:
     sound_player = AudioStreamPlayer.new()
