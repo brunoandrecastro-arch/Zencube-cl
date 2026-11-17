@@ -39,6 +39,7 @@ func run() -> void:
     check(int((game.get("current_stage") as int)) == 0, "start on first Void boss")
     check(bool(game.get("story_layer").visible), "boss intro visible before battle")
     var distinct: Dictionary = {}
+    var portraits: Dictionary = {}
     game.set("qa_preview",true)
     for i in range(16):
         game.call("_choose_stage",i,false)
@@ -46,8 +47,15 @@ func run() -> void:
         check(svg != null, "boss " + str(i) + " owns its own loaded artwork")
         if svg != null:
             distinct[svg.resource_path] = true
+        var boss: Dictionary = Data.BOSSES[i]
+        var art: Dictionary = Catalog.stage_for(boss["id"])
+        var pic: Texture2D = load(art["portrait"]) as Texture2D
+        check(pic != null, "boss " + str(i) + " has its own portrait")
+        if pic != null:
+            portraits[pic.resource_path] = true
         check(game.get("cells").size() == 150, "boss " + str(i) + " uses 5x5 board")
     check(distinct.size() == 16, "sixteen distinct loaded arena textures")
+    check(portraits.size() == 16, "sixteen distinct loaded portrait textures")
     var empty: Array = []
     empty.resize(150)
     empty.fill(0)
