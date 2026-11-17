@@ -559,11 +559,15 @@ func start_game(bot: bool, level: int = -1) -> void:
     cells.fill(0)
     result = 0
     recorded = false
-    turn = 1
+    # Alternate the opening turn in ordinary Realm bot matches, too. The
+    # player remains X and the bot remains O; no gameplay rules are altered.
+    var bot_opens: bool = bot and int(data.ascend.next_start) == 1
+    turn = 2 if bot_opens else 1
     owners = [0,1] if bot else [int(data.ascend.next_start),1-int(data.ascend.next_start)]
-    busy = false
+    busy = bot_opens
     cube.reset_view()
     draw()
+    if bot_opens: call_deferred("bot_turn")
 
 func play(cell: int) -> void:
     if result != 0 or busy or cell < 0 or cell >= Mode.CELLS or int(cells[cell]) != 0: return
@@ -675,7 +679,9 @@ func finish() -> void:
         if match_realm == 3 and bool(last_realm_awards.get("realm_completed", false)) and Realms.current_title(data,3) == "Fully Aware" and not bool(realm_state.get("fully_aware_ceremony_seen", false)):
             realm_state["fully_aware_ceremony_seen"] = true
             celebrate_fully_aware = true
-    if not against_bot: data.ascend.next_start = 1-int(data.ascend.next_start)
+    # A completed Realm match advances the shared alternating-start parity.
+    # Retries or viewing a finished result do not increment this counter.
+    data.ascend.next_start = 1-int(data.ascend.next_start)
     pending_fully_aware = celebrate_fully_aware
     SaveManager.save_data(data)
     if not queued_unlocks.is_empty():
@@ -1290,7 +1296,10 @@ func _realm_story_set_stage(stage: int) -> void:
     if not RealmStory.valid_game(old): old = {}
     if old.is_empty():
         cells.fill(0)
-        turn = 1
+        # Boss 0 starts with the player, Boss 1 with the demon, etc.
+        # retry_offset flips the opening turn on a repeat defeat.
+        var parity: int = (realm_story_stage + int(realm_story_progress.get("retry_offset",0))) % 2
+        turn = 2 if parity == 1 else 1
         result = 0
     else:
         cells = old.cells.duplicate()
@@ -1415,6 +1424,7 @@ func _realm_story_retry() -> void:
     if not realm_story_active or realm_story_stage >= RealmStory.LAST_STAGE: return
     realm_story_generation += 1
     realm_story_progress.game = {}
+    realm_story_progress["retry_offset"] = 1-int(realm_story_progress.get("retry_offset",0))
     _realm_story_set_stage(realm_story_stage)
     _realm_story_save()
     _realm_story_present_intro()
@@ -1426,6 +1436,7 @@ func _realm_story_advance() -> void:
     var progress: Dictionary = realm_story_progress.duplicate(true)
     progress.stage = next_stage
     progress.game = {}
+    progress["retry_offset"] = 0
     if not RealmStory.save_progress(progress):
         push_warning("Realm Chronicles: failed to save completed boss")
         return
