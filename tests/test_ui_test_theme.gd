@@ -45,6 +45,11 @@ func run() -> void:
     root.add_child(game)
     await process_frame
     var baseline: Dictionary = game.board.snapshot()
+    # A truly fresh install already opens language selection in _ready().
+    # Let the old overlay leave the tree before opening a second one; otherwise
+    # Godot renames the second sibling while the queued-for-free one still exists.
+    game.close_modal()
+    await process_frame
     game.open_language_choice()
     check(game.popup != null and game.popup.name == "UiTestLanguageOverlay", "language screen is new UI Test overlay")
     var title: Node = _find(game.popup, "UiTestTitle")
