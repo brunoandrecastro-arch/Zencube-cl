@@ -119,10 +119,10 @@ func _sound() -> AudioStreamWAV:
     random.seed = 5115
     for i in range(frames):
         var t: float = float(i)/float(rate)
-        var crack: float = random.randf_range(-1.0,1.0) * exp(-t*11.0)
-        var shimmer: float = sin(TAU*(650.0*t+330.0*t*t)) * exp(-t*3.6)
-        var echo: float = sin(TAU*(220.0*t+63.0*t*t)) * exp(-t*1.5)
-        var sample: float = (crack*0.45 + shimmer*0.36 + echo*0.24)*0.88
+        var crack: float = random.randf_range(-1.0,1.0) * (exp(-t*14.0) + 0.75*exp(-absf(t-0.72)*36.0) + 0.55*exp(-absf(t-1.12)*46.0))
+        var shimmer: float = sin(TAU*(1090.0*t+520.0*t*t)) * exp(-t*3.3)
+        var echo: float = sin(TAU*(880.0*t+150.0*t*t)) * exp(-t*2.2)
+        var sample: float = (crack*0.42 + shimmer*0.25 + echo*0.18)*0.68
         data.encode_s16(i*2,clampi(int(sample*32767.0),-32768,32767))
     wave.data = data
     return wave
@@ -275,9 +275,10 @@ func _begin_fracture() -> void:
     fracture_sound.play()
     mirror.begin()
     var tween: Tween = create_tween()
+    tween.tween_interval(1.05) # Hold the cube still while icy fractures spread.
     tween.set_parallel(true)
-    tween.tween_property(pivot,"scale",Vector3.ONE*0.22,1.05).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-    tween.tween_property(pivot,"rotation",pivot.rotation+Vector3(0.5,1.8,0.7),1.05)
+    tween.tween_property(pivot,"scale",Vector3.ONE*0.18,0.95).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+    tween.tween_property(pivot,"rotation",pivot.rotation+Vector3(0.25,1.25,0.35),0.95)
 
 func _goto_void() -> void:
     get_tree().change_scene_to_file("res://ZenMasterPrototype.tscn")
