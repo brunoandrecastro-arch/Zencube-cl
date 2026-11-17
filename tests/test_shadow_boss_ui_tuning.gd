@@ -14,7 +14,7 @@ func _initialize() -> void:
     call_deferred("run")
 
 func run() -> void:
-    randseed(27011)
+    seed(27011)
     var lines: Array = ZenAscend.generate_lines()
     verify(lines.size() == 204, "4x4 geometry unchanged")
     for stage in range(12):
