@@ -3,7 +3,8 @@ extends RefCounted
 # Isolated 5x5 experiment. No Classic/Zen Ascend saves, menus or unlocks are touched.
 const SIDE: int = 5
 const CELLS: int = 150
-const EXPECTED_LINES: int = 312
+const EXPECTED_LINES: int = 348
+const CONNECT: int = 4
 const SPACING: float = 0.615
 const SURFACE: float = 1.62
 
@@ -33,38 +34,42 @@ static func boundary(f: int, neighbour: int, tangent: Vector3, lane: int, inward
 
 static func generate_lines() -> Array:
     var lines: Array = []
-    # Five rows, five columns, and the two long diagonals on every face.
+    # Connect FOUR on the 5x5 faces. Windows can start at 0 or 1
+    # in rows/columns and at each of the 2x2 diagonal positions.
     for f in range(6):
-        for r in range(SIDE):
-            var horizontal: Array = []
-            var vertical: Array = []
-            for c in range(SIDE):
-                horizontal.append(id(f, r, c))
-                vertical.append(id(f, c, r))
-            lines.append(horizontal)
-            lines.append(vertical)
-        var diagonal_a: Array = []
-        var diagonal_b: Array = []
-        for i in range(SIDE):
-            diagonal_a.append(id(f, i, i))
-            diagonal_b.append(id(f, i, SIDE - 1 - i))
-        lines.append(diagonal_a)
-        lines.append(diagonal_b)
-    # The 12 physical cube edges each have five lanes and four splits:
-    # 1+4, 2+3, 3+2, 4+1. Lines do not turn around cube corners.
+        for row in range(SIDE):
+            for first in range(SIDE - CONNECT + 1):
+                var horizontal: Array = []
+                var vertical: Array = []
+                for step in range(CONNECT):
+                    horizontal.append(id(f, row, first + step))
+                    vertical.append(id(f, first + step, row))
+                lines.append(horizontal)
+                lines.append(vertical)
+        for row in range(SIDE - CONNECT + 1):
+            for col in range(SIDE - CONNECT + 1):
+                var diagonal_a: Array = []
+                var diagonal_b: Array = []
+                for step in range(CONNECT):
+                    diagonal_a.append(id(f, row + step, col + step))
+                    diagonal_b.append(id(f, row + step, col + CONNECT - 1 - step))
+                lines.append(diagonal_a)
+                lines.append(diagonal_b)
+    # Across each physical edge: 5 lanes x three splits (1+3,2+2,3+1).
+    # Only straight crossings, no bends or three-face routes.
     for a in range(6):
         for b in range(a + 1, 6):
             if CubeGeometry.N[a].dot(CubeGeometry.N[b]) != 0.0:
                 continue
             var tangent: Vector3 = CubeGeometry.N[a].cross(CubeGeometry.N[b])
             for lane in range(SIDE):
-                for split in range(1, SIDE):
+                for split in range(1, CONNECT):
                     var line: Array = []
                     for inward in range(split - 1, -1, -1):
                         line.append(boundary(a, b, tangent, lane, inward))
-                    for inward in range(SIDE - split):
+                    for inward in range(CONNECT - split):
                         line.append(boundary(b, a, tangent, lane, inward))
-                    assert(not line.has(-1), "Missing 5x5 physical edge cell")
+                    assert(not line.has(-1), "Missing 5x5 cross-edge cell")
                     lines.append(line)
     assert(lines.size() == EXPECTED_LINES)
     return lines
@@ -95,7 +100,7 @@ static func immediate_move(cells: Array, lines: Array, player: int) -> int:
             else:
                 valid = false
                 break
-        if valid and own == SIDE - 1 and free != -1:
+        if valid and own == CONNECT - 1 and free != -1:
             return free
     return -1
 
@@ -134,9 +139,9 @@ static func next_move(cells: Array, lines: Array, player: int, level: int = 1) -
             continue
         var score: float = 1.0
         if own > 0:
-            score += float([0, 4, 14, 70, 600][own])
+            score += float([0, 4, 18, 100, 1000][own])
         if enemy > 0:
-            score += float([0, 3, 12, 65, 520][enemy])
+            score += float([0, 3, 16, 95, 900][enemy])
         for c in line:
             if int(cells[int(c)]) == 0:
                 weights[int(c)] += score
