@@ -23,7 +23,10 @@ func _collect(node: Node, output: Array) -> void:
 func visible_text(node: Node) -> String:
     var all: Array = []
     _collect(node,all)
-    return " | ".join(all)
+    var contents: String = ""
+    for item in all:
+        contents += " | " + str(item)
+    return contents
 
 func run() -> void:
     var path: String = SaveManager.PATH
