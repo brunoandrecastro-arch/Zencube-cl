@@ -3,7 +3,7 @@ extends RefCounted
 
 # Independent QA campaign story. Four realms, four bosses each, no Play saves affected.
 const REALMS: Array[Dictionary] = [
-    {"id":"void_sanctuary","name":"Void Sanctuary","chapter":"Die Prüfung der Leere","intro":"Hinter den Eissplittern aus Satori entdeckt Kuze einen Tempel, in dem Namen und Angst verschwinden.","palette":"Dunkelviolett"},
+    {"id":"void_sanctuary","name":"Void Sanctuary","chapter":"Die Prüfung der Leere","intro":"Hinter dem zersplitterten Spiegel Satoris entdeckt Kuze einen Tempel, in dem Namen und Angst verschwinden.","palette":"Dunkelviolett"},
     {"id":"moonlit_garden","name":"Moonlit Garden","chapter":"Die Prüfung der Erinnerung","intro":"Nachdem Kuze Stille ausgehalten hat, stellt der Mondgarten ihm die Frage, was er wirklich bewahren möchte.","palette":"Mondrosa"},
     {"id":"astral_monastery","name":"Astral Monastery","chapter":"Die Prüfung der Klarheit","intro":"Auf den Brücken zwischen den Sternen muss Kuze lernen, Muster zu sehen, ohne sie kontrollieren zu wollen.","palette":"Astralblau"},
     {"id":"origin_realm","name":"Origin Realm","chapter":"Die Prüfung des Selbst","intro":"Vor dem ersten Sonnenaufgang wartet keine weitere Welt, sondern die Wahrheit über Kuze selbst.","palette":"Goldweiß"},
