@@ -39,6 +39,16 @@ func run() -> void:
     check(int((game.get("current_stage") as int)) == 0, "start on first Void boss")
     check(int(game.get("first_player")) == 1, "stage 1 starts with the player")
     check(bool(game.get("story_layer").visible), "boss intro visible before battle")
+    # Regression: portrait heads were cut off by COVERED and story text wasted space.
+    var portrait_view: TextureRect = game.get("dialog_preview") as TextureRect
+    check(portrait_view != null, "story popup uses dedicated boss portrait view")
+    if portrait_view != null:
+        check(portrait_view.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED,
+            "boss portrait entirely visible, not center-cropped")
+        check(portrait_view.custom_minimum_size.y >= 250.0, "portrait has enough vertical display space")
+    var story_copy: Label = game.get("dialog_text") as Label
+    check(story_copy != null and story_copy.size_flags_vertical == Control.SIZE_FILL,
+        "story text does not stretch into a giant blank area")
     var distinct: Dictionary = {}
     var portraits: Dictionary = {}
     game.set("qa_preview",true)
@@ -55,6 +65,16 @@ func run() -> void:
         if pic != null:
             portraits[pic.resource_path] = true
         check(game.get("cells").size() == 150, "boss " + str(i) + " uses 5x5 board")
+        if i < 8:
+            var painted_portrait: String = str(game.call("_visual_path",art,true))
+            var painted_arena: String = str(game.call("_visual_path",art,false))
+            check(painted_portrait.ends_with(".webp") and "hires/bosses" in painted_portrait,
+                "boss " + str(i) + " uses uploaded HD portrait not old SVG")
+            check(painted_arena.ends_with(".webp") and "hires/arenas" in painted_arena,
+                "boss " + str(i) + " uses uploaded HD arena not old SVG")
+            var texture: Texture2D = load(painted_portrait) as Texture2D
+            check(texture != null and texture.get_height() >= 1024,
+                "boss " + str(i) + " portrait imported at high resolution")
     check(distinct.size() == 16, "sixteen distinct loaded arena textures")
     check(portraits.size() == 16, "sixteen distinct loaded portrait textures")
     # The first mover alternates across stages AND retries, not based on a random draw.
