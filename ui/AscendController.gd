@@ -769,9 +769,16 @@ func show_mode_picker() -> void:
     if realm_story_active:
         _realm_story_menu()
         return
-    var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
+    var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),560)
     var dialog: Control = parts.dialog
     var body: VBoxContainer = parts.box
+    # The existing Realm Chronicles story is the primary way into 4x4.
+    # start_realm_story() restores saved boss, Realm and match progress.
+    var campaign: Button = action(body,"⚔  " + Z("Zen Ascend Campaign"),start_realm_story,true)
+    campaign.name = "ZenAscendCampaignPrimary"
+    text(body,Z("Realm Chronicles · 12 Bosse · Story-Modus"),14,Color("e7d9b8"))
+    var saved_story: Dictionary = RealmStory.load_progress()
+    text(body,Z("Story-Fortschritt · %d/12 Bosse") % clampi(int(saved_story.get("stage",0)),0,12),14,Color("c9e0ca"))
     text(body,Z("In diesem Reich ist die Schwierigkeit des Zen Ascend Bots fest vorgegeben."),15)
     var earned_realm_title: String = Achievements.main_title(data,realm_index())
     var realm_summary: String = Realms.realm_name(realm_index(),lang())
@@ -1543,15 +1550,24 @@ func _realm_story_menu() -> void:
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"menu"),430)
     var body: VBoxContainer = parts.box
     _realm_story_compact(parts)
-    # The story pause menu holds only two actions: size it accordingly.
+    # Three actions, including a reset of the current boss board only.
     var frame: PanelContainer = parts.frame
-    frame.anchor_top = 0.33
-    frame.anchor_bottom = 0.67
+    frame.anchor_top = 0.29
+    frame.anchor_bottom = 0.71
     var current_boss: String = RealmStory.text_for(lang(),"final_title") if realm_story_stage >= RealmStory.LAST_STAGE else RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
     text(body,current_boss,20,Color("#eddaae"))
     action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
+    var new_match: Button = action(body,Z("Neue Partie"),_realm_story_new_match)
+    new_match.name = "RealmChroniclesNewMatch"
     action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _open_realm_dialog(parts)
+
+func _realm_story_new_match() -> void:
+    # Start the current boss again, preserving all previous boss victories,
+    # earned Realm Challenges and Zen Leaves. Flip the opening side fairly.
+    if not realm_story_active or realm_story_stage >= RealmStory.LAST_STAGE: return
+    _realm_story_retry()
+    _realm_story_begin()
 
 # Exit the story without returning to Main. The ordinary Ascend 4x4
 # renderer, equipped shop skin and four Realm cards are restored in place.

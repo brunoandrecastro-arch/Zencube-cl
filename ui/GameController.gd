@@ -829,7 +829,7 @@ func open_store() -> void:
     label(ZMode.t("Zen Ascend 4×4",language_code()),box,20,Color("526943"))
     label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
     if ZMode.unlocked(data):
-        button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
+        button(ZMode.t("Zen Ascend betreten",language_code()),box,open_ascend_intro,true,true)
     else:
         var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true)
         unlock_button.disabled = int(data.economy.leaves) < ZMode.PRICE
@@ -1372,16 +1372,56 @@ func save_player_name(index: int, value: String) -> void:
     data.settings.names[index] = cleaned
     persist()
 
+# An authentic, non-interactive teaser using the four actual Realm textures
+# bundled into the game. No locked Realm is opened by viewing a preview.
+func _ascend_realm_teaser(box: VBoxContainer) -> void:
+    label(ZMode.t("Ein Blick auf deine Reise",language_code()),box,19,Color("#315b3d"))
+    var gallery: GridContainer = GridContainer.new()
+    gallery.name = "AscendFourRealmSneakPeek"
+    gallery.columns = 2
+    gallery.add_theme_constant_override("h_separation",8)
+    gallery.add_theme_constant_override("v_separation",8)
+    gallery.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    gallery.mouse_filter = Control.MOUSE_FILTER_PASS
+    box.add_child(gallery)
+    for realm in range(4):
+        var card: PanelContainer = PanelContainer.new()
+        card.name = "AscendTeaserRealm%d" % realm
+        card.add_theme_stylebox_override("panel",UiTest.frame(Color("#183c29"),12,2))
+        card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        gallery.add_child(card)
+        var contents: VBoxContainer = VBoxContainer.new()
+        contents.add_theme_constant_override("separation",4)
+        contents.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        card.add_child(contents)
+        var picture: TextureRect = TextureRect.new()
+        picture.name = "AscendTeaserImage%d" % realm
+        picture.texture = load(ZenAscendRealms.REALM_ART[realm]) as Texture2D
+        picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        picture.custom_minimum_size = Vector2(0,152)
+        picture.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        contents.add_child(picture)
+        var caption: Label = label(ZenAscendRealms.realm_name(realm,language_code()),contents,14,Color("#fff3d7"))
+        caption.name = "AscendTeaserCaption%d" % realm
+        caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 func open_ascend_intro() -> void:
     ZMode.ensure(data)
-    var box = modal(ZMode.t("Zen Ascend 4×4",language_code()))
-    label(ZMode.t("Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).",language_code()),box,16)
-    label(ZMode.t("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).",language_code()),box,15)
-    label(ZMode.t("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.",language_code()),box,14)
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,14)
+    var box: VBoxContainer = modal(ZMode.t("Zen Ascend 4×4",language_code()))
+    label(ZMode.t("Vier Reiche · Zwölf Bosse · Eine Reise",language_code()),box,18,Color("#315b3d"))
+    _ascend_realm_teaser(box)
+    label(ZMode.t("96 Felder · 204 Gewinnlinien",language_code()),box,15)
+    label(ZMode.t("Verbinde vier Zeichen auf einer Seite oder über eine Würfelkante.",language_code()),box,15)
     if ZMode.unlocked(data):
-        button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,start_ascend,true,true)
+        var enter: Button = button(ZMode.t("Zen Ascend betreten",language_code()),box,start_ascend,true,true)
+        enter.name = "EnterZenAscend"
     else:
+        label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,14)
         var buy_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true,true)
         buy_button.disabled = int(data.economy.leaves) < ZMode.PRICE
         button("Zen-Shop",box,open_store,true)

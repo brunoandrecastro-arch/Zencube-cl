@@ -303,7 +303,20 @@ static func load_progress() -> Dictionary:
     data.retry_offset = clampi(int(parsed.get("retry_offset",0)),0,1)
     data.introduced = parsed.get("introduced",{}) if parsed.get("introduced",{}) is Dictionary else {}
     data.game = parsed.get("game",{}) if parsed.get("game",{}) is Dictionary else {}
-    if not valid_game(data.game): data.game = {}
+    if not valid_game(data.game):
+        data.game = {}
+    elif not data.game.is_empty():
+        # JSON.parse_string() can return 0.0 instead of integer 0. The 4x4
+        # rules use Array.has(0) and Array.count(0), which treat those as
+        # different variants. Convert every tile back to 0/1/2 on loading,
+        # or a resumed battle can incorrectly look full after the next move.
+        var restored_cells: Array = []
+        for saved_mark in data.game.cells:
+            restored_cells.append(int(saved_mark))
+        data.game["cells"] = restored_cells
+        data.game["turn"] = int(data.game.get("turn",1))
+        data.game["result"] = int(data.game.get("result",0))
+        data.game["last_human"] = int(data.game.get("last_human",-1))
     return data
 
 static func valid_game(game: Dictionary) -> bool:

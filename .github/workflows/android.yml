@@ -174,6 +174,10 @@ jobs:
         if: env.ZENCUBE_FINAL_CANDIDATE == 'true'
         run: |
           timeout 75 "$GODOT" --headless --path . --script tests/test_release_localization_2_0.gd
+      - name: Verify Enter Ascend four-Realm teaser and Campaign-first boss New Match
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: |
+          timeout 95 "$GODOT" --headless --path . --script tests/test_zen_ascend_entry_flow.gd
       - name: Verify ZenCube 3D 2.0 Realm selection translations in DE EN PT
         if: env.ZENCUBE_UI_TEST == 'true'
         run: |
