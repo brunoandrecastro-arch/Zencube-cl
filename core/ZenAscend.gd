@@ -24,6 +24,8 @@ const WORDS: Dictionary = {
     "Regeln ansehen": ["View rules", "Ver regras"],
     "Gegen Zen-Bot": ["Play Zen-Bot", "Jogar contra o Zen-Bot"],
     "Zu zweit spielen": ["Two players", "Dois jogadores"],
+    "In diesem Reich ist die Schwierigkeit des Zen Ascend Bots fest vorgegeben.": ["This realm has a fixed Zen Ascend Bot difficulty.", "Neste reino, a dificuldade do Zen Ascend Bot é fixa."],
+    "Gegen %s spielen": ["Play against %s", "Jogar contra %s"],
     "Vier auf einer Fläche oder über eine Kante gewinnen!": ["Connect four on a face or across an edge to win!", "Liga quatro numa face ou através de uma aresta para ganhar!"],
     "Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen": ["Drag: rotate · Tap: mark · Two fingers: zoom", "Arrastar: rodar · Tocar: jogar · Dois dedos: zoom"],
     "Neue Partie": ["New match", "Nova partida"],
