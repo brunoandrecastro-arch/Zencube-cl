@@ -155,8 +155,32 @@ static func hint_owned(data: Dictionary, key: String) -> bool:
     ensure(data)
     return bool(ZenAscendRealms.state(data).purchased_hints.get(key,false))
 
-static func hint_text(key: String) -> String:
-    return str(HINTS.get(key,"A gentle clue is waiting to be discovered."))
+const HINT_LOCALES: Dictionary = {
+    "shadow_walker": ["Die Dunkelheit erinnert sich an jene, die zurückkehren.", "A escuridão recorda quem regressa."],
+    "keeper_silence": ["Stille Stärke wächst durch aufeinanderfolgende Siege.", "A força silenciosa cresce com vitórias consecutivas."],
+    "moon_disciple": ["Die Kante des Würfels verbirgt einen Weg.", "A aresta do cubo esconde um caminho."],
+    "veil_breaker": ["Wehre die Gefahr ab, bevor du den Sieg suchst.", "Afasta o perigo antes de procurares a vitória."],
+    "ember_initiate": ["Der Tempel belohnt jene, die nicht aufgeben.", "O templo acolhe quem não desiste."],
+    "flame_disciple": ["Stelle dich einem stärkeren Feuer.", "Enfrenta uma chama mais forte."],
+    "temple_challenger": ["Manchmal bleibt die Gewinnlinie auf einer einzigen Seite.", "Por vezes, a linha vencedora fica numa única face."],
+    "fire_strategist": ["Lass dich vom Schwung schwer erkämpfter Siege tragen.", "Deixa-te guiar pelo impulso das vitórias difíceis."],
+    "sky_seeker": ["Schau mehr als einmal zum Himmel auf.", "Olha para o céu mais do que uma vez."],
+    "cloud_disciple": ["Bewahre deinen Siegesrhythmus über den Wolken.", "Mantém o teu ritmo de vitórias entre as nuvens."],
+    "light_weaver": ["Licht kann eine unerwartete Kante überqueren.", "A luz pode atravessar uma aresta inesperada."],
+    "celestial_adept": ["Ein wahrer Meister prüft den Himmel.", "Um verdadeiro mestre desafia os céus."],
+    "mind_awakened": ["Die ersten Augenblicke der Klarheit sind erst der Anfang.", "Os primeiros instantes de consciência são apenas o começo."],
+    "stillness_walker": ["Finde ungebrochene Ruhe gegen einen mächtigen Gegner.", "Encontra serenidade inabalável perante um adversário formidável."],
+    "satori_adept": ["Manchmal ist Verteidigung die klügste Antwort.", "Por vezes, defender é a resposta mais sábia."],
+    "keeper_awareness": ["Nur der höchste Wächter kann vollkommene Achtsamkeit prüfen.", "Só o guardião supremo pode testar a consciência plena."],
+}
+
+static func hint_text(key: String, language: String = "en") -> String:
+    var original: String = str(HINTS.get(key,"A gentle clue is waiting to be discovered."))
+    if language == "en": return original
+    var item: Variant = HINT_LOCALES.get(key,[])
+    if item is Array and item.size() == 2:
+        return str(item[0] if language == "de" else item[1])
+    return original
 
 static func buy_hint(data: Dictionary, key: String) -> bool:
     ensure(data)
