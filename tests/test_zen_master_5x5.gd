@@ -13,13 +13,13 @@ func _initialize() -> void:
 
 func run() -> void:
     var lines: Array = Mode.generate_lines()
-    check(lines.size() == 312, "312 total lines")
+    check(lines.size() == 348, "348 four-in-a-row lines across 150 cells")
     var seen: Dictionary = {}
     var face_count: int = 0
     var edge_count: int = 0
-    var split_counts: Dictionary = {1:0, 2:0, 3:0, 4:0}
+    var split_counts: Dictionary = {1:0, 2:0, 3:0}
     for line in lines:
-        check(line.size() == 5, "every winning line contains exactly five cells")
+        check(line.size() == 4, "every winning line contains exactly FOUR cells")
         var faces: Dictionary = {}
         var copy: Array = line.duplicate()
         copy.sort()
@@ -41,31 +41,41 @@ func run() -> void:
                     prefix += 1
                 else:
                     break
-            check(prefix >= 1 and prefix <= 4, "valid crossing split")
+            check(prefix >= 1 and prefix <= 3, "valid crossing split")
             split_counts[prefix] += 1
-    check(face_count == 72, "72 face lines")
-    check(edge_count == 240, "240 edge lines")
-    for split in range(1, 5):
+    check(face_count == 168, "168 four-in-row face lines")
+    check(edge_count == 180, "180 four-in-row edge lines")
+    for split in range(1, 4):
         check(int(split_counts[split]) == 60, "60 lines with split " + str(split))
     var cells: Array = []
     cells.resize(Mode.CELLS)
     cells.fill(0)
     for c in lines[0]:
         cells[int(c)] = 1
-    check(Mode.winning_lines(cells, lines, 1).size() > 0, "five on one face wins")
+    check(Mode.winning_lines(cells, lines, 1).size() > 0, "FOUR on one 5x5 face wins")
     cells.fill(0)
-    for c in lines[72]:
+    for c in lines[168]:
         cells[int(c)] = 2
-    check(Mode.winning_lines(cells, lines, 2).size() > 0, "five across an edge wins")
+    check(Mode.winning_lines(cells, lines, 2).size() > 0, "FOUR across 5x5 edge wins")
     cells.fill(0)
-    for i in range(4):
+    for i in range(3):
         cells[int(lines[0][i])] = 1
-    check(Mode.immediate_move(cells, lines, 1) == int(lines[0][4]), "immediate fifth mark detected")
+    check(Mode.immediate_move(cells, lines, 1) == int(lines[0][3]), "fourth mark detected")
     check(Mode.next_move(cells, lines, 1) == int(lines[0][4]), "bot wins immediately")
     check(Mode.next_move(cells, lines, 2) == int(lines[0][4]), "bot blocks immediate threat")
-    check(cells.count(0) == 146, "bot does not mutate board")
+    check(cells.count(0) == 147, "bot does not mutate board")
     check(BoardModel.new().cells.size() == 54, "Classic remains 54 cells")
     check(ZenAscend.generate_lines().size() == 204, "Zen Ascend remains 204 lines")
+    cells.fill(0)
+    for i in range(1,4):
+        cells[i] = 2
+    check(Mode.winning_lines(cells,lines,2).is_empty(), "three marks alone do not win")
+    cells[4] = 2
+    check(not Mode.winning_lines(cells,lines,2).is_empty(), "offset four-in-row on a 5x5 face wins")
+    cells.fill(0)
+    for c in [Mode.id(0,0,0),Mode.id(0,1,1),Mode.id(0,2,2),Mode.id(0,3,3)]:
+        cells[c] = 1
+    check(not Mode.winning_lines(cells,lines,1).is_empty(), "four diagonal marks win")
     var packed: PackedScene = load("res://ZenMasterPrototype.tscn") as PackedScene
     check(packed != null, "independent prototype scene loads")
     if packed != null:
