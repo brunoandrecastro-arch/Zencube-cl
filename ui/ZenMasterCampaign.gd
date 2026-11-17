@@ -259,7 +259,7 @@ func _show_intro() -> void:
     var arena: Dictionary = Catalog.stage_for(boss["id"])
     active_dialog = "intro"
     dialog_head.text = ("%s\n%s" % [realm["name"],boss["name"]])
-    dialog_preview.texture = stage_backdrop.texture
+    dialog_preview.texture = load("res://assets/zen_master/bosses/%s.svg" % boss["id"]) as Texture2D
     var beginning: String = ""
     if boss["rank"] == 0:
         beginning = realm["intro"] + "\n\n"
@@ -289,7 +289,7 @@ func _show_result(won: bool) -> void:
     var boss: Dictionary = Story.BOSSES[current_stage]
     active_dialog = "win" if won else "loss"
     dialog_head.text = ("SIEG · " if won else "NIEDERLAGE · ") + boss["name"]
-    dialog_preview.texture = stage_backdrop.texture
+    dialog_preview.texture = load("res://assets/zen_master/bosses/%s.svg" % boss["id"]) as Texture2D
     if won:
         dialog_text.text = boss["victory"] + ("\n\nNeuer Realm freigeschaltet!" if boss["rank"] == 3 and cleared < 16 else "")
         dialog_quote.text = "„%s“" % boss["wisdom"]
