@@ -767,7 +767,10 @@ func show_mode_picker() -> void:
     var dialog: Control = parts.dialog
     var body: VBoxContainer = parts.box
     text(body,Z("In diesem Reich ist die Schwierigkeit des Zen Ascend Bots fest vorgegeben."),15)
-    text(body,Realms.realm_name(realm_index(),lang()) + " · " + Achievements.main_title(data,realm_index()),15,Color("e5ca93"))
+    var earned_realm_title: String = Achievements.main_title(data,realm_index())
+    var realm_summary: String = Realms.realm_name(realm_index(),lang())
+    if earned_realm_title != "—": realm_summary += " · " + Realms.localized_name(earned_realm_title,lang())
+    text(body,realm_summary,15,Color("e5ca93"))
     var fixed_level: int = Realms.fixed_bot_level(realm_index())
     var labels: Array[String] = ["Leicht", "Mittel", "Schwer", "Meister", "Großmeister"]
     var bot_name: String = "Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang())
