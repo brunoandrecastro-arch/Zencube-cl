@@ -23,14 +23,17 @@ assert 'purchased_hints' in ach
 assert 'if not exists or earned(data,key) or hint_owned(data,key): return false' in ach
 assert 'shop_tab == 3' in shop and 'store_hint_section(box)' in shop
 assert 'if revealed:' in ui
-assert 'str(secret.quote)' in ui.split('if revealed:',1)[1]
+assert 'Achievements.quote_for(secret,realm,lang())' in ui.split('if revealed:',1)[1]
+assert 'static func quote_for(' in ach and 'QUOTE_LOCALES' in ach
 assert 'str(secret.condition)' in ui.split('if revealed:',1)[1]
 detail = ui.split('func _show_achievement_details(', 1)[1].split('func show_match_result()', 1)[0]
 revealed = detail.split('    if revealed:', 1)[1].split('    else:', 1)[0]
 hidden = detail.split('    else:', 1)[1].split('    action(body,_achievements_label()', 1)[0]
 assert 'How to unlock: ' in revealed
 assert 'How to unlock: ' not in hidden
-assert 'Unlock condition hidden' in hidden
+assert 'Z("Freischaltbedingung verborgen. Entdecke das Geheimnis beim Spielen.")' in hidden
+assert 'Achievements.hint_text(str(secret.id),lang())' in hidden
+assert 'static func hint_text(key: String, language: String = "en")' in ach
 assert 'const VERSION = 3' in (root/'core/SaveManager.gd').read_text()
 assert 'ZenCollection.reward_loss(data)' in ui
 print('PASS: fixed bot 1/2/3/4, 8/8 challenges + 3/3 bosses transitions, secret paid hints, premium menu, quotes, legacy safety')
