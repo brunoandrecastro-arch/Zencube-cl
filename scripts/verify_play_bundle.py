@@ -33,7 +33,11 @@ def bundletool(*args):
 
 def check_manifest(bundle):
     bundletool("validate", f"--bundle={bundle}")
-    manifest = ET.fromstring(bundletool("dump", "manifest", f"--bundle={bundle}"))
+    manifest_text = bundletool("dump", "manifest", f"--bundle={bundle}")
+    manifest = ET.fromstring(manifest_text)
+    audit = ROOT / "build/release-checks"
+    audit.mkdir(parents=True, exist_ok=True)
+    (audit / "manifest.xml").write_text(manifest_text)
     presets = configparser.ConfigParser(interpolation=None)
     presets.read(ROOT / "export_presets.cfg", encoding="utf-8")
     play = next(section for section in presets if presets[section].get("name") == '"Android Play"')
@@ -52,8 +56,19 @@ def check_manifest(bundle):
     app = manifest.find("application")
     require(app is not None and app.get(ANDROID + "debuggable", "false") == "false", "App is debuggable")
     config = bundletool("dump", "config", f"--bundle={bundle}")
+    (audit / "bundle-config.json").write_text(config)
     require("PAGE_ALIGNMENT_16K" in config, "Bundle misses 16 KB page alignment")
-    require(app.get(ANDROID + "label") == "ZenCube 3D", "Unexpected application label")
+    label = app.get(ANDROID + "label", "")
+    if label != "ZenCube 3D":
+        # Android's compiled manifest normally references the string table.
+        # Verify the resolved values rather than comparing a resource ID to text.
+        ref = re.fullmatch(r"(?:@(?:ref/)?)?(?:com\.zencube\.game\.play:)?(0x[0-9a-fA-F]+|string/[\w]+)", label)
+        require(ref is not None, f"Unexpected application label reference: {label}")
+        labels = bundletool("dump", "resources", f"--bundle={bundle}", f"--resource={ref[1]}", "--values")
+        (audit / "application-label.txt").write_text(labels)
+        values = re.findall(r' - \[\w+\] ("[^"\n]*")\s*$', labels, re.M)
+        require(values and all(json.loads(value) == "ZenCube 3D" for value in values),
+                f"Application label does not resolve to ZenCube 3D: {labels}")
     require(app.get(ANDROID + "testOnly", "false") == "false", "App is testOnly")
     require(app.get(ANDROID + "allowBackup", "true") == "false", "Unexpected backup policy change")
     permissions = {node.get(ANDROID + "name") for node in manifest.findall("uses-permission")}
