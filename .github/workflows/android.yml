@@ -165,6 +165,10 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Verify ZenCube 3D 2.0 Realm selection translations in DE EN PT
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_realm_mode_picker_i18n.gd
       - name: Verify readable Settings controls and fixed Done footer in DE EN PT
         if: env.ZENCUBE_UI_TEST == 'true'
         run: |
@@ -277,15 +281,15 @@ jobs:
           name: ZenCube-3D-Campaign-Test
           path: build/ZenCube-3D-Campaign-Test.apk
           if-no-files-found: error
-      - name: Name UI Test APK
+      - name: Name ZenCube 3D 2.0.1 Android test APK
         if: env.ZENCUBE_UI_TEST == 'true'
-        run: mv build/ZenCube-3D.apk build/ZenCube-3D-UI-Test.apk
-      - name: Upload UI Test APK
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-2.0.1-Test.apk
+      - name: Upload ZenCube 3D 2.0.1 APK
         if: env.ZENCUBE_UI_TEST == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ZenCube-3D-UI-Test
-          path: build/ZenCube-3D-UI-Test.apk
+          name: ZenCube-3D-2.0.1-Test
+          path: build/ZenCube-3D-2.0.1-Test.apk
           if-no-files-found: error
       - name: Name end-user preview APK
         if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
