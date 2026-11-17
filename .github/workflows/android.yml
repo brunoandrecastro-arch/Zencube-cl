@@ -12,7 +12,8 @@ jobs:
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
-      ZENCUBE_UI_TEST: ${{ github.head_ref == 'feature/zencube-ui-test' || github.ref_name == 'feature/zencube-ui-test' }}
+      ZENCUBE_UI_TEST: ${{ github.head_ref == 'feature/zencube-ui-test' || github.ref_name == 'feature/zencube-ui-test' || github.head_ref == 'release/zencube-3d-2.0-final' || github.ref_name == 'release/zencube-3d-2.0-final' }}
+      ZENCUBE_FINAL_CANDIDATE: ${{ github.head_ref == 'release/zencube-3d-2.0-final' || github.ref_name == 'release/zencube-3d-2.0-final' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -165,6 +166,10 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Final 2.0 audit of 4x4 statistics, challenges, achievements and menus (DE/EN/PT)
+        if: env.ZENCUBE_FINAL_CANDIDATE == 'true'
+        run: |
+          timeout 75 "$GODOT" --headless --path . --script tests/test_release_localization_2_0.gd
       - name: Verify ZenCube 3D 2.0 Realm selection translations in DE EN PT
         if: env.ZENCUBE_UI_TEST == 'true'
         run: |
@@ -281,11 +286,21 @@ jobs:
           name: ZenCube-3D-Campaign-Test
           path: build/ZenCube-3D-Campaign-Test.apk
           if-no-files-found: error
+      - name: Name ZenCube 3D 2.0 final candidate APK
+        if: env.ZENCUBE_FINAL_CANDIDATE == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-2.0-Final-Candidate.apk
+      - name: Upload ZenCube 3D 2.0 final candidate APK
+        if: env.ZENCUBE_FINAL_CANDIDATE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-2.0-Final-Candidate
+          path: build/ZenCube-3D-2.0-Final-Candidate.apk
+          if-no-files-found: error
       - name: Name ZenCube 3D 2.0.1 Android test APK
-        if: env.ZENCUBE_UI_TEST == 'true'
+        if: env.ZENCUBE_UI_TEST == 'true' && env.ZENCUBE_FINAL_CANDIDATE != 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-3D-2.0.1-Test.apk
       - name: Upload ZenCube 3D 2.0.1 APK
-        if: env.ZENCUBE_UI_TEST == 'true'
+        if: env.ZENCUBE_UI_TEST == 'true' && env.ZENCUBE_FINAL_CANDIDATE != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ZenCube-3D-2.0.1-Test
