@@ -14,7 +14,7 @@ func run() -> void:
     for entry in Catalog.STAGES:
         var name: String = entry["realm"]
         realms[name] = int(realms.get(name, 0)) + 1
-        verify(entry["art"].ends_with(entry["boss"] + ".webp"), "matching boss-specific file path")
+        verify(entry["art"].ends_with(entry["boss"] + ".svg"), "matching boss-specific file path")
     verify(realms.size() == 4, "four different realms")
     for name in realms:
         verify(int(realms[name]) == 4, "four unique bosses in realm " + name)
