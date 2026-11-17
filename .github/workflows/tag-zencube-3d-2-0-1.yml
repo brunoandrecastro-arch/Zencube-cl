@@ -1,0 +1,32 @@
+name: Create ZenCube 3D 2.0.1 tested snapshot tag
+on:
+  push:
+    branches: [milestone/zencube-3d-2-0-1-tagging]
+permissions:
+  contents: write
+jobs:
+  create-immutable-tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout full commit history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Tag tested localization hotfix
+        shell: bash
+        env:
+          TARGET_SHA: 39247f796d3be01f73d65afbbeea1aaae4e05871
+          TAG_NAME: zencube-3d-2.0.1
+        run: |
+          set -euo pipefail
+          git cat-file -e "${TARGET_SHA}^{commit}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Tag ${TAG_NAME} already exists: refusing to overwrite" >&2
+            exit 1
+          fi
+          git config user.name "ZenCube Build Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG_NAME}" "${TARGET_SHA}" -m "ZenCube 3D 2.0.1 - DE/EN/PT Realm mode picker hotfix; CI-tested Android debug APK (17 Nov 2026). Preserve prior 2.0 tag, draft PR #5, main branch and Google Play unchanged."
+          git push origin "refs/tags/${TAG_NAME}"
+          echo "Created ${TAG_NAME} -> ${TARGET_SHA}"
