@@ -237,6 +237,20 @@ func _set_status() -> void:
     super._set_status()
     _refresh_hud()
 
+func _visual_path(stage: Dictionary, portrait: bool) -> String:
+    # Prefer separately supplied painted WebP art. Existing vector art remains
+    # a safe playable fallback while the two art bundles are reviewed/imported.
+    var boss_id: String = str(stage["boss"])
+    var candidate: String
+    var fallback: String
+    if portrait:
+        candidate = "res://assets/zen_master/hires/bosses/%s.webp" % boss_id
+        fallback = str(stage["portrait"])
+    else:
+        candidate = "res://assets/zen_master/hires/arenas/%s/%s.webp" % [stage["realm"], boss_id]
+        fallback = str(stage["art"])
+    return candidate if ResourceLoader.exists(candidate) else fallback
+
 func _choose_stage(index: int, intro: bool = true) -> void:
     if not (index >= 0 and index < Story.BOSSES.size()):
         return
@@ -246,7 +260,7 @@ func _choose_stage(index: int, intro: bool = true) -> void:
     var boss: Dictionary = Story.BOSSES[index]
     var stage: Dictionary = Catalog.stage_for(boss["id"])
     assert(not stage.is_empty())
-    var arena_texture: Texture2D = load(stage["art"]) as Texture2D
+    var arena_texture: Texture2D = load(_visual_path(stage,false)) as Texture2D
     if arena_texture == null:
         push_error("Boss arena missing: " + stage["art"])
         return
@@ -278,7 +292,7 @@ func _show_intro() -> void:
     var arena: Dictionary = Catalog.stage_for(boss["id"])
     active_dialog = "intro"
     dialog_head.text = ("%s\n%s" % [realm["name"],boss["name"]])
-    dialog_preview.texture = load("res://assets/zen_master/bosses/%s.svg" % boss["id"]) as Texture2D
+    dialog_preview.texture = load(_visual_path(Catalog.stage_for(boss["id"]),true)) as Texture2D
     var beginning: String = ""
     if boss["rank"] == 0:
         beginning = realm["intro"] + "\n\n"
@@ -308,7 +322,7 @@ func _show_result(won: bool) -> void:
     var boss: Dictionary = Story.BOSSES[current_stage]
     active_dialog = "win" if won else "loss"
     dialog_head.text = ("SIEG · " if won else "NIEDERLAGE · ") + boss["name"]
-    dialog_preview.texture = load("res://assets/zen_master/bosses/%s.svg" % boss["id"]) as Texture2D
+    dialog_preview.texture = load(_visual_path(Catalog.stage_for(boss["id"]),true)) as Texture2D
     if won:
         dialog_text.text = boss["victory"] + ("\n\nNeuer Realm freigeschaltet!" if boss["rank"] == 3 and cleared < 16 else "")
         dialog_quote.text = "„%s“" % boss["wisdom"]
