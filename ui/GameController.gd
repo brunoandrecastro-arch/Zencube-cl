@@ -829,7 +829,7 @@ func open_store() -> void:
     label(ZMode.t("Zen Ascend 4×4",language_code()),box,20,Color("526943"))
     label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
     if ZMode.unlocked(data):
-        button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
+        button(ZMode.t("Zen Ascend betreten",language_code()),box,open_ascend_intro,true,true)
     else:
         var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true)
         unlock_button.disabled = int(data.economy.leaves) < ZMode.PRICE
@@ -1400,7 +1400,7 @@ func _ascend_realm_teaser(box: VBoxContainer) -> void:
         picture.texture = load(ZenAscendRealms.REALM_ART[realm]) as Texture2D
         picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-        picture.custom_minimum_size = Vector2(0,113)
+        picture.custom_minimum_size = Vector2(0,152)
         picture.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
         contents.add_child(picture)
