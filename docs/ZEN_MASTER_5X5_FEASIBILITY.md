@@ -1,6 +1,6 @@
 # Zen Master 5×5 — Technischer Machbarkeitsbericht & isolierter Prototyp
 
-**Status:** erste technische Spielszene mit eigener CI-Test-APK; kein Google-Play-Release und keine Store-Anbindung. 
+**Status:** Satori-4×4-Testfinale mit Eis-/Fensterbruch und Void-Sanctuary-5×5-Prototyp mit eigener CI-Test-APK; kein Google-Play-Release und keine Store-Anbindung. 
 **Branch:** `prototype/zen-master-5x5` (von `main` abgeleitet).
 **Godot:** 4.5.1.
 
@@ -9,29 +9,30 @@
 - **Classic 3×3:** `core/BoardModel.gd` hält 54 Zellen. `core/CubeGeometry.gd`, `core/WinLineGenerator.gd` und `core/RulesEngine.gd` bilden 108 Kantenlinien ab.
 - **Zen Ascend 4×4:** `core/ZenAscend.gd` hält 96 Zellen, zählt 60 Linien auf den Flächen und 144 über zwölf Kanten (204 insgesamt). `ui/AscendRenderer.gd` rendert einen eigenen 3D-Würfel.
 - **Classic-KI:** `core/AIEngine.gd` verwendet hartcodierte 54-Zellen-Suchen, vierstellige Auswertungen und Zeitbudgets. Auf 5×5 unverändert nicht verwendbar.
-- **4×4-Bot:** `ZenAscend.next_move()` behandelt Vierergewinnlinien. Auch diese Funktion muss für Fünferlinien angepasst werden.
+- **4×4-Bot:** `ZenAscend.next_move()` behandelt Vierergewinnlinien. Für den 5×5-Modus bleibt dieselbe Vierer-Gewinnbedingung bestehen; die taktische Auswertung wurde dafür eigenständig angepasst.
 - **Touch/Rendering:** Rotieren, Raycast-Auswahl und Pinch-Zoom sind bereits erprobte Muster. 150 statt 96 Zellen bedeuten mehr Collider und kleinere Touchflächen; reale Android-Tests bleiben notwendig.
 
 ## Festgelegte 5×5-Regeln für das Experiment
 
 - Sechs Flächen mit je 5×5 Feldern, **150 Zellen**.
-- Ein Sieg benötigt **fünf** gleiche Zeichen in gerader Reihe.
-- **72 Flächenlinien**: 6 × (5 Reihen + 5 Spalten + 2 Diagonalen).
-- **240 Kantenlinien**: 12 physische Kanten × 5 Spuren × 4 Aufteilungen (1+4, 2+3, 3+2, 4+1).
-- **312 eindeutige Linien insgesamt.** Keine knickenden Ecklinien und keine Linien über drei Flächen.
+- Ein Sieg benötigt weiterhin **vier** gleiche Zeichen in gerader Reihe, obwohl jede Fläche 5×5 Felder hat.
+- **168 Flächenlinien**: pro Fläche 10 waagerechte und 10 senkrechte Viererfenster sowie 8 Diagonalfenster, auf sechs Flächen.
+- **180 Kantenlinien**: 12 physische Kanten × 5 Spuren × 3 Aufteilungen (1+3, 2+2, 3+1).
+- **348 eindeutige Viererlinien insgesamt.** Keine knickenden Ecklinien und keine Linien über drei Flächen.
 - **Unentschieden** nur bei vollem Spielbrett ohne Gewinnlinie.
 - Keine Sonderregeln, die klassische Spielmechanik wird nicht verändert.
 
 ## Implementierter Prototyp
 
-- `core/ZenMaster.gd`: unabhängige Geometrie, Fünfer-Sieglinien, Auswertung, unmittelbares Gewinnen/Blockieren und einfacher gewichteter Bot. Der Bot ist **kein** optimierter Master/Grandmaster.
+- `core/ZenMaster.gd`: unabhängige Geometrie, Vierer-Sieglinien, Auswertung, unmittelbares Gewinnen/Blockieren und einfacher gewichteter Bot. Der Bot ist **kein** optimierter Master/Grandmaster.
 - `ui/ZenMasterPrototype.gd`: 150 3D-Felder mit Collider, X/O, Drehung, Zoom, Touch- und Mausbedienung, hervorgehobenen Gewinnlinien, Zwei-Spieler-Modus und Zen-Bot.
-- `ZenMasterPrototype.tscn`: isoliert startbare Szene, **nicht ins Hauptmenü eingebaut**, keine Änderung bestehender Spielstände.
+- `ZenMasterPrototype.tscn`: isoliert startbare Void-Sanctuary-Szene (5×5, 4 Gewinnt), **nicht ins Hauptmenü eingebaut**, keine Änderung bestehender Spielstände.
+- `ZenMasterBridgeTest.tscn`: separate Satori-4×4-Abschlussprüfung mit leichtem Bot, sichtbaren Rissen/Eisplatten, eigenem Bruchsound und Übergang in Void Sanctuary.
 - `tests/test_zen_master_5x5.gd`: reale Godot-Prüfungen der Linien und der Szene.
 
-**Android-Smartphone:** GitHub Actions baut eine separat installierbare Debug-APK mit dem nur für Tests verwendeten Paketnamen `com.zencube.game.zenmaster`. Es ersetzt weder die aktuelle Play-App `com.zencube.game.play` noch den normalen Classic-Debug-Build `com.zencube.game`. Der Workflow ändert `project.godot` und die Android-Debug-Exportkonfiguration **nur im temporären CI-Arbeitsverzeichnis**, nicht als Commit. GitHub Actions → `Zen Master 5x5 prototype checks` → erfolgreich gelaufenen Build öffnen → Artefakt `ZenMaster-5x5-Android-Test-APK` herunterladen, ZIP entpacken und APK auf Android installieren. Noch keine visuelle Gerätetest-Freigabe.\n\n**Lokal in Godot:** `ZenMasterPrototype.tscn` öffnen und „Szene starten“ wählen.
+**Android-Smartphone:** GitHub Actions baut eine separat installierbare Debug-APK mit dem nur für Tests verwendeten Paketnamen `com.zencube.game.zenmaster`. Es ersetzt weder die aktuelle Play-App `com.zencube.game.play` noch den normalen Classic-Debug-Build `com.zencube.game`. Der Workflow ändert `project.godot` und die Android-Debug-Exportkonfiguration **nur im temporären CI-Arbeitsverzeichnis**, nicht als Commit. GitHub Actions → `Zen Master 5x5 prototype checks` → erfolgreich gelaufenen Build öffnen → Artefakt `ZenMaster-Satori-Void-Android-Test` herunterladen, ZIP entpacken und APK auf Android installieren. Noch keine visuelle Gerätetest-Freigabe.\n\n**Lokal in Godot:** `ZenMasterPrototype.tscn` öffnen und „Szene starten“ wählen.
 
-**CLI:** `godot --path . res://ZenMasterPrototype.tscn`
+**CLI:** `godot --path . res://ZenMasterBridgeTest.tscn`
 
 **Godot-Tests:** `godot --headless --path . --script tests/test_zen_master_5x5.gd`
 
