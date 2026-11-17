@@ -4,6 +4,12 @@ extends "res://ui/ZenMasterPrototype.gd"
 const Story = preload("res://core/ZenMasterCampaignData.gd")
 const Catalog = preload("res://core/ZenMasterStageCatalog.gd")
 const BossAI = preload("res://core/ZenMasterBossAI.gd")
+const REALM_MUSIC: Array[String] = [
+    "res://assets/realm_music/shadow_realm.ogg",
+    "res://assets/realm_music/satori_realm.ogg",
+    "res://assets/realm_music/celestial_realm.ogg",
+    "res://assets/realm_music/ember_temple.ogg"
+]
 const SAVE: String = "user://zen_master_campaign_qa_v1.cfg"
 const REALM_TEXTURES: Array[String] = [
     "res://assets/realms/shadow_realm.webp",
@@ -14,6 +20,7 @@ const REALM_TEXTURES: Array[String] = [
 var cleared: int = 0
 var current_stage: int = 0
 var qa_preview: bool = false
+var stage_music: AudioStreamPlayer
 var stage_backdrop: Sprite3D
 var base_backdrop: Sprite3D
 var hud_title: Label
@@ -40,6 +47,10 @@ func _ready() -> void:
         if child is Sprite3D and base_backdrop == null:
             base_backdrop = child
     _read_save()
+    stage_music = AudioStreamPlayer.new()
+    stage_music.volume_db = -17.0
+    stage_music.name = "ZenMasterRealmMusic"
+    add_child(stage_music)
     _make_campaign_ui()
     _choose_stage(Story.next_stage(cleared), true)
 
@@ -246,6 +257,14 @@ func _choose_stage(index: int, intro: bool = true) -> void:
         base_backdrop.modulate = [Color("706b9b99"),Color("a881a799"),Color("7a9ba899"),Color("b99c8a99")][realm_number]
         base_backdrop.pixel_size = 0.014
     stage_backdrop.modulate = [Color("dfc6ffbd"),Color("ffdcf4c1"),Color("c8ebffbe"),Color("ffeed3c4")][realm_number]
+    var new_music: AudioStream = load(REALM_MUSIC[realm_number]) as AudioStream
+    if new_music != stage_music.stream:
+        stage_music.stop()
+        stage_music.stream = new_music
+        if stage_music.stream is AudioStreamOggVorbis:
+            stage_music.stream.loop = true
+        if stage_music.stream != null:
+            stage_music.play()
     _restart(true)
     _refresh_hud()
     story_layer.visible = false
