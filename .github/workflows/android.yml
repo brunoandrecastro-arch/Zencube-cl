@@ -165,6 +165,10 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Verify Challenge and Achievement presentation are separate (Ember + DE/EN/PT)
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: |
+          timeout 75 "$GODOT" --headless --path . --script tests/test_challenge_vs_achievement_ui.gd
       - name: Verify modest Shadow boss tuning in the separate UI Test
         if: env.ZENCUBE_UI_TEST == 'true'
         run: |
