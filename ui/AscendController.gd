@@ -10,6 +10,7 @@ const BossMusic = preload("res://core/ZenRealmBossMusic.gd")
 const FullyAware = preload("res://ui/ZenFullyAwareCeremony.gd")
 const Achievements = preload("res://core/ZenAscendAchievements.gd")
 const UnlockCeremony = preload("res://ui/ZenUnlockCeremony.gd")
+const UiTest = preload("res://ui/ZenUiTestTheme.gd")
 const RealmPortal = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
@@ -186,13 +187,8 @@ func sync_realm_music(initial: bool = false) -> void:
         incoming.volume_db = -2.0
 
 func style(color: Color, radius: int = 17) -> StyleBoxFlat:
-    var box: StyleBoxFlat = StyleBoxFlat.new()
-    box.bg_color = color
-    box.border_color = Color("ddb166",0.94)
-    box.set_border_width_all(2)
-    box.set_corner_radius_all(radius)
-    box.set_content_margin_all(11.0)
-    return box
+    # Same gold border, shadow and padding system as the 3x3 classic menus.
+    return UiTest.frame(color,radius,2)
 func text(parent: Node, value: String, size: int = 16, color: Color = Color("ead8b9")) -> Label:
     var label_node: Label = Label.new()
     label_node.text = value
@@ -208,10 +204,10 @@ func action(parent: Node, value: String, fn: Callable, primary: bool = false) ->
     b.text = value
     b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     b.custom_minimum_size.y = 54
-    b.add_theme_stylebox_override("normal",style(Color("315b3d") if primary else Color("193b2a")))
-    b.add_theme_stylebox_override("pressed",style(Color("34543b")))
-    b.add_theme_stylebox_override("hover",style(Color("49704c") if primary else Color("2c5238")))
-    var fc: Color = Color("fff6db")
+    b.add_theme_stylebox_override("normal",style(Color("#315b3d") if primary else UiTest.GREEN))
+    b.add_theme_stylebox_override("pressed",style(Color("#34543b")))
+    b.add_theme_stylebox_override("hover",style(Color("#49704c") if primary else Color("#2b5637")))
+    var fc: Color = UiTest.IVORY
     for kind in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
         b.add_theme_color_override(kind, fc)
     b.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -303,7 +299,7 @@ func build_interface() -> void:
     column.add_theme_constant_override("separation",8)
     margin.add_child(column)
     var header: PanelContainer = PanelContainer.new()
-    header.add_theme_stylebox_override("panel",style(Color("392a25",0.96),22))
+    header.add_theme_stylebox_override("panel",style(Color("#18291e",0.97),22))
     column.add_child(header)
     var header_row: HBoxContainer = HBoxContainer.new()
     header_row.add_theme_constant_override("separation",8)
@@ -319,7 +315,7 @@ func build_interface() -> void:
     text(title_box,Z("Zen Ascend 4×4"),18,Color("e8d1a9"))
     text(title_box,L("subtitle"),12,Color("d6bfa4"))
     var scoreboard: PanelContainer = PanelContainer.new()
-    scoreboard.add_theme_stylebox_override("panel",style(Color("fff1d9",0.95)))
+    scoreboard.add_theme_stylebox_override("panel",style(Color("#f9edd5",0.97)))
     column.add_child(scoreboard)
     var score_box: VBoxContainer = VBoxContainer.new()
     scoreboard.add_child(score_box)
@@ -340,7 +336,7 @@ func build_interface() -> void:
     cube_card.add_child(cube_surface)
     cube_surface.gui_input.connect(cube_input)
     var tip: PanelContainer = PanelContainer.new()
-    tip.add_theme_stylebox_override("panel",style(Color("302820",0.96),13))
+    tip.add_theme_stylebox_override("panel",style(Color("#18291e",0.96),13))
     column.add_child(tip)
     instructions = text(tip,Z("Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen"),13)
     var row: HBoxContainer = HBoxContainer.new()
@@ -358,7 +354,7 @@ func build_interface() -> void:
     action(realm_actions,L("challenges"),show_challenges,true)
     action(realm_actions,_achievements_label(),show_realm_titles)
     var quote_box: PanelContainer = PanelContainer.new()
-    quote_box.add_theme_stylebox_override("panel",style(Color("302820",0.94),13))
+    quote_box.add_theme_stylebox_override("panel",style(Color("#18291e",0.94),13))
     column.add_child(quote_box)
     quote_label = text(quote_box,"",12,Color("f4dfbd"))
 
@@ -862,7 +858,7 @@ func _realm_dialog(title: String, height: int = 660) -> Dictionary:
     root.add_child(tint)
     tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var frame: PanelContainer = PanelContainer.new()
-    frame.add_theme_stylebox_override("panel",style(Color("1b302d",0.985),24))
+    frame.add_theme_stylebox_override("panel",style(Color("#18291e",0.985),24))
     root.add_child(frame)
     frame.anchor_left = 0.045
     frame.anchor_right = 0.955
@@ -885,7 +881,7 @@ func _realm_dialog(title: String, height: int = 660) -> Dictionary:
     close_btn.custom_minimum_size = Vector2(48,48)
     close_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
     var golden_rule: ColorRect = ColorRect.new()
-    golden_rule.color = Color("c39d61",0.73)
+    golden_rule.color = UiTest.GOLD
     golden_rule.custom_minimum_size.y = 2
     golden_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
     stack.add_child(golden_rule)
