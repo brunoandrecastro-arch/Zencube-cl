@@ -44,7 +44,7 @@ func _make_world() -> void:
     pivot.name = "ZenMasterCube"
     add_child(pivot)
     camera = Camera3D.new()
-    camera.position = Vector3(0, 0, 11.75)
+    camera.position = Vector3(0, 0, 13.05)
     camera.fov = 44
     camera.current = true
     add_child(camera)
@@ -189,7 +189,7 @@ func _make_ui() -> void:
     footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     footer.add_theme_font_size_override("font_size", 15)
     footer.add_theme_color_override("font_color", Color("e6d7ac"))
-    footer.text = "Drehen · Zoomen · Tippen"
+    footer.text = "4 gewinnt · Drehen · Zoomen · Tippen"
 
 func _return_to_satori() -> void:
     get_tree().change_scene_to_file("res://ZenMasterBridgeTest.tscn")
@@ -218,9 +218,9 @@ func _set_status() -> void:
     if winner == 3:
         status.text = "Unentschieden · Alle Felder sind belegt"
     elif winner == 1:
-        status.text = "X gewinnt! · Fünf in einer Reihe"
+        status.text = "X gewinnt! · Vier in einer Reihe"
     elif winner == 2:
-        status.text = ("Zen-Bot gewinnt!" if versus_bot else "O gewinnt!") + " · Fünf in einer Reihe"
+        status.text = ("Zen-Bot gewinnt!" if versus_bot else "O gewinnt!") + " · Vier in einer Reihe"
     else:
         status.text = ("Du bist am Zug (X)" if versus_bot else ("X ist am Zug" if turn == 1 else "O ist am Zug"))
 
