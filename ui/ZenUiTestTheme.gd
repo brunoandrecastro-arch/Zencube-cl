@@ -32,6 +32,58 @@ static func install_main_theme(theme: Theme) -> void:
         theme.set_color(kind, "Button", IVORY)
     theme.set_color("font_disabled_color", "Button", Color("#c2b7a0"))
 
+# Settings-specific controls: native OptionButtons and LineEdits inherit
+# font colors from their own theme types, NOT from the regular Button style.
+# Without these overrides, Android shows dark text against dark jade.
+static func settings_field(edit: LineEdit) -> void:
+    edit.custom_minimum_size.y = 54.0
+    edit.add_theme_stylebox_override("normal",frame(Color("#fff6e5"),14,2))
+    edit.add_theme_stylebox_override("focus",frame(Color("#fffdf2"),14,2))
+    edit.add_theme_stylebox_override("read_only",frame(Color("#e6e1d7"),14,2))
+    edit.add_theme_color_override("font_color",Color("#263a2e"))
+    edit.add_theme_color_override("font_selected_color",Color("#fff9e9"))
+    edit.add_theme_color_override("font_placeholder_color",Color("#6b6559"))
+    edit.add_theme_color_override("font_uneditable_color",Color("#5b645b"))
+    edit.add_theme_color_override("caret_color",Color("#8f632e"))
+    edit.add_theme_color_override("selection_color",Color("#315b3d"))
+    edit.add_theme_font_size_override("font_size",18)
+
+static func settings_picker(entry: OptionButton) -> void:
+    entry.custom_minimum_size.y = 54.0
+    entry.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    entry.add_theme_stylebox_override("normal",frame(GREEN,17))
+    entry.add_theme_stylebox_override("hover",frame(Color("#28543b"),17))
+    entry.add_theme_stylebox_override("pressed",frame(Color("#345a3c"),17))
+    entry.add_theme_stylebox_override("focus",frame(GREEN,17))
+    entry.add_theme_stylebox_override("disabled",frame(Color("#455648"),17))
+    for name in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+        entry.add_theme_color_override(name,IVORY)
+    entry.add_theme_color_override("font_disabled_color",Color("#e2d6bb"))
+    entry.add_theme_font_size_override("font_size",18)
+    # The dropdown menu itself needs contrast, not only the closed picker.
+    var pop: PopupMenu = entry.get_popup()
+    var popup_theme: Theme = Theme.new()
+    popup_theme.set_stylebox("panel","PopupMenu",frame(Color("#183c29"),12))
+    popup_theme.set_stylebox("hover","PopupMenu",frame(Color("#315a3c"),9,1))
+    popup_theme.set_color("font_color","PopupMenu",IVORY)
+    popup_theme.set_color("font_hover_color","PopupMenu",Color("#fff9e8"))
+    popup_theme.set_color("font_disabled_color","PopupMenu",Color("#dccaaa"))
+    popup_theme.set_color("font_separator_color","PopupMenu",GOLD)
+    pop.theme = popup_theme
+
+static func settings_switch(toggle: CheckButton) -> void:
+    toggle.custom_minimum_size.y = 54.0
+    toggle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    toggle.add_theme_stylebox_override("normal",frame(Color("#31553a"),15))
+    toggle.add_theme_stylebox_override("hover",frame(Color("#3d6445"),15))
+    toggle.add_theme_stylebox_override("pressed",frame(Color("#34543b"),15))
+    toggle.add_theme_stylebox_override("focus",frame(Color("#31553a"),15))
+    toggle.add_theme_stylebox_override("disabled",frame(Color("#455648"),15))
+    for name in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+        toggle.add_theme_color_override(name,IVORY)
+    toggle.add_theme_color_override("font_disabled_color",Color("#e3d6bd"))
+    toggle.add_theme_font_size_override("font_size",17)
+
 static func caption(parent: Node, message: String, size: int, color: Color, center: bool = true) -> Label:
     var text := Label.new()
     text.text = message
