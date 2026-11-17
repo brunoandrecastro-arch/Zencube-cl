@@ -165,6 +165,10 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Verify Realm Chronicles turn ownership and single X/O move counter
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_realm_story_turn_hud.gd
       - name: Verify current earned Realm title in Statistics (Celestial after Ember)
         if: env.ZENCUBE_UI_TEST == 'true'
         run: |
