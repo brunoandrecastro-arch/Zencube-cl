@@ -18,6 +18,10 @@ const REALM_TEXTURES: Array[String] = [
     "res://assets/zen_world_heaven.webp"
 ]
 var cleared: int = 0
+# Each stage alternates the starting side. Retry on the same stage flips it again.
+var attempts_by_stage: Dictionary = {}
+var match_serial: int = 0
+var first_player: int = 1
 var current_stage: int = 0
 var qa_preview: bool = false
 var stage_music: AudioStreamPlayer
@@ -221,7 +225,7 @@ func _refresh_hud() -> void:
     var boss: Dictionary = Story.BOSSES[current_stage]
     var realm: Dictionary = Story.REALMS[boss["realm"]]
     hud_title.text = "%s · %s" % [realm["name"],boss["name"]]
-    hud_progress.text = "Boss %d/16 · Siege %d/16 · 4 GEWINNT" % [current_stage+1,cleared]
+    hud_progress.text = "Boss %d/16 · Siege %d/16 · 4 GEWINNT · Start %s" % [current_stage+1,cleared,("Du" if first_player == 1 else "Bot")]
     if winner == 1:
         hud_status.text = "Sieg! Du hast %s besiegt." % boss["name"]
     elif winner == 2:
@@ -279,7 +283,7 @@ func _choose_stage(index: int, intro: bool = true) -> void:
             stage_music.stream.loop = true
         if stage_music.stream != null:
             stage_music.play()
-    _restart(true)
+    _start_fair_match()
     _refresh_hud()
     story_layer.visible = false
     map_layer.visible = false
@@ -354,9 +358,27 @@ func _bot_turn() -> void:
     if pick >= 0:
         _play_move(pick)
 
+func _start_fair_match() -> void:
+    # Stage 1: player; Stage 2: bot; Stage 3: player; etc.
+    # Repeat a stage? The starter flips for a fair rematch.
+    match_serial += 1
+    var serial: int = match_serial
+    var attempt: int = int(attempts_by_stage.get(current_stage,0))
+    attempts_by_stage[current_stage] = attempt+1
+    first_player = 1 if (current_stage+attempt) % 2 == 0 else 2
+    super._restart(true)
+    turn = first_player
+    _set_status()
+    if first_player == 2:
+        # Let the story intro close first. Old timers cannot make a move in a newer battle.
+        get_tree().create_timer(0.25).timeout.connect(func() -> void:
+            if is_inside_tree() and match_serial == serial and winner == 0 and turn == 2:
+                _bot_turn()
+        )
+
 func _restart_stage() -> void:
     if current_stage >= 0:
-        _restart(true)
+        _start_fair_match()
         _refresh_hud()
     story_layer.visible = false
     map_layer.visible = false
