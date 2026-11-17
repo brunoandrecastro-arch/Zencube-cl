@@ -158,6 +158,14 @@ static func main_title(data: Dictionary, realm: int) -> String:
     if ZenAscendRealms.count(data,realm) < 8: return "—"
     return MAIN_TITLES[realm]
 
+# The active Realm may be unfinished. The player's displayed prestige title
+# is the highest *earned* Realm title, never an unequipped locked title.
+static func latest_main_title(data: Dictionary) -> String:
+    for realm in range(3,-1,-1):
+        var earned_title: String = main_title(data,realm)
+        if earned_title != "—": return earned_title
+    return "—"
+
 static func main_quote(realm: int) -> String:
     return MAIN_QUOTES[clampi(realm,0,3)]
 
