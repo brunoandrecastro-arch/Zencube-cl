@@ -4,6 +4,7 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Bot-Schwierigkeit": "Bot difficulty",
     "Ergebnis anzeigen": "Show result",
     "Spielfeld ansehen": "Inspect board",
     "Zen-Chroniken 📖": "Zen Chronicles 📖",
@@ -345,6 +346,7 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Bot-Schwierigkeit": "Dificuldade do bot",
     "Ergebnis anzeigen": "Ver resultado",
     "Spielfeld ansehen": "Ver tabuleiro",
     "Zen-Chroniken 📖": "Crónicas Zen 📖",
