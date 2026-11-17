@@ -44,15 +44,10 @@ func run() -> void:
         "en": "This realm has a fixed Zen Ascend Bot difficulty.",
         "pt": "Neste reino, a dificuldade do Zen Ascend Bot é fixa."
     }
-    var expected_actions: Dictionary = {
-        "de": "Gegen Zen Ascend Bot · Mittel spielen",
-        "en": "Play against Zen Ascend Bot · Medium",
-        "pt": "Jogar contra Zen Ascend Bot · Médio"
-    }
     var level_names: Dictionary = {
         "de": ["Mittel","Schwer","Meister","Großmeister"],
         "en": ["Medium","Hard","Master","Grandmaster"],
-        "pt": ["Médio","Difícil","Mestre","Grão-mestre"]
+        "pt": ["Médio","Difícil","Mestre","Grão-Mestre"]
     }
     for language in ["de","en","pt"]:
         for realm in range(4):
