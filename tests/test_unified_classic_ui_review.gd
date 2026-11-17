@@ -53,20 +53,21 @@ func run() -> void:
     for i in range(4):
         game.call("place",int(win[i]))
         if i < 3: game.call("place",int(filler[i]))
-    check(int(game.board.winner) == 1,"legal four-in-a-row still wins")
+    var board: BoardModel = game.get("board") as BoardModel
+    check(int(board.winner) == 1,"legal four-in-a-row still wins")
     await process_frame
     var popup: PanelContainer = game.get("popup") as PanelContainer
     check(popup != null,"local multiplayer also shows result panel")
     var inspect: Button = find_button(popup,"InspectClassicFinishedBoard") if popup != null else null
     check(inspect != null,"Classic results offer Inspect board")
-    var actual: Array = game.board.cells.duplicate()
-    var moves: int = game.board.move_count()
+    var actual: Array = board.cells.duplicate()
+    var moves: int = board.move_count()
     var renderer: CubeRenderer = game.get("renderer") as CubeRenderer
     var camera_at_end: Basis = renderer.pivot.basis
     if inspect != null: inspect.pressed.emit()
     check(game.get("popup") == null,"inspect closes results without replay")
-    check(game.board.move_count() == moves,"inspection preserves move count")
-    check(game.board.cells == actual,"inspection preserves all 54 cell values")
+    check(board.move_count() == moves,"inspection preserves move count")
+    check(board.cells == actual,"inspection preserves all 54 cell values")
     var button: Button = game.get("classic_result_button") as Button
     var undo: Button = game.get("classic_undo_button") as Button
     check(button != null and button.visible,"finished games show Show result")
@@ -78,14 +79,14 @@ func run() -> void:
     renderer.zoom(0.90)
     check(not is_equal_approx(renderer.camera.position.z,zoom_before),"real 3x3 cube zooms after finishing")
     game.call("on_cell",int(filler[25]))
-    check(game.board.cells == actual,"postgame taps never place new symbols")
+    check(board.cells == actual,"postgame taps never place new symbols")
 
     if button != null: button.pressed.emit()
     check(game.get("popup") != null,"Show result reopens without changing board")
-    check(game.board.cells == actual,"reopening preserves the completed match")
+    check(board.cells == actual,"reopening preserves the completed match")
     game.call("close_modal")
     game.call("play_again_after_result")
-    check(game.board.winner == 0 and game.board.move_count() == 0,"new match resets the Classic board")
+    check(board.winner == 0 and board.move_count() == 0,"new match resets the Classic board")
     check(button != null and not button.visible,"replay removes Show result")
     check(undo != null and undo.visible,"replay restores undo")
 
