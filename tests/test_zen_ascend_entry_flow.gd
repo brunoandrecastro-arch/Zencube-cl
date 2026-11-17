@@ -80,7 +80,10 @@ func run() -> void:
     check(Story.save_progress(story),"temporary in-progress first boss fight")
     var stored_pre: Dictionary = Story.load_progress()
     check(Story.valid_game(stored_pre.get("game",{})),"seeded saved boss game is structurally valid")
-    check((stored_pre.get("game",{}) as Dictionary).get("cells",[]) == game_cells,"seeded saved board round-trips before entering")
+    var restored_pre: Array = (stored_pre.get("game",{}) as Dictionary).get("cells",[])
+    check(restored_pre == game_cells,"seeded saved board round-trips with integer marks")
+    check(restored_pre.count(0) == 92 and restored_pre.has(0),
+        "a saved boss board retains 92 actually playable empty integer cells")
     (player.settings as Dictionary).language = "en"
     check(SaveManager.save_data(player),"restore temporary enabled 4x4 save")
 
@@ -119,15 +122,14 @@ func run() -> void:
             check(bool(ascend.get("realm_story_active")),"Campaign enters existing story, not a test-only mode")
             check(int(ascend.get("realm_story_stage")) == 0,"existing saved boss stage remains unchanged")
             var on_screen: Array = ascend.get("cells") as Array
-            if on_screen != game_cells:
-                var saved_now: Dictionary = Story.load_progress()
-                printerr("DEBUG STORY RESUME expected marks=",96-game_cells.count(0)," actual=",96-on_screen.count(0),
-                    " saved=",96-(saved_now.get("game",{}).get("cells",[]) as Array).count(0),
-                    " on_screen 0..16=",on_screen.slice(0,16),
-                    " expected 0..16=",game_cells.slice(0,16))
             check(on_screen == game_cells,"existing in-progress board resumes exactly")
             check((ascend.get("active_realm_dialog") as Node) != null,"existing boss intro/resume screen appears")
             ascend.call("_realm_story_begin")
+            # The resumed 4x4 board must still accept a valid move rather
+            # than considering float-valued empty cells a full-board draw.
+            ascend.call("play",20)
+            check(int(ascend.get("result")) == 0 and (ascend.get("cells") as Array).count(0) == 91,
+                "resumed fight accepts a real new X move without an early draw")
             ascend.call("_realm_story_menu")
             var pause: Node = ascend.get("active_realm_dialog")
             var new_match: Button = pause.find_child("RealmChroniclesNewMatch",true,false) as Button
