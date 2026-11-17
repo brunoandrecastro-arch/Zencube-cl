@@ -97,5 +97,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ZenMaster-16Boss-Campaign-Android-APK
-          path: build/ZenMaster-Satori-Void-Test.apk
+          path: build/ZenMaster-16Boss-Campaign-QA.apk
           if-no-files-found: error
