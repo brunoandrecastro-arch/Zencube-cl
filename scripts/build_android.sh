@@ -57,6 +57,14 @@ if [[ "$campaign_test" == true ]]; then
     s|^version/name=.*|version/name=\"2.0.1\"|
     s|^version/code=.*|version/code=24|
   }" export_presets.cfg
+  if [[ "${ZENCUBE_FINAL_CANDIDATE:-false}" == true ]]; then
+    # Higher debug versionCode installs over the existing UI Test, preserving
+    # its Android package and save data. This is NOT the Play Store bundle.
+    sed -i '/^\[preset\.0\.options\]$/,/^\[/ {
+      s|^version/name=.*|version/name="2.0-final-rc1"|
+      s|^version/code=.*|version/code=25|
+    }' export_presets.cfg
+  fi
 fi
 
 # Android previews use the very same access gates as the future Play release.
