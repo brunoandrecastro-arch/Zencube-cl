@@ -59,6 +59,7 @@ var challenge_leave_row: HBoxContainer
 var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
+const UiTest = preload("res://ui/ZenUiTestTheme.gd")
 const Asc = preload("res://core/ZenAscension.gd")
 # One original quote per Classic World (DE source; translated in ZenLocalization).
 const WORLD_QUOTES: Array[String] = [
@@ -120,13 +121,10 @@ func change_language(code: String) -> void:
     if bool(data.settings.get("intro_seen", false)):
         open_settings()
 func open_language_choice() -> void:
-    # Before a language is chosen, show only endonyms and the language icon.
-    var box = modal("🌐")
-    box.get_child(1).hide()
-    label("Deutsch  ·  English  ·  Português", box, 17)
-    button("Deutsch", box, choose_language.bind("de"), false, true)
-    button("English", box, choose_language.bind("en"), false, true)
-    button("Português", box, choose_language.bind("pt"), false, true)
+    # Separate UI Test: real 3x3 game cube, real 2+2 winning line,
+    # and native accessible language controls rather than an image mockup.
+    var box: VBoxContainer = modal("ZenCube 3D")
+    UiTest.show_language_selection(popup, box, Callable(self, "choose_language"))
 func _ready() -> void:
     data = SaveManager.load_data()
     Asc.ensure(data)
@@ -191,8 +189,8 @@ func premium_button(text: String, parent: Node, callback: Callable, featured: bo
     var b: Button = button(text, parent, callback, false, false)
     b.custom_minimum_size.y = 59
     b.add_theme_font_size_override("font_size", 20)
-    var normal_color: Color = Color("536545") if featured else Color("352b24")
-    var hover_color: Color = Color("667b53") if featured else Color("46382d")
+    var normal_color: Color = Color("536545") if featured else Color("183c29")
+    var hover_color: Color = Color("667b53") if featured else Color("29533b")
     b.add_theme_stylebox_override("normal", theme_style(normal_color, 18))
     b.add_theme_stylebox_override("hover", theme_style(hover_color, 18))
     b.add_theme_stylebox_override("pressed", theme_style(Color("7b6846"), 18))
@@ -234,7 +232,7 @@ func build_ui() -> void:
     ui.add_child(garden)
     garden.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var veil = ColorRect.new()
-    veil.color = Color("e5d7c2",0.10)
+    veil.color = Color("0a2218",0.16)
     veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
     ui.add_child(veil)
     veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -250,6 +248,7 @@ func build_ui() -> void:
     for typ in ["Label","CheckButton","OptionButton","LineEdit"]:
         th.set_color("font_color",typ,Color("493521"))
     th.set_color("font_hover_color","CheckButton",Color("493521"))
+    UiTest.install_main_theme(th)
     ui.theme = th
 
     var margin = MarginContainer.new()
@@ -264,7 +263,7 @@ func build_ui() -> void:
 
     # Carved-wood title panel inspired by the approved reference design.
     var title_panel = PanelContainer.new()
-    title_panel.add_theme_stylebox_override("panel",theme_style(Color("4b3020",0.96),25))
+    title_panel.add_theme_stylebox_override("panel",theme_style(Color("18291e",0.97),25))
     column.add_child(title_panel)
     var title_row = row(title_panel)
     var brand = VBoxContainer.new()
@@ -744,7 +743,7 @@ func open_menu() -> void:
         button(_campaign_text("leave"), campaign_box, _zen_campaign_leave, true)
         return
     var box = modal("Hauptmenü")
-    popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.975), 26))
+    popup.add_theme_stylebox_override("panel", theme_style(Color("18291e", 0.975), 26))
     var heading: Label = box.get_child(0) as Label
     heading.add_theme_color_override("font_color", Color("fce5b7"))
     heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
