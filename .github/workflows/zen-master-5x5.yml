@@ -1,0 +1,31 @@
+name: Zen Master 5x5 prototype checks
+on:
+  push:
+    branches:
+      - prototype/zen-master-5x5
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  godot-5x5:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.5.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.5.1-stable_linux.x86_64
+          echo "GODOT=/tmp/godot/Godot_v4.5.1-stable_linux.x86_64" >> "$GITHUB_ENV"
+      - name: Import project and validate scripts
+        run: |
+          "$GODOT" --headless --editor --import --quit
+      - name: Verify 5x5 mechanics and standalone playable scene
+        run: |
+          timeout 70 "$GODOT" --headless --path . --script tests/test_zen_master_5x5.gd
+      - name: Launch 3D prototype without modifying the main scene
+        run: |
+          timeout 40 "$GODOT" --headless --path . --quit-after 12 res://ZenMasterPrototype.tscn
