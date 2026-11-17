@@ -392,7 +392,7 @@ func show_ascend_menu() -> void:
     if realm_story_active:
         _realm_story_menu()
         return
-    var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",520)
+    var parts: Dictionary = _realm_dialog("Zen Ascend · " + Z("Menü"),520)
     var body: VBoxContainer = parts.box
     action(body,Z("Neue Partie"),show_mode_picker,true)
     action(body,Z("Statistik & Rang"),show_statistics)
@@ -811,12 +811,12 @@ func show_statistics() -> void:
     if rank < 5:
         var progress: int = ZenAscension.progress(data,rank)
         var goal: int = ZenAscension.target(rank)
-        text(body,"Next rank  ·  %d / %d" % [progress,goal],16)
+        text(body,Z("Nächster Rang · %d / %d") % [progress,goal],16)
         _progress_meter(body,progress,goal)
-    text(body,"Matches %d   ·   Wins %d   ·   Draws %d" % [total,int(s.p1),int(s.draw)],15)
-    text(body,"Win rate %.1f%%   ·   Best streak %d" % [rate,int(s.best_streak)],15)
-    text(body,"Current streak %d   ·   Total moves %d" % [int(s.current_streak),int(s.moves)],15)
-    text(body,"Fastest win %d   ·   Average moves %.1f" % [int(s.fastest_win),float(s.moves)/float(maxi(1,total))],15)
+    text(body,Z("Partien %d · Siege %d · Unentschieden %d") % [total,int(s.p1),int(s.draw)],15)
+    text(body,Z("Siegquote %.1f%% · Beste Serie %d") % [rate,int(s.best_streak)],15)
+    text(body,Z("Aktuelle Serie %d · Züge gesamt %d") % [int(s.current_streak),int(s.moves)],15)
+    text(body,Z("Schnellster Sieg %d · Ø Züge %.1f") % [int(s.fastest_win),float(s.moves)/float(maxi(1,total))],15)
     action(body,_achievements_label(),show_realm_titles,true)
     _open_realm_dialog(parts)
 
@@ -989,7 +989,7 @@ func show_realms() -> void:
         var selected: bool = i == realm_index()
         var choose: Button
         if not allowed:
-            choose = action(column,"🔒  " + ("Freischaltung ansehen" if lang() == "de" else "View unlock requirements"),_show_realm_requirements.bind(number),false)
+            choose = action(column,"🔒  " + Z("Freischaltung ansehen"),_show_realm_requirements.bind(number),false)
         else:
             choose = action(column,L("selected") if selected else L("select"),_choose_realm_from_dialog.bind(number,ui_parts.dialog),true)
             choose.disabled = selected or (move_count() > 0 and result == 0)
@@ -1100,7 +1100,7 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
     hero.custom_minimum_size.y = 160
     hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
     head_box.add_child(hero)
-    text(head_box,Realms.REALM_NAMES[realm] + ("  🔒" if not unlocked else ""),20,Color("f5dca8"))
+    text(head_box,Realms.realm_name(realm,lang()) + ("  🔒" if not unlocked else ""),20,Color("f5dca8"))
     text(head_box,L("progress") + ": %d/8" % Realms.count(data,realm),14)
     _progress_meter(head_box,Realms.count(data,realm),8)
     if not unlocked:
@@ -1116,7 +1116,7 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
         inside.add_theme_constant_override("separation",8)
         inside.mouse_filter = Control.MOUSE_FILTER_PASS
         card.add_child(inside)
-        text(inside,("✓  " if earned else "◇  ") + str(task.title),18,Color("f3ddb2"))
+        text(inside,("✓  " if earned else "◇  ") + Realms.task_title(task,lang()),18,Color("f3ddb2"))
         text(inside,Realms.task_description(task,lang()),14,Color("d7d5c9"))
         text(inside,(L("earned") if earned else L("reward")) + "  ·  🍃 %d" % int(task.leaves),14,Color("bce3af"))
     text(list,L("bot_only"),13,Color("cdbd9d"))
@@ -1136,7 +1136,7 @@ func show_realm_titles() -> void:
     # title can be earned per Realm, through full Realm mastery (8/8).
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + _achievements_label())
     var body: VBoxContainer = parts.box
-    text(body,"Secret Achievements   ·   %d / %d" % [Achievements.secret_count(data),Achievements.SECRETS.size()],18,Color("f3dca4"))
+    text(body,Z("Geheime Erfolge · %d / %d") % [Achievements.secret_count(data),Achievements.SECRETS.size()],18,Color("f3dca4"))
     for realm in range(4):
         var group: PanelContainer = PanelContainer.new()
         group.add_theme_stylebox_override("panel",style(_realm_tone(realm),18))
@@ -1155,19 +1155,19 @@ func show_realm_titles() -> void:
         inside.add_child(picture)
         var master: String = Achievements.MAIN_TITLES[realm]
         var title_earned: bool = Realms.count(data,realm) == 8
-        text(inside,("✦ " if title_earned else "🔒 ") + master + ("  ·  8/8" if title_earned else "  ·  Locked"),18,Color("d1eabd") if title_earned else Color("d9c8ac"))
-        action(inside,"View Realm Title",_show_achievement_details.bind(realm,{"id":"main","name":master,"condition":"Complete all 8 Realm Challenges.","quote":Achievements.main_quote(realm)},title_earned),false)
+        text(inside,("✦ " if title_earned else "🔒 ") + Realms.localized_name(master,lang()) + ("  ·  8/8" if title_earned else "  ·  " + L("locked")),18,Color("d1eabd") if title_earned else Color("d9c8ac"))
+        action(inside,Z("Realm-Titel ansehen"),_show_achievement_details.bind(realm,{"id":"main","name":master,"condition":"Complete all 8 Realm Challenges.","quote":Achievements.main_quote(realm)},title_earned),false)
         for secret in Achievements.SECRETS:
             if int(secret.realm) != realm: continue
             var unlocked: bool = Achievements.earned(data,str(secret.id))
-            var display: String = ("✦  " + str(secret.name)) if unlocked else "◇  ???  ·  Secret Achievement"
+            var display: String = ("✦  " + Realms.localized_name(str(secret.name),lang())) if unlocked else "◇  ???  ·  " + Z("Geheimer Erfolg")
             action(inside,display,_show_achievement_details.bind(realm,secret,unlocked),unlocked)
     _open_realm_dialog(parts)
 
 func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -> void:
     var is_main_title: bool = str(secret.id) == "main"
     var revealed: bool = unlocked or is_main_title
-    var title_text: String = str(secret.name) if revealed else "???"
+    var title_text: String = Realms.localized_name(str(secret.name),lang()) if revealed else "???"
     var parts: Dictionary = _realm_dialog(title_text,610)
     var body: VBoxContainer = parts.box
     var picture: TextureRect = TextureRect.new()
@@ -1177,7 +1177,7 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     picture.custom_minimum_size.y = 250
     picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body.add_child(picture)
-    text(body,("✦  Achievement Unlocked" if unlocked else "🔒  Secret Achievement"),18,Color("f4dcaa"))
+    text(body,("✦  " + Z("Erfolg freigeschaltet") if unlocked else "🔒  " + (L("rank") if is_main_title else Z("Geheimer Erfolg"))),18,Color("f4dcaa"))
     text(body,title_text,23,Color("f7e4b9"))
     if revealed:
         text(body,"“" + str(secret.quote) + "”",17,Color("d8e7d4"))
@@ -1185,11 +1185,11 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
         var earned_reason: String = str(secret.condition) if lang() == "en" else Achievements.unlock_reason(secret,realm,lang())
         text(body,reason_heading + earned_reason,15,Color("f1d29b"))
     else:
-        text(body,"Unlock condition hidden. Discover the secret in play.",15,Color("d8e7d4"))
+        text(body,Z("Freischaltbedingung verborgen. Entdecke das Geheimnis beim Spielen."),15,Color("d8e7d4"))
         if Achievements.hint_owned(data,str(secret.id)):
-            text(body,"🍃  Hint: " + Achievements.hint_text(str(secret.id)),16,Color("f1d29b"))
+            text(body,"🍃  " + (Z("Hinweis: %s") % Achievements.hint_text(str(secret.id))),16,Color("f1d29b"))
         else:
-            text(body,"Get a hint in Main menu → Zen Shop → Hints (🍃 %d)." % Achievements.HINT_PRICE,14,Color("edcfa2"))
+            text(body,Z("Kaufe einen Hinweis im Hauptmenü → Zen-Shop → Hinweise (🍃 %d).") % Achievements.HINT_PRICE,14,Color("edcfa2"))
     action(body,_achievements_label(),show_realm_titles,true)
     _open_realm_dialog(parts)
 
@@ -1215,12 +1215,12 @@ func show_match_result() -> void:
         text(info,"🍃 +%d " % leaves_total + L("leaves"),21,Color("c4edac"))
     for task_id in last_realm_awards.get("new_tasks",[]):
         for task in Realms.TASKS[clampi(match_realm,0,3)]:
-            if str(task.id) == str(task_id): text(info,"✓  " + str(task.title),15,Color("f0dba7"))
+            if str(task.id) == str(task_id): text(info,"✓  " + Realms.task_title(task,lang()),15,Color("f0dba7"))
     if bool(last_realm_awards.get("realm_completed",false)):
         text(info,"✦  " + L("realm_complete"),17,Color("ffe6a4"))
     if not last_realm_awards.get("new_tasks",[]).is_empty():
         if Achievements.main_title(data,match_realm) != "—":
-            text(info,L("rank") + ": " + Achievements.main_title(data,match_realm),15)
+            text(info,L("rank") + ": " + Realms.localized_name(Achievements.main_title(data,match_realm),lang()),15)
     var inspect: Button = action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     inspect.name = "InspectFinishedBoard"
     action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog))
