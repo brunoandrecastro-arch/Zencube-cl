@@ -2,7 +2,7 @@
 
 **Verbindliche Vorgabe:** Jeder der 16 Kämpfe bekommt ein *eigenes Hintergrundbild*; ein Realm-Bild, das bei vier Bossen einfach wiederverwendet wird, ist **nicht ausreichend**. Ein Boss-Porträt ersetzt **niemals** den Kampfhintergrund. Alle Bilder müssen zur Farbwelt, Geschichte und Architektur des jeweiligen Realms passen.
 
-Die Produktionspfade sind in `core/ZenMasterStageCatalog.gd` festgeschrieben. **Wichtig:** Diese Pfade sind aktuell Reservierungen – die 16 individuellen Hintergrunddateien sind noch **nicht** im Repository importiert. Die bisher gezeigten Realm-Poster sind Konzeptgrafiken, keine fertigen eigenständigen Arena-Assets. Die geplante Kampagne darf erst als visuell fertig gelten, wenn `ZenMasterStageCatalog.all_arena_art_imported()` wahr wird und jeder Hintergrund auf Android sichtbar getestet wurde.
+Die 16 einzigartigen Vektor-Kampfhintergründe wurden als SVG-Dateien unter assets/zen_master/arenas/ implementiert. Sie nutzen die bestehenden Realm-Illustrationen als Untergrund. Die bisherigen hochauflösenden WebP-Konzeptbilder aus dem Chat sind noch nicht direkt in GitHub eingebunden. Die Produktionspfade sind in `core/ZenMasterStageCatalog.gd` festgeschrieben. **Wichtig:** Diese Pfade sind aktuell Reservierungen – die 16 individuellen Hintergrunddateien sind noch **nicht** im Repository importiert. Die bisher gezeigten Realm-Poster sind Konzeptgrafiken, keine fertigen eigenständigen Arena-Assets. Die geplante Kampagne darf erst als visuell fertig gelten, wenn `ZenMasterStageCatalog.all_arena_art_imported()` wahr wird und jeder Hintergrund auf Android sichtbar getestet wurde.
 
 | Realm | Boss | Eigenständige Arena | Look / Dramaturgie |
 | --- | --- | --- | --- |
@@ -25,7 +25,7 @@ Die Produktionspfade sind in `core/ZenMasterStageCatalog.gd` festgeschrieben. **
 
 ## Export- und UX-Regeln
 
-- Jedes Kampfbild kommt in einem **boss-spezifischen** `.webp`-Pfad und wird individuell abgenommen.
+- Jedes Kampfbild kommt in einem **boss-spezifischen** `.svg`-Pfad und wird individuell abgenommen.
 - Für Android: Hochformat, wichtige architektonische Motive im zentralen Sichtfeld; Würfel und X/O bleiben kontraststark und vor dem Bild gut lesbar.
 - Hintergrund helligkeitsreduziert/abgedunkelt hinter dem 3D-Würfel, damit die Spielzüge im Vordergrund bleiben.
 - Eigenes Boss-Porträt im Intro; eigener Hintergrund im tatsächlichen Match; individuelle Besiegten-Grafik bzw. -Animation für den Übergang.
@@ -33,4 +33,4 @@ Die Produktionspfade sind in `core/ZenMasterStageCatalog.gd` festgeschrieben. **
 - **Weiterhin 4 GEWINNT auf 5×5**, auch bei Bosskämpfen (348 korrekte Linien); kein Boss darf die Viererregel verändern.
 - Keine neue Google-Play-Veröffentlichung, kein Main-Merge, kein Eingriff in PR #3. Experiment nur auf `prototype/zen-master-5x5`.
 
-Die 16 Arenen sind derzeit **designseitig benannt und im Code referenziert, nicht fertig illustriert und nicht in der Test-APK aktiv**.
+Die 16 Arenen besitzen **erste eigene SVG-Kampfhintergründe** und werden in der isolierten Kampagnen-Testszene eingebunden. Dies ist eine eigenständige QA-Kunstfassung, nicht das finale High-End-Artwork.
