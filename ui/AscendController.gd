@@ -602,10 +602,28 @@ func finish() -> void:
         if result != 3: outcome = 1 if int(owners[result-1]) == 0 else -1
         var lines_won: Array = Mode.winning_lines(cells,lines,result) if outcome == 1 else []
         last_realm_awards = Realms.record_bot_match(data,match_realm,outcome,bot_level,move_count(),lines_won,match_blocked_threat)
+        # Unlike secret achievements, Realm tasks formerly appeared only in the
+        # small match summary. Show ALL newly earned tasks in one readable
+        # ceremony with their true localized criteria, including simultaneous wins.
+        var new_task_details: Array = []
+        for task in Realms.TASKS[clampi(match_realm,0,3)]:
+            if last_realm_awards.get("new_tasks",[]).has(str(task.id)):
+                new_task_details.append({"id":str(task.id),
+                    "name":Realms.task_title(task,lang()),
+                    "reason":Realms.task_description(task,lang())})
+        if not new_task_details.is_empty():
+            queued_unlocks.append({"kind":"challenge","realm":match_realm,
+                "name":Realms.realm_name(match_realm,lang()),"quote":"",
+                "details":new_task_details})
         for secret in Achievements.claim_after_match(data,match_realm):
-            queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":str(secret.name),"quote":str(secret.quote)})
+            queued_unlocks.append({"kind":"achievement","realm":match_realm,
+                "name":str(secret.name),"quote":str(secret.quote),
+                "reason":Achievements.unlock_reason(secret,match_realm,lang())})
         if bool(last_realm_awards.get("realm_completed",false)):
-            queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":Achievements.MAIN_TITLES[match_realm],"quote":Achievements.main_quote(match_realm)})
+            queued_unlocks.append({"kind":"achievement","realm":match_realm,
+                "name":Achievements.MAIN_TITLES[match_realm],
+                "quote":Achievements.main_quote(match_realm),
+                "reason":Achievements.unlock_reason({"id":"main"},match_realm,lang())})
         # Realm access may unlock earlier, but AUTOMATIC travel requires all 8
         # challenges completed in the current Realm. Once-only persisted gate.
         if Realms.ready_for_breakthrough(data,match_realm):
@@ -658,7 +676,9 @@ func _show_next_unlock() -> void:
     unlock.finished.connect(func():
         if is_inside_tree(): call_deferred("_show_next_unlock")
     )
-    unlock.present(str(item.kind),str(Realms.REALM_ART[int(item.realm)]),str(item.name),str(item.quote),bool(data.settings.get("sound",true)),[world_music])
+    unlock.present(str(item.kind),str(Realms.REALM_ART[int(item.realm)]),
+        str(item.name),str(item.quote),bool(data.settings.get("sound",true)),[world_music],
+        str(item.get("reason","")),lang(),item.get("details",[]))
 
 func show_fully_aware(awards: Dictionary) -> void:
     if not is_inside_tree(): return
@@ -1116,7 +1136,9 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     text(body,title_text,23,Color("f7e4b9"))
     if revealed:
         text(body,"“" + str(secret.quote) + "”",17,Color("d8e7d4"))
-        text(body,"How to unlock: " + str(secret.condition),15,Color("f1d29b"))
+        var reason_heading: String = "Freigeschaltet weil: " if lang() == "de" else ("Desbloqueado porque: " if lang() == "pt" else "How to unlock: ")
+        var earned_reason: String = str(secret.condition) if lang() == "en" else Achievements.unlock_reason(secret,realm,lang())
+        text(body,reason_heading + earned_reason,15,Color("f1d29b"))
     else:
         text(body,"Unlock condition hidden. Discover the secret in play.",15,Color("d8e7d4"))
         if Achievements.hint_owned(data,str(secret.id)):
