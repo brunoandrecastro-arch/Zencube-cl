@@ -766,12 +766,13 @@ func show_mode_picker() -> void:
     var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
     var dialog: Control = parts.dialog
     var body: VBoxContainer = parts.box
-    text(body,"This Realm has a fixed Zen Ascend Bot difficulty.",15)
+    text(body,Z("In diesem Reich ist die Schwierigkeit des Zen Ascend Bots fest vorgegeben."),15)
     text(body,Realms.realm_name(realm_index(),lang()) + " · " + Achievements.main_title(data,realm_index()),15,Color("e5ca93"))
     var fixed_level: int = Realms.fixed_bot_level(realm_index())
     var labels: Array[String] = ["Leicht", "Mittel", "Schwer", "Meister", "Großmeister"]
-    text(body,"Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),18,Color("f4dfbd"))
-    action(body,"Play Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),_start_realm_match.bind(true,fixed_level,dialog),true)
+    var bot_name: String = "Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang())
+    text(body,bot_name,18,Color("f4dfbd"))
+    action(body,Z("Gegen %s spielen") % bot_name,_start_realm_match.bind(true,fixed_level,dialog),true)
     action(body,Z("Zu zweit spielen"),_start_realm_match.bind(false,0,dialog))
     _open_realm_dialog(parts)
 
