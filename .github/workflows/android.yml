@@ -166,6 +166,10 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Final 2.0 fair starter check across Realm bot and 12 story bosses
+        if: env.ZENCUBE_FINAL_CANDIDATE == 'true'
+        run: |
+          timeout 75 "$GODOT" --headless --path . --script tests/test_realm_fair_start_2_0.gd
       - name: Final 2.0 audit of 4x4 statistics, challenges, achievements and menus (DE/EN/PT)
         if: env.ZENCUBE_FINAL_CANDIDATE == 'true'
         run: |
