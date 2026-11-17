@@ -54,6 +54,56 @@ const SECRETS: Array = [
     {"id":"keeper_awareness","realm":3,"name":"Keeper of Awareness","metric":"grand_win","need":1,"condition":"Win a Satori match against Grandmaster.","quote":"To see the whole is to fear no single move."},
 ]
 
+
+# Reveal exact conditions only AFTER an achievement has actually been earned.
+# Secret requirements remain hidden in the locked achievement catalogue.
+const SECRET_REASONS_DE: Dictionary = {
+    "shadow_walker":"Gewinne 2 Partien im Shadow Realm.",
+    "keeper_silence":"Gewinne 3 Shadow-Realm-Partien hintereinander.",
+    "moon_disciple":"Gewinne 2 Shadow-Partien mit einer Viererlinie über die Würfelkante.",
+    "veil_breaker":"Gewinne 2 Shadow-Partien, nachdem du einen unmittelbaren Gewinn des Bots verhindert hast.",
+    "ember_initiate":"Gewinne 2 Partien im Ember Temple.",
+    "flame_disciple":"Gewinne 2 Ember-Partien gegen Schwer oder höher.",
+    "temple_challenger":"Gewinne 2 Ember-Partien mit einer Viererlinie auf einer einzigen Würfelseite.",
+    "fire_strategist":"Gewinne 3 Ember-Partien in Folge gegen Schwer oder höher.",
+    "sky_seeker":"Gewinne 3 Partien im Celestial Realm.",
+    "cloud_disciple":"Gewinne 4 Celestial-Partien hintereinander.",
+    "light_weaver":"Gewinne 3 Celestial-Partien mit einer Viererlinie über eine Würfelkante.",
+    "celestial_adept":"Gewinne 2 Celestial-Partien gegen Meister oder höher.",
+    "mind_awakened":"Gewinne 2 Partien im Satori Realm.",
+    "stillness_walker":"Gewinne 2 Satori-Partien in Folge gegen Meister oder höher.",
+    "satori_adept":"Gewinne 3 Satori-Partien, nachdem du jeweils eine unmittelbare Niederlage verhindert hast.",
+    "keeper_awareness":"Besiege den Großmeister-Bot in einer Satori-Partie."
+}
+const SECRET_REASONS_PT: Dictionary = {
+    "shadow_walker":"Ganha 2 partidas no Shadow Realm.",
+    "keeper_silence":"Ganha 3 partidas seguidas no Shadow Realm.",
+    "moon_disciple":"Ganha 2 partidas no Shadow Realm com uma linha de quatro através de uma aresta.",
+    "veil_breaker":"Ganha 2 partidas no Shadow Realm depois de bloqueares uma vitória imediata do bot.",
+    "ember_initiate":"Ganha 2 partidas no Ember Temple.",
+    "flame_disciple":"Ganha 2 partidas no Ember Temple contra Difícil ou superior.",
+    "temple_challenger":"Ganha 2 partidas no Ember Temple com quatro símbolos numa única face do cubo.",
+    "fire_strategist":"Ganha 3 partidas seguidas no Ember Temple contra Difícil ou superior.",
+    "sky_seeker":"Ganha 3 partidas no Celestial Realm.",
+    "cloud_disciple":"Ganha 4 partidas seguidas no Celestial Realm.",
+    "light_weaver":"Ganha 3 partidas no Celestial Realm com uma linha de quatro através de uma aresta.",
+    "celestial_adept":"Ganha 2 partidas no Celestial Realm contra Mestre ou superior.",
+    "mind_awakened":"Ganha 2 partidas no Satori Realm.",
+    "stillness_walker":"Ganha 2 partidas seguidas no Satori Realm contra Mestre ou superior.",
+    "satori_adept":"Ganha 3 partidas no Satori Realm depois de bloqueares uma derrota imediata.",
+    "keeper_awareness":"Vence o bot Grande Mestre numa partida do Satori Realm."
+}
+
+static func unlock_reason(item: Dictionary, realm: int, language: String) -> String:
+    if str(item.get("id","")) == "main":
+        if language == "de": return "Alle 8 Herausforderungen in %s abgeschlossen." % ZenAscendRealms.realm_name(realm,language)
+        if language == "pt": return "Concluíste os 8 desafios de %s." % ZenAscendRealms.realm_name(realm,language)
+        return "Completed all 8 challenges in %s." % ZenAscendRealms.realm_name(realm,language)
+    var id: String = str(item.get("id",""))
+    if language == "de": return str(SECRET_REASONS_DE.get(id,item.get("condition","")))
+    if language == "pt": return str(SECRET_REASONS_PT.get(id,item.get("condition","")))
+    return str(item.get("condition",""))
+
 static func ensure(data: Dictionary) -> void:
     var st: Dictionary = ZenAscendRealms.state(data)
     if not st.get("secret_achievements") is Dictionary:
