@@ -2,6 +2,7 @@ extends Node3D
 # QA-only bridge: an intentionally easy real 4x4 Satori victory triggers the 5x5 awakening.
 # Not connected to main, Play Alpha, save files or the 4x4 Realm Chronicles.
 const Four = preload("res://core/ZenAscend.gd")
+const Five = preload("res://core/ZenMaster.gd")
 const Mirror = preload("res://ui/ZenMirrorBreak.gd")
 var cells: Array = []
 var lines: Array = []
@@ -19,6 +20,8 @@ var dragged: bool = false
 var mouse_pressed: bool = false
 var touch_seen: bool = false
 var fracture_sound: AudioStreamPlayer
+var preview_cube: Node3D
+var hud_layer: CanvasLayer
 
 func _ready() -> void:
     lines = Four.generate_lines()
@@ -100,10 +103,44 @@ func _world() -> void:
         tile.add_child(mark)
         marks.append(mark)
     pivot.rotation = Vector3(0.16,-0.17,0.0)
+    _create_void_preview()
     fracture_sound = AudioStreamPlayer.new()
     fracture_sound.stream = _sound()
     fracture_sound.volume_db = -7.0
     add_child(fracture_sound)
+
+func _create_void_preview() -> void:
+    # A real 5x5 150-tile cube materializes THROUGH the opening before scene change.
+    preview_cube = Node3D.new()
+    preview_cube.name = "VoidSanctuaryFiveByFiveReveal"
+    preview_cube.visible = false
+    preview_cube.scale = Vector3.ONE*0.62
+    preview_cube.rotation = Vector3(0.32,-0.58,0.05)
+    preview_cube.position.z = -0.26
+    add_child(preview_cube)
+    var core: MeshInstance3D = MeshInstance3D.new()
+    var mesh: BoxMesh = BoxMesh.new()
+    mesh.size = Vector3(3.2,3.2,3.2)
+    core.mesh = mesh
+    core.material_override = _mat(Color("171322"))
+    preview_cube.add_child(core)
+    for c in range(Five.CELLS):
+        var face: int = Five.face(c)
+        var tile: MeshInstance3D = MeshInstance3D.new()
+        var box: BoxMesh = BoxMesh.new()
+        box.size = Vector3(0.566,0.566,0.077)
+        tile.mesh = box
+        tile.basis = Basis(CubeGeometry.U[face],-CubeGeometry.V[face],CubeGeometry.N[face])
+        tile.position = Five.center(c)
+        var tint: Color = Color("2b2546") if face % 2 == 0 else Color("3f315a")
+        tile.material_override = _mat(tint)
+        preview_cube.add_child(tile)
+    var halo: OmniLight3D = OmniLight3D.new()
+    halo.light_color = Color("b284f7")
+    halo.light_energy = 2.1
+    halo.omni_range = 6.0
+    halo.position = Vector3(-1.6,1.3,3.0)
+    preview_cube.add_child(halo)
 
 func _sound() -> AudioStreamWAV:
     # Original synthetic glass fracture / rising tone. No copyrighted sample.
@@ -129,6 +166,7 @@ func _sound() -> AudioStreamWAV:
 
 func _interface() -> void:
     var layer: CanvasLayer = CanvasLayer.new()
+    hud_layer = layer
     add_child(layer)
     var root_ui: Control = Control.new()
     root_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -272,13 +310,25 @@ func _on_tap(c: int) -> void:
 func _begin_fracture() -> void:
     transition_started = true
     status.text = "SIEG! Der neue Weg öffnet sich."
-    fracture_sound.play()
+    # Mirror starts with the visible 4x4, then glass cracks and exposes an actual 5x5 preview.
+    hud_layer.visible = false
     mirror.begin()
     var tween: Tween = create_tween()
-    tween.tween_interval(1.05) # Hold the cube still while icy fractures spread.
+    tween.tween_interval(0.99)
+    tween.tween_callback(fracture_sound.play)
+    tween.tween_property(pivot,"scale",Vector3.ONE*0.04,0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+    tween.tween_callback(_reveal_void_preview)
+
+
+func _reveal_void_preview() -> void:
+    if not transition_started:
+        return
+    pivot.visible = false
+    preview_cube.visible = true
+    var tween: Tween = create_tween()
     tween.set_parallel(true)
-    tween.tween_property(pivot,"scale",Vector3.ONE*0.18,0.95).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-    tween.tween_property(pivot,"rotation",pivot.rotation+Vector3(0.25,1.25,0.35),0.95)
+    tween.tween_property(preview_cube,"scale",Vector3.ONE,1.3).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
+    tween.tween_property(preview_cube,"rotation",preview_cube.rotation+Vector3(-0.14,0.64,0.0),1.3)
 
 func _goto_void() -> void:
     get_tree().change_scene_to_file("res://ZenMasterCampaign.tscn")
