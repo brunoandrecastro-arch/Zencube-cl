@@ -55,6 +55,8 @@ const Backdrops = preload("res://core/ZenBackdrops.gd")
 var challenge_row: HBoxContainer
 var classic_views: HBoxContainer
 var classic_actions: HBoxContainer
+var classic_undo_button: Button
+var classic_result_button: Button
 var challenge_leave_row: HBoxContainer
 var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
@@ -152,14 +154,14 @@ func _ready() -> void:
 func theme_style(bg: Color, radius: int = 18) -> StyleBoxFlat:
     var st = StyleBoxFlat.new()
     st.bg_color = bg
-    st.border_color = Color("c99f64",0.82)
+    st.border_color = UiTest.GOLD
     st.set_border_width_all(2)
     st.set_corner_radius_all(radius)
     st.content_margin_left = 13
     st.content_margin_right = 13
     st.content_margin_top = 10
     st.content_margin_bottom = 10
-    st.shadow_color = Color("3a2a17",0.18)
+    st.shadow_color = Color("132018",0.29)
     st.shadow_size = 5
     st.shadow_offset = Vector2(0,3)
     return st
@@ -170,12 +172,13 @@ func button(text: String, parent: Node, callback: Callable, small: bool = false,
     b.custom_minimum_size.y = 44 if small else 52
     b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     b.focus_mode = Control.FOCUS_NONE
-    if primary:
-        b.add_theme_stylebox_override("normal",theme_style(Color("53643e"),18))
-        b.add_theme_stylebox_override("hover",theme_style(Color("63754b"),18))
-        b.add_theme_stylebox_override("pressed",theme_style(Color("3c4d2c"),18))
-        for color_key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
-            b.add_theme_color_override(color_key,Color("fff3d5"))
+    # Every classic menu uses the same jade controls and gold borders as 4x4.
+    var base_color: Color = Color("#315b3d") if primary else UiTest.GREEN
+    b.add_theme_stylebox_override("normal",UiTest.frame(base_color,18))
+    b.add_theme_stylebox_override("hover",UiTest.frame(Color("#49704c") if primary else Color("#2b5637"),18))
+    b.add_theme_stylebox_override("pressed",UiTest.frame(Color("#34543b"),18))
+    for color_key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+        b.add_theme_color_override(color_key,UiTest.IVORY)
     b.pressed.connect(callback)
     b.button_down.connect(func():
         b.create_tween().tween_property(b, "modulate", Color("e8dbc7"), 0.08)
@@ -189,11 +192,11 @@ func premium_button(text: String, parent: Node, callback: Callable, featured: bo
     var b: Button = button(text, parent, callback, false, false)
     b.custom_minimum_size.y = 59
     b.add_theme_font_size_override("font_size", 20)
-    var normal_color: Color = Color("536545") if featured else Color("183c29")
-    var hover_color: Color = Color("667b53") if featured else Color("29533b")
+    var normal_color: Color = Color("#315b3d") if featured else UiTest.GREEN
+    var hover_color: Color = Color("#49704c") if featured else Color("#2b5637")
     b.add_theme_stylebox_override("normal", theme_style(normal_color, 18))
     b.add_theme_stylebox_override("hover", theme_style(hover_color, 18))
-    b.add_theme_stylebox_override("pressed", theme_style(Color("7b6846"), 18))
+    b.add_theme_stylebox_override("pressed", UiTest.frame(Color("#34543b"),18))
     for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
         b.add_theme_color_override(key, Color("fff0cf"))
     return b
@@ -360,7 +363,10 @@ func build_ui() -> void:
     button("Hinweis",views,open_help,true)
     var actions = row(column)
     classic_actions = actions
-    button("Rückgängig",actions,undo)
+    classic_undo_button = button("Rückgängig",actions,undo)
+    classic_result_button = button("Ergebnis anzeigen",actions,show_result_screen)
+    classic_result_button.name = "ClassicShowFinishedResult"
+    classic_result_button.visible = false
     button("Neue Partie",actions,confirm_new,true,true)
     zen_campaign_controls = row(column)
     zen_campaign_undo_button = button("Rückgängig", zen_campaign_controls, _zen_campaign_undo, true)
@@ -401,6 +407,12 @@ func _on_cube_surface_input(event: InputEvent, surface: TextureRect) -> void:
         var motion: InputEventMouseMotion = event.duplicate() as InputEventMouseMotion
         motion.position = (event.position - inset) * ratio
         input_control.handle(motion)
+
+func _classic_result_label() -> String:
+    return "Ergebnis anzeigen" if language_code() == "de" else ("Ver resultado" if language_code() == "pt" else "Show result")
+
+func _classic_finished_hint() -> String:
+    return "Partie beendet · Würfel drehen und zoomen" if language_code() == "de" else ("Partida terminada · Roda e amplia o cubo" if language_code() == "pt" else "Match finished · Rotate and zoom the cube")
 
 func mode_name() -> String:
     var mode = int(data.settings.mode)
@@ -493,10 +505,16 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
         if tutorial != null:
             help_text.text = str(tutorial.step+1)+" / "+str(TutorialController.TEXTS.size())+"  ·  "+T(TutorialController.TEXTS[tutorial.step])
         else:
-            help_text.text = toast if Time.get_ticks_msec()<toast_until else T("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen")
+            help_text.text = toast if Time.get_ticks_msec()<toast_until else (_classic_finished_hint() if board.winner != 0 else T("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen"))
     swap_row.visible = not challenge_active and board.swap_pending and not (int(data.settings.mode) == 1 and board.current_owner() == 1 and tutorial == null)
     tutorial_row.visible = not challenge_active and tutorial != null
     challenge_role_panel.visible = challenge_active
+    # Two buttons in the same space: undo during play, show result afterwards.
+    var finished_classic: bool = board.winner != 0 and not challenge_active and not zen_campaign_active and tutorial == null
+    if is_instance_valid(classic_undo_button): classic_undo_button.visible = not finished_classic
+    if is_instance_valid(classic_result_button):
+        classic_result_button.visible = finished_classic
+        classic_result_button.text = _classic_result_label()
     challenge_row.visible = challenge_active
     challenge_leave_row.visible = challenge_active
     classic_views.visible = not challenge_active
@@ -528,6 +546,8 @@ func notify_user(message: String) -> void:
     if help_text != null: help_text.text = toast
 func on_cell(cell: int) -> void:
     if cell < 0 or ceremony_active or (popup != null and not net_active): return
+    # Completed classic positions are read-only even though rotation remains on.
+    if board.winner != 0 and not challenge_active and not zen_campaign_active: return
     if zen_campaign_active:
         if not _zen_campaign_bot_turn() and not ai_running and not chronicles.is_open():
             place(cell)
@@ -563,7 +583,7 @@ func place(cell: int) -> void:
         if tutorial == null and int(data.settings.mode) != 2: record_result()
         if not board.win_lines.is_empty(): focus_line(board.win_lines[0])
     refresh(cell)
-    if board.winner != 0 and tutorial == null and int(data.settings.mode) != 2:
+    if board.winner != 0 and tutorial == null:
         call_deferred("show_result_screen")
 func record_result() -> void:
     if board.result_recorded: return
@@ -708,7 +728,7 @@ func modal(title: String) -> VBoxContainer:
     popup.offset_right = -14
     popup.offset_top = 22
     popup.offset_bottom = -22
-    popup.add_theme_stylebox_override("panel",theme_style(Color("fff2da",0.975),24))
+    popup.add_theme_stylebox_override("panel",UiTest.frame(Color("#f9edd5",0.985),24,3))
     popup.modulate.a = 0.0
     popup.create_tween().tween_property(popup,"modulate:a",1.0,0.18)
     var scroll = ScrollContainer.new()
@@ -722,8 +742,16 @@ func modal(title: String) -> VBoxContainer:
     box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     box.add_theme_constant_override("separation",12)
     scroll.add_child(box)
-    label(title,box,24,Color("453329"))
+    var title_label: Label = label(title,box,24,Color("#263c2d"))
+    title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title_label.name = "ZenGoldModalHeading"
     button("Zurück zum Spiel",box,close_modal,true)
+    var line: ColorRect = ColorRect.new()
+    line.name = "ZenGoldDivider"
+    line.color = UiTest.GOLD
+    line.custom_minimum_size.y = 2
+    line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    box.add_child(line)
     return box
 func close_modal() -> void:
     stop_shop_preview()
@@ -1185,8 +1213,7 @@ func show_result_screen() -> void:
     # Called deferred after a real Classic match finishes. A new match cancels it.
     if challenge_active or tutorial != null or board.winner == 0 or popup != null:
         return
-    if int(data.settings.mode) == 2:
-        return
+    # Both local and bot matches may be inspected without resetting the board.
     # Rank-up is already persisted by record_result(); this is visual only.
     # Never replay the ceremony on reopening results or loading a previous rank.
     if bool(last_rank_up.get("rank_up",false)) and not ceremony_done_for_match:
@@ -1224,7 +1251,7 @@ func show_result_screen() -> void:
     popup.anchor_bottom = 0.97
     popup.offset_top = 0
     box.add_theme_constant_override("separation",7)
-    popup.add_theme_stylebox_override("panel", theme_style(Color("342820", 0.985), 25))
+    popup.add_theme_stylebox_override("panel", UiTest.frame(Color("#18291e",0.985),25,3))
     var heading: Label = box.get_child(0) as Label
     box.get_child(1).hide()
     heading.add_theme_color_override("font_color", Color("f8dfaa"))
@@ -1255,8 +1282,21 @@ func show_result_screen() -> void:
     if versus_bot and last_leaf_reward > 0:
         var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    premium_button("Noch eine Partie", box, play_again_after_result, true)
+    var inspect: Button = premium_button("Spielfeld ansehen",box,_inspect_classic_finished_board,true)
+    inspect.name = "InspectClassicFinishedBoard"
+    premium_button("Noch eine Partie", box, play_again_after_result)
     premium_button("Hauptmenü", box, open_menu)
+
+func _inspect_classic_finished_board() -> void:
+    # Same read-only inspection workflow as Zen Ascend 4x4.
+    # Preserve the actual board, four-in-a-row highlight, camera and result.
+    if board.winner == 0: return
+    close_modal()
+    input_control.fingers.clear()
+    input_control.press_cell = -1
+    input_control.dragged = false
+    input_control.mouse_down = false
+    refresh(-1,false)
 
 func play_again_after_result() -> void:
     close_modal()
