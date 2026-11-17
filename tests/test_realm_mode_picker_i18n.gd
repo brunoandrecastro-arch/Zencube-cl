@@ -52,6 +52,8 @@ func run() -> void:
     for language in ["de","en","pt"]:
         for realm in range(4):
             (game.get("data") as Dictionary).settings.language = language
+            var selected: Dictionary = RealmData.state(game.get("data") as Dictionary)
+            selected["selected"] = realm
             game.set("match_realm",realm)
             game.set("realm_story_active",false)
             game.call("show_mode_picker")
