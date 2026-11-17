@@ -1,6 +1,8 @@
 name: Google Play unsigned AAB
 on:
   workflow_dispatch:
+  push:
+    branches: ['release/play-*']
 permissions:
   contents: read
 jobs:
@@ -41,12 +43,22 @@ jobs:
           unzip -joq templates.tpz 'templates/android_source.zip' 'templates/version.txt' -d "$templates_dir"
           printf 'GODOT=%s/Godot_v4.5.1-stable_linux.x86_64\nBUNDLETOOL_JAR=%s/bundletool.jar\n' \
             "$download_dir" "$download_dir" >> "$GITHUB_ENV"
-      - name: Check Chronicles and export the unsigned release bundle
+      - name: Run complete release regression suite
+        run: python3 scripts/run_release_checks.py
+      - name: Export and validate unsigned release bundle
         run: |
-          python3 tests/test_zen_chronicles_i18n.py
           bash scripts/build_play_aab.sh
+      - name: Save release checks and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-2.4-release-checks-${{ github.sha }}
+          path: build/release-checks/
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
-          name: ZenCube-3D-unsigned-${{ github.sha }}
-          path: build/ZenCube-3D-unsigned.aab
+          name: ZenCube-3D-2.4-unsigned-${{ github.sha }}
+          path: |
+            build/ZenCube-3D-unsigned.aab
+            build/release-checks/bundle-verification.txt
           if-no-files-found: error

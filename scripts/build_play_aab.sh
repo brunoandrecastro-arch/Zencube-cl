@@ -17,6 +17,7 @@ if [[ ! -f "$templates/android_source.zip" || ! -f "$android_sdk/platforms/andro
 fi
 
 mkdir -p build
+python3 scripts/check_play_release.py
 exec 9>build/.play-build.lock
 flock -n 9 || { echo 'An Android App Bundle build is already running.' >&2; exit 1; }
 work_dir=$(mktemp -d "$PWD/build/play-output.XXXXXXXX")
@@ -49,6 +50,7 @@ SETTINGS
 
 "$GODOT" --headless --editor --import --quit
 "$GODOT" --headless --path . --export-release 'Android Play' "$work_dir/ZenCube-3D-unsigned.aab"
-python3 scripts/verify_play_bundle.py "$work_dir/ZenCube-3D-unsigned.aab"
+mkdir -p build/release-checks
+python3 scripts/verify_play_bundle.py "$work_dir/ZenCube-3D-unsigned.aab" | tee build/release-checks/bundle-verification.txt
 mv -f -- "$work_dir/ZenCube-3D-unsigned.aab" build/ZenCube-3D-unsigned.aab
 printf '\n%s\n' 'Unsigned release bundle ready: build/ZenCube-3D-unsigned.aab'

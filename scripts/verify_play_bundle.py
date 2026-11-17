@@ -48,12 +48,17 @@ def check_manifest(bundle):
         require(manifest.get(key) == value, f"Unexpected manifest value for {key}")
     sdk = manifest.find("uses-sdk")
     require(sdk is not None and sdk.get(ANDROID + "targetSdkVersion") == "36", "Expected target SDK 36")
-    require(sdk.get(ANDROID + "minSdkVersion") == "26", "Expected minimum SDK 26")
+    require(sdk.get(ANDROID + "minSdkVersion") == "24", "Preserve Android 7 / minimum SDK 24")
     app = manifest.find("application")
     require(app is not None and app.get(ANDROID + "debuggable", "false") == "false", "App is debuggable")
     config = bundletool("dump", "config", f"--bundle={bundle}")
     require("PAGE_ALIGNMENT_16K" in config, "Bundle misses 16 KB page alignment")
-    print(f"{expected['package']} {expected[ANDROID + 'versionName']} ({expected[ANDROID + 'versionCode']}), target SDK 36, 16 KB.")
+    require(app.get(ANDROID + "label") == "ZenCube 3D", "Unexpected application label")
+    require(app.get(ANDROID + "testOnly", "false") == "false", "App is testOnly")
+    require(app.get(ANDROID + "allowBackup", "true") == "false", "Unexpected backup policy change")
+    permissions = {node.get(ANDROID + "name") for node in manifest.findall("uses-permission")}
+    require(permissions == {"android.permission.VIBRATE"}, f"Unexpected Android permissions: {permissions}")
+    print(f"{expected['package']} {expected[ANDROID + 'versionName']} ({expected[ANDROID + 'versionCode']}), min SDK 24, target SDK 36, 16 KB.")
 
 
 def check_native_libraries(archive, entries):
@@ -78,6 +83,10 @@ def check_game_assets(archive, entries):
     assets = {name.removeprefix(ASSET_BASE) for name in entries if name.startswith(ASSET_BASE)}
     for path in ("assets.sparsepck", "_cl_", "project.binary", "story/ZenChronicles.gdc"):
         require(path in assets, f"Missing game resource: {path}")
+    require(not any(name.startswith(("tests/", "reports/", ".github/")) for name in assets), "Development resources included in bundle")
+    command_line = archive.read(ASSET_BASE + "_cl_")
+    require(b"--remote-debug" not in command_line and b"--editor" not in command_line, "Development command line in export")
+    require(b"realm_chronicles_qa" not in archive.read(ASSET_BASE + "project.binary"), "QA project setting in export")
     for scene in ("Main.tscn", "Ascend.tscn"):
         check_remap(archive, assets, scene, ".remap")
 
@@ -85,6 +94,7 @@ def check_game_assets(archive, entries):
         *(ROOT / "story").glob("*.json"),
         *(ROOT / "challenges").glob("*.json"),
         *(ROOT / "assets").glob("*.pcm"),
+        *(ROOT / "assets" / "realm_chronicles").glob("*.json"),
     })
     for source in raw_files:
         relative = source.relative_to(ROOT).as_posix()
@@ -104,6 +114,10 @@ def check_game_assets(archive, entries):
     for relative in sorted(pages | imported_sources):
         check_remap(archive, assets, relative, ".import")
     print(f"Assets verified: {len(pages)} comic pages, {len(imported_sources)} other images/audio files, {len(raw_files)} data files.")
+    bosses = list((ROOT / "assets" / "realm_chronicles").glob("boss_*.json"))
+    themes = list((ROOT / "assets" / "realm_boss_music").glob("*.ogg"))
+    require(len(bosses) == 12 and len(themes) == 12, "Require all 12 HD portraits and exclusive boss themes")
+    print("All 12 HD boss portrait payloads and 12 individual boss themes included; no test resources or QA project setting.")
 
 
 def check_remap(archive, assets, relative, suffix):

@@ -1,0 +1,1 @@
+Novo estilo Sakura-Gold e Zen Ascend Campaign com quatro reinos, doze chefes da história e doze músicas próprias. Pré-visualização dos quatro reinos, início alternado e Nova partida no menu dos chefes. Textos DE/EN/PT melhorados e recuperação de batalhas guardadas. Zen Ascend mantém o desbloqueio por progresso.
