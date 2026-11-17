@@ -24,7 +24,7 @@ func _text(parent: Node, value: String, points: int, tint: Color) -> Label:
     parent.add_child(l)
     return l
 
-func present(kind: String, picture: String, title: String, quote: String, sound_on: bool, songs: Array) -> void:
+func present(kind: String, picture: String, title: String, quote: String, sound_on: bool, songs: Array, reason: String = "", language: String = "en", details: Array = []) -> void:
     layer = 25
     _music_sources = songs.duplicate()
     _root = Control.new()
@@ -67,18 +67,51 @@ func present(kind: String, picture: String, title: String, quote: String, sound_
     column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     column.anchor_left = 0.07
     column.anchor_right = 0.93
-    column.anchor_top = 0.30
-    column.anchor_bottom = 0.75
-    column.add_theme_constant_override("separation",22)
-    column.alignment = BoxContainer.ALIGNMENT_CENTER
+    column.anchor_top = 0.20 if kind == "challenge" else 0.27
+    column.anchor_bottom = 0.83 if kind == "challenge" else 0.78
+    column.add_theme_constant_override("separation",13 if kind == "challenge" else 20)
+    column.alignment = BoxContainer.ALIGNMENT_BEGIN if kind == "challenge" else BoxContainer.ALIGNMENT_CENTER
     _root.add_child(column)
-    _text(column,"✦   NEW REALM UNLOCKED   ✦" if kind == "realm" else "✦   ACHIEVEMENT UNLOCKED   ✦",20,Color("f6e7b6"))
-    var title_label: Label = _text(column,title,32,Color("fff2cf"))
+    var heading: String = "✦   NEW REALM UNLOCKED   ✦" if kind == "realm" else "✦   ACHIEVEMENT UNLOCKED   ✦"
+    if kind == "challenge":
+        heading = "✦   HERAUSFORDERUNGEN ERFÜLLT   ✦" if language == "de" else ("✦   DESAFIOS CONCLUÍDOS   ✦" if language == "pt" else "✦   CHALLENGES UNLOCKED   ✦")
+    elif kind == "achievement":
+        heading = "✦   ERFOLG FREIGESCHALTET   ✦" if language == "de" else ("✦   CONQUISTA DESBLOQUEADA   ✦" if language == "pt" else heading)
+    _text(column,heading,17 if kind == "challenge" else 20,Color("f6e7b6"))
+    var title_label: Label = _text(column,title,27 if kind == "challenge" else 32,Color("fff2cf"))
+    title_label.name = "UnlockTitle"
     title_label.pivot_offset = Vector2(0,24)
     title_label.scale = Vector2(0.92,0.92)
-    _text(column,quote,17,Color("e0e8dc"))
+    if kind == "challenge":
+        var list: ScrollContainer = ScrollContainer.new()
+        list.name = "NewChallengeReasons"
+        list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+        list.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+        list.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+        list.scroll_deadzone = 8
+        list.custom_minimum_size.y = 140
+        column.add_child(list)
+        var entries: VBoxContainer = VBoxContainer.new()
+        entries.add_theme_constant_override("separation",10)
+        entries.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        list.add_child(entries)
+        for task in details:
+            if not task is Dictionary: continue
+            var item: VBoxContainer = VBoxContainer.new()
+            item.add_theme_constant_override("separation",4)
+            entries.add_child(item)
+            _text(item,"✦  " + str(task.get("name","")),18,Color("ffe6ad"))
+            var reason_label: Label = _text(item,str(task.get("reason","")),14,Color("e2e9df"))
+            reason_label.name = "UnlockedReason"
+    else:
+        _text(column,quote,17,Color("e0e8dc"))
+        if not reason.is_empty() and kind == "achievement":
+            var reason_heading: String = "Freigeschaltet weil:" if language == "de" else ("Desbloqueado porque:" if language == "pt" else "Unlocked because:")
+            _text(column,reason_heading,16,Color("f5d89e"))
+            var explanation: Label = _text(column,reason,16,Color("e0e8dc"))
+            explanation.name = "UnlockedReason"
     var skip: Button = Button.new()
-    skip.text = "Continue ›"
+    skip.text = "Weiter ›" if language == "de" else ("Continuar ›" if language == "pt" else "Continue ›")
     skip.custom_minimum_size = Vector2(130,52)
     skip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
     var normal: StyleBoxFlat = StyleBoxFlat.new()
@@ -100,7 +133,8 @@ func present(kind: String, picture: String, title: String, quote: String, sound_
     if sound_on: _player.play()
     _root.create_tween().tween_property(_root,"modulate:a",1.0,0.45)
     _root.create_tween().tween_property(title_label,"scale",Vector2.ONE,1.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-    get_tree().create_timer(DURATION).timeout.connect(close)
+    # Let players read exact achievement reasons before continuing; never auto-dismiss them.
+    if kind == "realm": get_tree().create_timer(DURATION).timeout.connect(close)
 
 func close() -> void:
     if _closed: return
