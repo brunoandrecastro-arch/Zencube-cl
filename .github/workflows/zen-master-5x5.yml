@@ -26,6 +26,9 @@ jobs:
       - name: Verify 5x5 mechanics and standalone playable scene
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_zen_master_5x5.gd
+      - name: Verify every boss has its own realm-themed arena path
+        run: |
+          timeout 70 "$GODOT" --headless --path . --script tests/test_zen_master_stage_catalog.gd
       - name: Verify easy 4x4 Satori victory triggers real mirror break
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_zen_master_bridge.gd
