@@ -48,6 +48,23 @@ def main():
         print(f"[{index}/{len(tests)}] {status.upper()} {path}", flush=True)
         if status == "failed":
             print(log[-7000:], flush=True)
+    # Keep the existing tactical simulator as part of the Play gate as well.
+    start = time.monotonic()
+    simulator = OUT / "zencube-sim"
+    compiled = subprocess.run(["g++", "-O3", "-std=c++17", "tests/simulate.cpp", "-o", str(simulator)],
+                              cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=90)
+    simulation = None
+    if compiled.returncode == 0:
+        simulation = subprocess.run([str(simulator), "reports/lines.json"], cwd=ROOT, text=True,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=90)
+    code = compiled.returncode if simulation is None else simulation.returncode
+    log = compiled.stdout + (simulation.stdout if simulation is not None else "")
+    (OUT / "tactical-simulation.json").write_text(log)
+    games = sum(batch["games"] for batch in json.loads(simulation.stdout)["batches"]) if code == 0 else 0
+    results.append({"test": "tests/simulate.cpp", "status": "passed" if code == 0 and games == 10000 else "failed",
+                    "exit_code": code, "games": games, "seconds": round(time.monotonic() - start, 2)})
+    simulator.unlink(missing_ok=True)
+    print(f"Tactical simulation: {games} games, {results[-1]['status']}", flush=True)
     summary = {"godot": version, "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
                "passed": sum(row["status"] == "passed" for row in results),
                "failed": sum(row["status"] == "failed" for row in results), "checks": results}
