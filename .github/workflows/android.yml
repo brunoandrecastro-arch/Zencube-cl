@@ -165,6 +165,10 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Verify current earned Realm title in Statistics (Celestial after Ember)
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_current_realm_title_ui.gd
       - name: Verify finished 4x4 cube stays rotatable, zoomable and read-only
         if: env.ZENCUBE_UI_TEST == 'true'
         run: |
