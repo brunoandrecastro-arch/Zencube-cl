@@ -94,6 +94,42 @@ const SECRET_REASONS_PT: Dictionary = {
     "keeper_awareness":"Vence o bot Grande Mestre numa partida do Satori Realm."
 }
 
+# Spoken and written achievement quotes follow the selected game language.
+# Keys/conditions and unlock logic remain unchanged; the English originals
+# are still used as the authoritative fallback.
+const QUOTE_LOCALES: Dictionary = {
+    "shadow_walker": ["Jede lange Reise beginnt dort, wo das Licht endet.", "Toda a longa viagem começa onde a luz termina."],
+    "keeper_silence": ["Stille ist nicht leer. Sie ist voller Antworten.", "O silêncio não é vazio. Está cheio de respostas."],
+    "moon_disciple": ["Der Mond erhellt Wege, die am Tag verborgen bleiben.", "A lua ilumina caminhos invisíveis durante o dia."],
+    "veil_breaker": ["Hinter dem Schleier wird aus Angst Konzentration.", "Para além do véu, o medo transforma-se em concentração."],
+    "ember_initiate": ["Ein einziger Funke kann tausend Schritte erleuchten.", "Uma única faísca pode iluminar mil passos."],
+    "flame_disciple": ["Die Flamme prüft die Entschlossenheit, nicht die Eile.", "A chama testa a determinação, não a pressa."],
+    "temple_challenger": ["Tritt dem Feuer entgegen und lass dich von deinem Ziel leiten.", "Enfrenta o fogo e deixa que o propósito te guie."],
+    "fire_strategist": ["Ein ruhiges Herz beherrscht selbst das wildeste Feuer.", "Um coração sereno domina até o fogo mais feroz."],
+    "sky_seeker": ["Wer den Himmel sucht, muss zuerst lernen, stillzustehen.", "Quem procura o céu aprende primeiro a ficar imóvel."],
+    "cloud_disciple": ["Wolken ziehen weiter. Klarheit bleibt.", "As nuvens passam. A clareza permanece."],
+    "light_weaver": ["Ein einziger Lichtfaden verbindet ferne Welten.", "Um único fio de luz une mundos distantes."],
+    "celestial_adept": ["Den weitesten Blick hat der ruhigste Geist.", "A visão mais ampla pertence à mente mais serena."],
+    "mind_awakened": ["Achtsamkeit beginnt, wenn die Ablenkung endet.", "A consciência começa quando a distração termina."],
+    "stillness_walker": ["Ohne Eile zu handeln heißt, den Augenblick zu meistern.", "Agir sem pressa é dominar o momento."],
+    "satori_adept": ["Die Erkenntnis liegt zwischen zwei Atemzügen.", "A compreensão chega entre duas respirações."],
+    "keeper_awareness": ["Wer das Ganze sieht, fürchtet keinen einzelnen Zug.", "Quem vê o todo não teme uma única jogada."],
+    "main_shadow": ["Selbst in der Dunkelheit bleibt dein Weg klar.", "Mesmo na escuridão, o teu caminho mantém-se claro."],
+    "main_ember": ["Selbst das stärkste Feuer beugt sich einem geduldigen Geist.", "Até a chama mais intensa se curva perante uma mente paciente."],
+    "main_celestial": ["Über den Wolken findet jeder Zug seine Bedeutung.", "Acima das nuvens, cada jogada encontra o seu sentido."],
+    "main_satori": ["Der stille Geist sieht über jede Kante hinaus.", "A mente serena vê para além de todas as arestas."],
+}
+
+static func quote_for(item: Dictionary, realm: int, language: String) -> String:
+    var main: bool = str(item.get("id","")) == "main"
+    var key: String = "main_" + ["shadow","ember","celestial","satori"][clampi(realm,0,3)] if main else str(item.get("id",""))
+    var original: String = main_quote(realm) if main else str(item.get("quote",""))
+    if language == "en": return original
+    var candidates: Variant = QUOTE_LOCALES.get(key,[])
+    if candidates is Array and candidates.size() == 2:
+        return str(candidates[0] if language == "de" else candidates[1])
+    return original
+
 static func unlock_reason(item: Dictionary, realm: int, language: String) -> String:
     if str(item.get("id","")) == "main":
         if language == "de": return "Alle 8 Herausforderungen in %s abgeschlossen." % ZenAscendRealms.realm_name(realm,language)
