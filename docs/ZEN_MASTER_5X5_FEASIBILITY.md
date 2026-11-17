@@ -1,6 +1,6 @@
 # Zen Master 5×5 — Technischer Machbarkeitsbericht & isolierter Prototyp
 
-**Status:** erste technische Spielszene, kein Android-Release, keine Store-Anbindung. 
+**Status:** erste technische Spielszene mit eigener CI-Test-APK; kein Google-Play-Release und keine Store-Anbindung. 
 **Branch:** `prototype/zen-master-5x5` (von `main` abgeleitet).
 **Godot:** 4.5.1.
 
@@ -29,7 +29,7 @@
 - `ZenMasterPrototype.tscn`: isoliert startbare Szene, **nicht ins Hauptmenü eingebaut**, keine Änderung bestehender Spielstände.
 - `tests/test_zen_master_5x5.gd`: reale Godot-Prüfungen der Linien und der Szene.
 
-**Lokal in Godot:** `ZenMasterPrototype.tscn` öffnen und „Szene starten“ wählen.
+**Android-Smartphone:** GitHub Actions baut eine separat installierbare Debug-APK mit dem nur für Tests verwendeten Paketnamen `com.zencube.game.zenmaster`. Es ersetzt weder die aktuelle Play-App `com.zencube.game.play` noch den normalen Classic-Debug-Build `com.zencube.game`. Der Workflow ändert `project.godot` und die Android-Debug-Exportkonfiguration **nur im temporären CI-Arbeitsverzeichnis**, nicht als Commit. GitHub Actions → `Zen Master 5x5 prototype checks` → erfolgreich gelaufenen Build öffnen → Artefakt `ZenMaster-5x5-Android-Test-APK` herunterladen, ZIP entpacken und APK auf Android installieren. Noch keine visuelle Gerätetest-Freigabe.\n\n**Lokal in Godot:** `ZenMasterPrototype.tscn` öffnen und „Szene starten“ wählen.
 
 **CLI:** `godot --path . res://ZenMasterPrototype.tscn`
 
@@ -46,4 +46,4 @@
 
 ## Release-Schutz
 
-Diese erste Iteration enthält **keinen** App-Menüeintrag, **keine** Play-AAB, **keine** Aktualisierung von `main` oder PR #3, **keinen** neuen Paketnamen und **keine** Google-Play-Veröffentlichung. Testszene im eigenen Branch.
+Diese erste Iteration enthält **keinen** App-Menüeintrag, **keine** Play-AAB, **keine** Aktualisierung von `main` oder PR #3, **keine** Änderung der existierenden Paketnamen und **keine** Google-Play-Veröffentlichung. Testszene im eigenen Branch.
