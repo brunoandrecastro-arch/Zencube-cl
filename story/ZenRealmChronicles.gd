@@ -368,24 +368,43 @@ static func _moves(cells: Array, lines: Array, player: int) -> Array:
     return free
 
 static func choose_move(cells: Array, lines: Array, stage: int, last_player_cell: int = -1) -> int:
-    # All bosses use exactly their Realm's fixed Medium/Hard baseline.
-    # Their personality is a tactical *preference*, never a weaker tier.
+    # The three Shadow bosses keep fixed Medium. Small personality-specific
+    # adjustments make decisions more coherent without raising the Realm tier.
+    # Later Realm bosses keep their original Hard / Master / Grandmaster AI.
     var level: int = boss_level(stage)
     var wins: Array = _moves(cells,lines,2)
     if not wins.is_empty(): return int(wins[0])
     var blocks: Array = _moves(cells,lines,1)
     if not blocks.is_empty():
-        if stage >= 6 or stage in [0,2,4,5] or randf() < (0.84 if level == 1 else 0.92):
+        if stage >= 6 or stage in [0,2,4,5] or randf() < (0.91 if stage == 1 else 0.92):
             return int(blocks[0])
     var standard: int = ZenAscendRealmBot.next_move(cells,lines,2,level,stage < 3)
     if standard < 0: return -1
-    # Mirror Novice: genuine mirror of the player's last square when legal.
-    if stage == 1 and last_player_cell >= 0 and randf() < 0.63:
+    # Mist Guardian: on a few close strategic choices, gently favor the
+    # square that also denies the player useful lines (no new search tier).
+    if stage == 0 and randf() < 0.28:
+        var own_baseline: float = ZenAscendRealmBot._score(cells,lines,2,standard)
+        var best_guard: int = standard
+        var best_defense: float = ZenAscendRealmBot._score(cells,lines,1,standard)
+        for candidate in range(cells.size()):
+            if int(cells[candidate]) != 0: continue
+            var own: float = ZenAscendRealmBot._score(cells,lines,2,candidate)
+            if own < own_baseline - 6.0: continue
+            var defense: float = ZenAscendRealmBot._score(cells,lines,1,candidate)
+            if defense > best_defense + 10.0:
+                best_defense = defense
+                best_guard = candidate
+        return best_guard
+    # Mirror Novice keeps mirroring, but rejects clearly weaker mirror moves.
+    if stage == 1 and last_player_cell >= 0 and randf() < 0.53:
         var face: int = int(last_player_cell / 16)
         var row: int = int(last_player_cell % 16 / 4)
         var col: int = last_player_cell % 4
         var opposite: int = face * 16 + (3-row) * 4 + (3-col)
-        if int(cells[opposite]) == 0: return opposite
+        if int(cells[opposite]) == 0:
+            var baseline: float = ZenAscendRealmBot._score(cells,lines,2,standard)
+            var mirror_value: float = ZenAscendRealmBot._score(cells,lines,2,opposite)
+            if mirror_value >= baseline - 10.0: return opposite
     # Banner Guardian is a patient defensive Hard bot: when no immediate
     # win or forced block exists, he weighs threats to *both* players and
     # slightly prefers edge guard positions (including 4x4 face corners).
@@ -472,13 +491,15 @@ static func choose_move(cells: Array, lines: Array, stage: int, last_player_cell
                 best_priority = priority
                 preferred_move = candidate
         return preferred_move
-    # Veil Monk adds strategic fork preference at Medium, avoiding a forced
-    # full difficulty bump to Master.
-    if stage == 2 and randf() < 0.65:
+    # Veil Monk: slightly more likely to form a genuine two-threat fork,
+    # while retaining the Medium baseline and rejecting much weaker moves.
+    if stage == 2 and randf() < 0.72:
         var best_cell: int = standard
-        var best_value: float = -1.0
+        var best_value: float = ZenAscendRealmBot._fork_score(cells,lines,2,standard)
+        var own_baseline: float = ZenAscendRealmBot._score(cells,lines,2,standard)
         for cell in range(cells.size()):
             if int(cells[cell]) != 0: continue
+            if ZenAscendRealmBot._score(cells,lines,2,cell) < own_baseline - 10.0: continue
             var value: float = ZenAscendRealmBot._fork_score(cells,lines,2,cell)
             if value > best_value: best_value = value; best_cell = cell
         if best_value >= 25.0: return best_cell
