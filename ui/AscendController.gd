@@ -1221,7 +1221,14 @@ func _realm_story_set_stage(stage: int) -> void:
     if not RealmStory.valid_game(old): old = {}
     if old.is_empty():
         cells.fill(0)
-        turn = 1
+        # Each boss alternates its first mover based on stage order and retries.
+        # Persisted attempt counters keep alternation across app restarts.
+        var starts: Dictionary = realm_story_progress.get("starts",{})
+        var key: String = str(realm_story_stage)
+        var attempt: int = int(starts.get(key,0))
+        turn = 1 if (realm_story_stage + attempt) % 2 == 0 else 2
+        starts[key] = attempt+1
+        realm_story_progress.starts = starts
         result = 0
     else:
         cells = old.cells.duplicate()
@@ -1279,6 +1286,10 @@ func _realm_story_present_intro() -> void:
     _realm_story_art(body,stage,224)
     text(body,RealmStory.text_for(lang(),"intro_%d" % stage),15)
     text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
+    var starter_info: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
+    if lang() == "en": starter_info = "You start (X)" if turn == 1 else "Boss starts (O)"
+    elif lang() == "pt": starter_info = "Começas (X)" if turn == 1 else "O chefe começa (O)"
+    text(body,starter_info,14,Color("#f0dfb3"))
     action(body,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin,true)
     action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _open_realm_dialog(parts)
