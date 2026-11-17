@@ -54,7 +54,7 @@ if [[ "$campaign_test" == true ]]; then
   sed -i "/^\[preset\.0\.options\]$/,/^\[/ {
     s|^package/unique_name=.*|package/unique_name=\"$campaign_package\"|
     s|^package/name=.*|package/name=\"$campaign_label\"|
-    s|^version/name=.*|version/name="2.0.1"|
+    s|^version/name=.*|version/name=\"2.0.1\"|
     s|^version/code=.*|version/code=24|
   }" export_presets.cfg
 fi
