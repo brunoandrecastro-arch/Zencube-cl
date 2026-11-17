@@ -37,6 +37,7 @@ func run() -> void:
     await process_frame
     check(int((game.get("tiles") as Array).size()) == 150, "150 interactive 3D cells")
     check(int((game.get("current_stage") as int)) == 0, "start on first Void boss")
+    check(int(game.get("first_player")) == 1, "stage 1 starts with the player")
     check(bool(game.get("story_layer").visible), "boss intro visible before battle")
     var distinct: Dictionary = {}
     var portraits: Dictionary = {}
@@ -56,6 +57,20 @@ func run() -> void:
         check(game.get("cells").size() == 150, "boss " + str(i) + " uses 5x5 board")
     check(distinct.size() == 16, "sixteen distinct loaded arena textures")
     check(portraits.size() == 16, "sixteen distinct loaded portrait textures")
+    # The first mover alternates across stages AND retries, not based on a random draw.
+    game.set("attempts_by_stage", {})
+    game.call("_choose_stage",0,false)
+    check(int(game.get("first_player")) == 1, "stage 1: player starts")
+    game.call("_restart_stage")
+    check(int(game.get("first_player")) == 2, "same stage retry: boss starts")
+    game.call("_restart_stage")
+    check(int(game.get("first_player")) == 1, "second retry: player starts again")
+    game.call("_choose_stage",1,false)
+    check(int(game.get("first_player")) == 2, "stage 2: boss starts")
+    game.call("_restart_stage")
+    check(int(game.get("first_player")) == 1, "stage 2 retry: player starts")
+    game.call("_choose_stage",2,false)
+    check(int(game.get("first_player")) == 1, "stage 3: player starts")
     var empty: Array = []
     empty.resize(150)
     empty.fill(0)
