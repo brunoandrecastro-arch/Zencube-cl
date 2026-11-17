@@ -33,6 +33,8 @@ var details_label: Label
 var rank_label: Label
 var quote_label: Label
 var instructions: Label
+var rules_button: Button
+var result_review_button: Button
 var layer: Control
 var menu_dialog: ConfirmationDialog
 var world_music: AudioStreamPlayer
@@ -345,7 +347,10 @@ func build_interface() -> void:
     row.add_theme_constant_override("separation",6)
     column.add_child(row)
     action(row,Z("Neue Partie"),show_mode_picker)
-    action(row,Z("Regeln ansehen"),show_rules)
+    rules_button = action(row,Z("Regeln ansehen"),show_rules)
+    result_review_button = action(row,_result_button_label(),show_match_result)
+    result_review_button.name = "ShowFinishedResult"
+    result_review_button.visible = false
     var realm_actions: HBoxContainer = HBoxContainer.new()
     realm_actions.add_theme_constant_override("separation",6)
     column.add_child(realm_actions)
@@ -408,6 +413,25 @@ func pname(owner: int) -> String:
     return str(names[clampi(owner,0,1)])
 func move_count() -> int:
     return Mode.CELLS - cells.count(0)
+
+# Finished matches are read-only, not frozen: let players inspect every face.
+func _review_board_label() -> String:
+    return "Spielfeld ansehen" if lang() == "de" else ("Ver tabuleiro" if lang() == "pt" else "Inspect board")
+
+func _result_button_label() -> String:
+    return "Ergebnis anzeigen" if lang() == "de" else ("Ver resultado" if lang() == "pt" else "Show result")
+
+func _finished_board_hint() -> String:
+    return "Partie beendet · Drehen und zoomen möglich · Keine weiteren Züge" if lang() == "de" else ("Partida terminada · Podes rodar e ampliar · Sem novas jogadas" if lang() == "pt" else "Match finished · Rotate or zoom to inspect · No more moves")
+
+func _review_finished_board(dialog: Control) -> void:
+    if result == 0: return
+    _close_realm_dialog(dialog)
+    touch_positions.clear()
+    touched_cell = -1
+    dragged = false
+    mouse_pressed = false
+
 func draw() -> void:
     if cube == null: return
     var wins: Array = []
@@ -430,6 +454,10 @@ func draw() -> void:
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
+    if is_instance_valid(rules_button): rules_button.visible = result == 0
+    if is_instance_valid(result_review_button): result_review_button.visible = result != 0
+    if is_instance_valid(instructions):
+        instructions.text = _finished_board_hint() if result != 0 else Z("Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen")
     if realm_story_active:
         rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
         if result == 0:
@@ -447,21 +475,23 @@ func _pick_position(pos: Vector2) -> int:
     return cube.pick(inside * 960.0)
 
 func cube_input(event: InputEvent) -> void:
-    if result != 0 or busy: return
+    # Keep rotation and pinch-to-zoom after victory, defeat or draw. Only
+    # marking cells is prohibited; play() also enforces the immutable result.
+    if busy: return
     if event is InputEventScreenTouch:
         heard_touch = true
         if event.pressed:
             touch_positions[event.index] = event.position
             if touch_positions.size() == 1:
                 touch_down = event.position
-                touched_cell = _pick_position(event.position)
+                touched_cell = _pick_position(event.position) if result == 0 else -1
                 dragged = false
             else: dragged = true
         else:
             var single: bool = touch_positions.size() == 1
             if single and not dragged and event.position.distance_to(touch_down) < 13.0:
                 var end_cell: int = _pick_position(event.position)
-                if touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
+                if result == 0 and touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
             touch_positions.erase(event.index)
             if touch_positions.is_empty(): touched_cell = -1
     elif event is InputEventScreenDrag:
@@ -491,7 +521,7 @@ func cube_input(event: InputEvent) -> void:
                 touch_down = event.position
                 touched_cell = _pick_position(event.position)
                 dragged = false
-            elif not dragged and event.position.distance_to(touch_down) < 13.0:
+            elif result == 0 and not dragged and event.position.distance_to(touch_down) < 13.0:
                 var end_cell: int = _pick_position(event.position)
                 if touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
     elif event is InputEventMouseMotion and mouse_pressed and not heard_touch:
@@ -1164,7 +1194,9 @@ func show_match_result() -> void:
     if not last_realm_awards.get("new_tasks",[]).is_empty():
         if Achievements.main_title(data,match_realm) != "—":
             text(info,L("rank") + ": " + Achievements.main_title(data,match_realm),15)
-    action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog),true)
+    var inspect: Button = action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    inspect.name = "InspectFinishedBoard"
+    action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog))
     action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
 
@@ -1343,6 +1375,8 @@ func _realm_story_result() -> void:
     else:
         _realm_story_art(body,realm_story_stage,170)
     text(body,RealmStory.text_for(lang(),key),16)
+    var inspect: Button = action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    inspect.name = "InspectFinishedBoard"
     if won:
         action(body,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
     else:
