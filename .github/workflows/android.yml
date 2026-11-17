@@ -165,6 +165,10 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Verify modest Shadow boss tuning in the separate UI Test
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: |
+          timeout 60 "$GODOT" --headless --path . --script tests/test_shadow_boss_ui_tuning.gd
       - name: Ember Temple – three real boss battles, chapter finale and QA-only gate
         run: |
           timeout 110 "$GODOT" --headless --path . --script tests/test_ember_chapter.gd
