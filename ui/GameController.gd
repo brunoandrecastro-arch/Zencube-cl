@@ -1916,6 +1916,8 @@ func open_settings() -> void:
     )
     box.add_child(vibration)
     var hints = CheckButton.new()
+    hints.name = "SettingsHints"
+    UiTest.settings_switch(hints)
     hints.text = T("Gewinnfelder als Hilfe zeigen")
     hints.button_pressed = bool(data.settings.hints)
     hints.toggled.connect(func(enabled):
