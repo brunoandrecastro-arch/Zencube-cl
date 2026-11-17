@@ -9,6 +9,10 @@ var skin: Dictionary = {}
 var skin_texture: Texture2D
 var active_cells: Array = []
 var winner_cells: Array = []
+const BossSkins = preload("res://core/ZenRealmBossSkins.gd")
+var boss_skin_id: int = -1
+var boss_skin_texture: Texture2D
+var boss_skin_cache: Dictionary = {}
 func _ready() -> void:
     pivot = Node3D.new()
     add_child(pivot)
@@ -87,19 +91,41 @@ func set_skin(index: int) -> void:
     var skin_index: int = clampi(index,0,ZenCollection.SKINS.size()-1)
     skin = ZenCollection.SKINS[skin_index]
     skin_texture = load("res://assets/skins/skin_%02d.webp" % skin_index) as Texture2D
-    if pivot != null and pivot.has_node("CubeCore"):
-        var core: MeshInstance3D = pivot.get_node("CubeCore") as MeshInstance3D
-        core.material_override = mat(Color(str(skin.core)))
+    _apply_core_skin()
     repaint(active_cells,winner_cells)
 
+func set_boss_skin(index: int) -> void:
+    if index < 0 or index >= BossSkins.PROFILES.size():
+        return
+    boss_skin_id = index
+    if not boss_skin_cache.has(index):
+        boss_skin_cache[index] = BossSkins.make_surface(index)
+    boss_skin_texture = boss_skin_cache[index]
+    _apply_core_skin()
+    repaint(active_cells,winner_cells)
+
+func clear_boss_skin() -> void:
+    boss_skin_id = -1
+    boss_skin_texture = null
+    _apply_core_skin()
+    repaint(active_cells,winner_cells)
+
+func _apply_core_skin() -> void:
+    if pivot == null or not pivot.has_node("CubeCore"): return
+    var core: MeshInstance3D = pivot.get_node("CubeCore") as MeshInstance3D
+    var core_color: Color = Color(str(BossSkins.get_profile(boss_skin_id).core)) if boss_skin_id >= 0 else Color(str(skin.core))
+    core.material_override = mat(core_color)
+
 func _tile_mat(face_index: int, highlight: bool) -> StandardMaterial3D:
-    var base: Color = Color(str(skin.faces[face_index]))
+    var palette: Dictionary = BossSkins.get_profile(boss_skin_id) if boss_skin_id >= 0 else skin
+    var base: Color = Color(str(palette.faces[face_index]))
     if highlight: base = base.lightened(0.32)
     var m: StandardMaterial3D = mat(base)
-    m.metallic = float(skin.metal)
-    m.roughness = float(skin.rough)
+    m.metallic = float(palette.metal) if boss_skin_id >= 0 else float(skin.metal)
+    m.roughness = float(palette.rough) if boss_skin_id >= 0 else float(skin.rough)
     m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-    if skin_texture != null: m.albedo_texture = skin_texture
+    var texture: Texture2D = boss_skin_texture if boss_skin_id >= 0 else skin_texture
+    if texture != null: m.albedo_texture = texture
     return m
 
 func _rod(parent: Node3D, from: Vector3, to: Vector3, color: Color, width: float) -> void:

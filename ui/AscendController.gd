@@ -6,12 +6,15 @@ const Locale = preload("res://core/ZenLocalization.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const WorldMusic = preload("res://core/ZenWorldMusic.gd")
 const RealmMusic = preload("res://core/ZenRealmMusic.gd")
+const BossMusic = preload("res://core/ZenRealmBossMusic.gd")
 const FullyAware = preload("res://ui/ZenFullyAwareCeremony.gd")
 const Achievements = preload("res://core/ZenAscendAchievements.gd")
 const UnlockCeremony = preload("res://ui/ZenUnlockCeremony.gd")
 const RealmPortal = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
+const RealmStory = preload("res://story/ZenRealmChronicles.gd")
+const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
 var data: Dictionary = {}
 var lines: Array = []
@@ -53,6 +56,13 @@ var touched_cell: int = -1
 var dragged: bool = false
 var mouse_pressed: bool = false
 var heard_touch: bool = false
+var realm_story_active: bool = false
+var realm_story_progress: Dictionary = {}
+# Prevent delayed bot replies from bleeding into later normal/Chronicles matches.
+var match_generation: int = 0
+var realm_story_stage: int = 0
+var realm_story_last_human: int = -1
+var realm_story_generation: int = 0
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -100,6 +110,10 @@ func _ready() -> void:
     cube.set_skin(int(data.economy.get("equipped",0)))
     start_world_music()
     draw()
+    if ZenChronicles.consume_realm_story_launch():
+        # Scene is loaded; do not toggle normal 4x4 help_seen or rankings.
+        call_deferred("start_realm_story")
+        return
     # The explanation is guaranteed on first entry, including in the test build.
     if not bool(data.ascend.help_seen):
         data.ascend.help_seen = true
@@ -111,6 +125,12 @@ func _ready() -> void:
 # Existing shop IDs 0..13 always remain unchanged. In Base mode 4x4 uses
 # its own realm soundtrack; a manually owned track overrides it everywhere.
 func desired_realm_stream() -> AudioStream:
+    # Twelve original boss themes take precedence during the 4x4 story,
+    # independent of which Shop track the player has equipped. Outside a boss
+    # match, the original Realm/Shop choice is restored unchanged.
+    if realm_story_active:
+        var battle_theme: AudioStream = BossMusic.stream_for(realm_story_stage)
+        if battle_theme != null: return battle_theme
     if MusicPolicy.mode(data) == "base":
         return RealmMusic.stream_for(realm_index())
     var selected: int = MusicPolicy.selected_track(data)
@@ -370,6 +390,9 @@ func zen_ascend_bot_name() -> String:
     return "Zen Ascend Bot · " + _bot_difficulty_name()
 
 func show_ascend_menu() -> void:
+    if realm_story_active:
+        _realm_story_menu()
+        return
     var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",520)
     var body: VBoxContainer = parts.box
     action(body,Z("Neue Partie"),show_mode_picker,true)
@@ -409,6 +432,12 @@ func draw() -> void:
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
+    if realm_story_active:
+        rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
+        if result == 0:
+            status_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage) if busy else RealmStory.text_for(lang(),"story")+" · "+str(move_count())+"/96"
+        quote_label.text = RealmStory.text_for(lang(),"react_%d" % realm_story_stage)
+        details_label.text = RealmStory.text_for(lang(),"skin")+" · "+str(move_count())+"/96"
 
 func _pick_position(pos: Vector2) -> int:
     if cube_surface == null or cube == null: return -1
@@ -472,7 +501,11 @@ func cube_input(event: InputEvent) -> void:
         if dragged: cube.rotate_cube(event.relative)
 
 func start_game(bot: bool, level: int = -1) -> void:
+    if realm_story_active:
+        _realm_story_retry()
+        return
     against_bot = bot
+    match_generation += 1
     # Explicit level choices never override fixed Realm difficulty.
     match_realm = realm_index()
     bot_level = Realms.fixed_bot_level(match_realm)
@@ -485,13 +518,26 @@ func start_game(bot: bool, level: int = -1) -> void:
     turn = 1
     owners = [0,1] if bot else [int(data.ascend.next_start),1-int(data.ascend.next_start)]
     busy = false
+    if bot:
+        # Alternate real matches with the Realm bot, including rematches.
+        # Persist across sessions; puzzle challenges are not bot matches.
+        var count: int = int(data.ascend.get("normal_bot_start_counter",0))
+        turn = 1 if count % 2 == 0 else 2
+        data.ascend.normal_bot_start_counter = count+1
+        SaveManager.save_data(data)
     cube.reset_view()
     draw()
+    if bot and turn == 2:
+        busy = true
+        draw()
+        call_deferred("bot_turn")
 
 func play(cell: int) -> void:
     if result != 0 or busy or cell < 0 or cell >= Mode.CELLS or int(cells[cell]) != 0: return
     if against_bot and turn == 2: return
+    if realm_story_active: realm_story_last_human = cell
     _commit(cell)
+    if realm_story_active and result == 0: _realm_story_save()
     if against_bot and result == 0 and turn == 2:
         busy = true
         draw()
@@ -510,14 +556,31 @@ func _commit(cell: int) -> void:
     draw()
 
 func bot_turn() -> void:
-    await get_tree().create_timer(0.26).timeout
-    if not is_inside_tree() or result != 0 or not against_bot: return
-    var cell: int = RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)
+    var started_match: int = match_generation
+    var generation: int = realm_story_generation
+    var began_in_story: bool = realm_story_active
+    var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55,0.44,0.55,0.75,0.88,0.74,1.05][clampi(realm_story_stage,0,11)] if realm_story_active else 0.26
+    await get_tree().create_timer(delay).timeout
+    if not is_inside_tree() or result != 0 or not against_bot or started_match != match_generation: return
+    # After leaving a story, realm_story_active becomes false. Check the
+    # launch context TOO, otherwise an awaited story bot could continue on
+    # the restored ordinary 4x4 board after the player has left.
+    if began_in_story and (not realm_story_active or generation != realm_story_generation): return
+    if not began_in_story and realm_story_active: return
+    var cell: int = RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)
     busy = false
     if cell >= 0: _commit(cell)
+    if realm_story_active and result == 0: _realm_story_save()
     draw()
 
 func finish() -> void:
+    if realm_story_active:
+        if recorded: return
+        recorded = true
+        busy = false
+        _realm_story_save()
+        call_deferred("_realm_story_result")
+        return
     if recorded: return
     recorded = true
     Mode.ensure(data)
@@ -560,7 +623,7 @@ func finish() -> void:
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":Achievements.MAIN_TITLES[match_realm],"quote":Achievements.main_quote(match_realm)})
         # Realm access may unlock earlier, but AUTOMATIC travel requires all 8
         # challenges completed in the current Realm. Once-only persisted gate.
-        if match_realm < 3 and Realms.count(data,match_realm) == 8 and Realms.unlocked(data,match_realm+1):
+        if Realms.ready_for_breakthrough(data,match_realm):
             var journey: Dictionary = Realms.state(data)
             if not journey.get("auto_transitions") is Dictionary:
                 journey["auto_transitions"] = {}
@@ -657,6 +720,9 @@ func _start_picker_after_rules(dialog: Control) -> void:
     show_mode_picker()
 
 func show_mode_picker() -> void:
+    if realm_story_active:
+        _realm_story_menu()
+        return
     var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
     var dialog: Control = parts.dialog
     var body: VBoxContainer = parts.box
@@ -705,6 +771,9 @@ func show_statistics() -> void:
     _open_realm_dialog(parts)
 
 func return_home() -> void:
+    if realm_story_active:
+        _realm_story_leave()
+        return
     if get_tree() != null: get_tree().change_scene_to_file("res://Main.tscn")
 
 # ---- Standalone 4x4 Realms UI; all original Classic screens remain untouched. ----
@@ -726,6 +795,7 @@ func _progress_meter(parent: Node, current: int, goal: int) -> void:
     parent.add_child(bar)
 
 func realm_index() -> int:
+    if realm_story_active: return int(RealmStory.chapter(realm_story_stage))
     return int(Realms.state(data).selected)
 
 func _realm_dialog(title: String, height: int = 660) -> Dictionary:
@@ -784,7 +854,7 @@ func _realm_dialog(title: String, height: int = 660) -> Dictionary:
     back.custom_minimum_size.y = 53
     active_realm_dialog = root
     active_realm_scroll = scroll
-    return {"dialog":root,"box":content,"scroller":scroll}
+    return {"dialog":root,"box":content,"scroller":scroll,"back_button":back,"frame":frame}
 
 func _open_realm_dialog(items: Dictionary) -> void:
     # An in-scene overlay is immediately visible, already sized to the viewport.
@@ -795,11 +865,52 @@ func _realm_unlocked_hint(realm: int) -> String:
     return Realms.missing_reason(data,realm,lang())
 
 func show_realms() -> void:
+    if realm_story_active:
+        _realm_story_menu()
+        return
     Realms.ensure(data)
     var ui_parts: Dictionary = _realm_dialog("Zen Ascend · " + L("realms"))
     var body: VBoxContainer = ui_parts.box
     text(body,L("subtitle"),15,Color("567b72"))
     text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
+    # Realm Chronicles is a separate, playable 4x4 *story*, not a fifth realm.
+    # Keep the four normal Realm cards (and their gameplay/unlock rules) below.
+    var story_progress: Dictionary = RealmStory.load_progress()
+    var story_stage: int = clampi(int(story_progress.get("stage",0)),0,RealmStory.LAST_STAGE)
+    var story_card: PanelContainer = PanelContainer.new()
+    story_card.name = "RealmChroniclesCampaignCard"
+    story_card.add_theme_stylebox_override("panel",style(Color("34443e",0.98),18))
+    body.add_child(story_card)
+    var story_column: VBoxContainer = VBoxContainer.new()
+    story_column.add_theme_constant_override("separation",8)
+    story_card.add_child(story_column)
+    text(story_column,"📖 " + RealmStory.text_for(lang(),"realm_card_title"),20,Color("f9dba6"))
+    text(story_column,RealmStory.text_for(lang(),"realm_card_subtitle"),14,Color("e0d5b9"))
+    # Show the progression from Shadow to Satori in one visually coherent card.
+    var story_previews: HBoxContainer = HBoxContainer.new()
+    story_previews.name = "RealmChroniclesFourRealmPreviews"
+    story_previews.add_theme_constant_override("separation",3)
+    story_column.add_child(story_previews)
+    for chapter_id in range(4):
+        var preview: TextureRect = TextureRect.new()
+        preview.texture = load(RealmStory.CHAPTER_ART[chapter_id]) as Texture2D
+        preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        preview.custom_minimum_size = Vector2(0,74)
+        preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        story_previews.add_child(preview)
+    text(story_column,RealmStory.text_for(lang(),"story") + " · %d/%d " % [story_stage,RealmStory.LAST_STAGE] + RealmStory.text_for(lang(),"realm_card_bosses"),14,Color("d1ead3"))
+    if story_stage >= RealmStory.LAST_STAGE:
+        text(story_column,RealmStory.text_for(lang(),"realm_story_completed"),14,Color("f0d99c"))
+    var open_story: Button = action(story_column,RealmStory.text_for(lang(),"realm_card_open"),_open_realm_chronicles_from_realms,true)
+    open_story.name = "RealmChroniclesCampaignOpen"
+    # Debug build ONLY: inspect the real glass-break ceremony without changing
+    # Challenges, boss victories, unlock flags, ranks or save files.
+    if RealmStory.qa_mode():
+        var preview_label: String = "🪞 Spiegelbruch testen (Test-APK)" if lang() == "de" else ("🪞 Testar vidro partido (APK de teste)" if lang() == "pt" else "🪞 Preview mirror shatter (test APK)")
+        var preview: Button = action(story_column,preview_label,_preview_mirror_shatter_qa,true)
+        preview.name = "RealmMirrorShatterPreviewQA"
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -818,7 +929,9 @@ func show_realms() -> void:
         thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
         column.add_child(thumb)
         var amount: int = Realms.count(data,i)
+        var boss_wins: int = Realms.completed_story_bosses(i)
         text(column,L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
+        text(column,("Story-Bosse" if lang()=="de" else "Chefes da história" if lang()=="pt" else "Story bosses") + ": %d/3" % boss_wins,14,Color("#e8d1a5"))
         var rank_name: String = Realms.title_for_realm(data,i,lang())
         if rank_name != "—": text(column,rank_name,14,Color("e2ca8c"))
         if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
@@ -833,6 +946,27 @@ func show_realms() -> void:
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
 
+func _preview_mirror_shatter_qa() -> void:
+    if not RealmStory.qa_mode(): return
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    var preview: ZenRealmTravelCeremony = RealmPortal.new()
+    add_child(preview)
+    preview.finished.connect(func():
+        if is_inside_tree(): call_deferred("show_realms")
+    )
+    preview.present(Realms.REALM_ART[0],Realms.REALM_ART[1],
+        Realms.realm_name(1,lang()),true,bool(data.settings.get("sound",true)),
+        [world_music],lang())
+
+func _open_realm_chronicles_from_realms() -> void:
+    # The button is inside a modal; close it before opening the book. Returning
+    # from the book goes back to the four Realm cards, not the main library.
+    if realm_story_active: return
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_realm_story_overview(true)
+
 func _show_realm_requirements(realm: int) -> void:
     var parts: Dictionary = _realm_dialog(Realms.realm_name(realm,lang()),620)
     var body: VBoxContainer = parts.box
@@ -846,13 +980,16 @@ func _show_realm_requirements(realm: int) -> void:
     text(body,"🔒  " + Realms.missing_reason(data,realm,lang()),17,Color("f6daa0"))
     var source_realm: int = realm - 1
     for previous in range(realm):
-        if Realms.count(data,previous) < 8:
+        if Realms.count(data,previous) < 8 or Realms.completed_story_bosses(previous) < 3:
             source_realm = previous
             break
     if source_realm >= 0:
         var done: int = Realms.count(data,source_realm)
         text(body,Realms.realm_name(source_realm,lang()) + " · %d/8 " % done + L("challenges"),16)
         _progress_meter(body,done,8)
+        var defeated: int = Realms.completed_story_bosses(source_realm)
+        text(body,("Story-Bosse" if lang()=="de" else "Chefes da história" if lang()=="pt" else "Story bosses") + ": %d/3" % defeated,16)
+        _progress_meter(body,defeated,3)
     action(body,L("realms"),show_realms,true)
     _open_realm_dialog(parts)
 
@@ -860,6 +997,7 @@ func _choose_realm_from_dialog(number: int, dialog: Control) -> void:
     if select_realm(number): dialog.queue_free()
 
 func select_realm(number: int) -> bool:
+    if realm_story_active: return false
     if move_count() > 0 and result == 0: return false
     var from_realm: int = realm_index()
     if not Realms.select(data,number): return false
@@ -868,15 +1006,25 @@ func select_realm(number: int) -> bool:
     bot_level = Realms.fixed_bot_level(number)
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[number])
+    var first_open: bool = false
+    var transition_from: int = from_realm
+    if number > 0 and Realms.ready_for_breakthrough(data,number-1):
+        var state: Dictionary = Realms.state(data)
+        if not state.get("auto_transitions") is Dictionary:
+            state["auto_transitions"] = {}
+        if not bool(state.auto_transitions.get(str(number-1),false)):
+            state.auto_transitions[str(number-1)] = true
+            first_open = true
+            transition_from = number-1
     SaveManager.save_data(data)
     draw()
-    if from_realm != number:
-        call_deferred("_show_manual_realm_journey",from_realm,number)
+    if from_realm != number or first_open:
+        call_deferred("_show_manual_realm_journey",transition_from,number,first_open)
     else:
         sync_realm_music()
     return true
 
-func _show_manual_realm_journey(from_realm: int, to_realm: int) -> void:
+func _show_manual_realm_journey(from_realm: int, to_realm: int, breakthrough: bool = false) -> void:
     if not is_inside_tree(): return
     var journey: ZenRealmTravelCeremony = RealmPortal.new()
     add_child(journey)
@@ -884,7 +1032,7 @@ func _show_manual_realm_journey(from_realm: int, to_realm: int) -> void:
         if is_inside_tree(): sync_realm_music()
     )
     journey.present(Realms.REALM_ART[from_realm],Realms.REALM_ART[to_realm],
-        Realms.realm_name(to_realm,lang()),false,
+        Realms.realm_name(to_realm,lang()),breakthrough,
         bool(data.settings.get("sound",true)),[world_music],lang())
 
 func _challenge_items(list: VBoxContainer, realm: int) -> void:
@@ -994,6 +1142,9 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     _open_realm_dialog(parts)
 
 func show_match_result() -> void:
+    if realm_story_active:
+        _realm_story_result()
+        return
     if not is_inside_tree(): return
     var human_won: bool = result in [1,2] and int(owners[result-1]) == 0
     var title: String = Z("Unentschieden!") if result == 3 else (Z("Gewonnen!") if human_won else zen_ascend_bot_name() + " · " + Z("hat gewonnen!"))
@@ -1029,3 +1180,366 @@ func _replay_after_result(dialog: Control) -> void:
 func show_realm_rewards(_awards: Dictionary) -> void:
     # Compatibility: rewards are part of the single themed match result now.
     show_match_result()
+
+
+# Compact story dialogue: keep the existing beautiful theme and scroll
+# behavior, but do not reserve 80% of a tall Android screen for a short intro.
+# The dedicated story actions already offer navigation; a second Back footer
+# creates an unnecessary third exit next to X and "Return to main game".
+func _realm_story_compact(parts: Dictionary) -> void:
+    var frame: PanelContainer = parts.frame
+    frame.anchor_left = 0.055
+    frame.anchor_right = 0.945
+    frame.anchor_top = 0.155
+    frame.anchor_bottom = 0.845
+    frame.offset_top = 0
+    frame.offset_bottom = 0
+    var footer: Button = parts.back_button
+    # Remove redundant Back from the layout, rather than merely hiding it.
+    var footer_parent: VBoxContainer = footer.get_parent() as VBoxContainer
+    footer_parent.remove_child(footer)
+    footer.queue_free()
+    footer_parent.add_theme_constant_override("separation",8)
+    (parts.box as VBoxContainer).add_theme_constant_override("separation",9)
+
+# -------- Realm Chronicles: isolated 4x4 playable story --------
+func start_realm_story() -> void:
+    if not Mode.unlocked(data):
+        return_home()
+        return
+    realm_story_progress = RealmStory.load_progress()
+    realm_story_stage = int(realm_story_progress.stage)
+    realm_story_active = true
+    ZenChronicles.set_campaign_board_active(true)
+    realm_story_generation += 1
+    realm_story_last_human = -1
+    if realm_story_stage >= RealmStory.LAST_STAGE:
+        _realm_story_completed()
+        return
+    if not RealmStory.can_enter(data,realm_story_stage):
+        _realm_story_locked()
+        return
+    _realm_story_set_stage(realm_story_stage)
+    _realm_story_present_intro()
+
+func _realm_story_set_stage(stage: int) -> void:
+    match_generation += 1
+    realm_story_stage = clampi(stage,0,RealmStory.LAST_STAGE-1)
+    match_realm = RealmStory.chapter(realm_story_stage)
+    bot_level = Realms.fixed_bot_level(match_realm)
+    realm_story_generation += 1
+    realm_story_last_human = -1
+    against_bot = true
+    owners = [0,1]
+    recorded = false
+    busy = false
+    var old: Dictionary = realm_story_progress.get("game",{})
+    if not RealmStory.valid_game(old): old = {}
+    if old.is_empty():
+        cells.fill(0)
+        # Each boss alternates its first mover based on stage order and retries.
+        # Persisted attempt counters keep alternation across app restarts.
+        var starts: Dictionary = realm_story_progress.get("starts",{})
+        var key: String = str(realm_story_stage)
+        var attempt: int = int(starts.get(key,0))
+        turn = 1 if (realm_story_stage + attempt) % 2 == 0 else 2
+        starts[key] = attempt+1
+        realm_story_progress.starts = starts
+        result = 0
+    else:
+        cells = old.cells.duplicate()
+        turn = clampi(int(old.get("turn",1)),1,2)
+        result = clampi(int(old.get("result",0)),0,3)
+        recorded = result != 0
+        realm_story_last_human = int(old.get("last_human",-1))
+    cube.reset_view()
+    cube.set_boss_skin(realm_story_stage)
+    if realm_backdrop != null:
+        realm_backdrop.texture = load(RealmStory.CHAPTER_ART[match_realm])
+    draw()
+    # Follow the new Realm's EXISTING song on actual chapter travel.
+    # No new music and no modification to the Classic soundtrack.
+    sync_realm_music()
+
+func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0) -> void:
+    # Use approved cinematic boss portraits shipped in JSON + base64 WebP.
+    # Optional direct WebP file takes priority if present, then the validated
+    # inline texture decoder; only a broken asset falls back to an SVG.
+    var art: Texture2D = null
+    var file_path: String = "res://assets/realm_chronicles/boss_%s_hd.webp" % RealmStory.BOSS_IDS[stage]
+    if ResourceLoader.exists(file_path):
+        art = load(file_path) as Texture2D
+    if art == null:
+        art = RealmStory.boss_texture(stage)
+    if art == null:
+        art = load(RealmStory.CHAPTER_ART[RealmStory.chapter(stage)]) as Texture2D
+    if art == null: return
+    var picture: TextureRect = TextureRect.new()
+    picture.name = "RealmChroniclesBossArt"
+    picture.texture = art
+    picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    # Keep the full vertical portrait and its title legible; COVERED would
+    # crop the boss face and name on narrow Android screens.
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    picture.custom_minimum_size.y = height
+    picture.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent.add_child(picture)
+
+func _realm_story_present_intro() -> void:
+    if not realm_story_active: return
+    if result != 0:
+        _realm_story_result()
+        return
+    var stage: int = realm_story_stage
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"boss_%d" % stage),680)
+    var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
+    var chapter_key: String = ["shadow","ember","celestial","satori"][RealmStory.chapter(stage)]
+    text(body,RealmStory.text_for(lang(),chapter_key),17,Color("#e7cd9b"))
+    if stage in [6,9]:
+        text(body,RealmStory.text_for(lang(),"chapter%d_open" % (RealmStory.chapter(stage)+1)),14,Color("#b6d8ed"))
+    _realm_story_art(body,stage,224)
+    text(body,RealmStory.text_for(lang(),"intro_%d" % stage),15)
+    text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
+    var starter_info: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
+    if lang() == "en": starter_info = "You start (X)" if turn == 1 else "Boss starts (O)"
+    elif lang() == "pt": starter_info = "Começas (X)" if turn == 1 else "O chefe começa (O)"
+    text(body,starter_info,14,Color("#f0dfb3"))
+    action(body,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin,true)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
+    _open_realm_dialog(parts)
+
+func _realm_story_begin() -> void:
+    if not realm_story_active: return
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    var seen: Dictionary = realm_story_progress.get("introduced",{})
+    seen[str(realm_story_stage)] = true
+    realm_story_progress.introduced = seen
+    _realm_story_save()
+    if result == 0 and turn == 2 and not busy:
+        busy = true
+        call_deferred("bot_turn")
+    draw()
+
+func _realm_story_save() -> bool:
+    if not realm_story_active: return false
+    realm_story_progress.stage = realm_story_stage
+    # Final cutscene must not accidentally resurrect the last boss match
+    # when leaving and reopening the completed Chapter 2 story.
+    if realm_story_stage >= RealmStory.LAST_STAGE or (result == 0 and move_count() == 0):
+        realm_story_progress.game = {}
+    else:
+        realm_story_progress.game = {
+            "cells": cells.duplicate(),
+            "turn": turn,
+            "result": result,
+            "owners": owners.duplicate(),
+            "last_human": realm_story_last_human
+        }
+    var ok: bool = RealmStory.save_progress(realm_story_progress)
+    if not ok: push_warning("Realm Chronicles: save failed")
+    return ok
+
+func _realm_story_result() -> void:
+    if not realm_story_active or result == 0: return
+    var won: bool = result == 1
+    var key: String = "win_%d" % realm_story_stage if won else "loss_%d" % realm_story_stage
+    var title: String = RealmStory.text_for(lang(),"win" if won else ("draw" if result == 3 else "loss"))
+    var parts: Dictionary = _realm_dialog(title,590)
+    var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
+    if won:
+        # A complete Kuze-with-defeated-boss illustration after EACH of 12
+        # actual victories; never triggered on a loss or draw.
+        var scene_art: PanelContainer = VictoryArtwork.new()
+        body.add_child(scene_art)
+        scene_art.call("present",realm_story_stage,lang())
+        text(body,RealmStory.text_for(lang(),"victory_story_%d" % realm_story_stage),15,Color("#e7d3ab"))
+    else:
+        _realm_story_art(body,realm_story_stage,170)
+    text(body,RealmStory.text_for(lang(),key),16)
+    if won:
+        action(body,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
+    else:
+        action(body,RealmStory.text_for(lang(),"retry"),_realm_story_retry,true)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
+    _open_realm_dialog(parts)
+
+func _realm_story_retry() -> void:
+    if not realm_story_active or realm_story_stage >= RealmStory.LAST_STAGE: return
+    realm_story_generation += 1
+    realm_story_progress.game = {}
+    _realm_story_set_stage(realm_story_stage)
+    _realm_story_save()
+    _realm_story_present_intro()
+
+func _realm_story_advance() -> void:
+    if not realm_story_active or result != 1: return
+    var prior: int = realm_story_stage
+    var next_stage: int = mini(RealmStory.LAST_STAGE,prior + 1)
+    var progress: Dictionary = realm_story_progress.duplicate(true)
+    progress.stage = next_stage
+    progress.game = {}
+    if not RealmStory.save_progress(progress):
+        push_warning("Realm Chronicles: failed to save completed boss")
+        return
+    realm_story_progress = progress
+    realm_story_generation += 1
+    if (prior+1) % RealmStory.CHAPTER_SIZE == 0:
+        # Crucial: avoid re-saving the previous winning board under a new
+        # chapter stage when the player leaves the closing cutscene.
+        realm_story_stage = next_stage
+        cells.fill(0)
+        turn = 1
+        result = 0
+        recorded = false
+        busy = false
+        cube.clear_boss_skin()
+        _realm_story_chapter_outro(RealmStory.chapter(prior))
+    else:
+        _realm_story_set_stage(next_stage)
+        _realm_story_present_intro()
+
+func _realm_story_chapter_outro(chapter: int) -> void:
+    var is_final: bool = chapter == 3
+    var title_key: String = "chapter_complete_final" if is_final else "chapter_complete"
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),title_key),700)
+    var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
+    var picture: TextureRect = TextureRect.new()
+    picture.texture = load(RealmStory.CHAPTER_ART[clampi(chapter,0,3)])
+    picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    picture.custom_minimum_size.y = 213
+    picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(picture)
+    var chapter_key: String = "chapter%d_end" % (chapter+1)
+    text(body,RealmStory.text_for(lang(),chapter_key),16)
+    if is_final:
+        # Story conclusion only: does not forge the normal 4x4 Satori title.
+        text(body,RealmStory.text_for(lang(),"final_title"),23,Color("#ffdc89"))
+        text(body,RealmStory.text_for(lang(),"final_detail"),14,Color("#e6ddb9"))
+    else:
+        var target_stage: int = (chapter+1)*RealmStory.CHAPTER_SIZE
+        if RealmStory.can_enter(data,target_stage):
+            var label: String = ["next","continue_celestial","continue_satori"][chapter]
+            action(body,RealmStory.text_for(lang(),label),_realm_story_start_chapter.bind(target_stage),true)
+        else:
+            var gate: String = ["gate","gate_celestial","gate_satori"][chapter]
+            text(body,RealmStory.text_for(lang(),gate),14,Color("#e4bd82"))
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend,true)
+    _open_realm_dialog(parts)
+
+func _realm_story_start_chapter(stage: int) -> void:
+    if stage < 0 or stage >= RealmStory.LAST_STAGE: return
+    if not RealmStory.can_enter(data,stage):
+        realm_story_stage = stage
+        _realm_story_locked()
+        return
+    var destination: int = int(stage / RealmStory.CHAPTER_SIZE)
+    if destination > 0 and Realms.ready_for_breakthrough(data,destination-1):
+        var state: Dictionary = Realms.state(data)
+        if not state.get("auto_transitions") is Dictionary:
+            state["auto_transitions"] = {}
+        if not bool(state.auto_transitions.get(str(destination-1),false)):
+            state.auto_transitions[str(destination-1)] = true
+            state["selected"] = destination
+            SaveManager.save_data(data)
+            if is_instance_valid(active_realm_dialog):
+                _close_realm_dialog(active_realm_dialog)
+            var epic: ZenRealmTravelCeremony = RealmPortal.new()
+            add_child(epic)
+            epic.finished.connect(_realm_story_open_after_breakthrough.bind(stage))
+            epic.present(Realms.REALM_ART[destination-1],Realms.REALM_ART[destination],
+                Realms.realm_name(destination,lang()),true,
+                bool(data.settings.get("sound",true)),[world_music],lang())
+            return
+    _realm_story_open_after_breakthrough(stage)
+
+func _realm_story_open_after_breakthrough(stage: int) -> void:
+    if not realm_story_active or not is_inside_tree(): return
+    if not RealmStory.can_enter(data,stage): return
+    realm_story_progress.game = {}
+    _realm_story_set_stage(stage)
+    _realm_story_present_intro()
+
+func _realm_story_start_ember() -> void:
+    _realm_story_start_chapter(3)
+
+func _realm_story_locked() -> void:
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"challenge_unlock"),570)
+    var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
+    var gate: String = "gate_mode"
+    if realm_story_stage >= 9: gate = "gate_satori"
+    elif realm_story_stage >= 6: gate = "gate_celestial"
+    elif realm_story_stage >= 3: gate = "gate"
+    text(body,RealmStory.text_for(lang(),gate),17)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend,true)
+    _open_realm_dialog(parts)
+
+func _realm_story_completed() -> void:
+    _realm_story_chapter_outro(3)
+
+func _realm_story_menu() -> void:
+    if not realm_story_active: return
+    var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"menu"),430)
+    var body: VBoxContainer = parts.box
+    _realm_story_compact(parts)
+    # The story pause menu holds only two actions: size it accordingly.
+    var frame: PanelContainer = parts.frame
+    frame.anchor_top = 0.33
+    frame.anchor_bottom = 0.67
+    var current_boss: String = RealmStory.text_for(lang(),"final_title") if realm_story_stage >= RealmStory.LAST_STAGE else RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
+    text(body,current_boss,20,Color("#eddaae"))
+    action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
+    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
+    _open_realm_dialog(parts)
+
+# Exit the story without returning to Main. The ordinary Ascend 4x4
+# renderer, equipped shop skin and four Realm cards are restored in place.
+func _realm_story_return_to_ascend() -> void:
+    if not realm_story_active: return
+    match_generation += 1
+    _realm_story_save()
+    realm_story_generation += 1
+    realm_story_active = false
+    ZenChronicles.set_campaign_board_active(false)
+    busy = false
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    cube.clear_boss_skin()
+    cube.set_skin(int(data.economy.get("equipped",0)))
+    match_realm = int(Realms.state(data).selected)
+    bot_level = Realms.fixed_bot_level(match_realm)
+    cells.fill(0)
+    turn = 1
+    result = 0
+    recorded = false
+    realm_story_last_human = -1
+    against_bot = true
+    if realm_backdrop != null:
+        realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+    # Leaving a boss restores the normal Realm/Shop soundtrack immediately.
+    # Reuse the existing 1.8-second crossfade; keep the selected music intact.
+    sync_realm_music()
+    draw()
+    call_deferred("show_realms")
+
+func _realm_story_leave() -> void:
+    if not realm_story_active: return
+    match_generation += 1
+    _realm_story_save()
+    realm_story_active = false
+    ZenChronicles.set_campaign_board_active(false)
+    realm_story_generation += 1
+    busy = false
+    if is_instance_valid(active_realm_dialog):
+        _close_realm_dialog(active_realm_dialog)
+    # The shop's equipped skin ID was never changed. Restore its material
+    # in the same renderer before leaving the 4x4 scene.
+    cube.clear_boss_skin()
+    cube.set_skin(int(data.economy.get("equipped",0)))
+    return_home()

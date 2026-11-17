@@ -11,12 +11,13 @@ ids=re.findall(r'"id":"([a-z_]+)"',model)
 assert len(set(ids))==32, 'challenge IDs unique'
 assert 'var state: Dictionary' in model
 assert 'realm_state' in model and 'realm_rewards' in model
-assert 'for required_realm in range(realm):' in model
-assert 'for required_realm in range(realm):' in model
-assert 'for required_realm in range(realm):' in model
 assert '"satori_aware"' in model and '"satori_six"' in model
 assert 'bool(earned.get(id,false))' in model and 'realm_rewards.get(str(realm),false)' in model
 assert 'ZenAscend.unlocked(data)' in model
+assert 'for prior in range(realm):' in model
+assert 'not StoryGate.defeated_all(prior)' in model
+assert 'StoryGate.defeated_bosses(realm)' in model
+assert '8' in (R/'core/ZenRealmStoryGate.gd').read_text() or 'BOSSES_PER_REALM := 3' in (R/'core/ZenRealmStoryGate.gd').read_text()
 assert 'for realm in range(4):' in model
 assert 'match_realm = realm_index()' in ui
 assert 'if against_bot:' in ui and 'Realms.record_bot_match(' in ui
@@ -26,7 +27,7 @@ assert 'show_realms()' in ui and 'show_challenges()' in ui and 'show_realm_title
 # Gameplay uses independent Realm artwork.
 assert 'backdrop.texture = load(Realms.REALM_ART[realm_index()])' in ui
 finish = ui.split('func finish() -> void:', 1)[1].split('func _show_next_unlock()', 1)[0]
-assert 'Realms.count(data,match_realm) == 8' in finish, 'Realm must reach 8/8 before automatic transition'
+assert 'Realms.ready_for_breakthrough(data,match_realm)' in finish, 'Realm requires both 8/8 challenges and 3/3 story bosses'
 assert 'auto_transitions' in finish, 'Transition must only be triggered once'
 assert 'realm_backdrop.texture = load(Realms.REALM_ART[destination])' in finish, 'Next Realm artwork must be applied'
 assert 'realm_backdrop.texture = load(Realms.REALM_ART[number])' in ui

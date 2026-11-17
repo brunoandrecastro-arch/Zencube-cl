@@ -15,7 +15,7 @@ assert 'menu_button: Button = action(header_row,"☰",show_ascend_menu)' in ui
 assert 'action(footer,Z("Hauptmenü")' not in ui
 assert 'func realm_quote() -> String:' in ui and 'quote_label.text = realm_quote()' in ui
 finish=ui.split('func finish() -> void:',1)[1].split('func _show_next_unlock()',1)[0]
-assert 'Realms.count(data,match_realm) == 8' in finish
+assert 'Realms.ready_for_breakthrough(data,match_realm)' in finish
 assert 'auto_transitions' in finish
 assert 'previously_open' not in finish
 assert 'HINT_PRICE: int = 50' in ach
@@ -33,4 +33,4 @@ assert 'How to unlock: ' not in hidden
 assert 'Unlock condition hidden' in hidden
 assert 'const VERSION = 3' in (root/'core/SaveManager.gd').read_text()
 assert 'ZenCollection.reward_loss(data)' in ui
-print('PASS: fixed bot 1/2/3/4, 8/8 auto transitions, secret paid hints, premium menu, quotes, legacy safety')
+print('PASS: fixed bot 1/2/3/4, 8/8 challenges + 3/3 bosses transitions, secret paid hints, premium menu, quotes, legacy safety')

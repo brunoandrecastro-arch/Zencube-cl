@@ -1,8 +1,8 @@
 class_name ZenAscend
 extends RefCounted
 # Separate 4x4 mode: the existing Classic 3x3 rules and saves are untouched.
-# Release requires rank 3 or permanent purchase. Debug builds may test for free.
-# Historic debug flag retained as disabled constant for backwards compatibility.
+# All Android builds, including debug previews, require Zen Master or permanent purchase.
+# Historic compatibility flag remains permanently disabled.
 const TEST_UNLOCKED: bool = false
 const PRICE: int = 850
 const CELLS: int = 96
@@ -70,11 +70,11 @@ static func unlocked_for_release(data: Dictionary) -> bool:
     return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 3
 
 static func test_access_enabled() -> bool:
-    # Safe temporary test access: never active in a release export.
-    return OS.has_feature("debug")
+    # Never bypass player progression in debug or Play builds.
+    return false
 
 static func unlocked(data: Dictionary) -> bool:
-    return unlocked_for_release(data) or test_access_enabled()
+    return unlocked_for_release(data)
 
 static func buy(data: Dictionary) -> bool:
     # Do not charge anyone who already unlocked the mode through Zen-Meister.

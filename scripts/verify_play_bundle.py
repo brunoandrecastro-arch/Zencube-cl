@@ -43,6 +43,7 @@ def check_manifest(bundle):
         ANDROID + "versionCode": options["version/code"],
         ANDROID + "versionName": json.loads(options["version/name"]),
     }
+    require(expected["package"] == "com.zencube.game.play", "Play export must update the existing com.zencube.game.play app")
     for key, value in expected.items():
         require(manifest.get(key) == value, f"Unexpected manifest value for {key}")
     sdk = manifest.find("uses-sdk")

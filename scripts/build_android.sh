@@ -30,8 +30,14 @@ SETTINGS
 "$GODOT" --headless --path . --script tests/test_engine.gd
 
 campaign_test="${ZENCUBE_CAMPAIGN_TEST:-false}"
+realm_test="${ZENCUBE_REALM_CHRONICLES_TEST:-false}"
 campaign_package="com.zencube.game.campaign"
 campaign_label="ZenCube Campaign Test"
+if [[ "$realm_test" == true ]]; then
+  campaign_test=true
+  campaign_package="com.zencube.game.realmchronicles"
+  campaign_label="ZenCube 3D Preview"
+fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.
   preset_backup="$(mktemp)"
@@ -41,6 +47,13 @@ if [[ "$campaign_test" == true ]]; then
     s|^package/unique_name=.*|package/unique_name=\"$campaign_package\"|
     s|^package/name=.*|package/name=\"$campaign_label\"|
   }" export_presets.cfg
+fi
+
+# Android previews use the very same access gates as the future Play release.
+# No QA or chapter-skip setting may be embedded in the shipped APK.
+if grep -q 'config/realm_chronicles_qa=true' project.godot; then
+  echo 'ERROR: QA chapter override must not be exported to Android' >&2
+  exit 1
 fi
 
 apk_path=build/ZenCube-3D.apk

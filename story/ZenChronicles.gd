@@ -9,6 +9,8 @@ const GOLD = Color(0.86, 0.72, 0.47)
 const CREAM = Color(0.98, 0.94, 0.84)
 const MUTED = Color(0.75, 0.78, 0.77)
 const Campaign = preload("res://story/ZenCampaign.gd")
+const RealmStory = preload("res://story/ZenRealmChronicles.gd")
+const Realms = preload("res://core/ZenAscendRealms.gd")
 # German is the authored source language; EN and PT-PT live in a separate JSON.
 const UI_DE: Dictionary = {
     "library_tip": "Zen-Chroniken",
@@ -45,6 +47,10 @@ var _preview_all: bool = false
 var _show_quick: bool = true
 var _screen_name := ""
 var _campaign_board_active := false
+var _realm_story_requested: bool = false
+var _realm_story_from_realms: bool = false
+var _realm_chapter_scroll: ScrollContainer
+var _realm_chapter_dragging: bool = false
 
 func _ready() -> void:
     layer = 90
@@ -185,6 +191,8 @@ func _make_button(value: String, parent: Node, callback: Callable) -> Button:
     return b
 
 func _make_screen() -> VBoxContainer:
+    _realm_chapter_scroll = null
+    _realm_chapter_dragging = false
     if _screen != null:
         _screen.hide()
         _screen.queue_free()
@@ -228,6 +236,7 @@ func _chapter_accessible(i: int) -> bool:
     return ascension.world_unlocked(saved, i)
 
 func open_library() -> void:
+    _realm_story_from_realms = false
     _sync_language()
     _active_chapter = -1
     _screen_name = "library"
@@ -357,6 +366,7 @@ func _turn_page(dir: int) -> void:
     _update_page()
 
 func close_chronicles() -> void:
+    _realm_story_from_realms = false
     _active_chapter = -1
     _screen_name = ""
     if _screen != null:
@@ -376,6 +386,19 @@ func is_open() -> bool:
 func _input(event: InputEvent) -> void:
     if _screen == null:
         return
+    # Godot's nested PanelContainers/TextureRects can intercept touch
+    # gestures before ScrollContainer on Android. Drive this ONE chapter list
+    # from native drag deltas; never change the campaign reader or 3D cube.
+    if _screen_name == "realm-story" and is_instance_valid(_realm_chapter_scroll):
+        if event is InputEventScreenTouch:
+            if event.pressed:
+                _realm_chapter_dragging = _realm_chapter_scroll.get_global_rect().has_point(event.position)
+            else:
+                _realm_chapter_dragging = false
+        elif event is InputEventScreenDrag and _realm_chapter_dragging:
+            _realm_chapter_scroll.scroll_vertical = maxi(0, _realm_chapter_scroll.scroll_vertical - roundi(event.relative.y))
+            get_viewport().set_input_as_handled()
+            return
     if event is InputEventScreenTouch:
         if event.pressed:
             _touch_start = event.position
@@ -391,6 +414,8 @@ func _input(event: InputEvent) -> void:
                     open_comic_library()
                 "comics", "campaign":
                     open_library()
+                "realm-story":
+                    _back_from_realm_story()
                 _:
                     close_chronicles()
             get_viewport().set_input_as_handled()
@@ -482,3 +507,130 @@ func _launch_campaign() -> void:
     var game: Node = get_tree().current_scene
     if game != null and game.has_method("start_zen_campaign"):
         game.call("start_zen_campaign")
+
+# Realm Chronicles – optional 4x4 chapter campaign, never affects the existing
+# 3x3 campaign or Webcomic. The actual gameplay takes place in Ascend.tscn.
+func open_realm_story_overview(from_realms: bool = false) -> void:
+    _realm_story_from_realms = from_realms
+    _sync_language()
+    _active_chapter = -1
+    _screen_name = "realm-story"
+    var saved: Dictionary = SaveManager.load_data()
+    var progress: Dictionary = RealmStory.load_progress()
+    var stage: int = int(progress.stage)
+    var outer: VBoxContainer = _make_screen()
+    _screen.color = Color("#151b25")
+    var navigation: HBoxContainer = HBoxContainer.new()
+    navigation.custom_minimum_size.y = 56
+    outer.add_child(navigation)
+    _make_button("‹", navigation, _back_from_realm_story).custom_minimum_size.x = 48
+    var title: Label = _make_label(RealmStory.text_for(_active_language,"story"), navigation, 24, GOLD)
+    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _make_button("✕", navigation, close_chronicles).custom_minimum_size.x = 48
+    var body: VBoxContainer = _campaign_scroll(outer)
+    _realm_chapter_scroll = body.get_parent() as ScrollContainer
+    _realm_chapter_scroll.name = "RealmChroniclesChapterScroll"
+    _realm_chapter_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+    body.mouse_filter = Control.MOUSE_FILTER_PASS
+    _make_label(RealmStory.text_for(_active_language,"intro"), body, 15, CREAM)
+    for chapter in range(4):
+        var completed: bool = stage >= (chapter+1)*3
+        var allowed: bool = stage >= chapter*3 and RealmStory.can_enter(saved,chapter*3)
+        var panel: PanelContainer = PanelContainer.new()
+        var box_style: StyleBoxFlat = _style(Color("#252c35") if chapter % 2 == 0 else Color("#382c29"), 14)
+        box_style.border_color = GOLD if int(stage / 3) == chapter else Color("#76624a")
+        box_style.set_border_width_all(1)
+        panel.add_theme_stylebox_override("panel", box_style)
+        panel.mouse_filter = Control.MOUSE_FILTER_PASS
+        body.add_child(panel)
+        var section: VBoxContainer = VBoxContainer.new()
+        section.mouse_filter = Control.MOUSE_FILTER_PASS
+        section.add_theme_constant_override("separation",7)
+        panel.add_child(section)
+        var key: String = ["shadow","ember","celestial","satori"][chapter]
+        _make_label(RealmStory.text_for(_active_language,key), section, 19, GOLD)
+        var picture: TextureRect = Campaign.artwork(RealmStory.CHAPTER_ART[chapter],105)
+        picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        section.add_child(picture)
+        _make_label(RealmStory.text_for(_active_language,key+"_sub"),section,13,MUTED)
+        var challenge_wins: int = Realms.count(saved,chapter)
+        var boss_wins: int = Realms.completed_story_bosses(chapter)
+        var noun: String = "Story-Bosse" if _active_language == "de" else "Chefes" if _active_language == "pt" else "Story bosses"
+        _make_label("✦ %d/8 Challenges  ·  ⚔ %d/3 %s" % [challenge_wins,boss_wins,noun],section,13,GOLD)
+        var progress_label: String = RealmStory.text_for(_active_language,"completed" if completed else ("current" if allowed else "locked"))
+        _make_label(progress_label,section,13,GOLD if allowed or completed else MUTED)
+        if not allowed and not completed:
+            var lock_key: String = ["gate_mode","gate","gate_celestial","gate_satori"][chapter]
+            _make_label(RealmStory.text_for(_active_language,lock_key),section,12,MUTED)
+        if RealmStory.qa_mode() and chapter > 0:
+            var qa_key: String = ["","qa_ember","qa_celestial","qa_satori"][chapter]
+            var qa_button: Button = _make_button(RealmStory.text_for(_active_language,qa_key),section,_launch_chapter_qa.bind(chapter*RealmStory.CHAPTER_SIZE))
+            qa_button.add_theme_stylebox_override("normal",_style(Color("#693524") if chapter == 1 else Color("#36586a") if chapter == 2 else Color("#625079"),13))
+    if stage >= RealmStory.LAST_STAGE:
+        _make_label(RealmStory.text_for(_active_language,"realm_story_completed"),outer,15,CREAM)
+    elif RealmStory.can_enter(saved,stage):
+        _campaign_primary(RealmStory.text_for(_active_language,"continue"),outer,_launch_realm_story)
+    else:
+        _make_label(RealmStory.text_for(_active_language,"challenge_unlock"),outer,13,MUTED)
+
+# A Realm-menu entry returns to the four 4x4 Realm cards; the existing
+# Chronicles library entry still returns to the library as before.
+func _back_from_realm_story() -> void:
+    if not _realm_story_from_realms:
+        open_library()
+        return
+    close_chronicles()
+    var active_scene: Node = get_tree().current_scene
+    if active_scene != null and active_scene.scene_file_path == "res://Ascend.tscn" and active_scene.has_method("show_realms"):
+        active_scene.call_deferred("show_realms")
+
+func _launch_realm_story() -> void:
+    # Do not discard an unfinished ordinary Ascend match.
+    var active_scene: Node = get_tree().current_scene
+    if active_scene != null and active_scene.scene_file_path == "res://Ascend.tscn" and active_scene.has_method("move_count"):
+        if int(active_scene.call("move_count")) > 0 and int(active_scene.get("result")) == 0:
+            var warning: VBoxContainer = _make_screen()
+            _screen_name = "realm-story"
+            _make_label(RealmStory.text_for(_active_language,"finish_active"),warning,18,CREAM)
+            _make_button(RealmStory.text_for(_active_language,"back"),warning,open_realm_story_overview)
+            return
+    var saved: Dictionary = SaveManager.load_data()
+    var progress: Dictionary = RealmStory.load_progress()
+    if not RealmStory.can_enter(saved,int(progress.stage)):
+        open_realm_story_overview(_realm_story_from_realms)
+        return
+    # One-use handoff avoids touching the 4x4 Classic/Ascend save data.
+    _realm_story_requested = true
+    close_chronicles()
+    get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+# Test-APK only: preview specific chapters while preserving normal 4x4
+# progression, economy, scores, and an unfinished regular Ascend match.
+# Only this separately signed package sets the QA project setting.
+func _launch_chapter_qa(target_stage: int) -> void:
+    if not RealmStory.qa_mode() or target_stage not in [3,6,9]: return
+    var active_scene: Node = get_tree().current_scene
+    if active_scene != null and active_scene.scene_file_path == "res://Ascend.tscn" and active_scene.has_method("move_count"):
+        if int(active_scene.call("move_count")) > 0 and int(active_scene.get("result")) == 0:
+            var warning: VBoxContainer = _make_screen()
+            _screen_name = "realm-story"
+            _make_label(RealmStory.text_for(_active_language,"finish_active"),warning,18,CREAM)
+            _make_button(RealmStory.text_for(_active_language,"back"),warning,open_realm_story_overview)
+            return
+    var progress: Dictionary = RealmStory.load_progress()
+    if int(progress.stage) < target_stage or int(progress.stage) >= target_stage+RealmStory.CHAPTER_SIZE:
+        progress.stage = target_stage
+        progress.game = {}
+        if not RealmStory.save_progress(progress):
+            push_warning("Realm Chronicles: could not start QA preview")
+            return
+    _launch_realm_story()
+
+# Kept for older scripts and callers from the Chapter 2 test build.
+func _launch_ember_qa() -> void:
+    _launch_chapter_qa(3)
+
+func consume_realm_story_launch() -> bool:
+    var result: bool = _realm_story_requested
+    _realm_story_requested = false
+    return result

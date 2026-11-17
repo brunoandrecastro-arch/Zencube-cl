@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
+      ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -157,6 +158,26 @@ jobs:
       - name: Verify playable Zen Campaign and demon AI
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_zen_campaign.gd
+      - name: Verify 12 original Realm boss music mappings and OGG import
+        run: |
+          timeout 55 "$GODOT" --headless --path . --script tests/test_realm_boss_music.gd
+      - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
+        run: |
+          timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Ember Temple – three real boss battles, chapter finale and QA-only gate
+        run: |
+          timeout 110 "$GODOT" --headless --path . --script tests/test_ember_chapter.gd
+      - name: Celestial and Satori – six Master/Grandmaster battles and complete four-Realm finale
+        run: |
+          timeout 120 "$GODOT" --headless --path . --script tests/test_celestial_satori_chapters.gd
+      - name: Four Realm chapter cards and Celestial/Satori QA navigation
+        run: |
+          timeout 50 "$GODOT" --headless --path . --script tests/test_realm_chapter_menu.gd
+      - name: Verify approved Realm feedback - swipe, 4x4 return, 12 victories and shatter unlocks
+        run: |
+          timeout 90 "$GODOT" --headless --path . --script tests/test_realm_feedback_and_gates.gd
+      - name: Validate twelve original Boss track mappings and audio checksums
+        run: python3 tests/test_realm_boss_audio.py
       - name: Verify 100 tactical challenges on the 3D cube
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
@@ -179,6 +200,15 @@ jobs:
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim
           /tmp/zencube-sim reports/lines.json > reports/simulation.json
+      # A stable debug key lets future Realm Chronicles test builds update
+      # the SAME separately installed app, instead of creating a new signature
+      # on every ephemeral runner. No Google Play/upload key is involved.
+      - name: Reuse Realm Chronicles debug signing key
+        if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/zencube-debug.keystore
+          key: zencube-realmchronicles-debug-key-v1
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -193,6 +223,9 @@ jobs:
             grep -Fx "assets/story/$file" <<< "$apk_contents"
           done
           grep -Fx 'assets/story/zen_campaign.json' <<< "$apk_contents"
+          for boss in mist_guardian mirror_novice veil_monk ash_runner banner_guardian ember_high_priest wind_scribe bridge_sentinel sky_archivist lotus_witness halo_keeper fully_aware; do
+            grep -Fx "assets/assets/realm_chronicles/boss_${boss}.json" <<< "$apk_contents"
+          done
           for file in $(git ls-files 'assets/zen_campaign/*.webp'); do
             grep -Fx "assets/$file.import" <<< "$apk_contents"
           done
@@ -206,8 +239,18 @@ jobs:
           name: ZenCube-3D-Campaign-Test
           path: build/ZenCube-3D-Campaign-Test.apk
           if-no-files-found: error
+      - name: Name end-user preview APK
+        if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-Enduser-Preview.apk
+      - name: Upload end-user preview APK
+        if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-Enduser-Preview
+          path: build/ZenCube-3D-Enduser-Preview.apk
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: env.ZENCUBE_CAMPAIGN_TEST != 'true'
+        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true'
         with:
           name: ZenCube-3D-debug
           path: |
