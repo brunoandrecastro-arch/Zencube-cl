@@ -432,6 +432,26 @@ func _review_finished_board(dialog: Control) -> void:
     dragged = false
     mouse_pressed = false
 
+# Live, localized turn ownership for the 12 Realm Chronicles boss battles.
+# The second row counts occupied cells once, including BOTH X and O.
+func _story_turn_status() -> String:
+    var language: String = lang()
+    if result != 0:
+        return RealmStory.text_for(language,"draw" if result == 3 else ("win" if result == 1 else "loss"))
+    if turn == 1:
+        return "Du bist dran · X" if language == "de" else ("É a tua vez · X" if language == "pt" else "Your turn · X")
+    var boss: String = RealmStory.text_for(language,"boss_%d" % realm_story_stage)
+    if busy:
+        return (boss + " (O) überlegt …") if language == "de" else ((boss + " (O) está a pensar…") if language == "pt" else (boss + " (O) is thinking…"))
+    return (boss + " ist dran · O") if language == "de" else ((boss + " joga agora · O") if language == "pt" else (boss + "'s turn · O"))
+
+func _story_moves_status() -> String:
+    var x_count: int = cells.count(1)
+    var o_count: int = cells.count(2)
+    var language: String = lang()
+    var description: String = "Züge gesamt" if language == "de" else ("Jogadas no total" if language == "pt" else "Total moves")
+    return "%s: %d/96 · X: %d · O: %d" % [description,x_count+o_count,x_count,o_count]
+
 func draw() -> void:
     if cube == null: return
     var wins: Array = []
@@ -460,10 +480,11 @@ func draw() -> void:
         instructions.text = _finished_board_hint() if result != 0 else Z("Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen")
     if realm_story_active:
         rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
-        if result == 0:
-            status_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage) if busy else RealmStory.text_for(lang(),"story")+" · "+str(move_count())+"/96"
+        # Do not hide whose turn it is behind the story name or repeat 12/96.
+        # Both the player's X and the boss's O count as one move each.
+        status_label.text = _story_turn_status()
+        details_label.text = _story_moves_status()
         quote_label.text = RealmStory.text_for(lang(),"react_%d" % realm_story_stage)
-        details_label.text = RealmStory.text_for(lang(),"skin")+" · "+str(move_count())+"/96"
 
 func _pick_position(pos: Vector2) -> int:
     if cube_surface == null or cube == null: return -1
