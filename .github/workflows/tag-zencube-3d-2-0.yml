@@ -1,0 +1,32 @@
+name: Create ZenCube 3D 2.0 tested snapshot tag
+on:
+  push:
+    branches: [milestone/zencube-3d-2-0-tagging]
+permissions:
+  contents: write
+jobs:
+  tag-tested-snapshot:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Tag the exact already-passed UI Test build
+        shell: bash
+        env:
+          TARGET_SHA: 1f42465343fda3af272c5196c60805c9ba50aa41
+          TAG_NAME: zencube-3d-2.0
+        run: |
+          set -euo pipefail
+          git cat-file -e "${TARGET_SHA}^{commit}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG_NAME}" > /dev/null 2>&1; then
+            echo "Refusing to overwrite existing tag ${TAG_NAME}" >&2
+            exit 1
+          fi
+          git config user.name "ZenCube Build Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG_NAME}" "${TARGET_SHA}" -m "ZenCube 3D 2.0 - tested UI master snapshot (17 Nov 2026). Commit ${TARGET_SHA}; Godot CI green. Development milestone only: no main merge, no Google Play release, test package unchanged."
+          git push origin "refs/tags/${TAG_NAME}"
+          echo "Tagged ${TARGET_SHA} as ${TAG_NAME}"
