@@ -26,8 +26,12 @@ jobs:
       - name: Verify 5x5 mechanics and standalone playable scene
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_zen_master_5x5.gd
-      - name: Launch 3D prototype without modifying the main scene
+      - name: Verify easy 4x4 Satori victory triggers real mirror break
         run: |
+          timeout 70 "$GODOT" --headless --path . --script tests/test_zen_master_bridge.gd
+      - name: Launch final Satori bridge and 5x5 scenes (headless smoke)
+        run: |
+          timeout 40 "$GODOT" --headless --path . --quit-after 12 res://ZenMasterBridgeTest.tscn
           timeout 40 "$GODOT" --headless --path . --quit-after 12 res://ZenMasterPrototype.tscn
 
   android-test-apk:
@@ -66,7 +70,7 @@ jobs:
           source = project.read_text()
           needle = 'run/main_scene="res://Main.tscn"'
           assert source.count(needle) == 1
-          project.write_text(source.replace(needle, 'run/main_scene="res://ZenMasterPrototype.tscn"'))
+          project.write_text(source.replace(needle, 'run/main_scene="res://ZenMasterBridgeTest.tscn"'))
           preset = Path("export_presets.cfg")
           source = preset.read_text()
           needle = 'package/unique_name="com.zencube.game"'
@@ -80,9 +84,9 @@ jobs:
       - name: Export signed isolated debug APK
         run: |
           bash scripts/build_android.sh
-          mv build/ZenCube-3D.apk build/ZenMaster-5x5-Test.apk
+          mv build/ZenCube-3D.apk build/ZenMaster-Satori-Void-Test.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: ZenMaster-5x5-Android-Test-APK
-          path: build/ZenMaster-5x5-Test.apk
+          name: ZenMaster-Satori-Void-Android-Test
+          path: build/ZenMaster-Satori-Void-Test.apk
           if-no-files-found: error
