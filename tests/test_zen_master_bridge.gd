@@ -28,6 +28,14 @@ func run() -> void:
         check(shatter != null, "mirror animation exists")
         if shatter != null:
             check(bool(shatter.get("running")), "mirror animation is actually playing")
+            check((shatter.get("crack_paths") as Array).size() >= 40, "radial and circumferential glass cracks generated")
+            check((shatter.get("shard_data") as Array).size() >= 180, "real transparent glass shard polygons generated")
+        var preview: Node = game.get("preview_cube")
+        check(preview != null, "new 5x5 cube preview exists behind shattered screen")
+        if preview != null:
+            check(preview.get_child_count() >= 151, "new 5x5 cube preview contains 150 visible tiles")
+            game.call("_reveal_void_preview")
+            check(preview.visible, "new 5x5 is revealed before actual scene switch")
         game.queue_free()
         await process_frame
     check(ZenAscend.generate_lines().size() == 204, "normal 4x4 line count unchanged")
