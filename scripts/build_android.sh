@@ -31,9 +31,15 @@ SETTINGS
 
 campaign_test="${ZENCUBE_CAMPAIGN_TEST:-false}"
 realm_test="${ZENCUBE_REALM_CHRONICLES_TEST:-false}"
+ui_test="${ZENCUBE_UI_TEST:-false}"
 campaign_package="com.zencube.game.campaign"
 campaign_label="ZenCube Campaign Test"
-if [[ "$realm_test" == true ]]; then
+if [[ "$ui_test" == true ]]; then
+  # Separate, safely installable prototype: never touches the Play package.
+  campaign_test=true
+  campaign_package="com.zencube.game.uitest"
+  campaign_label="ZenCube 3D UI Test"
+elif [[ "$realm_test" == true ]]; then
   campaign_test=true
   campaign_package="com.zencube.game.realmchronicles"
   campaign_label="ZenCube 3D Preview"
