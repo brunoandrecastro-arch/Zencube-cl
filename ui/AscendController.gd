@@ -652,12 +652,12 @@ func finish() -> void:
         # Realm Challenges belong to the match summary only; they are not achievements.
         for secret in Achievements.claim_after_match(data,match_realm):
             queued_unlocks.append({"kind":"achievement","realm":match_realm,
-                "name":str(secret.name),"quote":str(secret.quote),
+                "name":Realms.localized_name(str(secret.name),lang()),"quote":Achievements.quote_for(secret,match_realm,lang()),
                 "reason":Achievements.unlock_reason(secret,match_realm,lang())})
         if bool(last_realm_awards.get("realm_completed",false)):
             queued_unlocks.append({"kind":"achievement","realm":match_realm,
-                "name":Achievements.MAIN_TITLES[match_realm],
-                "quote":Achievements.main_quote(match_realm),
+                "name":Realms.localized_name(Achievements.MAIN_TITLES[match_realm],lang()),
+                "quote":Achievements.quote_for({"id":"main"},match_realm,lang()),
                 "reason":Achievements.unlock_reason({"id":"main"},match_realm,lang())})
         # Realm access may unlock earlier, but AUTOMATIC travel requires all 8
         # challenges completed in the current Realm. Once-only persisted gate.
@@ -1180,14 +1180,14 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     text(body,("✦  " + Z("Erfolg freigeschaltet") if unlocked else "🔒  " + (L("rank") if is_main_title else Z("Geheimer Erfolg"))),18,Color("f4dcaa"))
     text(body,title_text,23,Color("f7e4b9"))
     if revealed:
-        text(body,"“" + str(secret.quote) + "”",17,Color("d8e7d4"))
+        text(body,"“" + Achievements.quote_for(secret,realm,lang()) + "”",17,Color("d8e7d4"))
         var reason_heading: String = "Freigeschaltet weil: " if lang() == "de" else ("Desbloqueado porque: " if lang() == "pt" else "How to unlock: ")
         var earned_reason: String = str(secret.condition) if lang() == "en" else Achievements.unlock_reason(secret,realm,lang())
         text(body,reason_heading + earned_reason,15,Color("f1d29b"))
     else:
         text(body,Z("Freischaltbedingung verborgen. Entdecke das Geheimnis beim Spielen."),15,Color("d8e7d4"))
         if Achievements.hint_owned(data,str(secret.id)):
-            text(body,"🍃  " + (Z("Hinweis: %s") % Achievements.hint_text(str(secret.id))),16,Color("f1d29b"))
+            text(body,"🍃  " + (Z("Hinweis: %s") % Achievements.hint_text(str(secret.id),lang())),16,Color("f1d29b"))
         else:
             text(body,Z("Kaufe einen Hinweis im Hauptmenü → Zen-Shop → Hinweise (🍃 %d).") % Achievements.HINT_PRICE,14,Color("edcfa2"))
     action(body,_achievements_label(),show_realm_titles,true)
