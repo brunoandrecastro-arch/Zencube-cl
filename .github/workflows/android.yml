@@ -165,6 +165,10 @@ jobs:
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
+      - name: Verify unified Sakura-Gold Classic menus and post-match 3x3 cube review
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: |
+          timeout 65 "$GODOT" --headless --path . --script tests/test_unified_classic_ui_review.gd
       - name: Verify Realm Chronicles turn ownership and single X/O move counter
         if: env.ZENCUBE_UI_TEST == 'true'
         run: |
