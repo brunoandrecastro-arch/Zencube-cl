@@ -12,6 +12,7 @@ jobs:
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
+      ZENCUBE_UI_TEST: ${{ github.head_ref == 'feature/zencube-ui-test' || github.ref_name == 'feature/zencube-ui-test' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -203,12 +204,21 @@ jobs:
       # A stable debug key lets future Realm Chronicles test builds update
       # the SAME separately installed app, instead of creating a new signature
       # on every ephemeral runner. No Google Play/upload key is involved.
+      - name: Reuse UI test debug signing key
+        if: env.ZENCUBE_UI_TEST == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/zencube-debug.keystore
+          key: zencube-ui-test-debug-key-v1
       - name: Reuse Realm Chronicles debug signing key
         if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.android/zencube-debug.keystore
           key: zencube-realmchronicles-debug-key-v1
+      - name: Verify Sakura UI test screen and actual 2+2 win
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: timeout 65 "$GODOT" --headless --path . --script tests/test_ui_test_theme.gd
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -239,6 +249,16 @@ jobs:
           name: ZenCube-3D-Campaign-Test
           path: build/ZenCube-3D-Campaign-Test.apk
           if-no-files-found: error
+      - name: Name UI Test APK
+        if: env.ZENCUBE_UI_TEST == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-UI-Test.apk
+      - name: Upload UI Test APK
+        if: env.ZENCUBE_UI_TEST == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-UI-Test
+          path: build/ZenCube-3D-UI-Test.apk
+          if-no-files-found: error
       - name: Name end-user preview APK
         if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-3D-Enduser-Preview.apk
@@ -250,7 +270,7 @@ jobs:
           path: build/ZenCube-3D-Enduser-Preview.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true'
+        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_UI_TEST != 'true'
         with:
           name: ZenCube-3D-debug
           path: |
