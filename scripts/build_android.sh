@@ -37,8 +37,10 @@ campaign_label="ZenCube Campaign Test"
 if [[ "$ui_test" == true ]]; then
   # Separate, safely installable prototype: never touches the Play package.
   campaign_test=true
+  # ZenCube 3D 2.0, localization hotfix 2.0.1.
+  # Keep the existing UI-test package so installs update the same test app.
   campaign_package="com.zencube.game.uitest"
-  campaign_label="ZenCube 3D UI Test"
+  campaign_label="ZenCube 3D 2.0"
 elif [[ "$realm_test" == true ]]; then
   campaign_test=true
   campaign_package="com.zencube.game.realmchronicles"
@@ -52,6 +54,8 @@ if [[ "$campaign_test" == true ]]; then
   sed -i "/^\[preset\.0\.options\]$/,/^\[/ {
     s|^package/unique_name=.*|package/unique_name=\"$campaign_package\"|
     s|^package/name=.*|package/name=\"$campaign_label\"|
+    s|^version/name=.*|version/name="2.0.1"|
+    s|^version/code=.*|version/code=24|
   }" export_presets.cfg
 fi
 
