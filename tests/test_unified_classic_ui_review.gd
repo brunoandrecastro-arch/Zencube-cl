@@ -86,6 +86,9 @@ func run() -> void:
     check(board.cells == actual,"reopening preserves the completed match")
     game.call("close_modal")
     game.call("play_again_after_result")
+    # new_game() intentionally replaces BoardModel rather than mutating the
+    # archived completed board; inspect the new instance after replay.
+    board = game.get("board") as BoardModel
     check(board.winner == 0 and board.move_count() == 0,"new match resets the Classic board")
     check(button != null and not button.visible,"replay removes Show result")
     check(undo != null and undo.visible,"replay restores undo")
