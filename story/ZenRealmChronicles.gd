@@ -290,7 +290,7 @@ static func text_for(lang: String, key: String) -> String:
     return str(language.get(key, LOCALE["en"].get(key, key)))
 
 static func defaults() -> Dictionary:
-    return {"version": VERSION, "stage": 0, "introduced": {}, "game": {}}
+    return {"version": VERSION, "stage": 0, "introduced": {}, "game": {}, "starts": {}}
 
 static func load_progress() -> Dictionary:
     var data: Dictionary = defaults()
@@ -302,6 +302,7 @@ static func load_progress() -> Dictionary:
     data.stage = clampi(int(parsed.get("stage",0)),0,LAST_STAGE)
     data.introduced = parsed.get("introduced",{}) if parsed.get("introduced",{}) is Dictionary else {}
     data.game = parsed.get("game",{}) if parsed.get("game",{}) is Dictionary else {}
+    data.starts = parsed.get("starts",{}) if parsed.get("starts",{}) is Dictionary else {}
     if not valid_game(data.game): data.game = {}
     return data
 
@@ -317,7 +318,8 @@ static func save_progress(data: Dictionary) -> bool:
         "version": VERSION,
         "stage": clampi(int(data.get("stage",0)),0,LAST_STAGE),
         "introduced": data.get("introduced",{}),
-        "game": data.get("game",{})
+        "game": data.get("game",{}),
+        "starts": data.get("starts",{})
     }
     var temp: String = SAVE + ".tmp"
     var file := FileAccess.open(temp, FileAccess.WRITE)
