@@ -290,7 +290,7 @@ static func text_for(lang: String, key: String) -> String:
     return str(language.get(key, LOCALE["en"].get(key, key)))
 
 static func defaults() -> Dictionary:
-    return {"version": VERSION, "stage": 0, "introduced": {}, "game": {}}
+    return {"version": VERSION, "stage": 0, "introduced": {}, "game": {}, "retry_offset": 0}
 
 static func load_progress() -> Dictionary:
     var data: Dictionary = defaults()
@@ -300,6 +300,7 @@ static func load_progress() -> Dictionary:
     if not parsed is Dictionary or int(parsed.get("version", -1)) != VERSION:
         return data
     data.stage = clampi(int(parsed.get("stage",0)),0,LAST_STAGE)
+    data.retry_offset = clampi(int(parsed.get("retry_offset",0)),0,1)
     data.introduced = parsed.get("introduced",{}) if parsed.get("introduced",{}) is Dictionary else {}
     data.game = parsed.get("game",{}) if parsed.get("game",{}) is Dictionary else {}
     if not valid_game(data.game): data.game = {}
@@ -316,6 +317,7 @@ static func save_progress(data: Dictionary) -> bool:
     var progress: Dictionary = {
         "version": VERSION,
         "stage": clampi(int(data.get("stage",0)),0,LAST_STAGE),
+        "retry_offset": clampi(int(data.get("retry_offset",0)),0,1),
         "introduced": data.get("introduced",{}),
         "game": data.get("game",{})
     }
