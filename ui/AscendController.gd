@@ -779,7 +779,13 @@ func show_statistics() -> void:
     illustration.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body.add_child(illustration)
     text(body,Locale.translate(str(ZenAscension.RANKS[rank]),lang()),25,Color("ffe3a2"))
-    text(body,Achievements.main_title(data,realm_index()),20,Color("c8e4b8"))
+    # Display the latest earned title, not the unfinished current Realm.
+    # A Celestial player who completed Ember should still see Ember Master.
+    var latest_title: String = Achievements.latest_main_title(data)
+    var title_caption: String = "Aktueller Titel" if lang() == "de" else ("Título atual" if lang() == "pt" else "Current title")
+    var readable_title: String = Realms.localized_name(latest_title,lang()) if latest_title != "—" else ("Noch kein Realm-Titel" if lang() == "de" else ("Ainda sem título de reino" if lang() == "pt" else "No Realm title earned yet"))
+    var title_line: Label = text(body,"✦  " + title_caption + ": " + readable_title,20,Color("c8e4b8"))
+    title_line.name = "CurrentRealmTitle"
     text(body,Realms.realm_name(realm_index(),lang()),15,Color("e4cb97"))
     if rank < 5:
         var progress: int = ZenAscension.progress(data,rank)
