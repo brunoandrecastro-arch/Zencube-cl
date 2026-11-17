@@ -281,7 +281,7 @@ func _begin_fracture() -> void:
     tween.tween_property(pivot,"rotation",pivot.rotation+Vector3(0.25,1.25,0.35),0.95)
 
 func _goto_void() -> void:
-    get_tree().change_scene_to_file("res://ZenMasterPrototype.tscn")
+    get_tree().change_scene_to_file("res://ZenMasterCampaign.tscn")
 
 func _pick(pos: Vector2) -> int:
     var origin: Vector3 = camera.project_ray_origin(pos)
