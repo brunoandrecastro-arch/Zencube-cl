@@ -44,18 +44,26 @@ func _make_world() -> void:
     pivot.name = "ZenMasterCube"
     add_child(pivot)
     camera = Camera3D.new()
-    camera.position = Vector3(0, 0, 10.3)
+    camera.position = Vector3(0, 0, 11.75)
     camera.fov = 44
     camera.current = true
     add_child(camera)
     var env: WorldEnvironment = WorldEnvironment.new()
     env.environment = Environment.new()
     env.environment.background_mode = Environment.BG_COLOR
-    env.environment.background_color = Color("100f1d")
+    env.environment.background_color = Color("100b1e")
     env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     env.environment.ambient_light_color = Color("c7bfdd")
     env.environment.ambient_light_energy = 0.60
     add_child(env)
+    # Void Sanctuary preview: a dim violet temple backdrop, separate from Satori.
+    var backdrop: Sprite3D = Sprite3D.new()
+    backdrop.texture = load("res://assets/realms/shadow_realm.webp") as Texture2D
+    backdrop.pixel_size = 0.012
+    backdrop.shaded = false
+    backdrop.modulate = Color(0.64,0.48,0.88,0.48)
+    backdrop.position = Vector3(0,0,-10.0)
+    add_child(backdrop)
     var sun: DirectionalLight3D = DirectionalLight3D.new()
     sun.rotation_degrees = Vector3(-40, -30, 0)
     sun.light_energy = 1.45
@@ -97,6 +105,16 @@ func _make_world() -> void:
         mark.position.z = 0.085
         tile.add_child(mark)
         marks.append(mark)
+    var podium: MeshInstance3D = MeshInstance3D.new()
+    var disk: CylinderMesh = CylinderMesh.new()
+    disk.top_radius = 2.10
+    disk.bottom_radius = 2.16
+    disk.height = 0.13
+    disk.radial_segments = 48
+    podium.mesh = disk
+    podium.material_override = _material(Color("353050"))
+    podium.position = Vector3(0,-2.37,0)
+    add_child(podium)
     pivot.rotation = Vector3(0.45, -0.64, 0.06)
 
 func _make_ui() -> void:
@@ -112,7 +130,7 @@ func _make_ui() -> void:
     top.offset_left = 12
     top.offset_right = -12
     top.offset_top = 18
-    top.offset_bottom = 146
+    top.offset_bottom = 129
     var top_style: StyleBoxFlat = StyleBoxFlat.new()
     top_style.bg_color = Color("26233c")
     top_style.corner_radius_top_left = 15
@@ -127,9 +145,9 @@ func _make_ui() -> void:
     var header: VBoxContainer = VBoxContainer.new()
     top.add_child(header)
     mode_label = Label.new()
-    mode_label.text = "ZEN MASTER · 5×5 · 150 FELDER"
+    mode_label.text = "VOID SANCTUARY · ZEN MASTER 5×5"
     mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    mode_label.add_theme_font_size_override("font_size", 19)
+    mode_label.add_theme_font_size_override("font_size", 17)
     mode_label.add_theme_color_override("font_color", Color("e6d7ac"))
     header.add_child(mode_label)
     var buttons: HBoxContainer = HBoxContainer.new()
@@ -149,6 +167,11 @@ func _make_ui() -> void:
     restart_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     restart_button.pressed.connect(_restart_current)
     buttons.add_child(restart_button)
+    var replay_button: Button = Button.new()
+    replay_button.text = "Satori-Test"
+    replay_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    replay_button.pressed.connect(_return_to_satori)
+    buttons.add_child(replay_button)
     status = Label.new()
     status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     status.add_theme_color_override("font_color", Color("f0ede2"))
@@ -159,14 +182,17 @@ func _make_ui() -> void:
     footer.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
     footer.offset_left = 22
     footer.offset_right = -22
-    footer.offset_top = -110
-    footer.offset_bottom = -26
+    footer.offset_top = -63
+    footer.offset_bottom = -17
     footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     footer.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    footer.add_theme_font_size_override("font_size", 16)
+    footer.add_theme_font_size_override("font_size", 15)
     footer.add_theme_color_override("font_color", Color("e6d7ac"))
-    footer.text = "Fünf in einer Reihe – auf einer Seite oder gerade über eine Kante.\nZiehen: drehen · Zwei Finger: zoomen · Tippen: setzen"
+    footer.text = "Drehen · Zoomen · Tippen"
+
+func _return_to_satori() -> void:
+    get_tree().change_scene_to_file("res://ZenMasterBridgeTest.tscn")
 
 func _restart_current() -> void:
     _restart(versus_bot)
@@ -315,7 +341,7 @@ func _unhandled_input(event: InputEvent) -> void:
             finger_positions[event.index] = event.position
             var after: float = finger_positions[keys[0]].distance_to(finger_positions[keys[1]])
             if before > 4 and after > 4:
-                camera.position.z = clampf(camera.position.z * before / after, 6.2, 13.0)
+                camera.position.z = clampf(camera.position.z * before / after, 6.8, 15.0)
             dragged = true
         elif finger_positions.size() == 1:
             finger_positions[event.index] = event.position
@@ -327,9 +353,9 @@ func _unhandled_input(event: InputEvent) -> void:
         if touch_seen or OS.get_name() == "Android":
             return
         if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-            camera.position.z = clampf(camera.position.z * 0.93, 6.2, 13.0)
+            camera.position.z = clampf(camera.position.z * 0.93, 6.8, 15.0)
         elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-            camera.position.z = clampf(camera.position.z * 1.07, 6.2, 13.0)
+            camera.position.z = clampf(camera.position.z * 1.07, 6.8, 15.0)
         elif event.button_index == MOUSE_BUTTON_LEFT:
             mouse_down = event.pressed
             if event.pressed:
