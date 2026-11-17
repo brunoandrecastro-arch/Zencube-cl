@@ -171,13 +171,13 @@ func _make_campaign_ui() -> void:
     dialog_head = _ui_label("",20,Color("f9e5bb"))
     story_col.add_child(dialog_head)
     dialog_preview = TextureRect.new()
-    dialog_preview.custom_minimum_size = Vector2(0,198)
+    dialog_preview.custom_minimum_size = Vector2(0,270)
     dialog_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
     dialog_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    dialog_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    dialog_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     story_col.add_child(dialog_preview)
     dialog_text = _ui_label("",15,Color("f6f1e9"))
-    dialog_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    dialog_text.size_flags_vertical = Control.SIZE_FILL
     story_col.add_child(dialog_text)
     dialog_quote = _ui_label("",14,Color("d6c0f2"))
     story_col.add_child(dialog_quote)
@@ -215,7 +215,7 @@ func _make_campaign_ui() -> void:
     map_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     map_scroll.add_theme_constant_override("separation",5)
     scroll.add_child(map_scroll)
-    map_col.add_child(_ui_button("Satori-Eisbruch erneut testen",_return_to_satori))
+    map_col.add_child(_ui_button("Satori-Glasbruch erneut testen",_return_to_satori))
     map_col.add_child(_ui_button("Zurück zum Würfel",_close_map))
     map_layer.visible = false
 
@@ -225,7 +225,7 @@ func _refresh_hud() -> void:
     var boss: Dictionary = Story.BOSSES[current_stage]
     var realm: Dictionary = Story.REALMS[boss["realm"]]
     hud_title.text = "%s · %s" % [realm["name"],boss["name"]]
-    hud_progress.text = "Boss %d/16 · Siege %d/16 · 4 GEWINNT · Start %s" % [current_stage+1,cleared,("Du" if first_player == 1 else "Bot")]
+    hud_progress.text = "Boss %d/16 · Siege %d/16 · 4 GEWINNT · Beginn: %s" % [current_stage+1,cleared,("Du" if first_player == 1 else "Bot")]
     if winner == 1:
         hud_status.text = "Sieg! Du hast %s besiegt." % boss["name"]
     elif winner == 2:
@@ -332,7 +332,7 @@ func _show_result(won: bool) -> void:
         dialog_quote.text = "„%s“" % boss["wisdom"]
         dialog_action.text = "Zum nächsten Boss" if cleared < 16 else "Chronik abgeschlossen"
     else:
-        dialog_text.text = "Kuze wird zurückgeworfen, aber sein Weg ist noch nicht zu Ende. Betrachte die vier Gewinnlinien und versuche eine neue Strategie."
+        dialog_text.text = "Kuze wird zurückgeworfen, aber sein Weg ist noch nicht zu Ende. Suche nach möglichen Vierer-Reihen auf den Flächen und über die Kanten. Versuche eine neue Strategie."
         dialog_quote.text = "„%s“" % boss["challenge"]
         dialog_action.text = "Erneut kämpfen"
     story_layer.visible = true
