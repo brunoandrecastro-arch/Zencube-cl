@@ -84,11 +84,11 @@ jobs:
           source = preset.read_text()
           needle = 'package/unique_name="com.zencube.game"'
           assert source.count(needle) == 1
-          source = source.replace(needle, 'package/unique_name="com.zencube.game.zenmaster"', 1)
-          source = source.replace('package/name="ZenCube 3D"', 'package/name="Zen Master 16 Boss QA"', 1)
+          source = source.replace(needle, 'package/unique_name="com.zencube.game.zenmastercampaign"', 1)
+          source = source.replace('package/name="ZenCube 3D"', 'package/name="Zen Master Campaign QA"', 1)
           preset.write_text(source)
           assert 'package/unique_name="com.zencube.game.play"' in source
-          print("Temporary Android debug package: com.zencube.game.zenmaster")
+          print("Isolated QA package: com.zencube.game.zenmastercampaign")
           PY
       - name: Export signed isolated debug APK
         run: |
