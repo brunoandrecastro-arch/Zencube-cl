@@ -186,7 +186,7 @@ func sync_realm_music(initial: bool = false) -> void:
 func style(color: Color, radius: int = 17) -> StyleBoxFlat:
     var box: StyleBoxFlat = StyleBoxFlat.new()
     box.bg_color = color
-    box.border_color = Color("c49f65",0.8)
+    box.border_color = Color("ddb166",0.94)
     box.set_border_width_all(2)
     box.set_corner_radius_all(radius)
     box.set_content_margin_all(11.0)
@@ -206,10 +206,10 @@ func action(parent: Node, value: String, fn: Callable, primary: bool = false) ->
     b.text = value
     b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     b.custom_minimum_size.y = 54
-    b.add_theme_stylebox_override("normal",style(Color("4e674f") if primary else Color("ead8bb")))
-    b.add_theme_stylebox_override("pressed",style(Color("5d774f")))
-    b.add_theme_stylebox_override("hover",style(Color("729073") if primary else Color("f2e5d0")))
-    var fc: Color = Color("fff9e7") if primary else Color("3d3028")
+    b.add_theme_stylebox_override("normal",style(Color("315b3d") if primary else Color("193b2a")))
+    b.add_theme_stylebox_override("pressed",style(Color("34543b")))
+    b.add_theme_stylebox_override("hover",style(Color("49704c") if primary else Color("2c5238")))
+    var fc: Color = Color("fff6db")
     for kind in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
         b.add_theme_color_override(kind, fc)
     b.mouse_filter = Control.MOUSE_FILTER_PASS
