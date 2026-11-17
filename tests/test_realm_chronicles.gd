@@ -109,6 +109,12 @@ func run() -> void:
     controller.call("start_realm_story")
     check(bool(controller.get("realm_story_active")),"story starts on real 4x4 scene")
     check(int(controller.get("realm_story_stage"))==0,"first story starts with Mist Guardian")
+    check(int(controller.get("turn"))==1,"first Shadow boss: player begins")
+    controller.call("_realm_story_retry")
+    check(int(controller.get("turn"))==2,"Shadow boss retry: boss begins")
+    controller.call("_realm_story_retry")
+    check(int(controller.get("turn"))==1,"Shadow boss second retry: player begins again")
+    check(int(Story.load_progress().starts.get("0",0))==3,"starter parity persisted across three starts")
     var renderer: Node = controller.get("cube")
     check(int(renderer.get("boss_skin_id"))==0,"Mist Guardian material is automatic")
     var story_popup: Control = controller.get("active_realm_dialog") as Control
@@ -147,6 +153,7 @@ func run() -> void:
     check(FileAccess.get_file_as_string(SaveManager.PATH)==classic_disk,"story cannot award currency or alter normal Ascend data")
     controller.call("_realm_story_advance")
     check(int(Story.load_progress().stage)==1,"stage advances after an actual win")
+    check(int(controller.get("turn"))==2,"second story boss starts with bot")
     check(int(renderer.get("boss_skin_id"))==1,"Mirror Novice automatically gets new skin")
     for stage in range(12):
         controller.call("_realm_story_set_stage",stage)
