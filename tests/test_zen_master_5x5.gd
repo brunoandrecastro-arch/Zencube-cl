@@ -61,8 +61,8 @@ func run() -> void:
     for i in range(3):
         cells[int(lines[0][i])] = 1
     check(Mode.immediate_move(cells, lines, 1) == int(lines[0][3]), "fourth mark detected")
-    check(Mode.next_move(cells, lines, 1) == int(lines[0][4]), "bot wins immediately")
-    check(Mode.next_move(cells, lines, 2) == int(lines[0][4]), "bot blocks immediate threat")
+    check(Mode.next_move(cells, lines, 1) == int(lines[0][3]), "bot wins immediately")
+    check(Mode.next_move(cells, lines, 2) == int(lines[0][3]), "bot blocks immediate threat")
     check(cells.count(0) == 147, "bot does not mutate board")
     check(BoardModel.new().cells.size() == 54, "Classic remains 54 cells")
     check(ZenAscend.generate_lines().size() == 204, "Zen Ascend remains 204 lines")
