@@ -820,8 +820,14 @@ func request_campaign_breakthrough(chapter: int) -> void:
     get_tree().root.add_child(transition)
     transition.finished.connect(_campaign_after_breakthrough.bind(chapter))
     var settings: Dictionary = SaveManager.load_data().get("settings",{})
+    var from_art: String = Realm2.SOURCE_ART[chapter]
+    var to_art: String = Realm2.SOURCE_ART[chapter+1]
+    var abyss_art: String = "res://assets/abyss_of_memories/gameplay.webp"
+    if ResourceLoader.exists(abyss_art):
+        if chapter==0: to_art = abyss_art
+        elif chapter==1: from_art = abyss_art
     transition.present(
-        Realm2.SOURCE_ART[chapter],Realm2.SOURCE_ART[chapter+1],
+        from_art,to_art,
         Realm2.REALM_NAMES[chapter+1],true,bool(settings.get("sound",true)),[],
         str(settings.get("language","de")))
 

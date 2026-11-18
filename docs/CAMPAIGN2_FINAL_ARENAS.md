@@ -1,0 +1,2 @@
+# Final approved arena package
+Place the exact user-approved `ZenCube_Campaign2_Final_Arenas.zip` in the repository root of `fix/campaign2-build337-feedback`. Do not unzip when uploading. The CI verifies the seven SHA-256 digests, extracts the original WebP textures prior to Godot import, and checks their presence in the APK. No fallback images are accepted for this branch's final APK export. Original dimensions are retained; this is not native 4K. No production changes or Play release.

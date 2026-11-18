@@ -81,6 +81,7 @@ var shadow_generation: int = 0
 var shadow_last_human: int = -1
 var campaign_practice_active: bool = false
 var campaign_awards: Array[String] = []
+var practice_choir_played: bool = false
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -454,6 +455,7 @@ func show_ascend_menu() -> void:
     action(body,Z("Regeln ansehen"),show_rules)
     action(body,L("realms"),show_realms)
     action(body,L("challenges"),show_challenges)
+    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms)
     action(body,_achievements_label(),show_realm_titles)
     action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
@@ -1028,7 +1030,8 @@ func show_realms() -> void:
     text(body,L("subtitle"),15,Color("567b72"))
     text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
     # Story and boss progress live exclusively in Zen Realm Chronicles.
-    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true)
+    var chronicles_button: Button = action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true)
+    chronicles_button.name = "Campaign2ChroniclesEntry"
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -1080,6 +1083,7 @@ func _preview_mirror_shatter_qa() -> void:
 
 func _add_abyss_realm_card(body: VBoxContainer) -> void:
     var card: PanelContainer = PanelContainer.new()
+    card.name = "Campaign2AbyssRealmCard"
     card.add_theme_stylebox_override("panel",style(Color("252034"),18))
     body.add_child(card)
     var column: VBoxContainer = VBoxContainer.new()
@@ -1318,6 +1322,8 @@ func show_match_result() -> void:
             text(info,L("rank") + ": " + Achievements.main_title(data,match_realm),15)
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog))
+    if against_bot and match_realm==0:
+        action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_open_campaign_trials_from_realms.bind(0))
     action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
 
@@ -2081,6 +2087,11 @@ func start_campaign_practice(chapter: int) -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     if chapter==0:
         if not Realms.select(data,0): return
+        campaign_practice_active = false
+        campaign_awards = []
+        cube.clear_abyss_skin()
+        cube.set_skin(int(data.economy.get("equipped",0)))
+        ZenChronicles.set_campaign_board_active(false)
         SaveManager.save_data(data)
         if realm_backdrop != null: realm_backdrop.texture = load(Realms.REALM_ART[0])
         sync_realm_music()
@@ -2110,6 +2121,7 @@ func _campaign_practice_restart() -> void:
     recorded = false
     busy = false
     campaign_awards = []
+    practice_choir_played = false
     var total: int = int(Realm2.load_progress().abyss_stats.played)
     turn = 1 if total % 2 == 0 else 2
     cube.reset_view()
@@ -2131,7 +2143,8 @@ func _campaign_practice_result() -> void:
         text(body,_campaign_phrase("🏆 Realm-Challenge abgeschlossen!","🏆 Realm challenge earned!","🏆 Desafio de reino concluído!"),18,Color("#c8e8b4"))
         for title_name in campaign_awards:
             text(body,"✓ " + title_name,17,Color("#e5d2ac"))
-        if bool(data.get("settings",{}).get("sound",true)):
+        if not practice_choir_played and bool(data.get("settings",{}).get("sound",true)):
+            practice_choir_played = true
             var choir: AudioStreamPlayer = AudioStreamPlayer.new()
             choir.stream = load("res://assets/audio/zen_achievement_choir.wav") as AudioStream
             add_child(choir)

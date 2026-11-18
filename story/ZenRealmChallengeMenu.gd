@@ -61,7 +61,10 @@ func _render() -> void:
     add_child(panel)
     panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var scenery := TextureRect.new()
-    scenery.texture = load(Campaign.SOURCE_ART[chapter]) if ResourceLoader.exists(Campaign.SOURCE_ART[chapter]) else null
+    var art_path: String = Campaign.SOURCE_ART[chapter]
+    if chapter==1 and ResourceLoader.exists("res://assets/abyss_of_memories/gameplay.webp"):
+        art_path = "res://assets/abyss_of_memories/gameplay.webp"
+    scenery.texture = load(art_path) if ResourceLoader.exists(art_path) else null
     scenery.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     scenery.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     scenery.modulate = Color(0.50,0.55,0.63,0.40)

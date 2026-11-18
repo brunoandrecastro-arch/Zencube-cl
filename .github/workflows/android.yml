@@ -72,6 +72,16 @@ jobs:
           else
             echo "::notice::HD arena/preview ZIP not yet uploaded; QA APK uses safe legacy backgrounds until media upload"
           fi
+      - name: Extract final approved Campaign 2.0 arena ZIP
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f ZenCube_Campaign2_Final_Arenas.zip ]]; then
+            python3 tests/test_campaign2_arenas.py --extract
+          else
+            echo "::warning::Final arena ZIP missing; source tests can run, but final APK export requires it"
+          fi
       - name: Import project and check GDScript
         run: |
           "$GODOT" --headless --editor --import --quit
@@ -299,6 +309,9 @@ jobs:
         with:
           path: ~/.android/zencube-debug.keystore
           key: zencube-realm-2-0-debug-key-v1
+      - name: Require verified final arena pack before Campaign 2.0 APK export
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback')
+        run: python3 tests/test_campaign2_arenas.py
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -339,6 +352,9 @@ jobs:
           grep -F 'assets/assets/shadow_campaign/pages/page_30.webp' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/mist_guardian.ogg' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/veil_monk.ogg' <<< "$contents"
+      - name: Verify seven final arena textures inside APK
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback')
+        run: python3 tests/test_campaign2_arenas.py --apk build/ZenCube-3D.apk
       - name: Name ZenCube 2.0 Realm test APK
         if: env.ZENCUBE_REALM_2_0_TEST == 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-2.0-Realm.apk
