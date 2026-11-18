@@ -12,6 +12,7 @@ const Campaign = preload("res://story/ZenCampaign.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const AbyssReader = preload("res://story/ZenAbyssReader.gd")
 const ShadowReader = preload("res://story/ZenShadowReader.gd")
+const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const ChallengeMenu = preload("res://story/ZenRealmChallengeMenu.gd")
 const Portal2 = preload("res://ui/ZenRealmTravelCeremony.gd")
@@ -68,6 +69,10 @@ func _ready() -> void:
     _load_settings_and_chapters()
     _root = Control.new()
     _root.name = "ZenChroniclesRoot"
+    var chronicle_theme: Theme = Theme.new()
+    chronicle_theme.default_font = ZenType.body()
+    chronicle_theme.default_font_size = 18
+    _root.theme = chronicle_theme
     _root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(_root)
     _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
