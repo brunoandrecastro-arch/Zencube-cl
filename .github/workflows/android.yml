@@ -12,9 +12,9 @@ jobs:
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
-      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' }}
-      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' }}
-      ZENCUBE_REALM_2_0_TEST: ${{ github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' }}
+      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'feature/campaign-2-arenas-6realms-2026-11-18' || github.ref_name == 'feature/campaign-2-arenas-6realms-2026-11-18' }}
+      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'feature/campaign-2-arenas-6realms-2026-11-18' || github.ref_name == 'feature/campaign-2-arenas-6realms-2026-11-18' }}
+      ZENCUBE_REALM_2_0_TEST: ${{ github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'feature/campaign-2-arenas-6realms-2026-11-18' || github.ref_name == 'feature/campaign-2-arenas-6realms-2026-11-18' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -72,6 +72,24 @@ jobs:
           else
             echo "::notice::HD arena/preview ZIP not yet uploaded; QA APK uses safe legacy backgrounds until media upload"
           fi
+      - name: Extract optional six individual Shadow / Abyss boss arenas
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f ZenCube_Campaign2_Boss_Arenas.zip ]]; then
+            unzip -oq ZenCube_Campaign2_Boss_Arenas.zip -d .
+            for path in assets/shadow_campaign/arenas/{mist_guardian,mirror_novice,veil_monk}.webp \
+                        assets/abyss_of_memories/arenas/{memory_thief,weeping_blade,forgotten_shogun}.webp; do
+              test -s "$path" || { echo "::error::Boss arena missing: $path"; exit 1; }
+            done
+            echo "::notice::All six individual Campaign 2.0 arenas extracted"
+          else
+            echo "::notice::Arena pack not uploaded yet; existing Realm visuals remain in this debug APK"
+          fi
+      - name: Verify boss arena source mapping and optional WebP package
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        run: python3 tests/test_campaign2_arenas.py
       - name: Import project and check GDScript
         run: |
           "$GODOT" --headless --editor --import --quit
