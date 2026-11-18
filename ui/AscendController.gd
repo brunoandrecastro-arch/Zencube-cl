@@ -14,6 +14,7 @@ const RealmPortal = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
+const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
@@ -315,6 +316,10 @@ func build_interface() -> void:
     layer = Control.new()
     canvas.add_child(layer)
     layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var ui_theme: Theme = Theme.new()
+    ui_theme.default_font = ZenType.body()
+    ui_theme.default_font_size = 18
+    layer.theme = ui_theme
     var backdrop: TextureRect = TextureRect.new()
     realm_backdrop = backdrop
     backdrop.texture = load(Realms.REALM_ART[realm_index()])
@@ -352,6 +357,7 @@ func build_interface() -> void:
     title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header_row.add_child(title_box)
     rank_label = text(title_box,"",27,Color("f9e7b7"))
+    rank_label.add_theme_font_override("font",ZenType.heading())
     text(title_box,Z("Zen Ascend 4×4"),18,Color("e8d1a9"))
     text(title_box,L("subtitle"),12,Color("d6bfa4"))
     var scoreboard: PanelContainer = PanelContainer.new()
