@@ -1,0 +1,89 @@
+{
+  "chapter_id": "campaign2_shadow_realm",
+  "title": "Shadow Realm – The Whispering Veil",
+  "page_count": 30,
+  "source": "Zen_Chronicles_Chapter1_30_Images(1).zip",
+  "optimized_zip": "ZenCube_Shadow_Media_Pages.zip",
+  "pages": [
+    "res://assets/shadow_campaign/pages/page_01.webp",
+    "res://assets/shadow_campaign/pages/page_02.webp",
+    "res://assets/shadow_campaign/pages/page_03.webp",
+    "res://assets/shadow_campaign/pages/page_04.webp",
+    "res://assets/shadow_campaign/pages/page_05.webp",
+    "res://assets/shadow_campaign/pages/page_06.webp",
+    "res://assets/shadow_campaign/pages/page_07.webp",
+    "res://assets/shadow_campaign/pages/page_08.webp",
+    "res://assets/shadow_campaign/pages/page_09.webp",
+    "res://assets/shadow_campaign/pages/page_10.webp",
+    "res://assets/shadow_campaign/pages/page_11.webp",
+    "res://assets/shadow_campaign/pages/page_12.webp",
+    "res://assets/shadow_campaign/pages/page_13.webp",
+    "res://assets/shadow_campaign/pages/page_14.webp",
+    "res://assets/shadow_campaign/pages/page_15.webp",
+    "res://assets/shadow_campaign/pages/page_16.webp",
+    "res://assets/shadow_campaign/pages/page_17.webp",
+    "res://assets/shadow_campaign/pages/page_18.webp",
+    "res://assets/shadow_campaign/pages/page_19.webp",
+    "res://assets/shadow_campaign/pages/page_20.webp",
+    "res://assets/shadow_campaign/pages/page_21.webp",
+    "res://assets/shadow_campaign/pages/page_22.webp",
+    "res://assets/shadow_campaign/pages/page_23.webp",
+    "res://assets/shadow_campaign/pages/page_24.webp",
+    "res://assets/shadow_campaign/pages/page_25.webp",
+    "res://assets/shadow_campaign/pages/page_26.webp",
+    "res://assets/shadow_campaign/pages/page_27.webp",
+    "res://assets/shadow_campaign/pages/page_28.webp",
+    "res://assets/shadow_campaign/pages/page_29.webp",
+    "res://assets/shadow_campaign/pages/page_30.webp"
+  ],
+  "gates": [
+    {
+      "boss": "mist_guardian",
+      "name": "Mist Guardian",
+      "after_page": 4,
+      "resume_page": 5,
+      "difficulty": "medium",
+      "portrait": "res://assets/realm_chronicles/boss_mist_guardian.json",
+      "music": "res://assets/realm_boss_music/mist_guardian.ogg"
+    },
+    {
+      "boss": "mirror_novice",
+      "name": "Mirror Novice",
+      "after_page": 8,
+      "resume_page": 9,
+      "difficulty": "medium",
+      "portrait": "res://assets/realm_chronicles/boss_mirror_novice.json",
+      "music": "res://assets/realm_boss_music/mirror_novice.ogg"
+    },
+    {
+      "boss": "veil_monk",
+      "name": "Veil Monk",
+      "after_page": 15,
+      "resume_page": 16,
+      "difficulty": "medium",
+      "portrait": "res://assets/realm_chronicles/boss_veil_monk.json",
+      "music": "res://assets/realm_boss_music/veil_monk.ogg"
+    }
+  ],
+  "realm_art": "res://assets/realms/shadow_realm.webp",
+  "realm_art_resolution": [
+    1440,
+    2560
+  ],
+  "story_music": "res://assets/realm_music/shadow_realm.ogg",
+  "cube_material_source": "res://core/ZenRealmBossSkins.gd",
+  "cube_material_indexes": [
+    0,
+    1,
+    2
+  ],
+  "board": {
+    "faces": 6,
+    "side": 4,
+    "cells": 96,
+    "winning_lines": 204
+  },
+  "save_file": "user://zencube_shadow_campaign_v1.json",
+  "status": "Native reader and boss adapter written; media ZIP pending branch upload and complete Android CI",
+  "release": "Draft only. No merge, no Play Console change."
+}
