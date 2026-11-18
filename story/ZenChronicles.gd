@@ -275,10 +275,13 @@ func open_library() -> void:
         "🔒 Shadow Realm · Unlock Zen Ascend 4×4","🔒 Shadow Realm · Desbloqueia Zen Ascend 4×4"),outer,open_shadow_reader)
     _make_button("🌑 Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · Shadow 3+3",outer,open_abyss_reader)
     _make_button("🔥 Ember Temple" if Realm2.unlocked(2) else "🔒 Ember Temple · Abyss 3+3",outer,open_ember_campaign_preview)
-    _make_label("Original Archives",outer,18,GOLD)
-    _make_button("📜 Original Realm Chronicles · 12 Bosses",outer,open_realm_story_archive)
-    _make_button("📖 Original Zen Campaign · 3×3",outer,open_campaign_overview)
-    _make_button("📚 Original Zen Webcomic",outer,open_comic_library)
+    _make_label(campaign_ui("Originalarchive","Original Archives","Arquivos originais"),outer,18,GOLD)
+    _make_button(campaign_ui("📜 Original Realm Chronicles · 12 Bosse",
+        "📜 Original Realm Chronicles · 12 Bosses","📜 Realm Chronicles originais · 12 chefes"),outer,open_realm_story_archive)
+    _make_button(campaign_ui("📖 Originale Zen-Kampagne · 3×3",
+        "📖 Original Zen Campaign · 3×3","📖 Campanha Zen original · 3×3"),outer,open_campaign_overview)
+    _make_button(campaign_ui("📚 Originaler Zen-Webcomic",
+        "📚 Original Zen Webcomic","📚 Webcomic Zen original"),outer,open_comic_library)
 
 func open_comic_library() -> void:
     _sync_language()
