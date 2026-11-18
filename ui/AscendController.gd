@@ -2029,3 +2029,101 @@ func _shadow_back_to_reader() -> void:
     draw()
     ZenChronicles.open_shadow_reader()
 
+
+# ---- Zen Realm Chronicles: NORMAL Abyss bot matches, not puzzles ----
+func start_campaign_practice(chapter: int) -> void:
+    if chapter != 1 or not Realm2.unlocked(1): return
+    campaign_practice_active = true
+    abyss_active = false
+    shadow_active = false
+    realm_story_active = false
+    against_bot = true
+    bot_level = 1
+    owners = [0,1]
+    ZenChronicles.set_campaign_board_active(true)
+    cube.clear_boss_skin()
+    cube.set_abyss_skin(0)
+    if realm_backdrop != null:
+        var arena: Texture2D = Abyss.battle_backdrop()
+        if arena != null: realm_backdrop.texture = arena
+    sync_realm_music()
+    _campaign_practice_restart()
+
+func _campaign_practice_restart() -> void:
+    if not campaign_practice_active: return
+    match_generation += 1
+    cells.fill(0)
+    result = 0
+    recorded = false
+    busy = false
+    campaign_awards = []
+    var total: int = int(Realm2.load_progress().abyss_stats.played)
+    turn = 1 if total % 2 == 0 else 2
+    cube.reset_view()
+    draw()
+    if turn == 2:
+        busy = true
+        call_deferred("bot_turn")
+
+func _campaign_practice_result() -> void:
+    if not campaign_practice_active: return
+    var heading: String = _campaign_phrase("Sieg","Victory","Vitória") if result==1 else (
+        _campaign_phrase("Unentschieden","Draw","Empate") if result==3 else
+        _campaign_phrase("Niederlage","Defeat","Derrota"))
+    var parts: Dictionary = _realm_dialog(heading,520)
+    _campaign_result_compact(parts)
+    var body: VBoxContainer = parts.box
+    text(body,"Abyss of Memories · Zen-Bot",20,Color("#e5d2ac"))
+    if not campaign_awards.is_empty():
+        text(body,_campaign_phrase("🏆 Realm-Challenge abgeschlossen!","🏆 Realm challenge earned!","🏆 Desafio de reino concluído!"),18,Color("#c8e8b4"))
+        for title_name in campaign_awards:
+            text(body,"✓ " + title_name,17,Color("#e5d2ac"))
+        if bool(data.get("settings",{}).get("sound",true)):
+            var choir: AudioStreamPlayer = AudioStreamPlayer.new()
+            choir.stream = load("res://assets/audio/zen_achievement_choir.wav") as AudioStream
+            add_child(choir)
+            choir.finished.connect(choir.queue_free)
+            choir.play()
+    text(body,_campaign_phrase("Abyss-Challenges: %d/3","Abyss challenges: %d/3","Desafios Abyss: %d/3") %
+        Realm2.completed_count(Realm2.load_progress(),1),16,Color("#e8ddc5"))
+    action(body,_campaign_phrase("⚔ Noch eine Partie","⚔ Play Again","⚔ Jogar novamente"),_campaign_practice_begin_again,true)
+    action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
+    _open_realm_dialog(parts)
+
+func _campaign_practice_begin_again() -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    _campaign_practice_restart()
+
+func _campaign_practice_menu() -> void:
+    if not campaign_practice_active: return
+    var parts: Dictionary = _realm_dialog("Abyss of Memories · Zen-Bot",420)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    action(body,_campaign_phrase("⚔ Partie fortsetzen","⚔ Continue Match","⚔ Continuar partida"),_campaign_practice_begin,true)
+    action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
+    _open_realm_dialog(parts)
+
+func _campaign_practice_begin() -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+
+func _campaign_practice_back() -> void:
+    if not campaign_practice_active: return
+    match_generation += 1
+    campaign_practice_active = false
+    campaign_awards = []
+    busy = false
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    cube.clear_abyss_skin()
+    cube.set_skin(int(data.economy.get("equipped",0)))
+    match_realm = int(Realms.state(data).selected)
+    bot_level = Realms.fixed_bot_level(match_realm)
+    cells.fill(0)
+    turn = 1
+    result = 0
+    recorded = false
+    if realm_backdrop != null:
+        realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+    ZenChronicles.set_campaign_board_active(false)
+    sync_realm_music()
+    draw()
+    ZenChronicles.open_campaign_challenges(1)
