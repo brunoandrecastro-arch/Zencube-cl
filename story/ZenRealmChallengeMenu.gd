@@ -7,6 +7,10 @@ var chapter: int = 0
 var locale: String = "en"
 var panel: Control
 
+func _chronicles() -> Node:
+    # Avoid circular script preload resolution in Godot headless Android CI.
+    return get_tree().root.get_node("ZenChronicles")
+
 func _ready() -> void:
     layer = 111
     locale = str(SaveManager.load_data().get("settings",{}).get("language","en"))
@@ -106,25 +110,25 @@ func _render() -> void:
     _button(content,t("Zur Bibliothek","Library","Biblioteca"),_library)
 
 func _play_bot() -> void:
-    ZenChronicles.close_campaign_challenges()
+    _chronicles().call("close_campaign_challenges")
     if chapter==0:
         # Existing Shadow Realm tasks only progress in normal Zen-Bot games.
         get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
     else:
         # Abyss-specific free-play, never an individual puzzle shortcut.
-        ZenChronicles.call_deferred("request_campaign_practice",chapter)
+        _chronicles().call_deferred("request_campaign_practice",chapter)
 
 func _back() -> void:
-    ZenChronicles.close_campaign_challenges()
-    if chapter==0: ZenChronicles.call_deferred("open_shadow_reader")
-    else: ZenChronicles.call_deferred("open_abyss_reader")
+    _chronicles().call("close_campaign_challenges")
+    if chapter==0: _chronicles().call_deferred("open_shadow_reader")
+    else: _chronicles().call_deferred("open_abyss_reader")
 
 func _library() -> void:
-    ZenChronicles.close_campaign_challenges()
-    ZenChronicles.call_deferred("open_library")
+    _chronicles().call("close_campaign_challenges")
+    _chronicles().call_deferred("open_library")
 
 func _next_realm() -> void:
-    ZenChronicles.request_campaign_breakthrough(chapter)
+    _chronicles().call("request_campaign_breakthrough",chapter)
 
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE:
