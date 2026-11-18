@@ -260,7 +260,7 @@ func open_library() -> void:
     var outer := _make_screen()
     var head := HBoxContainer.new()
     outer.add_child(head)
-    var heading := _make_label(_t("library_header"), head, 24, GOLD)
+    var heading := _make_label("ZEN REALM CHRONICLES", head, 24, GOLD)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
@@ -269,6 +269,10 @@ func open_library() -> void:
     _make_button("🌘 Shadow Realm" if access else "🔒 Shadow Realm · Zen Ascend 4×4 freischalten",outer,open_shadow_reader)
     _make_button("🌑 Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · Shadow 3+3",outer,open_abyss_reader)
     _make_button("🔥 Ember Temple" if Realm2.unlocked(2) else "🔒 Ember Temple · Abyss 3+3",outer,open_ember_campaign_preview)
+    _make_label("Original Archives",outer,18,GOLD)
+    _make_button("📜 Original Realm Chronicles · 12 Bosses",outer,open_realm_story_archive)
+    _make_button("📖 Original Zen Campaign · 3×3",outer,open_campaign_overview)
+    _make_button("📚 Original Zen Webcomic",outer,open_comic_library)
 
 func open_comic_library() -> void:
     _sync_language()
@@ -837,3 +841,10 @@ func open_ember_campaign_preview() -> void:
     outer.add_child(pic)
     _make_label("Das vollständige Campaign-2.0-Kapitel für Ember Temple folgt in einer späteren Testversion.",outer,15,CREAM)
     _make_button("‹ Zur Bibliothek",outer,open_library)
+
+func open_realm_story_archive() -> void:
+    # Preserve the original 12 boss story without another entrance in Realms.
+    if not Realm2.base_unlocked():
+        _campaign_locked_screen(0)
+        return
+    open_realm_story_overview()
