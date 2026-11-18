@@ -1,137 +1,120 @@
 extends SceneTree
-## ZenCube 2.0 Realm acceptance tests: separate tactical achievements and safe gates.
-const Campaign = preload("res://core/ZenRealmCampaign2.gd")
+# ZenCube 2.0 Realm regression: real auto-awarded Realm tasks vs active Zen Challenges.
+const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
-const Menu = preload("res://story/ZenRealmChallengeMenu.gd")
+const Realms = preload("res://core/ZenAscendRealms.gd")
+const Reader = preload("res://story/ZenRealmChallengeMenu.gd")
 var failed: int = 0
 var snapshots: Dictionary = {}
-
-func ok(assertion: bool, description: String) -> void:
-    if not assertion:
+func check(value: bool, what: String) -> void:
+    if not value:
         failed += 1
-        printerr("REALM 2.0 FAILED: ",description)
+        printerr("REALM 2.0: ",what)
 
 func _initialize() -> void:
-    call_deferred("check_all")
+    call_deferred("run")
 
-func _backup(path: String) -> void:
-    if FileAccess.file_exists(path): snapshots[path] = FileAccess.get_file_as_bytes(path)
+func backup(path: String) -> void:
+    if FileAccess.file_exists(path): snapshots[path]=FileAccess.get_file_as_bytes(path)
 
-func _restore() -> void:
-    for path in [Campaign.SAVE,Shadow.SAVE,Abyss.SAVE,SaveManager.PATH]:
+func restore() -> void:
+    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,SaveManager.PATH]:
         if snapshots.has(path):
-            var f := FileAccess.open(path,FileAccess.WRITE)
+            var f: FileAccess = FileAccess.open(path,FileAccess.WRITE)
             if f!=null:
                 f.store_buffer(snapshots[path])
                 f.close()
         elif FileAccess.file_exists(path):
             DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
-func _seed_story(chapter: int, bosses: int, completed: bool) -> void:
+func seed_story(chapter: int, done: bool) -> void:
     var story: Dictionary = Shadow.defaults() if chapter==0 else Abyss.defaults()
-    story.defeated = [bosses>=1,bosses>=2,bosses>=3]
-    story.page = 30 if completed else (Shadow.GATES[mini(bosses,2)] if chapter==0 else Abyss.GATES[mini(bosses,2)])
-    story.completed = completed
-    if chapter==0: ok(Shadow.save_progress(story),"seed Shadow save")
-    else: ok(Abyss.save_progress(story),"seed Abyss save")
+    story.defeated = [true,true,true]
+    story.page = 30
+    story.completed = done
+    if chapter==0: check(Shadow.save_progress(story),"seed Shadow boss/story")
+    else: check(Abyss.save_progress(story),"seed Abyss boss/story")
 
-func check_all() -> void:
-    for path in [Campaign.SAVE,Shadow.SAVE,Abyss.SAVE,SaveManager.PATH]:
-        _backup(path)
-        if FileAccess.file_exists(path): DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
-    ok(Campaign.SAVE != Shadow.SAVE and Campaign.SAVE != Abyss.SAVE,
-        "Campaign achievements cannot overwrite 30-page Manhwa saves")
-    ok(not Campaign.can_unlock(3,2,true),"all 3 challenges are required")
-    ok(not Campaign.can_unlock(2,3,true),"all 3 bosses are required")
-    ok(not Campaign.can_unlock(3,3,false),"entire Manhwa must be read")
-    ok(Campaign.can_unlock(3,3,true),"3+3 plus story unlocks new realm")
-    ok(Campaign.unlocked(0),"Shadow always accessible")
-    ok(not Campaign.unlocked(1),"Abyss initially locked")
-    ok(not Campaign.unlocked(2),"Ember initially locked")
-    var lines: Array = ZenAscend.generate_lines()
-    ok(lines.size()==204,"real native 4x4 has 204 legal winning lines")
-    for chapter in range(2):
-        for index in range(3):
-            var puzzle: Dictionary = Campaign.puzzle(chapter,index,lines)
-            ok(not puzzle.is_empty(),"unique playable 4x4 tactical situation %d,%d" % [chapter,index])
-            if puzzle.is_empty(): continue
-            ok(puzzle.cells.size()==96,"96 authentic cube cells")
-            ok(Campaign.valid_move(puzzle,int(puzzle.target),lines),"native rule engine accepts solution")
-            var answer_count: int = 0
-            for i in range(96):
-                if Campaign.valid_move(puzzle,i,lines): answer_count += 1
-            ok(answer_count==1,"challenge has exactly one winning/defensive answer")
-            ok(Campaign.task_title(chapter,index)!="","named distinct challenge")
-    var baseline: Dictionary = SaveManager.defaults()
-    ZenAscend.ensure(baseline)
-    ZenAscendRealms.ensure(baseline)
-    baseline.ascension.rank = 3
-    baseline.ascension.completed = [true,true,true,false,false]
-    baseline.ascend.help_seen = true
-    baseline.settings.music = false
-    ok(SaveManager.save_data(baseline),"save legal 4x4 test access")
-    var state: Dictionary = Campaign.defaults()
-    ok(Campaign.save_progress(state),"independent achievement file can save")
-    _seed_story(0,3,true)
-    ok(not Campaign.unlocked(1),"three story bosses alone never unlock Abyss")
-    for i in range(2):
-        ok(Campaign.record_challenge(0,i),"record approved Shadow tactical achievement "+str(i))
-    ok(not Campaign.unlocked(1),"two of three Shadow tasks do not unlock Abyss")
-    ok(Campaign.record_challenge(0,2),"third Shadow challenge triggers completion")
-    ok(Campaign.unlocked(1),"Shadow 3 bosses + 3 challenges unlock Abyss")
-    ok(Campaign.completed_count(Campaign.load_progress(),0)==3,"persist all three Shadow achievements")
-    ok(not Campaign.record_challenge(0,2),"duplicate achievement rejected")
-    ok(Campaign.enter_next_realm(0),"Shadow breakthrough recorded once")
-    ok(Campaign.already_entered(0),"return visits do not replay glass")
-    _seed_story(1,3,true)
-    ok(not Campaign.unlocked(2),"Abyss bosses without challenges do not unlock Ember")
-    for i in range(3): ok(Campaign.record_challenge(1,i),"Abyss challenge "+str(i))
-    ok(Campaign.unlocked(2),"Abyss 3+3 unlocks Ember entry")
-    ok(Campaign.completed_count(Campaign.load_progress(),1)==3,"persist all three Abyss achievements")
-    ok(Campaign.enter_next_realm(1),"Abyss breakthrough may be marked")
-    ok(Campaign.already_entered(1),"Ember visit records breakthrough")
-    ok(Menu!=null,"independent, real Challenges UI imports")
-    # Native match routes: challenges must not increase Classic/normal Realm wins.
-    var old_normal: int = int(SaveManager.load_data().get("ascend",{}).get("played",0))
-    var old_leaves: int = int(SaveManager.load_data().get("economy",{}).get("leaves",0))
-    var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
-    ok(scene!=null,"real 3D native Ascend scene loads")
-    if scene!=null:
-        var original_scene: Node = current_scene
-        var controller: Node = scene.instantiate()
+func run() -> void:
+    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,SaveManager.PATH]:
+        backup(path)
+        if FileAccess.file_exists(path):
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+    check(not Realm2.base_unlocked(),"4x4 gate is never bypassed just because test APK")
+    check(not Realm2.unlocked(0),"Shadow locked without real Zen Master / purchased 4x4")
+    check(Realm2.record_abyss_match(1,false).is_empty(),"practice cannot bypass locked 4x4")
+    check(not Realm2.can_unlock(3,2,true),"3/3 automatic tasks mandatory")
+    check(not Realm2.can_unlock(2,3,true),"3/3 story bosses mandatory")
+    check(not Realm2.can_unlock(3,3,false),"story must be read")
+    check(Realm2.can_unlock(3,3,true),"3+3 unlock predicate")
+    var data: Dictionary = SaveManager.defaults()
+    data.ascension.rank = 3
+    data.ascension.completed = [true,true,true,false,false]
+    ZenAscend.ensure(data)
+    Realms.ensure(data)
+    data.ascend.help_seen = true
+    data.settings.music = false
+    check(SaveManager.save_data(data),"seed earned 4x4 entitlement")
+    check(Realm2.base_unlocked(),"earned 4x4 access")
+    check(Realm2.unlocked(0),"Shadow unlocked only after 4x4")
+    check(Realm2.completed_count(Realm2.load_progress(),0)==0,"Shadow has no fake puzzle awards")
+    var old_realm: Dictionary = SaveManager.load_data()
+    Realms.ensure(old_realm)
+    for i in range(3):
+        var task: Dictionary = Realm2.shadow_task(i)
+        check(not task.is_empty(),"existing 4x4 Shadow milestone "+str(i))
+        old_realm.ascend.realm_state.completed[str(task.id)]=true
+    check(SaveManager.save_data(old_realm),"save genuine Shadow Realm milestones")
+    check(Realm2.completed_count(Realm2.load_progress(),0)==3,"read Shadow milestones from original 4x4 stats")
+    check(not Realm2.unlocked(1),"Shadow milestones without bosses never unlock Abyss")
+    seed_story(0,true)
+    check(Realm2.unlocked(1),"3 bosses + three REAL Shadow bot milestones unlock Abyss")
+    check(Realm2.task_title(0,2,"en")=="Veil Tactician","original Veil Tactician, not a selectable puzzle")
+    check(Realm2.completed_count(Realm2.load_progress(),1)==0,"Abyss begins with zero true bot matches")
+    check(Realm2.record_abyss_match(1,false).size()==1,"first genuine win auto-earns First Echo")
+    check(Realm2.completed_count(Realm2.load_progress(),1)==1,"Abyss 1/3 after first match")
+    check(Realm2.record_abyss_match(-1,false).is_empty(),"losing does not trigger extra achievement")
+    check(Realm2.record_abyss_match(1,false).is_empty(),"second regular win, third requires total 3")
+    var got: Array[String] = Realm2.record_abyss_match(1,true)
+    check(got.size()==2,"third edge victory earns last two automatic tasks")
+    check(Realm2.completed_count(Realm2.load_progress(),1)==3,"Abyss 3/3 auto milestones")
+    check(not Realm2.unlocked(2),"Abyss 3 challenges without bosses cannot unlock Ember")
+    seed_story(1,true)
+    check(Realm2.unlocked(2),"all Abyss bosses, story and 3 auto tasks unlock Ember")
+    check(Realm2.enter_next_realm(0),"Shadow→Abyss may transition")
+    check(Realm2.already_entered(0),"portal will only play on first entry")
+    check(Realm2.enter_next_realm(1),"Abyss→Ember may transition")
+    check(Realm2.already_entered(1),"Ember first-visit tracked")
+    check(Reader!=null,"passive Realm Challenge cards import")
+    check(ZenAscend.generate_lines().size()==204,"unchanged 4x4 win rules")
+    var leaves_before: int = int(SaveManager.load_data().economy.leaves)
+    var ascended_before: int = int(SaveManager.load_data().ascend.played)
+    var packed: PackedScene = load("res://Ascend.tscn") as PackedScene
+    check(packed!=null,"native 4x4 scene imports")
+    if packed!=null:
+        var old_scene: Node = current_scene
+        var controller: Node = packed.instantiate()
         root.add_child(controller)
         current_scene = controller
         await process_frame
-        ok(controller.has_method("start_campaign_challenge"),"native 4x4 challenge start is callable")
-        # Prior chapters already solved: reset one challenge while preserving unlock.
-        var partial: Dictionary = Campaign.load_progress()
-        partial.completed[1][2] = false
-        ok(Campaign.save_progress(partial),"prepare a real Abyss tactical encounter")
-        controller.call("start_campaign_challenge",1,2)
-        ok(bool(controller.get("campaign_challenge_active")),"real 3D cube enters Campaign Challenge mode")
-        var puzzle: Dictionary = controller.get("campaign_puzzle")
-        ok(not puzzle.is_empty(),"native controller received an unsolved tactical puzzle")
-        if not puzzle.is_empty():
-            var wrong: int = 0
-            while wrong==int(puzzle.target) or int(puzzle.cells[wrong])!=0: wrong+=1
-            controller.call("_campaign_challenge_play",wrong)
-            ok(not Campaign.challenge_done(1,2),"wrong move cannot earn achievement")
-            controller.call("_campaign_challenge_play",int(puzzle.target))
-            ok(Campaign.challenge_done(1,2),"winning native cube move earns challenge achievement")
-        controller.call("_campaign_challenge_back")
+        controller.call("start_campaign_practice",1)
+        check(bool(controller.get("campaign_practice_active")),"separate real Abyss Zen-Bot mode starts")
+        check((controller.get("cells") as Array).size()==96,"96 real playable cube cells")
+        check(not controller.has_method("start_campaign_challenge"),"no separate puzzle launcher exists")
+        controller.call("_campaign_practice_back")
         await process_frame
-        var chron: Node = root.get_node_or_null("ZenChronicles")
-        ok(chron!=null and bool(chron.call("is_open")),"user returns to Challenge menu")
-        if chron!=null: chron.call("close_campaign_challenges")
+        var nav: Node = root.get_node_or_null("ZenChronicles")
+        check(nav!=null and nav.call("is_open"),"returns to passive challenge overview")
+        if nav!=null: nav.call("close_campaign_challenges")
         await process_frame
         controller.queue_free()
-        current_scene = original_scene
+        current_scene=old_scene
         await process_frame
-    ok(int(SaveManager.load_data().get("ascend",{}).get("played",0))==old_normal,
-       "Campaign Challenge cannot count as ranked/ordinary 4x4 match")
-    ok(int(SaveManager.load_data().get("economy",{}).get("leaves",0))==old_leaves,
-       "Campaign Challenge does not duplicate earned Zen Leaves")
-    _restore()
-    print("ZENCUBE REALM 2.0 TEST FAILURES=",failed)
+    check(int(SaveManager.load_data().economy.leaves)==leaves_before,
+        "Abyss practice does not invent shop rewards")
+    check(int(SaveManager.load_data().ascend.played)==ascended_before,
+        "Abyss practice does not inflate regular 4x4 wins")
+    restore()
+    print("ZENCUBE 2.0 REALM FAILURES=",failed)
     quit(0 if failed==0 else 1)
