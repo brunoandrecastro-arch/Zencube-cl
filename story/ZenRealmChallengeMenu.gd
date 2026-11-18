@@ -2,6 +2,7 @@ extends CanvasLayer
 ## ZenCube 2.0 Realm – only Challenges grant Campaign achievements.
 const Campaign = preload("res://core/ZenRealmCampaign2.gd")
 const Ui = preload("res://ui/ZenUiTestTheme.gd")
+const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 var chapter: int = 0
 var locale: String = "en"
 var panel: Control
@@ -23,6 +24,7 @@ func _label(parent: Node, words: String, size: int, color: Color) -> Label:
     label_node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     label_node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     parent.add_child(label_node)
+    label_node.add_theme_font_override("font",ZenType.heading() if size>=22 else ZenType.body())
     return label_node
 
 func _button(parent: Node, words: String, callback: Callable, primary: bool = false) -> Button:
@@ -47,6 +49,10 @@ func _render() -> void:
     panel = ColorRect.new()
     panel.color = Ui.NIGHT
     panel.mouse_filter = Control.MOUSE_FILTER_STOP
+    var challenge_theme: Theme = Theme.new()
+    challenge_theme.default_font = ZenType.body()
+    challenge_theme.default_font_size = 18
+    panel.theme = challenge_theme
     add_child(panel)
     panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var scenery := TextureRect.new()
