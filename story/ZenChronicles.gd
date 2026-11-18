@@ -659,6 +659,10 @@ func open_abyss_reader() -> void:
     if not Realm2.unlocked(1):
         _campaign_locked_screen(1)
         return
+    # Entering from the library must not skip the FIRST Realm breakthrough.
+    if not Realm2.already_entered(0):
+        request_campaign_breakthrough(0)
+        return
     close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
@@ -806,6 +810,9 @@ func _campaign_after_breakthrough(chapter: int) -> void:
 func open_ember_campaign_preview() -> void:
     if not Realm2.unlocked(2):
         _campaign_locked_screen(2)
+        return
+    if not Realm2.already_entered(1):
+        request_campaign_breakthrough(1)
         return
     close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
