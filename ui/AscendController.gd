@@ -1014,6 +1014,11 @@ func _realm_unlocked_hint(realm: int) -> String:
     return Realms.missing_reason(data,realm,lang())
 
 func show_realms() -> void:
+    if shadow_active or abyss_active:
+        if result!=0: _reopen_finished_result()
+        elif shadow_active: _shadow_menu()
+        else: _abyss_menu()
+        return
     if realm_story_active:
         _realm_story_menu()
         return
@@ -1202,6 +1207,15 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
     text(list,L("bot_only"),13,Color("cdbd9d"))
 
 func show_challenges() -> void:
+    if shadow_active or abyss_active or realm_story_active:
+        if result!=0: _reopen_finished_result()
+        elif shadow_active: _shadow_menu()
+        elif abyss_active: _abyss_menu()
+        else: _realm_story_menu()
+        return
+    if campaign_practice_active and move_count()>0 and result==0:
+        _campaign_practice_menu()
+        return
     if campaign_practice_active or realm_index()==0:
         _open_campaign_trials_from_realms(1 if campaign_practice_active else 0)
         return
@@ -2062,6 +2076,7 @@ func start_campaign_practice(chapter: int) -> void:
     if chapter not in [0,1] or not Realm2.unlocked(chapter): return
     if move_count()>0 and result==0:
         # Do not replace a live board when moving between Realms.
+        if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
         return
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     if chapter==0:

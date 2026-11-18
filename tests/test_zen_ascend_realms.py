@@ -27,9 +27,9 @@ assert 'show_realms()' in ui and 'show_challenges()' in ui and 'show_realm_title
 # Gameplay uses independent Realm artwork.
 assert 'backdrop.texture = load(Realms.REALM_ART[realm_index()])' in ui
 finish = ui.split('func finish() -> void:', 1)[1].split('func _show_next_unlock()', 1)[0]
-assert 'Realms.ready_for_breakthrough(data,match_realm)' in finish, 'Realm requires both 8/8 challenges and 3/3 story bosses'
-assert 'auto_transitions' in finish, 'Transition must only be triggered once'
-assert 'realm_backdrop.texture = load(Realms.REALM_ART[destination])' in finish, 'Next Realm artwork must be applied'
+assert 'Realms.ready_for_breakthrough(data,match_realm)' not in finish, 'Normal Realm matches must never trigger breakthrough'
+assert 'auto_transitions' not in finish, 'Normal Realm matches must not consume breakthrough'
+assert 'realm_backdrop.texture = load(Realms.REALM_ART[destination])' not in finish, 'Normal Realm matches keep the existing board scenery'
 assert 'realm_backdrop.texture = load(Realms.REALM_ART[number])' in ui
 
 # Classic world art is allowed only as rank illustration.
