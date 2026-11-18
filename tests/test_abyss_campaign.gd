@@ -86,6 +86,43 @@ func run() -> void:
         check(Abyss.story_stream()!=null,"story background soundtrack")
     else:
         print("ABYSS MEDIA PENDING: upload both ZIPs for complete Android build")
+    # Exercise the actual Ascend.tscn controller and full-screen ZenChronicles reader.
+    # This is a separately saved campaign and never awards normal rank/leaf wins.
+    var user: Dictionary = SaveManager.defaults()
+    user.ascension.rank = 3
+    user.ascension.completed = [true,true,true,false,false]
+    ZenAscend.ensure(user)
+    ZenAscendRealms.ensure(user)
+    user.ascend.help_seen = true
+    user.settings.music = false
+    check(SaveManager.save_data(user),"seed legal native 4x4 entitlement")
+    var campaign: Dictionary = Abyss.defaults()
+    campaign.page = 6
+    check(Abyss.save_progress(campaign),"seed first battle gate")
+    if scene != null:
+        var original_scene: Node = current_scene
+        var controller: Node = scene.instantiate()
+        root.add_child(controller)
+        current_scene = controller
+        await process_frame
+        check(controller.has_method("start_abyss_battle"),"native Ascend controller has Abyss mode")
+        controller.call("start_abyss_battle")
+        check(bool(controller.get("abyss_active")),"first boss actually launches in 3D scene")
+        check(int(controller.get("abyss_index"))==0,"first boss is Memory Thief")
+        var cube: Node = controller.get("cube")
+        check(cube != null and int(cube.get("abyss_skin_id"))==1,"unique 3D Memory Thief surface is active")
+        controller.call("_abyss_back_to_reader")
+        await process_frame
+        var book: Node = root.get_node("ZenChronicles")
+        check(book.call("is_open"),"native Manhwa reader opens after leaving battle")
+        check(int(Abyss.load_progress().page)==6,"leaving unfinished boss does not skip page gate")
+        book.call("close_abyss_reader")
+        await process_frame
+        controller.queue_free()
+        current_scene = original_scene
+        await process_frame
+    check(int(SaveManager.load_data().get("ascend",{}).get("played",0))==0,
+        "Abyss match does not add normal 4x4 rank wins")
     _restore()
     print("ABYSS CAMPAIGN TEST FAILURES=",failures)
     quit(0 if failures==0 else 1)
