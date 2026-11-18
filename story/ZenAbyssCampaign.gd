@@ -1,6 +1,6 @@
 extends RefCounted
 ## Campaign 2.0: isolated Abyss page/boss progression.
-## Prepared for later reader and native 4x4 controller integration.
+## Native 4x4 story gates; imported media lives under assets/abyss_of_memories.
 ## Does not replace the existing Realm Chronicles save or unlock anything.
 const SAVE := "user://zencube_abyss_campaign_v1.json"
 const VERSION := 1
@@ -107,4 +107,84 @@ static func record_victory(data: Dictionary, index: int) -> bool:
     data.defeated = won
     data.page = CONTINUE_PAGES[index]
     data.game = {}
+    return save_progress(data)
+
+static func qa_mode() -> bool:
+    # Only the separately signed Abyss debug APK sets this during export.
+    # It does not change rank, shop purchases or regular 4x4 gates.
+    return bool(ProjectSettings.get_setting("application/config/abyss_qa",false))
+
+static func realm_art() -> String:
+    return ASSET_ROOT + "realm.webp"
+
+static func story_music() -> String:
+    return ASSET_ROOT + "audio/story.mp3"
+
+static func _load_loop(path: String) -> AudioStream:
+    if not ResourceLoader.exists(path): return null
+    var stream: AudioStream = load(path) as AudioStream
+    if stream is AudioStreamMP3:
+        (stream as AudioStreamMP3).loop = true
+    return stream
+
+static func story_stream() -> AudioStream:
+    return _load_loop(story_music())
+
+static func boss_stream(index: int) -> AudioStream:
+    if index < 0 or index >= 3: return null
+    return _load_loop(boss_music(index))
+
+static func _threats(cells: Array, lines: Array, player: int) -> Array:
+    var result: Array = []
+    for line in lines:
+        var owned: int = 0
+        var free: int = -1
+        var blanks: int = 0
+        var blocked: bool = false
+        for c in line:
+            if int(cells[c]) == player: owned += 1
+            elif int(cells[c]) == 0:
+                free = int(c)
+                blanks += 1
+            else:
+                blocked = true
+                break
+        if not blocked and owned == 3 and blanks == 1 and not result.has(free):
+            result.append(free)
+    return result
+
+static func choose_move(cells: Array, lines: Array, index: int, last_human: int = -1) -> int:
+    # Use the game's tested native bot/204 win-line logic. Only tactical
+    # preference differs by boss; immediate wins and blocks always take priority.
+    var wins: Array = _threats(cells,lines,2)
+    if not wins.is_empty(): return int(wins[0])
+    var blocks: Array = _threats(cells,lines,1)
+    if not blocks.is_empty(): return int(blocks[0])
+    var boss: int = clampi(index,0,2)
+    if boss == 0 and last_human >= 0 and last_human < cells.size():
+        var face: int = int(last_human / 16)
+        var row: int = int(last_human % 16 / 4)
+        var col: int = last_human % 4
+        var mirror: int = face * 16 + (3-row)*4 + (3-col)
+        if int(cells[mirror]) == 0 and randf() < 0.35: return mirror
+    var baseline: int = ZenAscendRealmBot.next_move(cells,lines,2,BOT_LEVELS[boss],false)
+    if boss != 2: return baseline
+    # The Shogun prefers a move with future double-threat pressure when
+    # tactical strength is comparable. Master is still the baseline.
+    var best: int = baseline
+    var highest: float = -1e20
+    for candidate in range(cells.size()):
+        if int(cells[candidate]) != 0: continue
+        var value: float = ZenAscendRealmBot._score(cells,lines,2,candidate)
+        value += ZenAscendRealmBot._fork_score(cells,lines,2,candidate)
+        if value > highest:
+            highest = value
+            best = candidate
+    return best
+
+static func finish_chapter(data: Dictionary) -> bool:
+    var won: Array = data.get("defeated",[false,false,false])
+    if won.size() != 3 or not (bool(won[0]) and bool(won[1]) and bool(won[2])): return false
+    if int(data.get("page",0)) != 30: return false
+    data.completed = true
     return save_progress(data)
