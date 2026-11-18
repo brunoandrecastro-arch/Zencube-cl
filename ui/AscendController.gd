@@ -997,44 +997,7 @@ func show_realms() -> void:
     var body: VBoxContainer = ui_parts.box
     text(body,L("subtitle"),15,Color("567b72"))
     text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
-    # Realm Chronicles is a separate, playable 4x4 *story*, not a fifth realm.
-    # Keep the four normal Realm cards (and their gameplay/unlock rules) below.
-    var story_progress: Dictionary = RealmStory.load_progress()
-    var story_stage: int = clampi(int(story_progress.get("stage",0)),0,RealmStory.LAST_STAGE)
-    var story_card: PanelContainer = PanelContainer.new()
-    story_card.name = "RealmChroniclesCampaignCard"
-    story_card.add_theme_stylebox_override("panel",style(Color("34443e",0.98),18))
-    body.add_child(story_card)
-    var story_column: VBoxContainer = VBoxContainer.new()
-    story_column.add_theme_constant_override("separation",8)
-    story_card.add_child(story_column)
-    text(story_column,"📖 " + RealmStory.text_for(lang(),"realm_card_title"),20,Color("f9dba6"))
-    text(story_column,RealmStory.text_for(lang(),"realm_card_subtitle"),14,Color("e0d5b9"))
-    # Show the progression from Shadow to Satori in one visually coherent card.
-    var story_previews: HBoxContainer = HBoxContainer.new()
-    story_previews.name = "RealmChroniclesFourRealmPreviews"
-    story_previews.add_theme_constant_override("separation",3)
-    story_column.add_child(story_previews)
-    for chapter_id in range(4):
-        var preview: TextureRect = TextureRect.new()
-        preview.texture = load(RealmStory.CHAPTER_ART[chapter_id]) as Texture2D
-        preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-        preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-        preview.custom_minimum_size = Vector2(0,74)
-        preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        story_previews.add_child(preview)
-    text(story_column,RealmStory.text_for(lang(),"story") + " · %d/%d " % [story_stage,RealmStory.LAST_STAGE] + RealmStory.text_for(lang(),"realm_card_bosses"),14,Color("d1ead3"))
-    if story_stage >= RealmStory.LAST_STAGE:
-        text(story_column,RealmStory.text_for(lang(),"realm_story_completed"),14,Color("f0d99c"))
-    var open_story: Button = action(story_column,RealmStory.text_for(lang(),"realm_card_open"),_open_realm_chronicles_from_realms,true)
-    open_story.name = "RealmChroniclesCampaignOpen"
-    # Debug build ONLY: inspect the real glass-break ceremony without changing
-    # Challenges, boss victories, unlock flags, ranks or save files.
-    if RealmStory.qa_mode():
-        var preview_label: String = "🪞 Spiegelbruch testen (Test-APK)" if lang() == "de" else ("🪞 Testar vidro partido (APK de teste)" if lang() == "pt" else "🪞 Preview mirror shatter (test APK)")
-        var preview: Button = action(story_column,preview_label,_preview_mirror_shatter_qa,true)
-        preview.name = "RealmMirrorShatterPreviewQA"
+    # Story and boss progress live exclusively in Zen Realm Chronicles.
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -1053,9 +1016,7 @@ func show_realms() -> void:
         thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
         column.add_child(thumb)
         var amount: int = Realms.count(data,i)
-        var boss_wins: int = Realms.completed_story_bosses(i)
         text(column,L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
-        text(column,("Story-Bosse" if lang()=="de" else "Chefes da história" if lang()=="pt" else "Story bosses") + ": %d/3" % boss_wins,14,Color("#e8d1a5"))
         var rank_name: String = Realms.title_for_realm(data,i,lang())
         if rank_name != "—": text(column,rank_name,14,Color("e2ca8c"))
         if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
@@ -1184,11 +1145,11 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
         var earned: bool = bool(done.get(str(task.id),false))
         var card: PanelContainer = PanelContainer.new()
         card.add_theme_stylebox_override("panel",style(Color("294a3c") if earned else _realm_tone(realm),16))
-        card.mouse_filter = Control.MOUSE_FILTER_PASS
+        card.mouse_filter = Control.MOUSE_FILTER_STOP
         list.add_child(card)
         var inside: VBoxContainer = VBoxContainer.new()
         inside.add_theme_constant_override("separation",8)
-        inside.mouse_filter = Control.MOUSE_FILTER_PASS
+        inside.mouse_filter = Control.MOUSE_FILTER_STOP
         card.add_child(inside)
         text(inside,("✓  " if earned else "◇  ") + str(task.title),18,Color("f3ddb2"))
         text(inside,Realms.task_description(task,lang()),14,Color("d7d5c9"))
