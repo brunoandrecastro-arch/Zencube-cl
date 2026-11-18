@@ -12,6 +12,9 @@ const Campaign = preload("res://story/ZenCampaign.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const AbyssReader = preload("res://story/ZenAbyssReader.gd")
 const ShadowReader = preload("res://story/ZenShadowReader.gd")
+const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
+const ChallengeMenu = preload("res://story/ZenRealmChallengeMenu.gd")
+const Portal2 = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 # German is the authored source language; EN and PT-PT live in a separate JSON.
 const UI_DE: Dictionary = {
@@ -57,6 +60,8 @@ var _abyss_reader: CanvasLayer
 var _abyss_launch_requested: bool = false
 var _shadow_reader: CanvasLayer
 var _shadow_launch_requested: bool = false
+var _campaign_menu: CanvasLayer
+var _campaign_challenge_requested: Dictionary = {}
 
 func _ready() -> void:
     layer = 90
@@ -253,8 +258,9 @@ func open_library() -> void:
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _make_button(Campaign.text_for(_active_language, "play"), outer, open_campaign_overview)
-    _make_button("🌘 Campaign 2.0 · Chapter 1 · Shadow Realm", outer, open_shadow_reader)
-    _make_button("🌑 Campaign 2.0 · Chapter 2 · Abyss of Memories", outer, open_abyss_reader)
+    _make_button("🌘 ZenCube 2.0 Realm · 1 · Shadow Realm", outer, open_shadow_reader)
+    _make_button(("🌑 ZenCube 2.0 Realm · 2 · Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · 3 Bosse + 3 Challenges"),outer,open_abyss_reader)
+    _make_button(("🔥 Ember Temple · freigeschaltet" if Realm2.unlocked(2) else "🔒 Ember Temple · demnächst"),outer,open_ember_campaign_preview)
     _make_button(Campaign.text_for(_active_language, "webcomic"), outer, open_comic_library)
 
 func open_comic_library() -> void:
@@ -389,7 +395,7 @@ func set_campaign_board_active(active: bool) -> void:
     _quick_button.visible = _show_quick and not active and _screen == null
 
 func is_open() -> bool:
-    return _screen != null or is_instance_valid(_abyss_reader) or is_instance_valid(_shadow_reader)
+    return _screen != null or is_instance_valid(_abyss_reader) or is_instance_valid(_shadow_reader) or is_instance_valid(_campaign_menu)
 
 func _input(event: InputEvent) -> void:
     if _screen == null:
@@ -645,6 +651,10 @@ func consume_realm_story_launch() -> bool:
 
 # An isolated reader, not a fifth normal 4x4 realm, with its own progress.
 func open_abyss_reader() -> void:
+    if not Realm2.unlocked(1):
+        _campaign_locked_screen(1)
+        return
+    close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     if _screen != null: close_chronicles()
@@ -678,6 +688,7 @@ func consume_abyss_launch() -> bool:
 # Campaign 2.0 – Shadow Realm chapter, isolated from the existing 12
 # Realm Chronicles bosses and independent of the Abyss chapter save.
 func open_shadow_reader() -> void:
+    close_campaign_challenges()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
     if _screen != null: close_chronicles()
@@ -707,3 +718,104 @@ func consume_shadow_launch() -> bool:
     var flag: bool = _shadow_launch_requested
     _shadow_launch_requested = false
     return flag
+
+# ----- ZenCube 2.0 Realm – stage-aware campaign navigation -----
+func _campaign_locked_screen(chapter: int) -> void:
+    close_campaign_challenges()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    _sync_language()
+    _screen_name = "realm-2-locked"
+    var outer: VBoxContainer = _make_screen()
+    _make_label("🔒  " + Realm2.REALM_NAMES[clampi(chapter,0,2)],outer,23,GOLD)
+    var prev: int = clampi(chapter-1,0,1)
+    var words: String = "Bosse %d/3 + Challenges %d/3" % [
+        Realm2.bosses_won(prev),Realm2.completed_count(Realm2.load_progress(),prev)]
+    _make_label(words,outer,19,CREAM)
+    _make_label("Beide Bedingungen müssen erfüllt sein, bevor du den nächsten Realm betreten kannst.",outer,15,CREAM)
+    _make_button("‹ Zur Bibliothek",outer,open_library)
+    _make_button("✦ Challenges",outer,open_campaign_challenges.bind(prev))
+
+func open_campaign_challenges(chapter: int) -> void:
+    if chapter not in [0,1] or not Realm2.unlocked(chapter):
+        _campaign_locked_screen(chapter)
+        return
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    if _screen != null: close_chronicles()
+    close_campaign_challenges()
+    _campaign_menu = ChallengeMenu.new()
+    _campaign_menu.chapter = chapter
+    _root.add_child(_campaign_menu)
+    if _quick_button != null: _quick_button.hide()
+
+func close_campaign_challenges() -> void:
+    if is_instance_valid(_campaign_menu):
+        var old: CanvasLayer = _campaign_menu
+        _campaign_menu = null
+        old.queue_free()
+    if is_instance_valid(_quick_button) and _screen == null:
+        _quick_button.visible = _show_quick and not _campaign_board_active
+
+func request_campaign_challenge(chapter: int, index: int) -> void:
+    if chapter not in [0,1] or index not in [0,1,2] or not Realm2.unlocked(chapter):
+        return
+    if Realm2.challenge_done(chapter,index): return
+    _campaign_challenge_requested = {"chapter":chapter,"index":index}
+    close_campaign_challenges()
+    var scene: Node = get_tree().current_scene
+    if scene != null and scene.scene_file_path=="res://Ascend.tscn" and scene.has_method("start_campaign_challenge"):
+        _campaign_challenge_requested = {}
+        scene.call_deferred("start_campaign_challenge",chapter,index)
+    else:
+        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+func consume_campaign_challenge_launch() -> Dictionary:
+    var launch: Dictionary = _campaign_challenge_requested.duplicate()
+    _campaign_challenge_requested = {}
+    return launch
+
+func request_campaign_breakthrough(chapter: int) -> void:
+    if chapter not in [0,1] or not Realm2.ready(chapter): return
+    close_campaign_challenges()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    var already: bool = Realm2.already_entered(chapter)
+    if not Realm2.enter_next_realm(chapter): return
+    if already:
+        _campaign_after_breakthrough(chapter)
+        return
+    var transition: ZenRealmTravelCeremony = Portal2.new()
+    get_tree().root.add_child(transition)
+    transition.finished.connect(_campaign_after_breakthrough.bind(chapter))
+    var settings: Dictionary = SaveManager.load_data().get("settings",{})
+    transition.present(
+        Realm2.SOURCE_ART[chapter],Realm2.SOURCE_ART[chapter+1],
+        Realm2.REALM_NAMES[chapter+1],true,bool(settings.get("sound",true)),[],
+        str(settings.get("language","de")))
+
+func _campaign_after_breakthrough(chapter: int) -> void:
+    if chapter==0: open_abyss_reader()
+    else: open_ember_campaign_preview()
+
+func open_ember_campaign_preview() -> void:
+    if not Realm2.unlocked(2):
+        _campaign_locked_screen(2)
+        return
+    close_campaign_challenges()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    _sync_language()
+    _screen_name = "realm-2-ember-preview"
+    var outer: VBoxContainer = _make_screen()
+    _make_label("🔥 Ember Temple",outer,27,GOLD)
+    _make_label("✦ Realm freigeschaltet",outer,19,CREAM)
+    var pic: TextureRect = TextureRect.new()
+    pic.texture = load(Realm2.SOURCE_ART[2]) as Texture2D
+    pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    pic.custom_minimum_size.y = 360
+    pic.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    outer.add_child(pic)
+    _make_label("Das vollständige Campaign-2.0-Kapitel für Ember Temple folgt in einer späteren Testversion.",outer,15,CREAM)
+    _make_button("‹ Zur Bibliothek",outer,open_library)
