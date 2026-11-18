@@ -252,6 +252,9 @@ func _chapter_accessible(i: int) -> bool:
     var saved: Dictionary = SaveManager.load_data()
     return ascension.world_unlocked(saved, i)
 
+func campaign_ui(de: String,en: String,pt: String) -> String:
+    return de if _active_language=="de" else (pt if _active_language=="pt" else en)
+
 func open_library() -> void:
     _realm_story_from_realms = false
     _sync_language()
@@ -264,9 +267,12 @@ func open_library() -> void:
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
-    _make_label("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",outer,15,CREAM)
+    _make_label(campaign_ui("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",
+        "4×4 · 3 bosses + 3 Realm challenges per chapter",
+        "4×4 · 3 chefes + 3 desafios de reino por capítulo"),outer,15,CREAM)
     var access: bool = Realm2.unlocked(0)
-    _make_button("🌘 Shadow Realm" if access else "🔒 Shadow Realm · Zen Ascend 4×4 freischalten",outer,open_shadow_reader)
+    _make_button("🌘 Shadow Realm" if access else campaign_ui("🔒 Shadow Realm · Zen Ascend 4×4 freischalten",
+        "🔒 Shadow Realm · Unlock Zen Ascend 4×4","🔒 Shadow Realm · Desbloqueia Zen Ascend 4×4"),outer,open_shadow_reader)
     _make_button("🌑 Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · Shadow 3+3",outer,open_abyss_reader)
     _make_button("🔥 Ember Temple" if Realm2.unlocked(2) else "🔒 Ember Temple · Abyss 3+3",outer,open_ember_campaign_preview)
     _make_label("Original Archives",outer,18,GOLD)
@@ -747,15 +753,20 @@ func _campaign_locked_screen(chapter: int) -> void:
     var outer: VBoxContainer = _make_screen()
     _make_label("🔒  " + Realm2.REALM_NAMES[clampi(chapter,0,2)],outer,23,GOLD)
     if not Realm2.base_unlocked():
-        _make_label("Zen Ascend 4×4 muss zunächst im regulären Spiel freigeschaltet werden.",outer,17,CREAM)
+        _make_label(campaign_ui("Zen Ascend 4×4 muss zunächst regulär freigeschaltet werden.",
+            "First unlock Zen Ascend 4×4 through normal progression.",
+            "Desbloqueia primeiro o Zen Ascend 4×4 na progressão normal."),outer,17,CREAM)
     else:
         var prev: int = clampi(chapter-1,0,1)
-        _make_label("Bosse %d/3 + Challenges %d/3" % [
+        _make_label(campaign_ui("Bosse %d/3 + Challenges %d/3",
+            "Bosses %d/3 + Challenges %d/3","Chefes %d/3 + Desafios %d/3") % [
             Realm2.bosses_won(prev),Realm2.completed_count(Realm2.load_progress(),prev)],outer,19,CREAM)
-        _make_label("Zum Realm-Aufstieg müssen Bosse und reguläre 4×4-Challenges geschafft sein.",outer,15,CREAM)
+        _make_label(campaign_ui("Bosskämpfe und reguläre 4×4-Challenges sind beide erforderlich.",
+            "Both story bosses and regular 4×4 challenges are required.",
+            "São necessários os chefes da história e os desafios 4×4 normais."),outer,15,CREAM)
         if Realm2.unlocked(prev):
             _make_button("✦ Realm-Challenges",outer,open_campaign_challenges.bind(prev))
-    _make_button("‹ Zur Bibliothek",outer,open_library)
+    _make_button(campaign_ui("‹ Zur Bibliothek","‹ Library","‹ Biblioteca"),outer,open_library)
 
 func open_campaign_challenges(chapter: int) -> void:
     if chapter not in [0,1] or not Realm2.unlocked(chapter):
