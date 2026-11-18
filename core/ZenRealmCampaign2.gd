@@ -116,8 +116,15 @@ static func story_finished(chapter: int) -> bool:
     var saved: Dictionary = Shadow.load_progress() if chapter==0 else Abyss.load_progress()
     return bool(saved.get("completed",false)) and int(saved.get("page",1))==30
 
-static func can_unlock(bosses: int, challenges: int, story_done: bool) -> bool:
-    return bosses==3 and challenges==3 and story_done
+# Completing the illustrated epilogue remains separately saved; the final
+# guardian (not manual Realm selection or turning the last page) unlocks travel.
+static func can_unlock(bosses: int, challenges: int, _story_done: bool) -> bool:
+    return bosses==3 and challenges==3
+
+static func can_face_boss(chapter: int, boss: int) -> bool:
+    if chapter not in [0,1] or boss not in [0,1,2]: return false
+    if not unlocked(chapter): return false
+    return boss < 2 or completed_count(load_progress(),chapter)==3
 
 static func ready(chapter: int) -> bool:
     if chapter not in [0,1] or not base_unlocked(): return false

@@ -674,10 +674,6 @@ func open_abyss_reader() -> void:
     if not Realm2.unlocked(1):
         _campaign_locked_screen(1)
         return
-    # Entering from the library must not skip the FIRST Realm breakthrough.
-    if not Realm2.already_entered(0):
-        request_campaign_breakthrough(0)
-        return
     close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
@@ -771,7 +767,7 @@ func _campaign_locked_screen(chapter: int) -> void:
             _make_button("✦ Realm-Challenges",outer,open_campaign_challenges.bind(prev))
     _make_button(campaign_ui("‹ Zur Bibliothek","‹ Library","‹ Biblioteca"),outer,open_library)
 
-func open_campaign_challenges(chapter: int) -> void:
+func open_campaign_challenges(chapter: int, final_trial: bool = false) -> void:
     if chapter not in [0,1] or not Realm2.unlocked(chapter):
         _campaign_locked_screen(chapter)
         return
@@ -781,6 +777,7 @@ func open_campaign_challenges(chapter: int) -> void:
     close_campaign_challenges()
     _campaign_menu = ChallengeMenu.new()
     _campaign_menu.chapter = chapter
+    _campaign_menu.final_trial = final_trial
     _root.add_child(_campaign_menu)
     if _quick_button != null: _quick_button.hide()
 
@@ -793,7 +790,7 @@ func close_campaign_challenges() -> void:
         _quick_button.visible = _show_quick and not _campaign_board_active
 
 func request_campaign_practice(chapter: int) -> void:
-    if chapter != 1 or not Realm2.unlocked(1): return
+    if chapter not in [0,1] or not Realm2.unlocked(chapter): return
     _campaign_practice_requested = chapter
     close_campaign_challenges()
     var scene: Node = get_tree().current_scene
@@ -808,6 +805,7 @@ func consume_campaign_practice_launch() -> int:
     _campaign_practice_requested = -1
     return chapter
 
+# Called only after confirming a real final boss victory on the result screen.
 func request_campaign_breakthrough(chapter: int) -> void:
     if chapter not in [0,1] or not Realm2.ready(chapter): return
     close_campaign_challenges()
@@ -834,9 +832,6 @@ func _campaign_after_breakthrough(chapter: int) -> void:
 func open_ember_campaign_preview() -> void:
     if not Realm2.unlocked(2):
         _campaign_locked_screen(2)
-        return
-    if not Realm2.already_entered(1):
-        request_campaign_breakthrough(1)
         return
     close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()

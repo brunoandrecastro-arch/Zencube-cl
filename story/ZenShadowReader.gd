@@ -129,8 +129,12 @@ func _show_page() -> void:
         return
     var action: Dictionary = Shadow.next_action(progress)
     if action.get("type") == "battle":
-        next_button.text = t("fight")
-        status.text = t("gate") % Shadow.BOSS_NAMES[int(action.boss)]
+        if int(action.boss)==2 and not Realm2.can_face_boss(0,2):
+            next_button.text = "The Final Trial"
+            status.text = "Challenges · %d/3" % challenge_count
+        else:
+            next_button.text = t("fight")
+            status.text = t("gate") % Shadow.BOSS_NAMES[int(action.boss)]
     else:
         next_button.text = t("next")
     next_button.disabled = false
@@ -148,13 +152,17 @@ func _turn(direction: int) -> void:
             if Shadow.finish_chapter(progress): _show_page()
         elif Realm2.ready(0):
             _close()
-            _chronicles().call_deferred("request_campaign_breakthrough",0)
+            _chronicles().call_deferred("open_abyss_reader")
         else:
             status.text = "Bosse %d/3 · Challenges %d/3: Beides wird benötigt." % [
                 Realm2.bosses_won(0),Realm2.completed_count(Realm2.load_progress(),0)]
         return
     var action: Dictionary = Shadow.next_action(progress)
     if action.get("type") == "battle":
+        if int(action.boss)==2 and not Realm2.can_face_boss(0,2):
+            _close()
+            _chronicles().call_deferred("open_campaign_challenges",0,true)
+            return
         var saved: Dictionary = SaveManager.load_data()
         if not ZenAscend.unlocked(saved) and not Shadow.qa_mode():
             status.text = t("locked")

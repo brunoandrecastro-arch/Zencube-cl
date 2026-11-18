@@ -2580,6 +2580,8 @@ func _zen_campaign_result() -> void:
             if not draw and (stage == ZenCampaign.SLAIN or (stage >= ZenCampaign.LORD and wins > 0)):
                 _zen_campaign_paragraph(box, _campaign_text("streak_broken"))
             premium_button(_campaign_text("again"), box, _zen_campaign_retry, true)
+    var inspect: Button = premium_button("Spielfeld ansehen",box,_inspect_classic_finished_board)
+    inspect.text = _inspect_label()
     button(_campaign_text("leave"), box, _zen_campaign_leave, true)
 
 func _zen_campaign_night_result() -> void:

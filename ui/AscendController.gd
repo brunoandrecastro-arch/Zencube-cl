@@ -129,7 +129,7 @@ func _ready() -> void:
     start_world_music()
     draw()
     var practice_launch: int = ZenChronicles.consume_campaign_practice_launch()
-    if practice_launch == 1:
+    if practice_launch in [0,1]:
         call_deferred("start_campaign_practice",practice_launch)
         return
     if ZenChronicles.consume_shadow_launch():
@@ -461,7 +461,11 @@ func show_ascend_menu() -> void:
 func pname(owner: int) -> String:
     if against_bot and owner == 1: return zen_ascend_bot_name()
     var names: Array = data.settings.names
-    return str(names[clampi(owner,0,1)])
+    var index: int = clampi(owner,0,1)
+    var stored: String = str(names[index])
+    if stored == ("Du" if index==0 else "Spieler 2"):
+        return _campaign_phrase(stored,"You" if index==0 else "Player 2","Tu" if index==0 else "Jogador 2")
+    return stored
 func move_count() -> int:
     return Mode.CELLS - cells.count(0)
 func _review_board_label() -> String:
@@ -767,18 +771,8 @@ func finish() -> void:
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":str(secret.name),"quote":str(secret.quote)})
         if bool(last_realm_awards.get("realm_completed",false)):
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":Achievements.MAIN_TITLES[match_realm],"quote":Achievements.main_quote(match_realm)})
-        # Realm access may unlock earlier, but AUTOMATIC travel requires all 8
-        # challenges completed in the current Realm. Once-only persisted gate.
-        if Realms.ready_for_breakthrough(data,match_realm):
-            var journey: Dictionary = Realms.state(data)
-            if not journey.get("auto_transitions") is Dictionary:
-                journey["auto_transitions"] = {}
-            if not bool(journey.auto_transitions.get(str(match_realm),false)):
-                journey.auto_transitions[str(match_realm)] = true
-                var destination: int = match_realm + 1
-                queued_unlocks.push_front({"kind":"realm","realm":destination,"name":Realms.REALM_NAMES[destination],"quote":"A new path opens beyond the known world."})
-                journey["selected"] = destination
-                if realm_backdrop != null: realm_backdrop.texture = load(Realms.REALM_ART[destination])
+        # Ordinary matches still earn existing achievements and leaves.
+        # They never trigger the Campaign 2.0 breakthrough.
         var realm_state: Dictionary = Realms.state(data)
         if match_realm == 3 and bool(last_realm_awards.get("realm_completed", false)) and Realms.current_title(data,3) == "Fully Aware" and not bool(realm_state.get("fully_aware_ceremony_seen", false)):
             realm_state["fully_aware_ceremony_seen"] = true
@@ -1060,6 +1054,9 @@ func show_realms() -> void:
         else:
             choose = action(column,L("selected") if selected else L("select"),_choose_realm_from_dialog.bind(number,ui_parts.dialog),true)
             choose.disabled = selected or (move_count() > 0 and result == 0)
+        if i==0:
+            action(column,"Realm Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),0),_open_campaign_trials_from_realms.bind(0))
+            _add_abyss_realm_card(body)
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
 
@@ -1075,6 +1072,28 @@ func _preview_mirror_shatter_qa() -> void:
     preview.present(Realms.REALM_ART[0],Realms.REALM_ART[1],
         Realms.realm_name(1,lang()),true,bool(data.settings.get("sound",true)),
         [world_music],lang())
+
+func _add_abyss_realm_card(body: VBoxContainer) -> void:
+    var card: PanelContainer = PanelContainer.new()
+    card.add_theme_stylebox_override("panel",style(Color("252034"),18))
+    body.add_child(card)
+    var column: VBoxContainer = VBoxContainer.new()
+    card.add_child(column)
+    var allowed: bool = Realm2.unlocked(1)
+    text(column,"Abyss of Memories" + ("" if allowed else "  🔒"),20,Color("f7dfaa"))
+    var thumb: TextureRect = TextureRect.new()
+    thumb.texture = Abyss.battle_backdrop()
+    thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    thumb.custom_minimum_size.y = 112
+    thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    column.add_child(thumb)
+    text(column,"Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),1),15)
+    action(column,_campaign_phrase("Realm betreten","Enter Realm","Entrar no reino") if allowed else _campaign_phrase("Freischaltung ansehen","View unlock requirements","Ver requisitos"),_open_campaign_trials_from_realms.bind(1),allowed)
+
+func _open_campaign_trials_from_realms(chapter: int) -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_campaign_challenges(chapter)
 
 func _open_campaign_library_from_realms() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
@@ -1127,20 +1146,10 @@ func select_realm(number: int) -> bool:
     bot_level = Realms.fixed_bot_level(number)
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[number])
-    var first_open: bool = false
-    var transition_from: int = from_realm
-    if number > 0 and Realms.ready_for_breakthrough(data,number-1):
-        var state: Dictionary = Realms.state(data)
-        if not state.get("auto_transitions") is Dictionary:
-            state["auto_transitions"] = {}
-        if not bool(state.auto_transitions.get(str(number-1),false)):
-            state.auto_transitions[str(number-1)] = true
-            first_open = true
-            transition_from = number-1
     SaveManager.save_data(data)
     draw()
-    if from_realm != number or first_open:
-        call_deferred("_show_manual_realm_journey",transition_from,number,first_open)
+    if from_realm != number:
+        call_deferred("_show_manual_realm_journey",from_realm,number,false)
     else:
         sync_realm_music()
     return true
@@ -1193,7 +1202,10 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
     text(list,L("bot_only"),13,Color("cdbd9d"))
 
 func show_challenges() -> void:
-    # The Realm is chosen in Realms, not again in Challenges. More space for cards.
+    if campaign_practice_active or realm_index()==0:
+        _open_campaign_trials_from_realms(1 if campaign_practice_active else 0)
+        return
+    # Original archive Realms retain their achievement interface until migrated.
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + L("challenges"))
     var body: VBoxContainer = parts.box
     var tasks_box: VBoxContainer = VBoxContainer.new()
@@ -1686,6 +1698,9 @@ func start_abyss_battle() -> void:
         return
     abyss_index = int(next_action.get("boss",-1))
     if abyss_index < 0 or abyss_index >= 3: return
+    if not Realm2.can_face_boss(1,abyss_index):
+        ZenChronicles.open_campaign_challenges(1,true)
+        return
     abyss_active = true
     realm_story_active = false
     abyss_generation += 1
@@ -1707,7 +1722,7 @@ func start_abyss_battle() -> void:
     cube.clear_boss_skin()
     cube.set_abyss_skin(abyss_index+1)
     if realm_backdrop != null:
-        var arena: Texture2D = Abyss.battle_backdrop()
+        var arena: Texture2D = Abyss.battle_backdrop(abyss_index)
         if arena != null: realm_backdrop.texture = arena
     _abyss_save()
     sync_realm_music()
@@ -1809,6 +1824,8 @@ func _abyss_retry() -> void:
 
 func _abyss_victory() -> void:
     if not abyss_active or result != 1: return
+    if not Realm2.can_face_boss(1,abyss_index): return
+    var final_boss: bool = abyss_index==2
     if not Abyss.record_victory(abyss_progress,abyss_index): return
     abyss_generation += 1
     match_generation += 1
@@ -1816,7 +1833,9 @@ func _abyss_victory() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     # No glass-shatter after ordinary boss victories; the Manhwa resumes.
     # Glass and breakthrough sound are exclusively for actual Realm entry.
-    _abyss_back_to_reader()
+    _abyss_back_to_reader(not final_boss)
+    if final_boss:
+        ZenChronicles.call_deferred("request_campaign_breakthrough",1)
 
 func _abyss_menu() -> void:
     if not abyss_active: return
@@ -1828,7 +1847,7 @@ func _abyss_menu() -> void:
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
 
-func _abyss_back_to_reader() -> void:
+func _abyss_back_to_reader(open_reader: bool = true) -> void:
     if not abyss_active: return
     abyss_generation += 1
     match_generation += 1
@@ -1850,7 +1869,7 @@ func _abyss_back_to_reader() -> void:
     ZenChronicles.set_campaign_board_active(false)
     sync_realm_music()
     draw()
-    ZenChronicles.open_abyss_reader()
+    if open_reader: ZenChronicles.open_abyss_reader()
 
 # -------- Campaign 2.0: Shadow native 4x4 battles and story handoff --------
 func start_shadow_battle() -> void:
@@ -1862,6 +1881,9 @@ func start_shadow_battle() -> void:
         return
     shadow_index = int(next_action.get("boss",-1))
     if shadow_index < 0 or shadow_index >= 3: return
+    if not Realm2.can_face_boss(0,shadow_index):
+        ZenChronicles.open_campaign_challenges(0,true)
+        return
     shadow_active = true
     realm_story_active = false
     abyss_active = false
@@ -1987,6 +2009,8 @@ func _shadow_retry() -> void:
 
 func _shadow_victory() -> void:
     if not shadow_active or result != 1: return
+    if not Realm2.can_face_boss(0,shadow_index): return
+    var final_boss: bool = shadow_index==2
     if not Shadow.record_victory(shadow_progress,shadow_index): return
     shadow_generation += 1
     match_generation += 1
@@ -1994,7 +2018,9 @@ func _shadow_victory() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     # The Veil dissolves quietly. Epic glass fracture is reserved for
     # Shadow → Abyss and Abyss → Ember after all 3+3 requirements.
-    _shadow_back_to_reader()
+    _shadow_back_to_reader(not final_boss)
+    if final_boss:
+        ZenChronicles.call_deferred("request_campaign_breakthrough",0)
 
 func _shadow_menu() -> void:
     if not shadow_active: return
@@ -2006,7 +2032,7 @@ func _shadow_menu() -> void:
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
 
-func _shadow_back_to_reader() -> void:
+func _shadow_back_to_reader(open_reader: bool = true) -> void:
     if not shadow_active: return
     shadow_generation += 1
     match_generation += 1
@@ -2028,12 +2054,23 @@ func _shadow_back_to_reader() -> void:
     ZenChronicles.set_campaign_board_active(false)
     sync_realm_music()
     draw()
-    ZenChronicles.open_shadow_reader()
+    if open_reader: ZenChronicles.open_shadow_reader()
 
 
 # ---- Zen Realm Chronicles: NORMAL Abyss bot matches, not puzzles ----
 func start_campaign_practice(chapter: int) -> void:
-    if chapter != 1 or not Realm2.unlocked(1): return
+    if chapter not in [0,1] or not Realm2.unlocked(chapter): return
+    if move_count()>0 and result==0:
+        # Do not replace a live board when moving between Realms.
+        return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    if chapter==0:
+        if not Realms.select(data,0): return
+        SaveManager.save_data(data)
+        if realm_backdrop != null: realm_backdrop.texture = load(Realms.REALM_ART[0])
+        sync_realm_music()
+        start_game(true,Realms.fixed_bot_level(0))
+        return
     campaign_practice_active = true
     abyss_active = false
     shadow_active = false

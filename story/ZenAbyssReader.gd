@@ -129,8 +129,12 @@ func _show_page() -> void:
         return
     var action: Dictionary = Abyss.next_action(progress)
     if action.get("type") == "battle":
-        next_button.text = t("fight")
-        status.text = t("gate") % Abyss.BOSS_NAMES[int(action.boss)]
+        if int(action.boss)==2 and not Realm2.can_face_boss(1,2):
+            next_button.text = "The Final Trial"
+            status.text = "Challenges · %d/3" % challenge_count
+        else:
+            next_button.text = t("fight")
+            status.text = t("gate") % Abyss.BOSS_NAMES[int(action.boss)]
     else:
         next_button.text = t("next")
     next_button.disabled = false
@@ -148,13 +152,17 @@ func _turn(direction: int) -> void:
             if Abyss.finish_chapter(progress): _show_page()
         elif Realm2.ready(1):
             _close()
-            _chronicles().call_deferred("request_campaign_breakthrough",1)
+            _chronicles().call_deferred("open_ember_campaign_preview")
         else:
             status.text = "Bosse %d/3 · Challenges %d/3: Beides wird benötigt." % [
                 Realm2.bosses_won(1),Realm2.completed_count(Realm2.load_progress(),1)]
         return
     var action: Dictionary = Abyss.next_action(progress)
     if action.get("type") == "battle":
+        if int(action.boss)==2 and not Realm2.can_face_boss(1,2):
+            _close()
+            _chronicles().call_deferred("open_campaign_challenges",1,true)
+            return
         var saved: Dictionary = SaveManager.load_data()
         if not ZenAscend.unlocked(saved) and not Abyss.qa_mode():
             status.text = t("locked")
