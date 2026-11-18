@@ -41,14 +41,14 @@ func _verify() -> void:
     var on_disk := FileAccess.get_file_as_string(SaveManager.PATH)
 
     game.open_menu()
-    _press(game.popup, game.T("Zen-Chroniken 📖"))
-    _press(reader._screen, Campaign.text_for("de", "webcomic"))
+    _press(game.popup, game.T("Zen Realm Chronicles 📖"))
+    _press(reader._screen, "📚 Original Zen Webcomic")
     var read: Button = _button(reader._screen, "Lesen  ›")
     _check(read != null and not read.disabled, "webcomic has its original unlocked chapter")
     reader.open_chapter(0)
     _check(reader._page_image.texture != null and reader._page_counter.text == "1 / 4", "original comic has working pages")
     reader.open_library()
-    _press(reader._screen, Campaign.text_for("de", "play"))
+    _press(reader._screen, "📖 Original Zen Campaign · 3×3")
     await process_frame
     _check(bool(reader.is_open()), "campaign overview is reachable")
     _check(_art_count(reader._screen) == 6, "complete hero art and five thumbnail textures are bound to controls")
