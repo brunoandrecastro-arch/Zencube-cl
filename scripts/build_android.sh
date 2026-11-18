@@ -32,6 +32,7 @@ SETTINGS
 campaign_test="${ZENCUBE_CAMPAIGN_TEST:-false}"
 realm_test="${ZENCUBE_REALM_CHRONICLES_TEST:-false}"
 abyss_test="${ZENCUBE_ABYSS_TEST:-false}"
+shadow_test="${ZENCUBE_SHADOW_TEST:-false}"
 campaign_package="com.zencube.game.campaign"
 campaign_label="ZenCube Campaign Test"
 if [[ "$realm_test" == true ]]; then
@@ -44,6 +45,11 @@ if [[ "$abyss_test" == true ]]; then
   campaign_package="com.zencube.game.abyss"
   campaign_label="ZenCube Abyss Test"
 fi
+if [[ "$shadow_test" == true ]]; then
+  campaign_test=true
+  campaign_package="com.zencube.game.shadow"
+  campaign_label="ZenCube Shadow Test"
+fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.
   preset_backup="$(mktemp)"
@@ -55,7 +61,10 @@ if [[ "$campaign_test" == true ]]; then
   }" export_presets.cfg
   # A private export-only feature permits the player to TEST this campaign
   # even before Zen Master; it does not modify the 4x4 production gates.
-  if [[ "$abyss_test" == true ]]; then
+  if [[ "$shadow_test" == true ]]; then
+    # Both chapters are testable in this separate Campaign 2.0 build.
+    sed -i '0,/custom_features=""/s//custom_features="zencube_shadow_test,zencube_abyss_test"/' export_presets.cfg
+  elif [[ "$abyss_test" == true ]]; then
     sed -i '0,/custom_features=""/s//custom_features="zencube_abyss_test"/' export_presets.cfg
   fi
 fi
