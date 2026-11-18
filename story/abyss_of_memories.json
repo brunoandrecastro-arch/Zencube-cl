@@ -79,8 +79,8 @@
     "connect": 4
   },
   "save_file": "user://zencube_abyss_campaign_v1.json",
-  "assets_status": "Assets prepared in separately downloadable ZIP; NOT yet committed to GitHub",
-  "skins_status": "Four skins are concept art, not playable 3D materials",
-  "integration_status": "Manifest only: native Godot reader/4x4 battle bridge NOT yet wired",
-  "release_status": "Draft only. No merge or Google Play publication."
+  "assets_status": "38 optimized media files prepared in two downloadable ZIPs. GitHub branch ZIP upload pending; CI extracts before Godot import.",
+  "skins_status": "Four exclusive procedural 3D cube materials implemented in core/ZenAbyssSkins.gd and rendered via ui/AscendRenderer.gd; concept art remains visual reference.",
+  "integration_status": "Native Godot 30-page reader, 3 boss battles, isolated save, audio, shatter and route implemented. Automated headless tests passed. Real-media Android APK pending uploaded ZIPs and on-device QA.",
+  "release_status": "Draft PR #9, separate APK com.zencube.game.abyss only; no merge or Google Play publication."
 }
