@@ -60,6 +60,7 @@ var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
 const UiTest = preload("res://ui/ZenUiTestTheme.gd")
+const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 const Asc = preload("res://core/ZenAscension.gd")
 # One original quote per Classic World (DE source; translated in ZenLocalization).
 const WORLD_QUOTES: Array[String] = [
@@ -239,7 +240,8 @@ func build_ui() -> void:
     veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
     var th = Theme.new()
-    th.default_font_size = 17
+    th.default_font = ZenType.body()
+    th.default_font_size = 18
     th.set_stylebox("normal","Button",theme_style(Color("faecd3"),18))
     th.set_stylebox("hover","Button",theme_style(Color("f6dfbb"),18))
     th.set_stylebox("pressed","Button",theme_style(Color("e9cda6"),18))
@@ -272,7 +274,8 @@ func build_ui() -> void:
     brand.add_theme_constant_override("separation",1)
     title_row.add_child(brand)
     # In-game header foregrounds the CURRENT World; brand remains visible below.
-    world_title_label = label("Zen-Garten",brand,27,Color("f9e5b8"))
+    world_title_label = label("Zen-Garten",brand,28,Color("f9e5b8"))
+    world_title_label.add_theme_font_override("font",ZenType.heading())
     world_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var sub = label("ZenCube 3D",brand,12,Color("e6c99d"))
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -726,6 +729,7 @@ func modal(title: String) -> VBoxContainer:
     var title_label: Label = label(title,box,24,Color("#263c2d"))
     title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title_label.name = "ZenGoldModalHeading"
+    title_label.add_theme_font_override("font",ZenType.heading())
     button("Zurück zum Spiel",box,close_modal,true)
     var line: ColorRect = ColorRect.new()
     line.name = "ZenGoldDivider"
