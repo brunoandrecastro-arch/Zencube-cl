@@ -14,6 +14,7 @@ const RealmPortal = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
+const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
 var data: Dictionary = {}
@@ -63,6 +64,11 @@ var match_generation: int = 0
 var realm_story_stage: int = 0
 var realm_story_last_human: int = -1
 var realm_story_generation: int = 0
+var abyss_active: bool = false
+var abyss_progress: Dictionary = {}
+var abyss_index: int = -1
+var abyss_generation: int = 0
+var abyss_last_human: int = -1
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -86,7 +92,7 @@ func _ready() -> void:
         SaveManager.save_data(data)
     # Restore the correct fixed bot after the legacy selection is validated.
     bot_level = Realms.fixed_bot_level(match_realm)
-    if not Mode.unlocked(data):
+    if not Mode.unlocked(data) and not Abyss.qa_mode():
         get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
         return
     lines = Mode.generate_lines()
@@ -110,6 +116,9 @@ func _ready() -> void:
     cube.set_skin(int(data.economy.get("equipped",0)))
     start_world_music()
     draw()
+    if ZenChronicles.consume_abyss_launch():
+        call_deferred("start_abyss_battle")
+        return
     if ZenChronicles.consume_realm_story_launch():
         # Scene is loaded; do not toggle normal 4x4 help_seen or rankings.
         call_deferred("start_realm_story")
@@ -125,6 +134,9 @@ func _ready() -> void:
 # Existing shop IDs 0..13 always remain unchanged. In Base mode 4x4 uses
 # its own realm soundtrack; a manually owned track overrides it everywhere.
 func desired_realm_stream() -> AudioStream:
+    if abyss_active:
+        var abyss_stream: AudioStream = Abyss.boss_stream(abyss_index)
+        if abyss_stream != null: return abyss_stream
     # Twelve original boss themes take precedence during the 4x4 story,
     # independent of which Shop track the player has equipped. Outside a boss
     # match, the original Realm/Shop choice is restored unchanged.
@@ -390,6 +402,9 @@ func zen_ascend_bot_name() -> String:
     return "Zen Ascend Bot · " + _bot_difficulty_name()
 
 func show_ascend_menu() -> void:
+    if abyss_active:
+        _abyss_menu()
+        return
     if realm_story_active:
         _realm_story_menu()
         return
@@ -432,6 +447,11 @@ func draw() -> void:
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
+    if abyss_active:
+        rank_label.text = Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]
+        quote_label.text = "Abyss of Memories · 4×4"
+        status_label.text = ("⚔ " + Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
+        details_label.text = "Abyss · "+str(move_count())+"/96"
     if realm_story_active:
         rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
         if result == 0:
@@ -501,6 +521,9 @@ func cube_input(event: InputEvent) -> void:
         if dragged: cube.rotate_cube(event.relative)
 
 func start_game(bot: bool, level: int = -1) -> void:
+    if abyss_active:
+        _abyss_retry()
+        return
     if realm_story_active:
         _realm_story_retry()
         return
@@ -536,8 +559,10 @@ func play(cell: int) -> void:
     if result != 0 or busy or cell < 0 or cell >= Mode.CELLS or int(cells[cell]) != 0: return
     if against_bot and turn == 2: return
     if realm_story_active: realm_story_last_human = cell
+    if abyss_active: abyss_last_human = cell
     _commit(cell)
     if realm_story_active and result == 0: _realm_story_save()
+    if abyss_active and result == 0: _abyss_save()
     if against_bot and result == 0 and turn == 2:
         busy = true
         draw()
@@ -559,6 +584,8 @@ func bot_turn() -> void:
     var started_match: int = match_generation
     var generation: int = realm_story_generation
     var began_in_story: bool = realm_story_active
+    var began_in_abyss: bool = abyss_active
+    var started_abyss: int = abyss_generation
     var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55,0.44,0.55,0.75,0.88,0.74,1.05][clampi(realm_story_stage,0,11)] if realm_story_active else 0.26
     await get_tree().create_timer(delay).timeout
     if not is_inside_tree() or result != 0 or not against_bot or started_match != match_generation: return
@@ -567,13 +594,23 @@ func bot_turn() -> void:
     # the restored ordinary 4x4 board after the player has left.
     if began_in_story and (not realm_story_active or generation != realm_story_generation): return
     if not began_in_story and realm_story_active: return
-    var cell: int = RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)
+    if began_in_abyss and (not abyss_active or abyss_generation != started_abyss): return
+    if not began_in_abyss and abyss_active: return
+    var cell: int = Abyss.choose_move(cells,lines,abyss_index,abyss_last_human) if abyss_active else (RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0))
     busy = false
     if cell >= 0: _commit(cell)
     if realm_story_active and result == 0: _realm_story_save()
+    if abyss_active and result == 0: _abyss_save()
     draw()
 
 func finish() -> void:
+    if abyss_active:
+        if recorded: return
+        recorded = true
+        busy = false
+        _abyss_save()
+        call_deferred("_abyss_result")
+        return
     if realm_story_active:
         if recorded: return
         recorded = true
@@ -771,6 +808,9 @@ func show_statistics() -> void:
     _open_realm_dialog(parts)
 
 func return_home() -> void:
+    if abyss_active:
+        _abyss_back_to_reader()
+        return
     if realm_story_active:
         _realm_story_leave()
         return
@@ -1543,3 +1583,184 @@ func _realm_story_leave() -> void:
     cube.clear_boss_skin()
     cube.set_skin(int(data.economy.get("equipped",0)))
     return_home()
+
+# -------- Campaign 2.0: Abyss native 4x4 battles and story handoff --------
+func start_abyss_battle() -> void:
+    if not Mode.unlocked(data) and not Abyss.qa_mode(): return
+    abyss_progress = Abyss.load_progress()
+    var next_action: Dictionary = Abyss.next_action(abyss_progress)
+    if next_action.get("type") != "battle":
+        ZenChronicles.open_abyss_reader()
+        return
+    abyss_index = int(next_action.get("boss",-1))
+    if abyss_index < 0 or abyss_index >= 3: return
+    abyss_active = true
+    realm_story_active = false
+    abyss_generation += 1
+    match_generation += 1
+    ZenChronicles.set_campaign_board_active(true)
+    against_bot = true
+    owners = [0,1]
+    recorded = false
+    busy = false
+    var game: Dictionary = Abyss.begin_battle(abyss_progress,abyss_index)
+    if game.is_empty(): return
+    cells = game.cells.duplicate()
+    turn = clampi(int(game.get("turn",1)),1,2)
+    result = clampi(int(game.get("result",0)),0,3)
+    recorded = result != 0
+    abyss_last_human = int(game.get("last_human",-1))
+    bot_level = Abyss.BOT_LEVELS[abyss_index]
+    cube.reset_view()
+    cube.clear_boss_skin()
+    cube.set_abyss_skin(abyss_index+1)
+    if realm_backdrop != null and ResourceLoader.exists(Abyss.realm_art()):
+        realm_backdrop.texture = load(Abyss.realm_art()) as Texture2D
+    _abyss_save()
+    sync_realm_music()
+    draw()
+    if result != 0: _abyss_result()
+    else: _abyss_intro()
+
+func _abyss_save() -> bool:
+    if not abyss_active: return false
+    abyss_progress.game = {
+        "boss":abyss_index,
+        "cells":cells.duplicate(),
+        "turn":turn,
+        "result":result,
+        "last_human":abyss_last_human
+    }
+    var ok: bool = Abyss.save_progress(abyss_progress)
+    if not ok: push_warning("Abyss of Memories: could not save battle")
+    return ok
+
+func _abyss_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
+    var image_path: String = Abyss.boss_art(abyss_index)
+    if not ResourceLoader.exists(image_path): return
+    var art := TextureRect.new()
+    art.texture = load(image_path) as Texture2D
+    art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    art.custom_minimum_size.y = height
+    art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent.add_child(art)
+
+func _abyss_intro() -> void:
+    if not abyss_active: return
+    var parts: Dictionary = _realm_dialog(Abyss.BOSS_NAMES[abyss_index],670)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    _abyss_add_art(body)
+    var opening: Array = [
+        "Every stolen memory has a price.",
+        "Some wounds remain even when the blade is silent.",
+        "Remember who you were – and why you still fight."
+    ]
+    text(body,opening[abyss_index],16,Color("#dfd4e5"))
+    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
+    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
+    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
+    text(body,starter,14,Color("#e1c99d"))
+    action(body,"⚔ Kampf fortsetzen" if move_count() > 0 else "⚔ Kampf beginnen",_abyss_begin,true)
+    action(body,"‹ Zur Geschichte",_abyss_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _abyss_begin() -> void:
+    if not abyss_active: return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    if result == 0 and turn == 2 and not busy:
+        busy = true
+        call_deferred("bot_turn")
+    draw()
+
+func _abyss_result() -> void:
+    if not abyss_active or result == 0: return
+    var label: String = "Erinnerung zurückgewonnen" if result == 1 else ("Unentschieden" if result == 3 else "Niederlage")
+    if lang() == "en":
+        label = "Memory restored" if result == 1 else ("Draw" if result == 3 else "Defeat")
+    elif lang() == "pt":
+        label = "Memória recuperada" if result == 1 else ("Empate" if result == 3 else "Derrota")
+    var parts: Dictionary = _realm_dialog(label,620)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    _abyss_add_art(body,210)
+    text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
+    if result == 1:
+        action(body,"✦ Geschichte fortsetzen",_abyss_victory,true)
+    else:
+        action(body,"⚔ Erneut kämpfen",_abyss_retry,true)
+    action(body,"‹ Geschichte verlassen",_abyss_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _abyss_retry() -> void:
+    if not abyss_active: return
+    abyss_generation += 1
+    match_generation += 1
+    abyss_progress.game = {}
+    if not Abyss.save_progress(abyss_progress): return
+    # This allocates a fresh 96-cell board and alternates the first player.
+    var game: Dictionary = Abyss.begin_battle(abyss_progress,abyss_index)
+    cells = game.cells.duplicate()
+    turn = int(game.turn)
+    result = 0
+    recorded = false
+    busy = false
+    abyss_last_human = -1
+    cube.reset_view()
+    _abyss_save()
+    draw()
+    _abyss_intro()
+
+func _abyss_victory() -> void:
+    if not abyss_active or result != 1: return
+    if not Abyss.record_victory(abyss_progress,abyss_index): return
+    abyss_generation += 1
+    match_generation += 1
+    busy = false
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    var previous: String = Abyss.realm_art()
+    var next_art: String = Abyss.page_path(int(abyss_progress.page))
+    if ResourceLoader.exists(previous) and ResourceLoader.exists(next_art):
+        var transition: ZenRealmTravelCeremony = RealmPortal.new()
+        add_child(transition)
+        transition.finished.connect(_abyss_back_to_reader)
+        transition.present(previous,next_art,"Memory Restored",true,
+            bool(data.settings.get("sound",true)),[world_music],lang())
+    else:
+        _abyss_back_to_reader()
+
+func _abyss_menu() -> void:
+    if not abyss_active: return
+    var parts: Dictionary = _realm_dialog("Abyss of Memories",410)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    text(body,Abyss.BOSS_NAMES[clampi(abyss_index,0,2)],20,Color("#dfd4e5"))
+    action(body,"⚔ Kampf fortsetzen",_abyss_begin,true)
+    action(body,"‹ Zur Geschichte",_abyss_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _abyss_back_to_reader() -> void:
+    if not abyss_active: return
+    abyss_generation += 1
+    match_generation += 1
+    if result != 1: _abyss_save()
+    abyss_active = false
+    busy = false
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    cube.clear_abyss_skin()
+    cube.set_skin(int(data.economy.get("equipped",0)))
+    match_realm = int(Realms.state(data).selected)
+    bot_level = Realms.fixed_bot_level(match_realm)
+    cells.fill(0)
+    turn = 1
+    result = 0
+    recorded = false
+    abyss_last_human = -1
+    if realm_backdrop != null:
+        realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+    ZenChronicles.set_campaign_board_active(false)
+    sync_realm_music()
+    draw()
+    ZenChronicles.open_abyss_reader()
