@@ -12,8 +12,9 @@ jobs:
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
-      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' }}
-      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' }}
+      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' }}
+      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' }}
+      ZENCUBE_REALM_2_0_TEST: ${{ github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -206,6 +207,9 @@ jobs:
       - name: Shadow Realm Campaign 2.0 – 30 pages, 3 original 4x4 bosses and story save
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_shadow_campaign.gd
+      - name: 'ZenCube 2.0 Realm: 3 unique tactical Challenges per chapter and 3+3 unlock gates'
+        run: |
+          timeout 95 "$GODOT" --headless --path . --script tests/test_zen_realm_2_0.gd
       - name: Validate twelve original Boss track mappings and audio checksums
         run: python3 tests/test_realm_boss_audio.py
       - name: Verify 100 tactical challenges on the 3D cube
@@ -271,11 +275,17 @@ jobs:
           done
           test -s assets/realm_music/shadow_realm.ogg
       - name: Reuse Shadow debug signing key
-        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        if: env.ZENCUBE_SHADOW_TEST == 'true' && env.ZENCUBE_REALM_2_0_TEST != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.android/zencube-debug.keystore
           key: zencube-shadow-debug-key-v1
+      - name: Reuse ZenCube 2.0 Realm debug signing key
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/zencube-debug.keystore
+          key: zencube-realm-2-0-debug-key-v1
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -316,11 +326,21 @@ jobs:
           grep -F 'assets/assets/shadow_campaign/pages/page_30.webp' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/mist_guardian.ogg' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/veil_monk.ogg' <<< "$contents"
+      - name: Name ZenCube 2.0 Realm test APK
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-2.0-Realm.apk
+      - name: Upload ZenCube 2.0 Realm test APK
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-2.0-Realm
+          path: build/ZenCube-2.0-Realm.apk
+          if-no-files-found: error
       - name: Name Shadow test APK
-        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        if: env.ZENCUBE_SHADOW_TEST == 'true' && env.ZENCUBE_REALM_2_0_TEST != 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-3D-Shadow-Test.apk
       - name: Upload Shadow test APK
-        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        if: env.ZENCUBE_SHADOW_TEST == 'true' && env.ZENCUBE_REALM_2_0_TEST != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ZenCube-3D-Shadow-Test
@@ -357,7 +377,7 @@ jobs:
           path: build/ZenCube-3D-Enduser-Preview.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_ABYSS_TEST != 'true' && env.ZENCUBE_SHADOW_TEST != 'true'
+        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_ABYSS_TEST != 'true' && env.ZENCUBE_SHADOW_TEST != 'true' && env.ZENCUBE_REALM_2_0_TEST != 'true'
         with:
           name: ZenCube-3D-debug
           path: |
