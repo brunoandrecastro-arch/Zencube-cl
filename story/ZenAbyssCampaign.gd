@@ -112,7 +112,7 @@ static func record_victory(data: Dictionary, index: int) -> bool:
 static func qa_mode() -> bool:
     # Only the separately signed Abyss debug APK sets this during export.
     # It does not change rank, shop purchases or regular 4x4 gates.
-    return bool(ProjectSettings.get_setting("application/config/abyss_qa",false))
+    return OS.has_feature("zencube_abyss_test")
 
 static func realm_art() -> String:
     return ASSET_ROOT + "realm.webp"
