@@ -1614,8 +1614,9 @@ func start_abyss_battle() -> void:
     cube.reset_view()
     cube.clear_boss_skin()
     cube.set_abyss_skin(abyss_index+1)
-    if realm_backdrop != null and ResourceLoader.exists(Abyss.realm_art()):
-        realm_backdrop.texture = load(Abyss.realm_art()) as Texture2D
+    if realm_backdrop != null:
+        var arena: Texture2D = Abyss.battle_backdrop()
+        if arena != null: realm_backdrop.texture = arena
     _abyss_save()
     sync_realm_music()
     draw()
