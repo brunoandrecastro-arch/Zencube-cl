@@ -117,6 +117,24 @@ static func qa_mode() -> bool:
 static func realm_art() -> String:
     return ASSET_ROOT + "realm.webp"
 
+## The source concept collage places Kuze on the left and the sunken arena
+## on the right. A centered portrait crop showed Kuze behind the 3D cube.
+## The Android arena must instead foreground the submerged shrines, glowing
+## ZenCube, moon and water. Keep the original realm asset untouched for story.
+static func battle_backdrop() -> Texture2D:
+    var source_path: String = realm_art()
+    if not ResourceLoader.exists(source_path): return null
+    var full: Texture2D = load(source_path) as Texture2D
+    if full == null: return null
+    var size: Vector2 = full.get_size()
+    var crop: AtlasTexture = AtlasTexture.new()
+    crop.atlas = full
+    # Cropping the right ~42% matches the phone's portrait aspect ratio.
+    # Avoids the huge Kuze face / caption from the left of the concept.
+    crop.region = Rect2(size.x * 0.58, 0.0, size.x * 0.42, size.y)
+    crop.filter_clip = true
+    return crop
+
 static func story_music() -> String:
     return ASSET_ROOT + "audio/story.mp3"
 
