@@ -53,8 +53,8 @@ func run() -> void:
             for chapter in range(4):
                 test(ResourceLoader.exists(Story.CHAPTER_ART[chapter]),"chapter hero art included "+str(chapter))
         chronicles.call("close_chronicles")
-    # Real 4x4 menu integration: the campaign must be the FIRST card, in the
-    # existing Realm list, not merely in the Chronicles library overlay.
+    # New single entrance: Legacy/Manhwa belongs in Zen Realm Chronicles,
+    # while the normal 4x4 Realm screen contains ONLY four Realm cards.
     var ascend_scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     test(ascend_scene != null,"4x4 Ascend scene is still loadable")
     if ascend_scene != null and chronicles != null:
@@ -68,35 +68,25 @@ func run() -> void:
         var modal: Node = controller.get("active_realm_dialog")
         test(is_instance_valid(modal),"the normal 4x4 Realm menu opens")
         if is_instance_valid(modal):
-            var card: Node = modal.find_child("RealmChroniclesCampaignCard",true,false)
-            var open_button: Node = modal.find_child("RealmChroniclesCampaignOpen",true,false)
-            var visual_previews: Node = modal.find_child("RealmChroniclesFourRealmPreviews",true,false)
-            test(card != null,"separate story campaign card is visible in Realm menu")
-            test(open_button is Button,"story campaign has a real button")
-            test(visual_previews != null and visual_previews.get_child_count()==4,
-                "campaign card shows all four realm preview pictures")
-            if card != null:
-                var direct_cards: Array = []
-                for item in card.get_parent().get_children():
-                    if item is PanelContainer:
-                        direct_cards.append(item)
-                test(direct_cards.size()==5 and direct_cards[0]==card,
-                    "story campaign appears above Shadow, Ember, Celestial and Satori")
-            if open_button is Button:
-                (open_button as Button).emit_signal("pressed")
-                test(chronicles.get("_screen_name")=="realm-story",
-                    "Realm-menu campaign button actually opens Zen Chronicles story overview")
-                test(bool(chronicles.get("_realm_story_from_realms")),
-                    "story overview remembers that user entered through Realm menu")
-                chronicles.call("_back_from_realm_story")
-                await process_frame
-                test(chronicles.get("_screen")==null,
-                    "back from story returns to 4x4 UI instead of the global library")
-                var restored: Node = controller.get("active_realm_dialog")
-                test(is_instance_valid(restored) and restored.find_child("RealmChroniclesCampaignCard",true,false)!=null,
-                    "back from story reopens the existing Realm menu")
+            test(modal.find_child("RealmChroniclesCampaignCard",true,false)==null,
+                "no duplicate story card in the normal four-Realm menu")
+            test(modal.find_child("RealmChroniclesCampaignOpen",true,false)==null,
+                "no duplicate Open Story button")
+            var content: Node = controller.get("active_realm_scroll")
+            if content != null:
+                var count: int = 0
+                for item in content.get_children():
+                    for card in item.get_children():
+                        if card is PanelContainer: count += 1
+                test(count==4,"four Realm cards (Shadow/Ember/Celestial/Satori) only")
+        chronicles.call("open_library")
+        test(chronicles.get("_screen_name")=="library","Zen Realm Chronicles is the sole story entry")
+        var screen: Node = chronicles.get("_screen")
+        test(is_instance_valid(screen) and screen.find_child("ZenChroniclesRoot",true,false)==null,
+            "central Chronicles opens independently of the 4x4 Realms UI")
+        chronicles.call("close_chronicles")
         test(FileAccess.get_file_as_string(SaveManager.PATH)==ordinary_save,
-            "opening story card and returning never changes normal player saves")
+            "Chronicles navigation never changes existing Realm stats or progress")
         current_scene = previous_scene
         controller.queue_free()
     ProjectSettings.set_setting("application/config/realm_chronicles_qa",old_qa)

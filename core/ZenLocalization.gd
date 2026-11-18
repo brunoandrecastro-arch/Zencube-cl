@@ -4,6 +4,12 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "A New Dimension of Strategy": "Explore a New Dimension of Strategy",
+    "Freischalten · 🍃 850": "Unlock · 🍃 850",
+    "Zen Ascend betreten": "Enter Zen Ascend",
+    "Zen Challenges · 100 Aufgaben": "Zen Challenges · 100 Puzzles",
+    "Zen Realm Chronicles 📖": "Zen Realm Chronicles · Story 📖",
+    "🔒 Ab Zen-Meister oder im Shop für 850 Zen-Blätter.": "🔒 Unlock at Zen Master or for 850 Zen Leaves.",
     "Zen-Chroniken 📖": "Zen Chronicles 📖",
     "A purchased hint stays with you. Achievements must still be earned in battle.": "Purchased hints are permanent. Achievements must still be earned through play.",
     "Buy a hint · 🍃 %d": "Unlock a hint · 🍃 %d",
@@ -343,6 +349,12 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "A New Dimension of Strategy": "Uma nova dimensão de estratégia",
+    "Freischalten · 🍃 850": "Desbloquear · 🍃 850",
+    "Zen Ascend betreten": "Entrar no Zen Ascend",
+    "Zen Challenges · 100 Aufgaben": "Zen Challenges · 100 Desafios",
+    "Zen Realm Chronicles 📖": "Zen Realm Chronicles · História 📖",
+    "🔒 Ab Zen-Meister oder im Shop für 850 Zen-Blätter.": "🔒 Desbloqueia no nível Mestre Zen ou por 850 Folhas Zen.",
     "Zen-Chroniken 📖": "Crónicas Zen 📖",
     "A purchased hint stays with you. Achievements must still be earned in battle.": "As dicas compradas ficam para sempre. As conquistas têm de ser alcançadas a jogar.",
     "Buy a hint · 🍃 %d": "Comprar uma dica · 🍃 %d",

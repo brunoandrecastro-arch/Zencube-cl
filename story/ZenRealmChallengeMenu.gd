@@ -7,6 +7,10 @@ var chapter: int = 0
 var locale: String = "en"
 var panel: Control
 
+func _chronicles() -> Node:
+    # Avoid circular script preload resolution in Godot headless Android CI.
+    return get_tree().root.get_node("ZenChronicles")
+
 func _ready() -> void:
     layer = 111
     locale = str(SaveManager.load_data().get("settings",{}).get("language","en"))
@@ -81,17 +85,22 @@ func _render() -> void:
     scroll.add_child(content)
     _label(content,"ZenCube 2.0 Realm",27,Ui.GOLD)
     _label(content,Campaign.REALM_NAMES[chapter],22,Ui.IVORY)
-    _label(content,t("Realm-Challenges · nur hier gibt es Achievements","Realm challenges · achievements are earned here","Desafios do reino · conquistas apenas aqui"),14,Ui.IVORY)
-    var data: Dictionary = Campaign.load_progress()
-    var cleared: int = Campaign.completed_count(data,chapter)
+    _label(content,t("Automatisch durch 4×4-Partien gegen den Zen-Bot","Earned automatically in regular 4×4 matches against the Zen-Bot","Conquistados automaticamente em partidas 4×4 contra o Zen-Bot"),14,Ui.IVORY)
+    var cleared: int = Campaign.completed_count(Campaign.load_progress(),chapter)
     var defeated: int = Campaign.bosses_won(chapter)
     _label(content,t("Bosse: %d/3  ·  Challenges: %d/3","Bosses: %d/3  ·  Challenges: %d/3","Chefes: %d/3  ·  desafios: %d/3") % [defeated,cleared],17,Ui.GOLD)
     for i in range(3):
-        var done: bool = bool(data.completed[chapter][i])
-        var title: String = Campaign.task_title(chapter,i)
-        var task: Button = _button(content,("✓  " if done else "◇  ") + title, _launch.bind(i))
-        task.disabled = done
-        _label(content,Campaign.task_description(chapter,i,locale),13,Color("#d7d5d0"))
+        var done: bool = Campaign.challenge_done(chapter,i)
+        var task_card := PanelContainer.new()
+        task_card.add_theme_stylebox_override("panel",Ui.frame(Color("#244334",0.95) if done else Color("#28362f",0.96),15))
+        content.add_child(task_card)
+        var details := VBoxContainer.new()
+        details.add_theme_constant_override("separation",6)
+        task_card.add_child(details)
+        _label(details,("✓  " if done else "◇  ") + Campaign.task_title(chapter,i,locale),18,Ui.GOLD)
+        _label(details,Campaign.task_description(chapter,i,locale),14,Ui.IVORY)
+    _label(content,t("Nicht antippen: Der Fortschritt wird automatisch gezählt.","These are milestones, not selectable puzzle battles.","São objetivos automáticos, não puzzles selecionáveis."),13,Color("#b6c9b9"))
+    _button(content,t("⚔ Gegen Zen-Bot spielen","⚔ Play Zen-Bot","⚔ Jogar contra o Zen-Bot"),_play_bot,true)
     if Campaign.ready(chapter):
         _label(content,t("✓ Alle Bosse und Challenges geschafft. Der nächste Realm ist frei!","✓ All bosses and challenges complete. Next realm unlocked!","✓ Todos os chefes e desafios concluídos. Novo reino desbloqueado!"),16,Color("#c3f0bb"))
         _button(content,t("✦ Realm betreten","✦ Enter next realm","✦ Entrar no próximo reino"),_next_realm,true)
@@ -100,20 +109,26 @@ func _render() -> void:
     _button(content,t("‹ Zurück zum Manhwa","‹ Back to Manhwa","‹ Voltar ao Manhwa"),_back)
     _button(content,t("Zur Bibliothek","Library","Biblioteca"),_library)
 
-func _launch(index: int) -> void:
-    ZenChronicles.request_campaign_challenge(chapter,index)
+func _play_bot() -> void:
+    _chronicles().call("close_campaign_challenges")
+    if chapter==0:
+        # Existing Shadow Realm tasks only progress in normal Zen-Bot games.
+        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+    else:
+        # Abyss-specific free-play, never an individual puzzle shortcut.
+        _chronicles().call_deferred("request_campaign_practice",chapter)
 
 func _back() -> void:
-    ZenChronicles.close_campaign_challenges()
-    if chapter==0: ZenChronicles.call_deferred("open_shadow_reader")
-    else: ZenChronicles.call_deferred("open_abyss_reader")
+    _chronicles().call("close_campaign_challenges")
+    if chapter==0: _chronicles().call_deferred("open_shadow_reader")
+    else: _chronicles().call_deferred("open_abyss_reader")
 
 func _library() -> void:
-    ZenChronicles.close_campaign_challenges()
-    ZenChronicles.call_deferred("open_library")
+    _chronicles().call("close_campaign_challenges")
+    _chronicles().call_deferred("open_library")
 
 func _next_realm() -> void:
-    ZenChronicles.request_campaign_breakthrough(chapter)
+    _chronicles().call("request_campaign_breakthrough",chapter)
 
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE:

@@ -3,6 +3,8 @@ extends SceneTree
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Skins = preload("res://core/ZenAbyssSkins.gd")
 const Reader = preload("res://story/ZenAbyssReader.gd")
+const Shadow = preload("res://story/ZenShadowCampaign.gd")
+const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 var failures: int = 0
 var backups: Dictionary = {}
 
@@ -19,7 +21,7 @@ func _backup(path: String) -> void:
         backups[path] = FileAccess.get_file_as_bytes(path)
 
 func _restore() -> void:
-    for path in [Abyss.SAVE,SaveManager.PATH]:
+    for path in [Abyss.SAVE,Shadow.SAVE,Realm2.SAVE,SaveManager.PATH]:
         if backups.has(path):
             var file := FileAccess.open(path,FileAccess.WRITE)
             if file != null:
@@ -30,6 +32,8 @@ func _restore() -> void:
 
 func run() -> void:
     _backup(Abyss.SAVE)
+    _backup(Shadow.SAVE)
+    _backup(Realm2.SAVE)
     _backup(SaveManager.PATH)
     check(Abyss.BOSS_IDS.size()==3,"three unique bosses")
     check(Abyss.GATES==[6,15,25],"bosses appear on pages 6, 15 and 25")
@@ -96,6 +100,19 @@ func run() -> void:
     user.ascend.help_seen = true
     user.settings.music = false
     check(SaveManager.save_data(user),"seed legal native 4x4 entitlement")
+    # Campaign 2.0 now requires the actual Shadow story AND three regular
+    # Shadow Zen-Bot achievements before entering Abyss.
+    var old_shadow: Dictionary = Shadow.defaults()
+    old_shadow.defeated = [true,true,true]
+    old_shadow.page = 30
+    old_shadow.completed = true
+    check(Shadow.save_progress(old_shadow),"seed completed predecessor story")
+    for i in range(3):
+        var task: Dictionary = Realm2.shadow_task(i)
+        ZenAscendRealms.state(user).completed[str(task.id)] = true
+    check(SaveManager.save_data(user),"seed three original Shadow Realm bot milestones")
+    check(Realm2.unlocked(1),"Abyss is genuinely unlocked via 3+3")
+    check(Realm2.enter_next_realm(0),"the first Shadow→Abyss portal has already been watched for this boss fixture")
     var campaign: Dictionary = Abyss.defaults()
     campaign.page = 6
     check(Abyss.save_progress(campaign),"seed first battle gate")

@@ -23,6 +23,10 @@ var sound: AudioStreamPlayer
 var muted: Array[AudioStreamPlayer] = []
 var start_touch: Vector2 = Vector2.ZERO
 
+func _chronicles() -> Node:
+    # Avoid circular script preload resolution in Godot headless Android CI.
+    return get_tree().root.get_node("ZenChronicles")
+
 func _ready() -> void:
     layer = 110
     progress = Abyss.load_progress()
@@ -144,7 +148,7 @@ func _turn(direction: int) -> void:
             if Abyss.finish_chapter(progress): _show_page()
         elif Realm2.ready(1):
             _close()
-            ZenChronicles.call_deferred("request_campaign_breakthrough",1)
+            _chronicles().call_deferred("request_campaign_breakthrough",1)
         else:
             status.text = "Bosse %d/3 · Challenges %d/3: Beides wird benötigt." % [
                 Realm2.bosses_won(1),Realm2.completed_count(Realm2.load_progress(),1)]
@@ -155,14 +159,14 @@ func _turn(direction: int) -> void:
         if not ZenAscend.unlocked(saved) and not Abyss.qa_mode():
             status.text = t("locked")
             return
-        ZenChronicles.request_abyss_battle()
+        _chronicles().call("request_abyss_battle")
     elif action.get("type") == "page":
         progress.page = int(action.page)
         if Abyss.save_progress(progress): _show_page()
 
 func _open_challenges() -> void:
     _close()
-    ZenChronicles.call_deferred("open_campaign_challenges",1)
+    _chronicles().call_deferred("open_campaign_challenges",1)
 
 func _input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
@@ -215,7 +219,7 @@ func _exit_tree() -> void:
 
 func _return_library() -> void:
     _close()
-    ZenChronicles.call_deferred("open_library")
+    _chronicles().call_deferred("open_library")
 
 func _close() -> void:
-    ZenChronicles.close_abyss_reader()
+    _chronicles().call("close_abyss_reader")

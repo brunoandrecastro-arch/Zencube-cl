@@ -63,6 +63,7 @@ var _shadow_reader: CanvasLayer
 var _shadow_launch_requested: bool = false
 var _campaign_menu: CanvasLayer
 var _campaign_challenge_requested: Dictionary = {}
+var _campaign_practice_requested: int = -1
 
 func _ready() -> void:
     layer = 90
@@ -251,6 +252,9 @@ func _chapter_accessible(i: int) -> bool:
     var saved: Dictionary = SaveManager.load_data()
     return ascension.world_unlocked(saved, i)
 
+func campaign_ui(de: String,en: String,pt: String) -> String:
+    return de if _active_language=="de" else (pt if _active_language=="pt" else en)
+
 func open_library() -> void:
     _realm_story_from_realms = false
     _sync_language()
@@ -259,14 +263,25 @@ func open_library() -> void:
     var outer := _make_screen()
     var head := HBoxContainer.new()
     outer.add_child(head)
-    var heading := _make_label(_t("library_header"), head, 24, GOLD)
+    var heading := _make_label("ZEN REALM CHRONICLES", head, 24, GOLD)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
-    _make_button(Campaign.text_for(_active_language, "play"), outer, open_campaign_overview)
-    _make_button("🌘 ZenCube 2.0 Realm · 1 · Shadow Realm", outer, open_shadow_reader)
-    _make_button(("🌑 ZenCube 2.0 Realm · 2 · Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · 3 Bosse + 3 Challenges"),outer,open_abyss_reader)
-    _make_button(("🔥 Ember Temple · freigeschaltet" if Realm2.unlocked(2) else "🔒 Ember Temple · demnächst"),outer,open_ember_campaign_preview)
-    _make_button(Campaign.text_for(_active_language, "webcomic"), outer, open_comic_library)
+    _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
+    _make_label(campaign_ui("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",
+        "4×4 · 3 bosses + 3 Realm challenges per chapter",
+        "4×4 · 3 chefes + 3 desafios de reino por capítulo"),outer,15,CREAM)
+    var access: bool = Realm2.unlocked(0)
+    _make_button("🌘 Shadow Realm" if access else campaign_ui("🔒 Shadow Realm · Zen Ascend 4×4 freischalten",
+        "🔒 Shadow Realm · Unlock Zen Ascend 4×4","🔒 Shadow Realm · Desbloqueia Zen Ascend 4×4"),outer,open_shadow_reader)
+    _make_button("🌑 Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · Shadow 3+3",outer,open_abyss_reader)
+    _make_button("🔥 Ember Temple" if Realm2.unlocked(2) else "🔒 Ember Temple · Abyss 3+3",outer,open_ember_campaign_preview)
+    _make_label(campaign_ui("Originalarchive","Original Archives","Arquivos originais"),outer,18,GOLD)
+    _make_button(campaign_ui("📜 Original Realm Chronicles · 12 Bosse",
+        "📜 Original Realm Chronicles · 12 Bosses","📜 Realm Chronicles originais · 12 chefes"),outer,open_realm_story_archive)
+    _make_button(campaign_ui("📖 Originale Zen-Kampagne · 3×3",
+        "📖 Original Zen Campaign · 3×3","📖 Campanha Zen original · 3×3"),outer,open_campaign_overview)
+    _make_button(campaign_ui("📚 Originaler Zen-Webcomic",
+        "📚 Original Zen Webcomic","📚 Webcomic Zen original"),outer,open_comic_library)
 
 func open_comic_library() -> void:
     _sync_language()
@@ -697,6 +712,9 @@ func consume_abyss_launch() -> bool:
 # Campaign 2.0 – Shadow Realm chapter, isolated from the existing 12
 # Realm Chronicles bosses and independent of the Abyss chapter save.
 func open_shadow_reader() -> void:
+    if not Realm2.unlocked(0):
+        _campaign_locked_screen(0)
+        return
     close_campaign_challenges()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
@@ -737,13 +755,21 @@ func _campaign_locked_screen(chapter: int) -> void:
     _screen_name = "realm-2-locked"
     var outer: VBoxContainer = _make_screen()
     _make_label("🔒  " + Realm2.REALM_NAMES[clampi(chapter,0,2)],outer,23,GOLD)
-    var prev: int = clampi(chapter-1,0,1)
-    var words: String = "Bosse %d/3 + Challenges %d/3" % [
-        Realm2.bosses_won(prev),Realm2.completed_count(Realm2.load_progress(),prev)]
-    _make_label(words,outer,19,CREAM)
-    _make_label("Beide Bedingungen müssen erfüllt sein, bevor du den nächsten Realm betreten kannst.",outer,15,CREAM)
-    _make_button("‹ Zur Bibliothek",outer,open_library)
-    _make_button("✦ Challenges",outer,open_campaign_challenges.bind(prev))
+    if not Realm2.base_unlocked():
+        _make_label(campaign_ui("Zen Ascend 4×4 muss zunächst regulär freigeschaltet werden.",
+            "First unlock Zen Ascend 4×4 through normal progression.",
+            "Desbloqueia primeiro o Zen Ascend 4×4 na progressão normal."),outer,17,CREAM)
+    else:
+        var prev: int = clampi(chapter-1,0,1)
+        _make_label(campaign_ui("Bosse %d/3 + Challenges %d/3",
+            "Bosses %d/3 + Challenges %d/3","Chefes %d/3 + Desafios %d/3") % [
+            Realm2.bosses_won(prev),Realm2.completed_count(Realm2.load_progress(),prev)],outer,19,CREAM)
+        _make_label(campaign_ui("Bosskämpfe und reguläre 4×4-Challenges sind beide erforderlich.",
+            "Both story bosses and regular 4×4 challenges are required.",
+            "São necessários os chefes da história e os desafios 4×4 normais."),outer,15,CREAM)
+        if Realm2.unlocked(prev):
+            _make_button("✦ Realm-Challenges",outer,open_campaign_challenges.bind(prev))
+    _make_button(campaign_ui("‹ Zur Bibliothek","‹ Library","‹ Biblioteca"),outer,open_library)
 
 func open_campaign_challenges(chapter: int) -> void:
     if chapter not in [0,1] or not Realm2.unlocked(chapter):
@@ -766,23 +792,21 @@ func close_campaign_challenges() -> void:
     if is_instance_valid(_quick_button) and _screen == null:
         _quick_button.visible = _show_quick and not _campaign_board_active
 
-func request_campaign_challenge(chapter: int, index: int) -> void:
-    if chapter not in [0,1] or index not in [0,1,2] or not Realm2.unlocked(chapter):
-        return
-    if Realm2.challenge_done(chapter,index): return
-    _campaign_challenge_requested = {"chapter":chapter,"index":index}
+func request_campaign_practice(chapter: int) -> void:
+    if chapter != 1 or not Realm2.unlocked(1): return
+    _campaign_practice_requested = chapter
     close_campaign_challenges()
     var scene: Node = get_tree().current_scene
-    if scene != null and scene.scene_file_path=="res://Ascend.tscn" and scene.has_method("start_campaign_challenge"):
-        _campaign_challenge_requested = {}
-        scene.call_deferred("start_campaign_challenge",chapter,index)
+    if scene != null and scene.scene_file_path=="res://Ascend.tscn" and scene.has_method("start_campaign_practice"):
+        _campaign_practice_requested = -1
+        scene.call_deferred("start_campaign_practice",chapter)
     else:
         get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
 
-func consume_campaign_challenge_launch() -> Dictionary:
-    var launch: Dictionary = _campaign_challenge_requested.duplicate()
-    _campaign_challenge_requested = {}
-    return launch
+func consume_campaign_practice_launch() -> int:
+    var chapter: int = _campaign_practice_requested
+    _campaign_practice_requested = -1
+    return chapter
 
 func request_campaign_breakthrough(chapter: int) -> void:
     if chapter not in [0,1] or not Realm2.ready(chapter): return
@@ -831,3 +855,10 @@ func open_ember_campaign_preview() -> void:
     outer.add_child(pic)
     _make_label("Das vollständige Campaign-2.0-Kapitel für Ember Temple folgt in einer späteren Testversion.",outer,15,CREAM)
     _make_button("‹ Zur Bibliothek",outer,open_library)
+
+func open_realm_story_archive() -> void:
+    # Preserve the original 12 boss story without another entrance in Realms.
+    if not Realm2.base_unlocked():
+        _campaign_locked_screen(0)
+        return
+    open_realm_story_overview()

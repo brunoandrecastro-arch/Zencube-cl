@@ -33,7 +33,13 @@ static func boss_stream(index: int) -> AudioStream:
     if index < 0 or index >= 3: return null
     return BossMusic.stream_for(index)
 
-static func battle_backdrop() -> Texture2D:
+static func battle_backdrop(index: int = -1) -> Texture2D:
+    # Original Shadow background stays a fallback when optional HD images
+    # have not yet been committed to this development branch.
+    if index >= 0 and index < 3:
+        var boss_path: String = ASSET_ROOT + "arenas/" + BOSS_IDS[index] + ".webp"
+        if ResourceLoader.exists(boss_path):
+            return load(boss_path) as Texture2D
     if not ResourceLoader.exists(REALM_ART): return null
     return load(REALM_ART) as Texture2D
 

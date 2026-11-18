@@ -763,11 +763,11 @@ func open_menu() -> void:
     var subtitle: Label = label("Denke über die Kanten hinaus.", box, 17, Color("e7d0a7"))
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Spielen", box, open_play_menu, true)
-    premium_button("Zen-Rätsel · 100 Aufgaben", box, begin_challenges)
+    premium_button("Zen Challenges · 100 Aufgaben", box, begin_challenges)
     premium_button("Zen-Aufstieg", box, open_ascension)
     premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
     premium_button("Welten", box, open_worlds)
-    premium_button("Zen-Chroniken 📖", box, func(): get_node("/root/ZenChronicles").open_library())
+    premium_button("Zen Realm Chronicles 📖", box, func(): get_node("/root/ZenChronicles").open_library())
     premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
     premium_button("Einstellungen", box, open_settings)
@@ -1347,15 +1347,36 @@ func save_player_name(index: int, value: String) -> void:
 
 func open_ascend_intro() -> void:
     ZMode.ensure(data)
-    var box = modal(ZMode.t("Zen Ascend 4×4",language_code()))
-    label(ZMode.t("Neuer Modus: 6 Seiten mit je 4×4 Feldern (96 Felder).",language_code()),box,16)
-    label(ZMode.t("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1).",language_code()),box,15)
-    label(ZMode.t("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert.",language_code()),box,14)
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,14)
-    if ZMode.unlocked(data):
-        button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,start_ascend,true,true)
+    var language: String = language_code()
+    var box: VBoxContainer = modal(ZMode.t("Zen Ascend 4×4",language))
+    var heading: Label = label("A New Dimension of Strategy",box,20,Color("#284735"))
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var preview: TextureRect = TextureRect.new()
+    preview.name = "ZenAscendSneakPreview"
+    var art_path: String = "res://assets/zen_realm2/ascend_preview.webp"
+    if not ResourceLoader.exists(art_path):
+        art_path = "res://assets/realms/shadow_realm.webp"
+    preview.texture = load(art_path) as Texture2D
+    preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    preview.custom_minimum_size.y = 245
+    preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    box.add_child(preview)
+    var tagline: String = "96 Felder · 6 Seiten · 204 Gewinnlinien"
+    if language=="en": tagline = "96 Cells · 6 Faces · 204 Winning Lines"
+    elif language=="pt": tagline = "96 casas · 6 faces · 204 linhas de vitória"
+    var summary: Label = label(tagline,box,17,Color("#315846"))
+    summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    if ZMode.unlocked_for_release(data):
+        premium_button("Zen Ascend betreten" if language=="de" else ("Enter Zen Ascend" if language=="en" else "Entrar no Zen Ascend"),box,start_ascend,true)
     else:
-        var buy_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true,true)
+        label("🔒 Ab Zen-Meister oder im Shop für 850 Zen-Blätter." if language=="de" else (
+            "🔒 Unlock at Zen Master or for 850 Zen Leaves." if language=="en" else
+            "🔒 Desbloqueia ao atingir Mestre Zen ou por 850 Folhas Zen."),box,15)
+        var buy_button: Button = premium_button(
+            "Freischalten · 🍃 850" if language=="de" else ("Unlock · 🍃 850" if language=="en" else "Desbloquear · 🍃 850"),
+            box,buy_ascend,true)
         buy_button.disabled = int(data.economy.leaves) < ZMode.PRICE
         button("Zen-Shop",box,open_store,true)
 

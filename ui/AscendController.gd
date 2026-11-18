@@ -77,10 +77,8 @@ var shadow_progress: Dictionary = {}
 var shadow_index: int = -1
 var shadow_generation: int = 0
 var shadow_last_human: int = -1
-var campaign_challenge_active: bool = false
-var campaign_chapter: int = -1
-var campaign_challenge_index: int = -1
-var campaign_puzzle: Dictionary = {}
+var campaign_practice_active: bool = false
+var campaign_awards: Array[String] = []
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -128,9 +126,9 @@ func _ready() -> void:
     cube.set_skin(int(data.economy.get("equipped",0)))
     start_world_music()
     draw()
-    var challenge_launch: Dictionary = ZenChronicles.consume_campaign_challenge_launch()
-    if not challenge_launch.is_empty():
-        call_deferred("start_campaign_challenge",int(challenge_launch.get("chapter",-1)),int(challenge_launch.get("index",-1)))
+    var practice_launch: int = ZenChronicles.consume_campaign_practice_launch()
+    if practice_launch == 1:
+        call_deferred("start_campaign_practice",practice_launch)
         return
     if ZenChronicles.consume_shadow_launch():
         call_deferred("start_shadow_battle")
@@ -153,8 +151,8 @@ func _ready() -> void:
 # Existing shop IDs 0..13 always remain unchanged. In Base mode 4x4 uses
 # its own realm soundtrack; a manually owned track overrides it everywhere.
 func desired_realm_stream() -> AudioStream:
-    if campaign_challenge_active:
-        var stream: AudioStream = Shadow.story_stream() if campaign_chapter==0 else Abyss.story_stream()
+    if campaign_practice_active:
+        var stream: AudioStream = Abyss.story_stream()
         if stream != null: return stream
     if shadow_active:
         var shadow_stream: AudioStream = Shadow.boss_stream(shadow_index)
@@ -432,8 +430,8 @@ func zen_ascend_bot_name() -> String:
     return "Zen Ascend Bot · " + _bot_difficulty_name()
 
 func show_ascend_menu() -> void:
-    if campaign_challenge_active:
-        _campaign_challenge_menu()
+    if campaign_practice_active:
+        _campaign_practice_menu()
         return
     if shadow_active:
         _shadow_menu()
@@ -483,11 +481,10 @@ func draw() -> void:
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
-    if campaign_challenge_active:
-        rank_label.text = "ZenCube 2.0 Realm · " + Realm2.REALM_NAMES[campaign_chapter]
-        quote_label.text = Realm2.task_title(campaign_chapter,campaign_challenge_index)
-        status_label.text = Realm2.task_description(campaign_chapter,campaign_challenge_index,lang())
-        details_label.text = "⚔ 4×4 · 96 Felder · 204 Linien · Challenge %d/3" % (campaign_challenge_index+1)
+    if campaign_practice_active:
+        rank_label.text = "Abyss of Memories · Zen-Bot"
+        quote_label.text = "Zen Realm Chronicles · 4×4"
+        details_label.text = "Abyss · %d/96 · Challenges %d/3" % [move_count(),Realm2.completed_count(Realm2.load_progress(),1)]
     if shadow_active:
         rank_label.text = Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]
         quote_label.text = "Shadow Realm · 4×4"
@@ -567,8 +564,8 @@ func cube_input(event: InputEvent) -> void:
         if dragged: cube.rotate_cube(event.relative)
 
 func start_game(bot: bool, level: int = -1) -> void:
-    if campaign_challenge_active:
-        _campaign_challenge_restart()
+    if campaign_practice_active:
+        _campaign_practice_restart()
         return
     if shadow_active:
         _shadow_retry()
@@ -608,9 +605,6 @@ func start_game(bot: bool, level: int = -1) -> void:
         call_deferred("bot_turn")
 
 func play(cell: int) -> void:
-    if campaign_challenge_active:
-        _campaign_challenge_play(cell)
-        return
     if result != 0 or busy or cell < 0 or cell >= Mode.CELLS or int(cells[cell]) != 0: return
     if against_bot and turn == 2: return
     if realm_story_active: realm_story_last_human = cell
@@ -645,6 +639,7 @@ func bot_turn() -> void:
     var started_abyss: int = abyss_generation
     var began_in_shadow: bool = shadow_active
     var started_shadow: int = shadow_generation
+    var began_in_practice: bool = campaign_practice_active
     var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55,0.44,0.55,0.75,0.88,0.74,1.05][clampi(realm_story_stage,0,11)] if realm_story_active else 0.26
     await get_tree().create_timer(delay).timeout
     if not is_inside_tree() or result != 0 or not against_bot or started_match != match_generation: return
@@ -657,6 +652,7 @@ func bot_turn() -> void:
     if not began_in_abyss and abyss_active: return
     if began_in_shadow and (not shadow_active or shadow_generation != started_shadow): return
     if not began_in_shadow and shadow_active: return
+    if began_in_practice != campaign_practice_active: return
     var cell: int = Shadow.choose_move(cells,lines,shadow_index,shadow_last_human) if shadow_active else (Abyss.choose_move(cells,lines,abyss_index,abyss_last_human) if abyss_active else (RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)))
     busy = false
     if cell >= 0: _commit(cell)
@@ -666,6 +662,19 @@ func bot_turn() -> void:
     draw()
 
 func finish() -> void:
+    if campaign_practice_active:
+        if recorded: return
+        recorded = true
+        busy = false
+        var crossed: bool = false
+        if result == 1:
+            for line in Mode.winning_lines(cells,lines,1):
+                if int(line[0]/16) != int(line[3]/16):
+                    crossed = true
+                    break
+        campaign_awards = Realm2.record_abyss_match(1 if result==1 else (0 if result==3 else -1),crossed)
+        call_deferred("_campaign_practice_result")
+        return
     if shadow_active:
         if recorded: return
         recorded = true
@@ -877,8 +886,8 @@ func show_statistics() -> void:
     _open_realm_dialog(parts)
 
 func return_home() -> void:
-    if campaign_challenge_active:
-        _campaign_challenge_back()
+    if campaign_practice_active:
+        _campaign_practice_back()
         return
     if shadow_active:
         _shadow_back_to_reader()
@@ -988,44 +997,7 @@ func show_realms() -> void:
     var body: VBoxContainer = ui_parts.box
     text(body,L("subtitle"),15,Color("567b72"))
     text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
-    # Realm Chronicles is a separate, playable 4x4 *story*, not a fifth realm.
-    # Keep the four normal Realm cards (and their gameplay/unlock rules) below.
-    var story_progress: Dictionary = RealmStory.load_progress()
-    var story_stage: int = clampi(int(story_progress.get("stage",0)),0,RealmStory.LAST_STAGE)
-    var story_card: PanelContainer = PanelContainer.new()
-    story_card.name = "RealmChroniclesCampaignCard"
-    story_card.add_theme_stylebox_override("panel",style(Color("34443e",0.98),18))
-    body.add_child(story_card)
-    var story_column: VBoxContainer = VBoxContainer.new()
-    story_column.add_theme_constant_override("separation",8)
-    story_card.add_child(story_column)
-    text(story_column,"📖 " + RealmStory.text_for(lang(),"realm_card_title"),20,Color("f9dba6"))
-    text(story_column,RealmStory.text_for(lang(),"realm_card_subtitle"),14,Color("e0d5b9"))
-    # Show the progression from Shadow to Satori in one visually coherent card.
-    var story_previews: HBoxContainer = HBoxContainer.new()
-    story_previews.name = "RealmChroniclesFourRealmPreviews"
-    story_previews.add_theme_constant_override("separation",3)
-    story_column.add_child(story_previews)
-    for chapter_id in range(4):
-        var preview: TextureRect = TextureRect.new()
-        preview.texture = load(RealmStory.CHAPTER_ART[chapter_id]) as Texture2D
-        preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-        preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-        preview.custom_minimum_size = Vector2(0,74)
-        preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        story_previews.add_child(preview)
-    text(story_column,RealmStory.text_for(lang(),"story") + " · %d/%d " % [story_stage,RealmStory.LAST_STAGE] + RealmStory.text_for(lang(),"realm_card_bosses"),14,Color("d1ead3"))
-    if story_stage >= RealmStory.LAST_STAGE:
-        text(story_column,RealmStory.text_for(lang(),"realm_story_completed"),14,Color("f0d99c"))
-    var open_story: Button = action(story_column,RealmStory.text_for(lang(),"realm_card_open"),_open_realm_chronicles_from_realms,true)
-    open_story.name = "RealmChroniclesCampaignOpen"
-    # Debug build ONLY: inspect the real glass-break ceremony without changing
-    # Challenges, boss victories, unlock flags, ranks or save files.
-    if RealmStory.qa_mode():
-        var preview_label: String = "🪞 Spiegelbruch testen (Test-APK)" if lang() == "de" else ("🪞 Testar vidro partido (APK de teste)" if lang() == "pt" else "🪞 Preview mirror shatter (test APK)")
-        var preview: Button = action(story_column,preview_label,_preview_mirror_shatter_qa,true)
-        preview.name = "RealmMirrorShatterPreviewQA"
+    # Story and boss progress live exclusively in Zen Realm Chronicles.
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -1044,9 +1016,7 @@ func show_realms() -> void:
         thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
         column.add_child(thumb)
         var amount: int = Realms.count(data,i)
-        var boss_wins: int = Realms.completed_story_bosses(i)
         text(column,L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
-        text(column,("Story-Bosse" if lang()=="de" else "Chefes da história" if lang()=="pt" else "Story bosses") + ": %d/3" % boss_wins,14,Color("#e8d1a5"))
         var rank_name: String = Realms.title_for_realm(data,i,lang())
         if rank_name != "—": text(column,rank_name,14,Color("e2ca8c"))
         if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
@@ -1175,11 +1145,11 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
         var earned: bool = bool(done.get(str(task.id),false))
         var card: PanelContainer = PanelContainer.new()
         card.add_theme_stylebox_override("panel",style(Color("294a3c") if earned else _realm_tone(realm),16))
-        card.mouse_filter = Control.MOUSE_FILTER_PASS
+        card.mouse_filter = Control.MOUSE_FILTER_STOP
         list.add_child(card)
         var inside: VBoxContainer = VBoxContainer.new()
         inside.add_theme_constant_override("separation",8)
-        inside.mouse_filter = Control.MOUSE_FILTER_PASS
+        inside.mouse_filter = Control.MOUSE_FILTER_STOP
         card.add_child(inside)
         text(inside,("✓  " if earned else "◇  ") + str(task.title),18,Color("f3ddb2"))
         text(inside,Realms.task_description(task,lang()),14,Color("d7d5c9"))
@@ -1301,6 +1271,15 @@ func show_realm_rewards(_awards: Dictionary) -> void:
 # behavior, but do not reserve 80% of a tall Android screen for a short intro.
 # The dedicated story actions already offer navigation; a second Back footer
 # creates an unnecessary third exit next to X and "Return to main game".
+func _campaign_phrase(de: String, en: String, pt: String) -> String:
+    return de if lang()=="de" else (pt if lang()=="pt" else en)
+
+func _campaign_result_compact(parts: Dictionary) -> void:
+    _realm_story_compact(parts)
+    var frame: PanelContainer = parts.frame
+    frame.anchor_top = 0.25
+    frame.anchor_bottom = 0.75
+
 func _realm_story_compact(parts: Dictionary) -> void:
     var frame: PanelContainer = parts.frame
     frame.anchor_left = 0.055
@@ -1661,7 +1640,7 @@ func _realm_story_leave() -> void:
 
 # -------- Campaign 2.0: Abyss native 4x4 battles and story handoff --------
 func start_abyss_battle() -> void:
-    if not Mode.unlocked(data) and not Abyss.qa_mode(): return
+    if not Realm2.unlocked(1): return
     abyss_progress = Abyss.load_progress()
     var next_action: Dictionary = Abyss.next_action(abyss_progress)
     if next_action.get("type") != "battle":
@@ -1739,8 +1718,8 @@ func _abyss_intro() -> void:
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter,14,Color("#e1c99d"))
-    action(body,"⚔ Kampf fortsetzen" if move_count() > 0 else "⚔ Kampf beginnen",_abyss_begin,true)
-    action(body,"‹ Zur Geschichte",_abyss_back_to_reader)
+    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_abyss_begin,true)
+    action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
 
 func _abyss_begin() -> void:
@@ -1758,16 +1737,16 @@ func _abyss_result() -> void:
         label = "Memory restored" if result == 1 else ("Draw" if result == 3 else "Defeat")
     elif lang() == "pt":
         label = "Memória recuperada" if result == 1 else ("Empate" if result == 3 else "Derrota")
-    var parts: Dictionary = _realm_dialog(label,620)
-    _realm_story_compact(parts)
+    var parts: Dictionary = _realm_dialog(label,520)
+    _campaign_result_compact(parts)
     var body: VBoxContainer = parts.box
-    _abyss_add_art(body,210)
+    _abyss_add_art(body,190)
     text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
     if result == 1:
-        action(body,"✦ Geschichte fortsetzen",_abyss_victory,true)
+        action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_abyss_victory,true)
     else:
-        action(body,"⚔ Erneut kämpfen",_abyss_retry,true)
-    action(body,"‹ Geschichte verlassen",_abyss_back_to_reader)
+        action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_abyss_retry,true)
+    action(body,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
 
 func _abyss_retry() -> void:
@@ -1806,8 +1785,8 @@ func _abyss_menu() -> void:
     _realm_story_compact(parts)
     var body: VBoxContainer = parts.box
     text(body,Abyss.BOSS_NAMES[clampi(abyss_index,0,2)],20,Color("#dfd4e5"))
-    action(body,"⚔ Kampf fortsetzen",_abyss_begin,true)
-    action(body,"‹ Zur Geschichte",_abyss_back_to_reader)
+    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_abyss_begin,true)
+    action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
 
 func _abyss_back_to_reader() -> void:
@@ -1836,7 +1815,7 @@ func _abyss_back_to_reader() -> void:
 
 # -------- Campaign 2.0: Shadow native 4x4 battles and story handoff --------
 func start_shadow_battle() -> void:
-    if not Mode.unlocked(data) and not Shadow.qa_mode(): return
+    if not Realm2.unlocked(0): return
     shadow_progress = Shadow.load_progress()
     var next_action: Dictionary = Shadow.next_action(shadow_progress)
     if next_action.get("type") != "battle":
@@ -1867,7 +1846,7 @@ func start_shadow_battle() -> void:
     cube.clear_boss_skin()
     cube.set_boss_skin(shadow_index)
     if realm_backdrop != null:
-        var arena: Texture2D = Shadow.battle_backdrop()
+        var arena: Texture2D = Shadow.battle_backdrop(shadow_index)
         if arena != null: realm_backdrop.texture = arena
     _shadow_save()
     sync_realm_music()
@@ -1916,8 +1895,8 @@ func _shadow_intro() -> void:
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter,14,Color("#e1c99d"))
-    action(body,"⚔ Kampf fortsetzen" if move_count() > 0 else "⚔ Kampf beginnen",_shadow_begin,true)
-    action(body,"‹ Zur Geschichte",_shadow_back_to_reader)
+    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_shadow_begin,true)
+    action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
 
 func _shadow_begin() -> void:
@@ -1935,16 +1914,16 @@ func _shadow_result() -> void:
         label = "The veil fades" if result == 1 else ("Draw" if result == 3 else "Defeat")
     elif lang() == "pt":
         label = "O véu desvanece" if result == 1 else ("Empate" if result == 3 else "Derrota")
-    var parts: Dictionary = _realm_dialog(label,620)
-    _realm_story_compact(parts)
+    var parts: Dictionary = _realm_dialog(label,520)
+    _campaign_result_compact(parts)
     var body: VBoxContainer = parts.box
-    _shadow_add_art(body,210)
+    _shadow_add_art(body,190)
     text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
     if result == 1:
-        action(body,"✦ Geschichte fortsetzen",_shadow_victory,true)
+        action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_shadow_victory,true)
     else:
-        action(body,"⚔ Erneut kämpfen",_shadow_retry,true)
-    action(body,"‹ Geschichte verlassen",_shadow_back_to_reader)
+        action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_shadow_retry,true)
+    action(body,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
 
 func _shadow_retry() -> void:
@@ -1983,8 +1962,8 @@ func _shadow_menu() -> void:
     _realm_story_compact(parts)
     var body: VBoxContainer = parts.box
     text(body,Shadow.BOSS_NAMES[clampi(shadow_index,0,2)],20,Color("#dfd4e5"))
-    action(body,"⚔ Kampf fortsetzen",_shadow_begin,true)
-    action(body,"‹ Zur Geschichte",_shadow_back_to_reader)
+    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_shadow_begin,true)
+    action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
 
 func _shadow_back_to_reader() -> void:
@@ -2011,135 +1990,91 @@ func _shadow_back_to_reader() -> void:
     draw()
     ZenChronicles.open_shadow_reader()
 
-# ------- ZenCube 2.0 Realm: separate, native tactical Challenges -------
-func start_campaign_challenge(chapter: int, index: int) -> void:
-    if chapter not in [0,1] or index not in [0,1,2]: return
-    if not Realm2.unlocked(chapter) or Realm2.challenge_done(chapter,index): return
-    if not Mode.unlocked(data) and not Realm2.qa_mode(): return
-    var challenge: Dictionary = Realm2.puzzle(chapter,index,lines)
-    if challenge.is_empty():
-        push_error("ZenCube 2.0 Realm: no unique 4x4 tactical solution")
-        return
-    campaign_challenge_active = true
-    campaign_chapter = chapter
-    campaign_challenge_index = index
-    campaign_puzzle = challenge
-    shadow_active = false
+
+# ---- Zen Realm Chronicles: NORMAL Abyss bot matches, not puzzles ----
+func start_campaign_practice(chapter: int) -> void:
+    if chapter != 1 or not Realm2.unlocked(1): return
+    campaign_practice_active = true
     abyss_active = false
+    shadow_active = false
     realm_story_active = false
-    match_generation += 1
-    against_bot = false
-    busy = false
-    recorded = false
-    result = 0
-    turn = 1
+    against_bot = true
+    bot_level = 1
     owners = [0,1]
-    cells = challenge.cells.duplicate()
     ZenChronicles.set_campaign_board_active(true)
-    cube.reset_view()
-    cube.clear_abyss_skin()
     cube.clear_boss_skin()
-    if chapter==0: cube.set_boss_skin(index)
-    else: cube.set_abyss_skin(index+1)
-    if is_instance_valid(realm_backdrop):
-        var art: String = Realm2.SOURCE_ART[chapter]
-        if ResourceLoader.exists(art):
-            realm_backdrop.texture = load(art) as Texture2D
+    cube.set_abyss_skin(0)
+    if realm_backdrop != null:
+        var arena: Texture2D = Abyss.battle_backdrop()
+        if arena != null: realm_backdrop.texture = arena
     sync_realm_music()
-    draw()
-    _campaign_challenge_intro()
+    _campaign_practice_restart()
 
-func _campaign_challenge_intro() -> void:
-    if not campaign_challenge_active: return
-    var parts: Dictionary = _realm_dialog(Realm2.task_title(campaign_chapter,campaign_challenge_index),550)
-    _realm_story_compact(parts)
-    var body: VBoxContainer = parts.box
-    text(body,Realm2.task_description(campaign_chapter,campaign_challenge_index,lang()),18,Color("#e8d6bc"))
-    text(body,"96 fields · 204 winning lines · one correct move",15,Color("#ded0ac"))
-    action(body,"⚔  Challenge spielen",_campaign_challenge_begin,true)
-    action(body,"‹  Challenges",_campaign_challenge_back)
-    _open_realm_dialog(parts)
-
-func _campaign_challenge_begin() -> void:
-    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
-    draw()
-
-func _campaign_challenge_play(cell: int) -> void:
-    if not campaign_challenge_active or result!=0 or busy or cell<0 or cell>=96:
-        return
-    if int(cells[cell])!=0: return
-    if not Realm2.valid_move(campaign_puzzle,cell,lines):
-        var attempt: String = "Das war nicht die Lösung. Suche den einzigen entscheidenden Zug."
-        if lang()=="en": attempt = "Not quite. Find the one decisive move."
-        if lang()=="pt": attempt = "Ainda não. Encontra a jogada decisiva."
-        status_label.text = attempt
-        feedback_on_place(true,false)
-        return
-    cells[cell] = 1
-    result = 1
-    recorded = true
-    feedback_on_place(true,true)
-    draw()
-    if not Realm2.record_challenge(campaign_chapter,campaign_challenge_index):
-        push_warning("ZenCube 2.0 Realm: completed challenge could not be persisted")
-        return
-    # Dedicated Campaign 2.0 achievement: only Challenges trigger the choir.
-    var choir := AudioStreamPlayer.new()
-    choir.name = "CampaignChallengeChoir"
-    choir.stream = load("res://assets/audio/zen_achievement_choir.wav") as AudioStream
-    add_child(choir)
-    if bool(data.get("settings",{}).get("sound",true)):
-        choir.play()
-    choir.finished.connect(choir.queue_free)
-    call_deferred("_campaign_challenge_result")
-
-func _campaign_challenge_result() -> void:
-    if not campaign_challenge_active: return
-    var title: String = "🏆 Challenge abgeschlossen"
-    if lang()=="en": title = "🏆 Challenge completed"
-    if lang()=="pt": title = "🏆 Desafio concluído"
-    var parts: Dictionary = _realm_dialog(title,550)
-    _realm_story_compact(parts)
-    var body: VBoxContainer = parts.box
-    text(body,"✦ " + Realm2.task_title(campaign_chapter,campaign_challenge_index),21,Color("#efdcaa"))
-    var count: int = Realm2.completed_count(Realm2.load_progress(),campaign_chapter)
-    text(body,"Challenges: %d/3" % count,18,Color("#b4f0b4"))
-    text(body,"Nur diese taktischen Prüfungen verleihen Campaign-Achievements.",14,Color("#e6dec5"))
-    action(body,"✦ Weitere Challenges",_campaign_challenge_back,true)
-    _open_realm_dialog(parts)
-
-func _campaign_challenge_restart() -> void:
-    if not campaign_challenge_active: return
+func _campaign_practice_restart() -> void:
+    if not campaign_practice_active: return
+    match_generation += 1
+    cells.fill(0)
     result = 0
     recorded = false
     busy = false
-    cells = campaign_puzzle.get("cells",[]).duplicate()
+    campaign_awards = []
+    var total: int = int(Realm2.load_progress().abyss_stats.played)
+    turn = 1 if total % 2 == 0 else 2
     cube.reset_view()
     draw()
-    _campaign_challenge_intro()
+    if turn == 2:
+        busy = true
+        call_deferred("bot_turn")
 
-func _campaign_challenge_menu() -> void:
-    if not campaign_challenge_active: return
-    var parts: Dictionary = _realm_dialog("ZenCube 2.0 Realm",410)
-    _realm_story_compact(parts)
+func _campaign_practice_result() -> void:
+    if not campaign_practice_active: return
+    var heading: String = _campaign_phrase("Sieg","Victory","Vitória") if result==1 else (
+        _campaign_phrase("Unentschieden","Draw","Empate") if result==3 else
+        _campaign_phrase("Niederlage","Defeat","Derrota"))
+    var parts: Dictionary = _realm_dialog(heading,520)
+    _campaign_result_compact(parts)
     var body: VBoxContainer = parts.box
-    text(body,Realm2.task_title(campaign_chapter,campaign_challenge_index),20,Color("#f1dba6"))
-    action(body,"⚔ Zur Challenge",_campaign_challenge_begin,true)
-    action(body,"‹ Challenges",_campaign_challenge_back)
+    text(body,"Abyss of Memories · Zen-Bot",20,Color("#e5d2ac"))
+    if not campaign_awards.is_empty():
+        text(body,_campaign_phrase("🏆 Realm-Challenge abgeschlossen!","🏆 Realm challenge earned!","🏆 Desafio de reino concluído!"),18,Color("#c8e8b4"))
+        for title_name in campaign_awards:
+            text(body,"✓ " + title_name,17,Color("#e5d2ac"))
+        if bool(data.get("settings",{}).get("sound",true)):
+            var choir: AudioStreamPlayer = AudioStreamPlayer.new()
+            choir.stream = load("res://assets/audio/zen_achievement_choir.wav") as AudioStream
+            add_child(choir)
+            choir.finished.connect(choir.queue_free)
+            choir.play()
+    text(body,_campaign_phrase("Abyss-Challenges: %d/3","Abyss challenges: %d/3","Desafios Abyss: %d/3") %
+        Realm2.completed_count(Realm2.load_progress(),1),16,Color("#e8ddc5"))
+    action(body,_campaign_phrase("⚔ Noch eine Partie","⚔ Play Again","⚔ Jogar novamente"),_campaign_practice_begin_again,true)
+    action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
     _open_realm_dialog(parts)
 
-func _campaign_challenge_back() -> void:
-    if not campaign_challenge_active: return
-    var previous_chapter: int = campaign_chapter
+func _campaign_practice_begin_again() -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    _campaign_practice_restart()
+
+func _campaign_practice_menu() -> void:
+    if not campaign_practice_active: return
+    var parts: Dictionary = _realm_dialog("Abyss of Memories · Zen-Bot",420)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    action(body,_campaign_phrase("⚔ Partie fortsetzen","⚔ Continue Match","⚔ Continuar partida"),_campaign_practice_begin,true)
+    action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
+    _open_realm_dialog(parts)
+
+func _campaign_practice_begin() -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+
+func _campaign_practice_back() -> void:
+    if not campaign_practice_active: return
     match_generation += 1
-    campaign_challenge_active = false
-    campaign_chapter = -1
-    campaign_challenge_index = -1
-    campaign_puzzle = {}
+    campaign_practice_active = false
+    campaign_awards = []
     busy = false
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     cube.clear_abyss_skin()
-    cube.clear_boss_skin()
     cube.set_skin(int(data.economy.get("equipped",0)))
     match_realm = int(Realms.state(data).selected)
     bot_level = Realms.fixed_bot_level(match_realm)
@@ -2147,9 +2082,9 @@ func _campaign_challenge_back() -> void:
     turn = 1
     result = 0
     recorded = false
-    if is_instance_valid(realm_backdrop):
+    if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
     ZenChronicles.set_campaign_board_active(false)
     sync_realm_music()
     draw()
-    ZenChronicles.open_campaign_challenges(previous_chapter)
+    ZenChronicles.open_campaign_challenges(1)

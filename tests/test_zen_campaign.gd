@@ -41,14 +41,14 @@ func _verify() -> void:
     var on_disk := FileAccess.get_file_as_string(SaveManager.PATH)
 
     game.open_menu()
-    _press(game.popup, game.T("Zen-Chroniken 📖"))
-    _press(reader._screen, Campaign.text_for("de", "webcomic"))
+    _press(game.popup, game.T("Zen Realm Chronicles 📖"))
+    _press(reader._screen, "📚 Originaler Zen-Webcomic")
     var read: Button = _button(reader._screen, "Lesen  ›")
     _check(read != null and not read.disabled, "webcomic has its original unlocked chapter")
     reader.open_chapter(0)
     _check(reader._page_image.texture != null and reader._page_counter.text == "1 / 4", "original comic has working pages")
     reader.open_library()
-    _press(reader._screen, Campaign.text_for("de", "play"))
+    _press(reader._screen, "📖 Originale Zen-Kampagne · 3×3")
     await process_frame
     _check(bool(reader.is_open()), "campaign overview is reachable")
     _check(_art_count(reader._screen) == 6, "complete hero art and five thumbnail textures are bound to controls")
@@ -414,7 +414,9 @@ func _verify_languages() -> void:
         # Change the selected locale as the main settings menu would do.
         game.choose_language(language)
         reader.open_library()
-        _check(_button(reader._screen, Campaign.text_for(language, "play")) != null, "hub follows selected language " + language)
+        var archived: String = "📖 Originale Zen-Kampagne · 3×3" if language=="de" else (
+            "📖 Original Zen Campaign · 3×3" if language=="en" else "📖 Campanha Zen original · 3×3")
+        _check(_button(reader._screen, archived) != null, "hub follows selected language " + language)
         reader.open_campaign_overview()
         _check(_button(reader._screen, Campaign.text_for(language, "open_epilogue")) != null, "overview follows selected language " + language)
         game.start_zen_campaign()
