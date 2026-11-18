@@ -15,6 +15,7 @@ const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
+const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
 var data: Dictionary = {}
@@ -69,6 +70,11 @@ var abyss_progress: Dictionary = {}
 var abyss_index: int = -1
 var abyss_generation: int = 0
 var abyss_last_human: int = -1
+var shadow_active: bool = false
+var shadow_progress: Dictionary = {}
+var shadow_index: int = -1
+var shadow_generation: int = 0
+var shadow_last_human: int = -1
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -92,7 +98,7 @@ func _ready() -> void:
         SaveManager.save_data(data)
     # Restore the correct fixed bot after the legacy selection is validated.
     bot_level = Realms.fixed_bot_level(match_realm)
-    if not Mode.unlocked(data) and not Abyss.qa_mode():
+    if not Mode.unlocked(data) and not (Abyss.qa_mode() or Shadow.qa_mode()):
         get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
         return
     lines = Mode.generate_lines()
@@ -116,6 +122,9 @@ func _ready() -> void:
     cube.set_skin(int(data.economy.get("equipped",0)))
     start_world_music()
     draw()
+    if ZenChronicles.consume_shadow_launch():
+        call_deferred("start_shadow_battle")
+        return
     if ZenChronicles.consume_abyss_launch():
         call_deferred("start_abyss_battle")
         return
@@ -134,6 +143,9 @@ func _ready() -> void:
 # Existing shop IDs 0..13 always remain unchanged. In Base mode 4x4 uses
 # its own realm soundtrack; a manually owned track overrides it everywhere.
 func desired_realm_stream() -> AudioStream:
+    if shadow_active:
+        var shadow_stream: AudioStream = Shadow.boss_stream(shadow_index)
+        if shadow_stream != null: return shadow_stream
     if abyss_active:
         var abyss_stream: AudioStream = Abyss.boss_stream(abyss_index)
         if abyss_stream != null: return abyss_stream
@@ -402,6 +414,9 @@ func zen_ascend_bot_name() -> String:
     return "Zen Ascend Bot · " + _bot_difficulty_name()
 
 func show_ascend_menu() -> void:
+    if shadow_active:
+        _shadow_menu()
+        return
     if abyss_active:
         _abyss_menu()
         return
@@ -447,6 +462,11 @@ func draw() -> void:
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
+    if shadow_active:
+        rank_label.text = Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]
+        quote_label.text = "Shadow Realm · 4×4"
+        status_label.text = ("⚔ " + Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
+        details_label.text = "Shadow · " + str(move_count()) + "/96"
     if abyss_active:
         rank_label.text = Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]
         quote_label.text = "Abyss of Memories · 4×4"
@@ -521,6 +541,9 @@ func cube_input(event: InputEvent) -> void:
         if dragged: cube.rotate_cube(event.relative)
 
 func start_game(bot: bool, level: int = -1) -> void:
+    if shadow_active:
+        _shadow_retry()
+        return
     if abyss_active:
         _abyss_retry()
         return
@@ -560,9 +583,11 @@ func play(cell: int) -> void:
     if against_bot and turn == 2: return
     if realm_story_active: realm_story_last_human = cell
     if abyss_active: abyss_last_human = cell
+    if shadow_active: shadow_last_human = cell
     _commit(cell)
     if realm_story_active and result == 0: _realm_story_save()
     if abyss_active and result == 0: _abyss_save()
+    if shadow_active and result == 0: _shadow_save()
     if against_bot and result == 0 and turn == 2:
         busy = true
         draw()
@@ -586,6 +611,8 @@ func bot_turn() -> void:
     var began_in_story: bool = realm_story_active
     var began_in_abyss: bool = abyss_active
     var started_abyss: int = abyss_generation
+    var began_in_shadow: bool = shadow_active
+    var started_shadow: int = shadow_generation
     var delay: float = [0.36,0.40,0.75,0.14,0.31,0.55,0.44,0.55,0.75,0.88,0.74,1.05][clampi(realm_story_stage,0,11)] if realm_story_active else 0.26
     await get_tree().create_timer(delay).timeout
     if not is_inside_tree() or result != 0 or not against_bot or started_match != match_generation: return
@@ -596,14 +623,24 @@ func bot_turn() -> void:
     if not began_in_story and realm_story_active: return
     if began_in_abyss and (not abyss_active or abyss_generation != started_abyss): return
     if not began_in_abyss and abyss_active: return
-    var cell: int = Abyss.choose_move(cells,lines,abyss_index,abyss_last_human) if abyss_active else (RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0))
+    if began_in_shadow and (not shadow_active or shadow_generation != started_shadow): return
+    if not began_in_shadow and shadow_active: return
+    var cell: int = Shadow.choose_move(cells,lines,shadow_index,shadow_last_human) if shadow_active else (Abyss.choose_move(cells,lines,abyss_index,abyss_last_human) if abyss_active else (RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)))
     busy = false
     if cell >= 0: _commit(cell)
     if realm_story_active and result == 0: _realm_story_save()
     if abyss_active and result == 0: _abyss_save()
+    if shadow_active and result == 0: _shadow_save()
     draw()
 
 func finish() -> void:
+    if shadow_active:
+        if recorded: return
+        recorded = true
+        busy = false
+        _shadow_save()
+        call_deferred("_shadow_result")
+        return
     if abyss_active:
         if recorded: return
         recorded = true
@@ -808,6 +845,9 @@ func show_statistics() -> void:
     _open_realm_dialog(parts)
 
 func return_home() -> void:
+    if shadow_active:
+        _shadow_back_to_reader()
+        return
     if abyss_active:
         _abyss_back_to_reader()
         return
@@ -1765,3 +1805,187 @@ func _abyss_back_to_reader() -> void:
     sync_realm_music()
     draw()
     ZenChronicles.open_abyss_reader()
+
+# -------- Campaign 2.0: Shadow native 4x4 battles and story handoff --------
+func start_shadow_battle() -> void:
+    if not Mode.unlocked(data) and not Shadow.qa_mode(): return
+    shadow_progress = Shadow.load_progress()
+    var next_action: Dictionary = Shadow.next_action(shadow_progress)
+    if next_action.get("type") != "battle":
+        ZenChronicles.open_shadow_reader()
+        return
+    shadow_index = int(next_action.get("boss",-1))
+    if shadow_index < 0 or shadow_index >= 3: return
+    shadow_active = true
+    realm_story_active = false
+    abyss_active = false
+    shadow_generation += 1
+    match_generation += 1
+    ZenChronicles.set_campaign_board_active(true)
+    against_bot = true
+    owners = [0,1]
+    recorded = false
+    busy = false
+    var game: Dictionary = Shadow.begin_battle(shadow_progress,shadow_index)
+    if game.is_empty(): return
+    cells = game.cells.duplicate()
+    turn = clampi(int(game.get("turn",1)),1,2)
+    result = clampi(int(game.get("result",0)),0,3)
+    recorded = result != 0
+    shadow_last_human = int(game.get("last_human",-1))
+    bot_level = Shadow.BOT_LEVELS[shadow_index]
+    cube.reset_view()
+    cube.clear_abyss_skin()
+    cube.clear_boss_skin()
+    cube.set_boss_skin(shadow_index)
+    if realm_backdrop != null:
+        var arena: Texture2D = Shadow.battle_backdrop()
+        if arena != null: realm_backdrop.texture = arena
+    _shadow_save()
+    sync_realm_music()
+    draw()
+    if result != 0: _shadow_result()
+    else: _shadow_intro()
+
+func _shadow_save() -> bool:
+    if not shadow_active: return false
+    shadow_progress.game = {
+        "boss":shadow_index,
+        "cells":cells.duplicate(),
+        "turn":turn,
+        "result":result,
+        "last_human":shadow_last_human
+    }
+    var ok: bool = Shadow.save_progress(shadow_progress)
+    if not ok: push_warning("Shadow Realm: could not save battle")
+    return ok
+
+func _shadow_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
+    var portrait: Texture2D = Shadow.boss_art(shadow_index)
+    if portrait == null: return
+    var art := TextureRect.new()
+    art.texture = portrait
+    art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    art.custom_minimum_size.y = height
+    art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent.add_child(art)
+
+func _shadow_intro() -> void:
+    if not shadow_active: return
+    var parts: Dictionary = _realm_dialog(Shadow.BOSS_NAMES[shadow_index],670)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    _shadow_add_art(body)
+    var opening: Array = [
+        "The mist conceals the path, but never the next move.",
+        "The mirror remembers every repeated mistake.",
+        "At the veil gate, patience is the final blade."
+    ]
+    text(body,opening[shadow_index],16,Color("#dfd4e5"))
+    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
+    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
+    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
+    text(body,starter,14,Color("#e1c99d"))
+    action(body,"⚔ Kampf fortsetzen" if move_count() > 0 else "⚔ Kampf beginnen",_shadow_begin,true)
+    action(body,"‹ Zur Geschichte",_shadow_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _shadow_begin() -> void:
+    if not shadow_active: return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    if result == 0 and turn == 2 and not busy:
+        busy = true
+        call_deferred("bot_turn")
+    draw()
+
+func _shadow_result() -> void:
+    if not shadow_active or result == 0: return
+    var label: String = "Der Schleier weicht" if result == 1 else ("Unentschieden" if result == 3 else "Niederlage")
+    if lang() == "en":
+        label = "The veil fades" if result == 1 else ("Draw" if result == 3 else "Defeat")
+    elif lang() == "pt":
+        label = "O véu desvanece" if result == 1 else ("Empate" if result == 3 else "Derrota")
+    var parts: Dictionary = _realm_dialog(label,620)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    _shadow_add_art(body,210)
+    text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
+    if result == 1:
+        action(body,"✦ Geschichte fortsetzen",_shadow_victory,true)
+    else:
+        action(body,"⚔ Erneut kämpfen",_shadow_retry,true)
+    action(body,"‹ Geschichte verlassen",_shadow_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _shadow_retry() -> void:
+    if not shadow_active: return
+    shadow_generation += 1
+    match_generation += 1
+    shadow_progress.game = {}
+    if not Shadow.save_progress(shadow_progress): return
+    # This allocates a fresh 96-cell board and alternates the first player.
+    var game: Dictionary = Shadow.begin_battle(shadow_progress,shadow_index)
+    cells = game.cells.duplicate()
+    turn = int(game.turn)
+    result = 0
+    recorded = false
+    busy = false
+    shadow_last_human = -1
+    cube.reset_view()
+    _shadow_save()
+    draw()
+    _shadow_intro()
+
+func _shadow_victory() -> void:
+    if not shadow_active or result != 1: return
+    if not Shadow.record_victory(shadow_progress,shadow_index): return
+    shadow_generation += 1
+    match_generation += 1
+    busy = false
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    var previous: String = Shadow.REALM_ART
+    var next_art: String = Shadow.page_path(int(shadow_progress.page))
+    if ResourceLoader.exists(previous) and ResourceLoader.exists(next_art):
+        var transition: ZenRealmTravelCeremony = RealmPortal.new()
+        add_child(transition)
+        transition.finished.connect(_shadow_back_to_reader)
+        transition.present(previous,next_art,"The Veil Dissolves",true,
+            bool(data.settings.get("sound",true)),[world_music],lang())
+    else:
+        _shadow_back_to_reader()
+
+func _shadow_menu() -> void:
+    if not shadow_active: return
+    var parts: Dictionary = _realm_dialog("Shadow Realm",410)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    text(body,Shadow.BOSS_NAMES[clampi(shadow_index,0,2)],20,Color("#dfd4e5"))
+    action(body,"⚔ Kampf fortsetzen",_shadow_begin,true)
+    action(body,"‹ Zur Geschichte",_shadow_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _shadow_back_to_reader() -> void:
+    if not shadow_active: return
+    shadow_generation += 1
+    match_generation += 1
+    if result != 1: _shadow_save()
+    shadow_active = false
+    busy = false
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    cube.clear_boss_skin()
+    cube.set_skin(int(data.economy.get("equipped",0)))
+    match_realm = int(Realms.state(data).selected)
+    bot_level = Realms.fixed_bot_level(match_realm)
+    cells.fill(0)
+    turn = 1
+    result = 0
+    recorded = false
+    shadow_last_human = -1
+    if realm_backdrop != null:
+        realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+    ZenChronicles.set_campaign_board_active(false)
+    sync_realm_music()
+    draw()
+    ZenChronicles.open_shadow_reader()
