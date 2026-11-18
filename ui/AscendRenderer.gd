@@ -10,9 +10,13 @@ var skin_texture: Texture2D
 var active_cells: Array = []
 var winner_cells: Array = []
 const BossSkins = preload("res://core/ZenRealmBossSkins.gd")
+const AbyssSkins = preload("res://core/ZenAbyssSkins.gd")
 var boss_skin_id: int = -1
 var boss_skin_texture: Texture2D
 var boss_skin_cache: Dictionary = {}
+var abyss_skin_id: int = -1
+var abyss_skin_texture: Texture2D
+var abyss_skin_cache: Dictionary = {}
 func _ready() -> void:
     pivot = Node3D.new()
     add_child(pivot)
@@ -104,6 +108,20 @@ func set_boss_skin(index: int) -> void:
     _apply_core_skin()
     repaint(active_cells,winner_cells)
 
+func set_abyss_skin(index: int) -> void:
+    if index < 0 or index >= AbyssSkins.PROFILES.size(): return
+    abyss_skin_id = index
+    if not abyss_skin_cache.has(index): abyss_skin_cache[index] = AbyssSkins.make_surface(index)
+    abyss_skin_texture = abyss_skin_cache[index]
+    _apply_core_skin()
+    repaint(active_cells,winner_cells)
+
+func clear_abyss_skin() -> void:
+    abyss_skin_id = -1
+    abyss_skin_texture = null
+    _apply_core_skin()
+    repaint(active_cells,winner_cells)
+
 func clear_boss_skin() -> void:
     boss_skin_id = -1
     boss_skin_texture = null
@@ -113,18 +131,18 @@ func clear_boss_skin() -> void:
 func _apply_core_skin() -> void:
     if pivot == null or not pivot.has_node("CubeCore"): return
     var core: MeshInstance3D = pivot.get_node("CubeCore") as MeshInstance3D
-    var core_color: Color = Color(str(BossSkins.get_profile(boss_skin_id).core)) if boss_skin_id >= 0 else Color(str(skin.core))
+    var core_color: Color = Color(str(AbyssSkins.get_profile(abyss_skin_id).core)) if abyss_skin_id >= 0 else (Color(str(BossSkins.get_profile(boss_skin_id).core)) if boss_skin_id >= 0 else Color(str(skin.core)))
     core.material_override = mat(core_color)
 
 func _tile_mat(face_index: int, highlight: bool) -> StandardMaterial3D:
-    var palette: Dictionary = BossSkins.get_profile(boss_skin_id) if boss_skin_id >= 0 else skin
+    var palette: Dictionary = AbyssSkins.get_profile(abyss_skin_id) if abyss_skin_id >= 0 else (BossSkins.get_profile(boss_skin_id) if boss_skin_id >= 0 else skin)
     var base: Color = Color(str(palette.faces[face_index]))
     if highlight: base = base.lightened(0.32)
     var m: StandardMaterial3D = mat(base)
-    m.metallic = float(palette.metal) if boss_skin_id >= 0 else float(skin.metal)
-    m.roughness = float(palette.rough) if boss_skin_id >= 0 else float(skin.rough)
+    m.metallic = float(palette.metal)
+    m.roughness = float(palette.rough)
     m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-    var texture: Texture2D = boss_skin_texture if boss_skin_id >= 0 else skin_texture
+    var texture: Texture2D = abyss_skin_texture if abyss_skin_id >= 0 else (boss_skin_texture if boss_skin_id >= 0 else skin_texture)
     if texture != null: m.albedo_texture = texture
     return m
 

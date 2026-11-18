@@ -10,6 +10,7 @@ const CREAM = Color(0.98, 0.94, 0.84)
 const MUTED = Color(0.75, 0.78, 0.77)
 const Campaign = preload("res://story/ZenCampaign.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
+const AbyssReader = preload("res://story/ZenAbyssReader.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 # German is the authored source language; EN and PT-PT live in a separate JSON.
 const UI_DE: Dictionary = {
@@ -51,6 +52,8 @@ var _realm_story_requested: bool = false
 var _realm_story_from_realms: bool = false
 var _realm_chapter_scroll: ScrollContainer
 var _realm_chapter_dragging: bool = false
+var _abyss_reader: CanvasLayer
+var _abyss_launch_requested: bool = false
 
 func _ready() -> void:
     layer = 90
@@ -247,6 +250,7 @@ func open_library() -> void:
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _make_button(Campaign.text_for(_active_language, "play"), outer, open_campaign_overview)
+    _make_button("🌑 Campaign 2.0 · Abyss of Memories", outer, open_abyss_reader)
     _make_button(Campaign.text_for(_active_language, "webcomic"), outer, open_comic_library)
 
 func open_comic_library() -> void:
@@ -381,7 +385,7 @@ func set_campaign_board_active(active: bool) -> void:
     _quick_button.visible = _show_quick and not active and _screen == null
 
 func is_open() -> bool:
-    return _screen != null
+    return _screen != null or is_instance_valid(_abyss_reader)
 
 func _input(event: InputEvent) -> void:
     if _screen == null:
@@ -634,3 +638,34 @@ func consume_realm_story_launch() -> bool:
     var result: bool = _realm_story_requested
     _realm_story_requested = false
     return result
+
+# An isolated reader, not a fifth normal 4x4 realm, with its own progress.
+func open_abyss_reader() -> void:
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    if _screen != null: close_chronicles()
+    _abyss_reader = AbyssReader.new()
+    _root.add_child(_abyss_reader)
+    if _quick_button != null: _quick_button.hide()
+
+func close_abyss_reader() -> void:
+    if is_instance_valid(_abyss_reader):
+        var old: CanvasLayer = _abyss_reader
+        _abyss_reader = null
+        old.queue_free()
+    if _quick_button != null and _screen == null:
+        _quick_button.visible = _show_quick and not _campaign_board_active
+
+func request_abyss_battle() -> void:
+    _abyss_launch_requested = true
+    close_abyss_reader()
+    var current: Node = get_tree().current_scene
+    if current != null and current.scene_file_path == "res://Ascend.tscn" and current.has_method("start_abyss_battle"):
+        _abyss_launch_requested = false
+        current.call_deferred("start_abyss_battle")
+    else:
+        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+func consume_abyss_launch() -> bool:
+    var flag: bool = _abyss_launch_requested
+    _abyss_launch_requested = false
+    return flag

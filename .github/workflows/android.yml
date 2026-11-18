@@ -12,6 +12,7 @@ jobs:
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
+      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -34,6 +35,18 @@ jobs:
           curl -fsSL --retry 3 -o /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz
           mkdir -p "$HOME/.local/share/godot/export_templates/4.5.1.stable"
           unzip -jq /tmp/templates.tpz 'templates/android_debug.apk' 'templates/android_release.apk' 'templates/version.txt' -d "$HOME/.local/share/godot/export_templates/4.5.1.stable"
+      - name: Extract supplied Abyss art and original boss soundtracks
+        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for archive in ZenCube_Abyss_Media_Pages.zip ZenCube_Abyss_Media_Boss_Audio.zip; do
+            if [[ -f "$archive" ]]; then
+              unzip -oq "$archive" -d .
+            else
+              echo "::notice::Upload $archive to this branch to complete the real Abyss APK"
+            fi
+          done
       - name: Import project and check GDScript
         run: |
           "$GODOT" --headless --editor --import --quit
@@ -176,6 +189,9 @@ jobs:
       - name: Verify approved Realm feedback - swipe, 4x4 return, 12 victories and shatter unlocks
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_feedback_and_gates.gd
+      - name: 'Test complete Abyss Campaign 2.0: pages, 3 boss gates, saves, 4 cube skins'
+        run: |
+          timeout 90 "$GODOT" --headless --path . --script tests/test_abyss_campaign.gd
       - name: Validate twelve original Boss track mappings and audio checksums
         run: python3 tests/test_realm_boss_audio.py
       - name: Verify 100 tactical challenges on the 3D cube
@@ -209,6 +225,24 @@ jobs:
         with:
           path: ~/.android/zencube-debug.keystore
           key: zencube-realmchronicles-debug-key-v1
+      - name: Require 30 pages, 3 boss portraits and 4 tracks for final Abyss APK
+        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(find assets/abyss_of_memories/pages -type f -name 'page_*.webp' 2>/dev/null | wc -l)
+          test "$count" -eq 30 || { echo "::error::30 Abyss Manhwa pages required, have $count"; exit 1; }
+          for asset in assets/abyss_of_memories/realm.webp \
+              assets/abyss_of_memories/bosses/{memory_thief,weeping_blade,forgotten_shogun}.webp \
+              assets/abyss_of_memories/audio/{story,memory_thief,weeping_blade,forgotten_shogun}.mp3; do
+            test -s "$asset" || { echo "::error::Missing Abyss media $asset"; exit 1; }
+          done
+      - name: Reuse Abyss debug signing key
+        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/zencube-debug.keystore
+          key: zencube-abyss-debug-key-v1
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -229,6 +263,26 @@ jobs:
           for file in $(git ls-files 'assets/zen_campaign/*.webp'); do
             grep -Fx "assets/$file.import" <<< "$apk_contents"
           done
+      - name: Verify native Abyss media included in debug APK
+        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          contents=$(unzip -Z1 build/ZenCube-3D.apk)
+          grep -F "assets/assets/abyss_of_memories/pages/page_01.webp" <<< "$contents"
+          grep -F "assets/assets/abyss_of_memories/pages/page_30.webp" <<< "$contents"
+          grep -F "assets/assets/abyss_of_memories/bosses/forgotten_shogun.webp" <<< "$contents"
+          grep -F "assets/assets/abyss_of_memories/audio/forgotten_shogun.mp3" <<< "$contents"
+      - name: Name Abyss test APK
+        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-Abyss-Test.apk
+      - name: Upload Abyss test APK
+        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-Abyss-Test
+          path: build/ZenCube-3D-Abyss-Test.apk
+          if-no-files-found: error
       - name: Name campaign test APK
         if: env.ZENCUBE_CAMPAIGN_TEST == 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-3D-Campaign-Test.apk
@@ -250,7 +304,7 @@ jobs:
           path: build/ZenCube-3D-Enduser-Preview.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true'
+        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_ABYSS_TEST != 'true'
         with:
           name: ZenCube-3D-debug
           path: |

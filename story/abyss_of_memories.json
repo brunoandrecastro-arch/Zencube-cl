@@ -1,0 +1,86 @@
+{
+  "id": "campaign_2_abyss_of_memories",
+  "title": "Abyss of Memories",
+  "version": 1,
+  "page_count": 30,
+  "pages": [
+    "res://assets/abyss_of_memories/pages/page_01.webp",
+    "res://assets/abyss_of_memories/pages/page_02.webp",
+    "res://assets/abyss_of_memories/pages/page_03.webp",
+    "res://assets/abyss_of_memories/pages/page_04.webp",
+    "res://assets/abyss_of_memories/pages/page_05.webp",
+    "res://assets/abyss_of_memories/pages/page_06.webp",
+    "res://assets/abyss_of_memories/pages/page_07.webp",
+    "res://assets/abyss_of_memories/pages/page_08.webp",
+    "res://assets/abyss_of_memories/pages/page_09.webp",
+    "res://assets/abyss_of_memories/pages/page_10.webp",
+    "res://assets/abyss_of_memories/pages/page_11.webp",
+    "res://assets/abyss_of_memories/pages/page_12.webp",
+    "res://assets/abyss_of_memories/pages/page_13.webp",
+    "res://assets/abyss_of_memories/pages/page_14.webp",
+    "res://assets/abyss_of_memories/pages/page_15.webp",
+    "res://assets/abyss_of_memories/pages/page_16.webp",
+    "res://assets/abyss_of_memories/pages/page_17.webp",
+    "res://assets/abyss_of_memories/pages/page_18.webp",
+    "res://assets/abyss_of_memories/pages/page_19.webp",
+    "res://assets/abyss_of_memories/pages/page_20.webp",
+    "res://assets/abyss_of_memories/pages/page_21.webp",
+    "res://assets/abyss_of_memories/pages/page_22.webp",
+    "res://assets/abyss_of_memories/pages/page_23.webp",
+    "res://assets/abyss_of_memories/pages/page_24.webp",
+    "res://assets/abyss_of_memories/pages/page_25.webp",
+    "res://assets/abyss_of_memories/pages/page_26.webp",
+    "res://assets/abyss_of_memories/pages/page_27.webp",
+    "res://assets/abyss_of_memories/pages/page_28.webp",
+    "res://assets/abyss_of_memories/pages/page_29.webp",
+    "res://assets/abyss_of_memories/pages/page_30.webp"
+  ],
+  "source_file_corrected_mapping": {
+    "7": 30,
+    "17": 7,
+    "27": 17,
+    "30": 27
+  },
+  "gates": [
+    {
+      "id": "memory_thief",
+      "name": "The Memory Thief",
+      "after_page": 6,
+      "continue_at_page": 7,
+      "difficulty": "medium",
+      "portrait": "res://assets/abyss_of_memories/bosses/memory_thief.webp",
+      "music": "res://assets/abyss_of_memories/audio/memory_thief.mp3"
+    },
+    {
+      "id": "weeping_blade",
+      "name": "The Weeping Blade",
+      "after_page": 15,
+      "continue_at_page": 16,
+      "difficulty": "hard",
+      "portrait": "res://assets/abyss_of_memories/bosses/weeping_blade.webp",
+      "music": "res://assets/abyss_of_memories/audio/weeping_blade.mp3"
+    },
+    {
+      "id": "forgotten_shogun",
+      "name": "The Forgotten Shogun",
+      "after_page": 25,
+      "continue_at_page": 26,
+      "difficulty": "master",
+      "portrait": "res://assets/abyss_of_memories/bosses/forgotten_shogun.webp",
+      "music": "res://assets/abyss_of_memories/audio/forgotten_shogun.mp3"
+    }
+  ],
+  "story_music": "res://assets/abyss_of_memories/audio/story.mp3",
+  "board": {
+    "faces": 6,
+    "side": 4,
+    "cells": 96,
+    "winning_lines": 204,
+    "connect": 4
+  },
+  "save_file": "user://zencube_abyss_campaign_v1.json",
+  "assets_status": "38 optimized media files prepared in two downloadable ZIPs. GitHub branch ZIP upload pending; CI extracts before Godot import.",
+  "skins_status": "Four exclusive procedural 3D cube materials implemented in core/ZenAbyssSkins.gd and rendered via ui/AscendRenderer.gd; concept art remains visual reference.",
+  "integration_status": "Native Godot 30-page reader, 3 boss battles, isolated save, audio, shatter and route implemented. Automated headless tests passed. Real-media Android APK pending uploaded ZIPs and on-device QA.",
+  "release_status": "Draft PR #9, separate APK com.zencube.game.abyss only; no merge or Google Play publication."
+}
