@@ -59,6 +59,7 @@ var challenge_leave_row: HBoxContainer
 var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
 const ZenLocale = preload("res://core/ZenLocalization.gd")
+const UiTest = preload("res://ui/ZenUiTestTheme.gd")
 const Asc = preload("res://core/ZenAscension.gd")
 # One original quote per Classic World (DE source; translated in ZenLocalization).
 const WORLD_QUOTES: Array[String] = [
@@ -120,13 +121,10 @@ func change_language(code: String) -> void:
     if bool(data.settings.get("intro_seen", false)):
         open_settings()
 func open_language_choice() -> void:
-    # Before a language is chosen, show only endonyms and the language icon.
-    var box = modal("🌐")
-    box.get_child(1).hide()
-    label("Deutsch  ·  English  ·  Português", box, 17)
-    button("Deutsch", box, choose_language.bind("de"), false, true)
-    button("English", box, choose_language.bind("en"), false, true)
-    button("Português", box, choose_language.bind("pt"), false, true)
+    # Separate UI Test: real 3x3 game cube, real 2+2 winning line,
+    # and native accessible language controls rather than an image mockup.
+    var box: VBoxContainer = modal("ZenCube 3D")
+    UiTest.show_language_selection(popup, box, Callable(self, "choose_language"))
 func _ready() -> void:
     data = SaveManager.load_data()
     Asc.ensure(data)
@@ -154,14 +152,14 @@ func _ready() -> void:
 func theme_style(bg: Color, radius: int = 18) -> StyleBoxFlat:
     var st = StyleBoxFlat.new()
     st.bg_color = bg
-    st.border_color = Color("c99f64",0.82)
+    st.border_color = UiTest.GOLD
     st.set_border_width_all(2)
     st.set_corner_radius_all(radius)
     st.content_margin_left = 13
     st.content_margin_right = 13
     st.content_margin_top = 10
     st.content_margin_bottom = 10
-    st.shadow_color = Color("3a2a17",0.18)
+    st.shadow_color = Color("132018",0.29)
     st.shadow_size = 5
     st.shadow_offset = Vector2(0,3)
     return st
@@ -172,12 +170,13 @@ func button(text: String, parent: Node, callback: Callable, small: bool = false,
     b.custom_minimum_size.y = 44 if small else 52
     b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     b.focus_mode = Control.FOCUS_NONE
-    if primary:
-        b.add_theme_stylebox_override("normal",theme_style(Color("53643e"),18))
-        b.add_theme_stylebox_override("hover",theme_style(Color("63754b"),18))
-        b.add_theme_stylebox_override("pressed",theme_style(Color("3c4d2c"),18))
-        for color_key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
-            b.add_theme_color_override(color_key,Color("fff3d5"))
+    # Every classic menu uses the same jade controls and gold borders as 4x4.
+    var base_color: Color = Color("#315b3d") if primary else UiTest.GREEN
+    b.add_theme_stylebox_override("normal",UiTest.frame(base_color,18))
+    b.add_theme_stylebox_override("hover",UiTest.frame(Color("#49704c") if primary else Color("#2b5637"),18))
+    b.add_theme_stylebox_override("pressed",UiTest.frame(Color("#34543b"),18))
+    for color_key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+        b.add_theme_color_override(color_key,UiTest.IVORY)
     b.pressed.connect(callback)
     b.button_down.connect(func():
         b.create_tween().tween_property(b, "modulate", Color("e8dbc7"), 0.08)
@@ -191,11 +190,11 @@ func premium_button(text: String, parent: Node, callback: Callable, featured: bo
     var b: Button = button(text, parent, callback, false, false)
     b.custom_minimum_size.y = 59
     b.add_theme_font_size_override("font_size", 20)
-    var normal_color: Color = Color("536545") if featured else Color("352b24")
-    var hover_color: Color = Color("667b53") if featured else Color("46382d")
+    var normal_color: Color = Color("#315b3d") if featured else UiTest.GREEN
+    var hover_color: Color = Color("#49704c") if featured else Color("#2b5637")
     b.add_theme_stylebox_override("normal", theme_style(normal_color, 18))
     b.add_theme_stylebox_override("hover", theme_style(hover_color, 18))
-    b.add_theme_stylebox_override("pressed", theme_style(Color("7b6846"), 18))
+    b.add_theme_stylebox_override("pressed", UiTest.frame(Color("#34543b"),18))
     for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
         b.add_theme_color_override(key, Color("fff0cf"))
     return b
@@ -234,7 +233,7 @@ func build_ui() -> void:
     ui.add_child(garden)
     garden.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var veil = ColorRect.new()
-    veil.color = Color("e5d7c2",0.10)
+    veil.color = Color("0a2218",0.16)
     veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
     ui.add_child(veil)
     veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -250,6 +249,7 @@ func build_ui() -> void:
     for typ in ["Label","CheckButton","OptionButton","LineEdit"]:
         th.set_color("font_color",typ,Color("493521"))
     th.set_color("font_hover_color","CheckButton",Color("493521"))
+    UiTest.install_main_theme(th)
     ui.theme = th
 
     var margin = MarginContainer.new()
@@ -264,7 +264,7 @@ func build_ui() -> void:
 
     # Carved-wood title panel inspired by the approved reference design.
     var title_panel = PanelContainer.new()
-    title_panel.add_theme_stylebox_override("panel",theme_style(Color("4b3020",0.96),25))
+    title_panel.add_theme_stylebox_override("panel",theme_style(Color("18291e",0.97),25))
     column.add_child(title_panel)
     var title_row = row(title_panel)
     var brand = VBoxContainer.new()
@@ -709,7 +709,7 @@ func modal(title: String) -> VBoxContainer:
     popup.offset_right = -14
     popup.offset_top = 22
     popup.offset_bottom = -22
-    popup.add_theme_stylebox_override("panel",theme_style(Color("fff2da",0.975),24))
+    popup.add_theme_stylebox_override("panel",UiTest.frame(Color("#f9edd5",0.985),24,3))
     popup.modulate.a = 0.0
     popup.create_tween().tween_property(popup,"modulate:a",1.0,0.18)
     var scroll = ScrollContainer.new()
@@ -723,8 +723,16 @@ func modal(title: String) -> VBoxContainer:
     box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     box.add_theme_constant_override("separation",12)
     scroll.add_child(box)
-    label(title,box,24,Color("453329"))
+    var title_label: Label = label(title,box,24,Color("#263c2d"))
+    title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title_label.name = "ZenGoldModalHeading"
     button("Zurück zum Spiel",box,close_modal,true)
+    var line: ColorRect = ColorRect.new()
+    line.name = "ZenGoldDivider"
+    line.color = UiTest.GOLD
+    line.custom_minimum_size.y = 2
+    line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    box.add_child(line)
     return box
 func close_modal() -> void:
     stop_shop_preview()
