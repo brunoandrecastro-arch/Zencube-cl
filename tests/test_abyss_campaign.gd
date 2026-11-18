@@ -6,8 +6,8 @@ const Reader = preload("res://story/ZenAbyssReader.gd")
 var failures: int = 0
 var backups: Dictionary = {}
 
-func check(pass: bool, reason: String) -> void:
-    if not pass:
+func check(ok: bool, reason: String) -> void:
+    if not ok:
         failures += 1
         printerr("ABYSS TEST FAIL: ",reason)
 
