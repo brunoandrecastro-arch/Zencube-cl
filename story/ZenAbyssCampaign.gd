@@ -121,8 +121,11 @@ static func realm_art() -> String:
 ## on the right. A centered portrait crop showed Kuze behind the 3D cube.
 ## The Android arena must instead foreground the submerged shrines, glowing
 ## ZenCube, moon and water. Keep the original realm asset untouched for story.
+static func gameplay_art() -> String:
+    return ASSET_ROOT + "gameplay.webp"
+
 static func battle_backdrop(index: int = -1) -> Texture2D:
-    # A unique 1440x2560 WEBP arena per boss takes priority over the
+    # A unique original-size WEBP arena per boss takes priority over the
     # legacy concept-collage crop. This affects Campaign 2.0 only.
     if index >= 0 and index < BOSS_IDS.size():
         var boss_path: String = ASSET_ROOT + "arenas/%s.webp" % BOSS_IDS[index]
@@ -130,6 +133,10 @@ static func battle_backdrop(index: int = -1) -> Texture2D:
             var boss_texture: Texture2D = load(boss_path) as Texture2D
             if boss_texture != null:
                 return boss_texture
+    var gameplay_path: String = gameplay_art()
+    if ResourceLoader.exists(gameplay_path):
+        var gameplay_texture: Texture2D = load(gameplay_path) as Texture2D
+        if gameplay_texture != null: return gameplay_texture
     var source_path: String = realm_art()
     if not ResourceLoader.exists(source_path): return null
     var full: Texture2D = load(source_path) as Texture2D
