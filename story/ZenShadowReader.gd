@@ -6,9 +6,9 @@ const GOLD := Color("#ded0fa")
 const WHITE := Color("#f3e9e0")
 const MUTE := Color("#cfbce3")
 const COPY: Dictionary = {
-    "de":{"previous":"‹ Zurück","next":"Weiter ›","fight":"⚔ Schattenprüfung","finish":"✦ Schattenkapitel abschließen","done":"Kapitel abgeschlossen","progress":"Seite %d / 30  ·  Schattenbosse %d/3","missing":"Shadow-Manhwa-Bilder fehlen in dieser Testversion.","tip":"Wischen zum Weiterlesen","locked":"Zen Ascend 4×4 muss zuerst freigeschaltet sein.","gate":"Besiege %s, um weiterzulesen.","home":"Zur Bibliothek"},
-    "en":{"previous":"‹ Previous","next":"Next ›","fight":"⚔ Shadow trial","finish":"✦ Finish Shadow chapter","done":"Chapter complete","progress":"Page %d / 30  ·  Shadow bosses %d/3","missing":"Shadow Manhwa pages are missing in this build.","tip":"Swipe to read","locked":"Unlock Zen Ascend 4×4 first.","gate":"Defeat %s to continue.","home":"Back to library"},
-    "pt":{"previous":"‹ Voltar","next":"Seguinte ›","fight":"⚔ Prova das sombras","finish":"✦ Concluir o capítulo Shadow","done":"Capítulo concluído","progress":"Página %d / 30  ·  Chefes %d/3","missing":"Faltam as páginas Shadow nesta versão.","tip":"Desliza para continuar","locked":"Desbloqueia Zen Ascend 4×4 primeiro.","gate":"Derrota %s para continuar.","home":"Voltar à biblioteca"}
+    "de":{"previous":"‹ Zurück","next":"Weiter ›","fight":"⚔ Schattenprüfung","finish":"✦ Schattenkapitel abschließen","done":"Weiter zu Abyss of Memories ›","progress":"Seite %d / 30  ·  Schattenbosse %d/3","missing":"Shadow-Manhwa-Bilder fehlen in dieser Testversion.","tip":"Wischen zum Weiterlesen","locked":"Zen Ascend 4×4 muss zuerst freigeschaltet sein.","gate":"Besiege %s, um weiterzulesen.","home":"Zur Bibliothek"},
+    "en":{"previous":"‹ Previous","next":"Next ›","fight":"⚔ Shadow trial","finish":"✦ Finish Shadow chapter","done":"Continue to Abyss of Memories ›","progress":"Page %d / 30  ·  Shadow bosses %d/3","missing":"Shadow Manhwa pages are missing in this build.","tip":"Swipe to read","locked":"Unlock Zen Ascend 4×4 first.","gate":"Defeat %s to continue.","home":"Back to library"},
+    "pt":{"previous":"‹ Voltar","next":"Seguinte ›","fight":"⚔ Prova das sombras","finish":"✦ Concluir o capítulo Shadow","done":"Continuar para Abyss of Memories ›","progress":"Página %d / 30  ·  Chefes %d/3","missing":"Faltam as páginas Shadow nesta versão.","tip":"Desliza para continuar","locked":"Desbloqueia Zen Ascend 4×4 primeiro.","gate":"Derrota %s para continuar.","home":"Voltar à biblioteca"}
 }
 var progress: Dictionary = {}
 var locale: String = "en"
@@ -111,7 +111,7 @@ func _show_page() -> void:
     prev_button.disabled = p == 1
     if p == 30:
         next_button.text = t("done") if bool(progress.get("completed",false)) else t("finish")
-        next_button.disabled = bool(progress.get("completed",false))
+        next_button.disabled = false
         return
     var action: Dictionary = Shadow.next_action(progress)
     if action.get("type") == "battle":
@@ -130,7 +130,11 @@ func _turn(direction: int) -> void:
             _show_page()
         return
     if p >= 30:
-        if Shadow.finish_chapter(progress): _show_page()
+        if bool(progress.get("completed",false)):
+            _close()
+            ZenChronicles.call_deferred("open_abyss_reader")
+        elif Shadow.finish_chapter(progress):
+            _show_page()
         return
     var action: Dictionary = Shadow.next_action(progress)
     if action.get("type") == "battle":
