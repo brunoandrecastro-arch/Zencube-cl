@@ -12,7 +12,8 @@ jobs:
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
-      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' }}
+      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' }}
+      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -47,6 +48,16 @@ jobs:
               echo "::notice::Upload $archive to this branch to complete the real Abyss APK"
             fi
           done
+      - name: Extract original Shadow Realm 30 Manhwa pages
+        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f ZenCube_Shadow_Media_Pages.zip ]]; then
+            unzip -oq ZenCube_Shadow_Media_Pages.zip -d .
+          else
+            echo "::notice::Upload ZenCube_Shadow_Media_Pages.zip to this branch to package the Shadow manhwa"
+          fi
       - name: Import project and check GDScript
         run: |
           "$GODOT" --headless --editor --import --quit
@@ -192,6 +203,9 @@ jobs:
       - name: 'Test complete Abyss Campaign 2.0: pages, 3 boss gates, saves, 4 cube skins'
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_abyss_campaign.gd
+      - name: Shadow Realm Campaign 2.0 – 30 pages, 3 original 4x4 bosses and story save
+        run: |
+          timeout 90 "$GODOT" --headless --path . --script tests/test_shadow_campaign.gd
       - name: Validate twelve original Boss track mappings and audio checksums
         run: python3 tests/test_realm_boss_audio.py
       - name: Verify 100 tactical challenges on the 3D cube
@@ -238,11 +252,30 @@ jobs:
             test -s "$asset" || { echo "::error::Missing Abyss media $asset"; exit 1; }
           done
       - name: Reuse Abyss debug signing key
-        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        if: env.ZENCUBE_ABYSS_TEST == 'true' && env.ZENCUBE_SHADOW_TEST != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.android/zencube-debug.keystore
           key: zencube-abyss-debug-key-v1
+      - name: Require all 30 Shadow Manhwa pages before APK publication
+        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(find assets/shadow_campaign/pages -type f -name 'page_*.webp' 2>/dev/null | wc -l)
+          test "$count" -eq 30 || { echo "::error::Shadow Realm needs 30 story pages; found $count"; exit 1; }
+          test -s assets/realms/shadow_realm.webp
+          for boss in mist_guardian mirror_novice veil_monk; do
+            test -s "assets/realm_chronicles/boss_${boss}.json"
+            test -s "assets/realm_boss_music/${boss}.ogg"
+          done
+          test -s assets/realm_music/shadow_realm.ogg
+      - name: Reuse Shadow debug signing key
+        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/zencube-debug.keystore
+          key: zencube-shadow-debug-key-v1
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -273,11 +306,31 @@ jobs:
           grep -F "assets/assets/abyss_of_memories/pages/page_30.webp" <<< "$contents"
           grep -F "assets/assets/abyss_of_memories/bosses/forgotten_shogun.webp" <<< "$contents"
           grep -F "assets/assets/abyss_of_memories/audio/forgotten_shogun.mp3" <<< "$contents"
+      - name: Verify 30 Shadow pages and Boss assets inside APK
+        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          contents=$(unzip -Z1 build/ZenCube-3D.apk)
+          grep -F 'assets/assets/shadow_campaign/pages/page_01.webp' <<< "$contents"
+          grep -F 'assets/assets/shadow_campaign/pages/page_30.webp' <<< "$contents"
+          grep -F 'assets/assets/realm_boss_music/mist_guardian.ogg' <<< "$contents"
+          grep -F 'assets/assets/realm_boss_music/veil_monk.ogg' <<< "$contents"
+      - name: Name Shadow test APK
+        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-Shadow-Test.apk
+      - name: Upload Shadow test APK
+        if: env.ZENCUBE_SHADOW_TEST == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-Shadow-Test
+          path: build/ZenCube-3D-Shadow-Test.apk
+          if-no-files-found: error
       - name: Name Abyss test APK
-        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        if: env.ZENCUBE_ABYSS_TEST == 'true' && env.ZENCUBE_SHADOW_TEST != 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-3D-Abyss-Test.apk
       - name: Upload Abyss test APK
-        if: env.ZENCUBE_ABYSS_TEST == 'true'
+        if: env.ZENCUBE_ABYSS_TEST == 'true' && env.ZENCUBE_SHADOW_TEST != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ZenCube-3D-Abyss-Test
@@ -304,7 +357,7 @@ jobs:
           path: build/ZenCube-3D-Enduser-Preview.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_ABYSS_TEST != 'true'
+        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_ABYSS_TEST != 'true' && env.ZENCUBE_SHADOW_TEST != 'true'
         with:
           name: ZenCube-3D-debug
           path: |
