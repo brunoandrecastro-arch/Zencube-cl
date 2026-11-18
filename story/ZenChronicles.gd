@@ -660,6 +660,7 @@ func request_abyss_battle() -> void:
     close_abyss_reader()
     var current: Node = get_tree().current_scene
     if current != null and current.scene_file_path == "res://Ascend.tscn" and current.has_method("start_abyss_battle"):
+        _abyss_launch_requested = false
         current.call_deferred("start_abyss_battle")
     else:
         get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
