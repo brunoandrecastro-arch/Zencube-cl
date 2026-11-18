@@ -274,7 +274,7 @@ func build_ui() -> void:
     brand.add_theme_constant_override("separation",1)
     title_row.add_child(brand)
     # In-game header foregrounds the CURRENT World; brand remains visible below.
-    world_title_label = label("Zen-Garten",brand,28,Color("f9e5b8"))
+    world_title_label = label("Zen-Garten",brand,27,Color("f9e5b8"))
     world_title_label.add_theme_font_override("font",ZenType.heading())
     world_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var sub = label("ZenCube 3D",brand,12,Color("e6c99d"))
