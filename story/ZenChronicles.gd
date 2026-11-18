@@ -11,6 +11,7 @@ const MUTED = Color(0.75, 0.78, 0.77)
 const Campaign = preload("res://story/ZenCampaign.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const AbyssReader = preload("res://story/ZenAbyssReader.gd")
+const ShadowReader = preload("res://story/ZenShadowReader.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 # German is the authored source language; EN and PT-PT live in a separate JSON.
 const UI_DE: Dictionary = {
@@ -54,6 +55,8 @@ var _realm_chapter_scroll: ScrollContainer
 var _realm_chapter_dragging: bool = false
 var _abyss_reader: CanvasLayer
 var _abyss_launch_requested: bool = false
+var _shadow_reader: CanvasLayer
+var _shadow_launch_requested: bool = false
 
 func _ready() -> void:
     layer = 90
@@ -250,7 +253,8 @@ func open_library() -> void:
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _make_button(Campaign.text_for(_active_language, "play"), outer, open_campaign_overview)
-    _make_button("🌑 Campaign 2.0 · Abyss of Memories", outer, open_abyss_reader)
+    _make_button("🌘 Campaign 2.0 · Chapter 1 · Shadow Realm", outer, open_shadow_reader)
+    _make_button("🌑 Campaign 2.0 · Chapter 2 · Abyss of Memories", outer, open_abyss_reader)
     _make_button(Campaign.text_for(_active_language, "webcomic"), outer, open_comic_library)
 
 func open_comic_library() -> void:
@@ -385,7 +389,7 @@ func set_campaign_board_active(active: bool) -> void:
     _quick_button.visible = _show_quick and not active and _screen == null
 
 func is_open() -> bool:
-    return _screen != null or is_instance_valid(_abyss_reader)
+    return _screen != null or is_instance_valid(_abyss_reader) or is_instance_valid(_shadow_reader)
 
 func _input(event: InputEvent) -> void:
     if _screen == null:
@@ -641,6 +645,7 @@ func consume_realm_story_launch() -> bool:
 
 # An isolated reader, not a fifth normal 4x4 realm, with its own progress.
 func open_abyss_reader() -> void:
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     if _screen != null: close_chronicles()
     _abyss_reader = AbyssReader.new()
@@ -668,4 +673,37 @@ func request_abyss_battle() -> void:
 func consume_abyss_launch() -> bool:
     var flag: bool = _abyss_launch_requested
     _abyss_launch_requested = false
+    return flag
+
+# Campaign 2.0 – Shadow Realm chapter, isolated from the existing 12
+# Realm Chronicles bosses and independent of the Abyss chapter save.
+func open_shadow_reader() -> void:
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if _screen != null: close_chronicles()
+    _shadow_reader = ShadowReader.new()
+    _root.add_child(_shadow_reader)
+    if _quick_button != null: _quick_button.hide()
+
+func close_shadow_reader() -> void:
+    if is_instance_valid(_shadow_reader):
+        var old: CanvasLayer = _shadow_reader
+        _shadow_reader = null
+        old.queue_free()
+    if _quick_button != null and _screen == null:
+        _quick_button.visible = _show_quick and not _campaign_board_active
+
+func request_shadow_battle() -> void:
+    _shadow_launch_requested = true
+    close_shadow_reader()
+    var current: Node = get_tree().current_scene
+    if current != null and current.scene_file_path == "res://Ascend.tscn" and current.has_method("start_shadow_battle"):
+        _shadow_launch_requested = false
+        current.call_deferred("start_shadow_battle")
+    else:
+        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+func consume_shadow_launch() -> bool:
+    var flag: bool = _shadow_launch_requested
+    _shadow_launch_requested = false
     return flag
