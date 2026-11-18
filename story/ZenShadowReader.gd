@@ -2,6 +2,7 @@ extends CanvasLayer
 ## Independent, touch-first, 30-page Manhwa reader for Campaign 2.0.
 ## Uses the existing 4x4 Ascend scene only for boss battles.
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
+const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const GOLD := Color("#ded0fa")
 const WHITE := Color("#f3e9e0")
 const MUTE := Color("#cfbce3")
@@ -17,6 +18,7 @@ var counter: Label
 var status: Label
 var prev_button: Button
 var next_button: Button
+var challenge_button: Button
 var sound: AudioStreamPlayer
 var muted: Array[AudioStreamPlayer] = []
 var start_touch: Vector2 = Vector2.ZERO
@@ -97,6 +99,7 @@ func _make_ui() -> void:
     main.add_child(controls)
     prev_button = _button(t("previous"),controls,_turn.bind(-1))
     next_button = _button(t("next"),controls,_turn.bind(1))
+    challenge_button = _button("🏆 Challenges · 0/3",main,_open_challenges)
 
 func _show_page() -> void:
     var p: int = clampi(int(progress.get("page",1)),1,Shadow.page_limit(progress))
@@ -109,8 +112,15 @@ func _show_page() -> void:
     counter.text = t("progress") % [p,victories]
     status.text = t("tip") if reader.texture != null else t("missing")
     prev_button.disabled = p == 1
+    var challenge_count: int = Realm2.completed_count(Realm2.load_progress(),0)
+    challenge_button.text = "🏆 Challenges · %d/3" % challenge_count
     if p == 30:
-        next_button.text = t("done") if bool(progress.get("completed",false)) else t("finish")
+        var done_story: bool = bool(progress.get("completed",false))
+        if done_story:
+            next_button.text = ("✦ Abyss of Memories" if 0==0 else "✦ Ember Temple") if Realm2.ready(0) else "🔒 3 Bosse + 3 Challenges"
+            status.text = "Bosse: %d/3 · Challenges: %d/3" % [Realm2.bosses_won(0),challenge_count]
+        else:
+            next_button.text = t("finish")
         next_button.disabled = false
         return
     var action: Dictionary = Shadow.next_action(progress)
@@ -130,11 +140,14 @@ func _turn(direction: int) -> void:
             _show_page()
         return
     if p >= 30:
-        if bool(progress.get("completed",false)):
+        if not bool(progress.get("completed",false)):
+            if Shadow.finish_chapter(progress): _show_page()
+        elif Realm2.ready(0):
             _close()
-            ZenChronicles.call_deferred("open_abyss_reader")
-        elif Shadow.finish_chapter(progress):
-            _show_page()
+            ZenChronicles.call_deferred("request_campaign_breakthrough",0)
+        else:
+            status.text = "Bosse %d/3 · Challenges %d/3: Beides wird benötigt." % [
+                Realm2.bosses_won(0),Realm2.completed_count(Realm2.load_progress(),0)]
         return
     var action: Dictionary = Shadow.next_action(progress)
     if action.get("type") == "battle":
@@ -146,6 +159,10 @@ func _turn(direction: int) -> void:
     elif action.get("type") == "page":
         progress.page = int(action.page)
         if Shadow.save_progress(progress): _show_page()
+
+func _open_challenges() -> void:
+    _close()
+    ZenChronicles.call_deferred("open_campaign_challenges",0)
 
 func _input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
