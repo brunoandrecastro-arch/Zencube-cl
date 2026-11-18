@@ -145,8 +145,8 @@ func run() -> void:
     check(int(cube.get("boss_skin_id")) == -1,"normal 3D shop skin restored")
     check(FileAccess.get_file_as_string(SaveManager.PATH)==regular_save,"story does not alter normal stats, rank or money")
     var menu: Node = controller.get("active_realm_dialog")
-    check(menu != null and menu.find_child("RealmChroniclesCampaignCard",true,false)!=null,
-        "Return to Zen Ascend displays normal four Realm cards")
+    check(menu != null and menu.find_child("RealmChroniclesCampaignCard",true,false)==null,
+        "Legacy story tile is absent from ordinary four-Realm menu (now in Zen Realm Chronicles)")
     # Realm access is locked until BOTH independent milestones are true.
     check(not Realms.unlocked(data,1),"Ember stays locked with zero story victories")
     for task in Realms.TASKS[0]:
@@ -186,8 +186,8 @@ func run() -> void:
     controller.call("show_realms")
     await process_frame
     var qa_menu: Node = controller.get("active_realm_dialog")
-    check(qa_menu != null and qa_menu.find_child("RealmMirrorShatterPreviewQA",true,false) != null,
-        "test APK offers a one-tap mirror shatter preview")
+    check(qa_menu != null and qa_menu.find_child("RealmMirrorShatterPreviewQA",true,false) == null,
+        "No extra mirror/legacy-story button in normal four-Realm UI")
     var normal_before: String = FileAccess.get_file_as_string(SaveManager.PATH)
     var story_before: String = FileAccess.get_file_as_string(Story.SAVE)
     controller.call("_preview_mirror_shatter_qa")
