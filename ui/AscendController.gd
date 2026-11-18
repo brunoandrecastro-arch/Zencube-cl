@@ -1846,7 +1846,7 @@ func start_shadow_battle() -> void:
     cube.clear_boss_skin()
     cube.set_boss_skin(shadow_index)
     if realm_backdrop != null:
-        var arena: Texture2D = Shadow.battle_backdrop()
+        var arena: Texture2D = Shadow.battle_backdrop(shadow_index)
         if arena != null: realm_backdrop.texture = arena
     _shadow_save()
     sync_realm_music()
