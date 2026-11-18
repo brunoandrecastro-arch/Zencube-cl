@@ -72,22 +72,20 @@ jobs:
           else
             echo "::notice::HD arena/preview ZIP not yet uploaded; QA APK uses safe legacy backgrounds until media upload"
           fi
-      - name: Extract optional six individual Shadow / Abyss boss arenas
+      - name: Extract original-quality six boss arenas and Abyss gameplay art
         if: env.ZENCUBE_REALM_2_0_TEST == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f ZenCube_Campaign2_Boss_Arenas.zip ]]; then
-            unzip -oq ZenCube_Campaign2_Boss_Arenas.zip -d .
-            for path in assets/shadow_campaign/arenas/{mist_guardian,mirror_novice,veil_monk}.webp \
-                        assets/abyss_of_memories/arenas/{memory_thief,weeping_blade,forgotten_shogun}.webp; do
-              test -s "$path" || { echo "::error::Boss arena missing: $path"; exit 1; }
-            done
-            echo "::notice::All six individual Campaign 2.0 arenas extracted"
+          if [[ -f ZenCube_Campaign2_Final_Arenas.zip ]]; then
+            unzip -oq ZenCube_Campaign2_Final_Arenas.zip -d .
+          elif [[ "${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}" == "feature/campaign-2-arenas-6realms-2026-11-18" ]]; then
+            echo "::error::Upload ZenCube_Campaign2_Final_Arenas.zip before building the final arena APK"
+            exit 1
           else
-            echo "::notice::Arena pack not uploaded yet; existing Realm visuals remain in this debug APK"
+            echo "::notice::Final arena archive not supplied on this branch"
           fi
-      - name: Verify boss arena source mapping and optional WebP package
+      - name: Verify original arena assets and mapping
         if: env.ZENCUBE_REALM_2_0_TEST == 'true'
         run: python3 tests/test_campaign2_arenas.py
       - name: Import project and check GDScript
@@ -357,6 +355,17 @@ jobs:
           grep -F 'assets/assets/shadow_campaign/pages/page_30.webp' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/mist_guardian.ogg' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/veil_monk.ogg' <<< "$contents"
+      - name: Verify all seven arena textures in the APK
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f ZenCube_Campaign2_Final_Arenas.zip ]]; then
+            contents=$(unzip -Z1 build/ZenCube-3D.apk)
+            while IFS= read -r path; do
+              grep -Fx "assets/$path.import" <<< "$contents"
+            done < <(unzip -Z1 ZenCube_Campaign2_Final_Arenas.zip)
+          fi
       - name: Name ZenCube 2.0 Realm test APK
         if: env.ZENCUBE_REALM_2_0_TEST == 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-2.0-Realm.apk
