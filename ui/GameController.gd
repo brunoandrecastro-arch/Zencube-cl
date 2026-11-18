@@ -55,6 +55,8 @@ const Backdrops = preload("res://core/ZenBackdrops.gd")
 var challenge_row: HBoxContainer
 var classic_views: HBoxContainer
 var classic_actions: HBoxContainer
+var classic_undo_button: Button
+var classic_result_button: Button
 var challenge_leave_row: HBoxContainer
 var challenge_role_panel: PanelContainer
 var challenge_role_label: Label
@@ -364,7 +366,10 @@ func build_ui() -> void:
     button("Hinweis",views,open_help,true)
     var actions = row(column)
     classic_actions = actions
-    button("Rückgängig",actions,undo)
+    classic_undo_button = button("Rückgängig",actions,undo)
+    classic_result_button = button("Ergebnis anzeigen",actions,show_result_screen)
+    classic_result_button.name = "ClassicShowFinishedResult"
+    classic_result_button.hide()
     button("Neue Partie",actions,confirm_new,true,true)
     zen_campaign_controls = row(column)
     zen_campaign_undo_button = button("Rückgängig", zen_campaign_controls, _zen_campaign_undo, true)
@@ -418,9 +423,8 @@ func mode_name() -> String:
     return T("Zwei Spieler lokal")
 func player_name(owner: int) -> String:
     if int(data.settings.mode) == 1:
-        return "Zen-Bot" if owner == 1 else str(data.settings.names[0])
-    var pname = str(data.settings.names[owner])
-    return T(pname)
+        return "Zen-Bot" if owner == 1 else _display_player_name(0)
+    return _display_player_name(owner)
 func apply_world() -> void:
     if world_background == null or data == null: return
     var chosen: int = clampi(int(data.ascension.get("world",0)), 0, 4)
@@ -501,6 +505,13 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
     swap_row.visible = not challenge_active and board.swap_pending and not (int(data.settings.mode) == 1 and board.current_owner() == 1 and tutorial == null)
     tutorial_row.visible = not challenge_active and tutorial != null
     challenge_role_panel.visible = challenge_active
+    var finished_classic: bool = board.winner != 0 and not challenge_active and not zen_campaign_active and tutorial == null
+    if is_instance_valid(classic_undo_button): classic_undo_button.visible = not finished_classic
+    if is_instance_valid(classic_result_button):
+        classic_result_button.visible = finished_classic
+        classic_result_button.text = _classic_result_label()
+    if finished_classic:
+        help_text.text = "Partie beendet · Würfel drehen und zoomen" if language_code() == "de" else ("Partida terminada · Roda e amplia o cubo" if language_code() == "pt" else "Match finished · Rotate and zoom the cube")
     challenge_row.visible = challenge_active
     challenge_leave_row.visible = challenge_active
     classic_views.visible = not challenge_active
@@ -532,6 +543,7 @@ func notify_user(message: String) -> void:
     if help_text != null: help_text.text = toast
 func on_cell(cell: int) -> void:
     if cell < 0 or ceremony_active or (popup != null and not net_active): return
+    if board.winner != 0 and not challenge_active: return
     if zen_campaign_active:
         if not _zen_campaign_bot_turn() and not ai_running and not chronicles.is_open():
             place(cell)
@@ -644,7 +656,7 @@ func undo() -> void:
     if tutorial != null:
         load_tutorial()
         return
-    if board.result_recorded:
+    if board.result_recorded or board.winner != 0:
         notify_user("Abgeschlossene Ergebnisse bleiben erhalten. Starte eine neue Partie.")
         return
     generation += 1
@@ -1268,8 +1280,25 @@ func show_result_screen() -> void:
     if versus_bot and last_leaf_reward > 0:
         var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    premium_button("Noch eine Partie", box, play_again_after_result, true)
+    var inspect: Button = premium_button("Spielfeld ansehen",box,_inspect_classic_finished_board,true)
+    inspect.text = _inspect_label()
+    inspect.name = "InspectClassicFinishedBoard"
+    premium_button("Noch eine Partie", box, play_again_after_result)
     premium_button("Hauptmenü", box, open_menu)
+
+func _inspect_label() -> String:
+    return "Spielfeld ansehen" if language_code()=="de" else ("Ver tabuleiro" if language_code()=="pt" else "Inspect board")
+
+func _classic_result_label() -> String:
+    return "Ergebnis anzeigen" if language_code()=="de" else ("Ver resultado" if language_code()=="pt" else "Show result")
+
+func _inspect_classic_finished_board() -> void:
+    if board.winner == 0: return
+    close_modal()
+    input_control.fingers.clear()
+    input_control.press_cell = -1
+    input_control.dragged = false
+    input_control.mouse_down = false
 
 func play_again_after_result() -> void:
     close_modal()
@@ -1338,9 +1367,17 @@ func open_stats() -> void:
     button("Zen-Aufstieg",box,open_ascension,true)
     label("Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.",box,14)
 # ---- Separate 4x4 Zen Ascend mode and persistent player profiles ----
+func _display_player_name(index: int) -> String:
+    var stored: String = str(data.settings.names[index])
+    if stored == ("Du" if index == 0 else "Spieler 2"):
+        if language_code() == "en": return "You" if index == 0 else "Player 2"
+        if language_code() == "pt": return "Tu" if index == 0 else "Jogador 2"
+    return stored
+
 func save_player_name(index: int, value: String) -> void:
     if index < 0 or index > 1: return
     var cleaned: String = value.strip_edges().replace("\n", " ").replace("\r", " ").substr(0,24)
+    if cleaned == _display_player_name(index): return
     if cleaned == "": cleaned = "Du" if index == 0 else "Spieler 2"
     data.settings.names[index] = cleaned
     persist()
@@ -1796,21 +1833,24 @@ func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> vo
 
 func open_settings() -> void:
     var box = modal("Deine Einstellungen")
+    box.add_theme_constant_override("separation",9)
     label("Spiele in deinem Tempo.",box,15,Color("806c54"))
     for i in range(2):
         var idx: int = i
         label(ZMode.t("Spielername",language_code()) + " " + str(i+1),box,14)
         var name_field: LineEdit = LineEdit.new()
         name_field.max_length = 24
-        name_field.text = str(data.settings.names[i])
+        name_field.text = _display_player_name(i)
         name_field.placeholder_text = ZMode.t("Spieler 1" if i==0 else "Spieler 2",language_code())
-        name_field.custom_minimum_size.y = 49
+        name_field.name = "SettingsPlayerName%d" % (i+1)
+        UiTest.settings_field(name_field)
         name_field.text_submitted.connect(func(value: String): save_player_name(idx,value))
         name_field.focus_exited.connect(func(): save_player_name(idx,name_field.text))
         box.add_child(name_field)
     label("Sprache",box,15)
     var language_picker = OptionButton.new()
-    language_picker.custom_minimum_size.y = 52
+    language_picker.name = "SettingsLanguage"
+    UiTest.settings_picker(language_picker)
     language_picker.add_item("Deutsch", 0)
     language_picker.add_item("English", 1)
     language_picker.add_item("Português", 2)
@@ -1819,6 +1859,8 @@ func open_settings() -> void:
     language_picker.item_selected.connect(func(index): change_language(["de","en","pt"][index]))
     box.add_child(language_picker)
     var level = OptionButton.new()
+    level.name = "SettingsBotDifficulty"
+    UiTest.settings_picker(level)
     for title in ["Bot: Leicht","Bot: Mittel","Bot: Schwer","Bot: Meister","Bot: Großmeister"]: level.add_item(T(title))
     for index in range(5):
         level.set_item_disabled(index, not Asc.level_unlocked(data,index))
@@ -1835,6 +1877,7 @@ func open_settings() -> void:
     )
     box.add_child(level)
     var music = CheckButton.new()
+    UiTest.settings_switch(music)
     music.text = T("Ruhige Zen-Garten-Musik")
     music.button_pressed = bool(data.settings.get("music",false))
     music.toggled.connect(func(enabled):
@@ -1845,6 +1888,8 @@ func open_settings() -> void:
     box.add_child(music)
     label("Musiktitel", box, 15)
     var tracks: OptionButton = OptionButton.new()
+    tracks.name = "SettingsMusicTrack"
+    UiTest.settings_picker(tracks)
     tracks.add_item(MusicPolicy.base_label(language_code()))
     var music_names: Array = ["Zen-Garten (Original)", "Klangschalen – Stiller Tempel", "Handpan – Sanfter Rhythmus", "Nebelpfad", "Stein und Wasser", "Regentropfen im Zen-Garten", "Sternenlicht am Tempel"] + NEW_MUSIC_TITLES
     # Hide Misty Path (3), Stone and Water (4), Whispers (7) from manual selection.
@@ -1880,6 +1925,7 @@ func open_settings() -> void:
     )
     box.add_child(tracks)
     var sounds = CheckButton.new()
+    UiTest.settings_switch(sounds)
     sounds.text = T("Sanfte Spieltöne")
     sounds.button_pressed = bool(data.settings.sound)
     sounds.toggled.connect(func(enabled):
@@ -1888,6 +1934,7 @@ func open_settings() -> void:
     )
     box.add_child(sounds)
     var vibration = CheckButton.new()
+    UiTest.settings_switch(vibration)
     vibration.text = T("Vibration bei Spielzügen")
     vibration.button_pressed = bool(data.settings.get("haptics", true))
     vibration.toggled.connect(func(enabled):
@@ -1896,6 +1943,7 @@ func open_settings() -> void:
     )
     box.add_child(vibration)
     var hints = CheckButton.new()
+    UiTest.settings_switch(hints)
     hints.text = T("Gewinnfelder als Hilfe zeigen")
     hints.button_pressed = bool(data.settings.hints)
     hints.toggled.connect(func(enabled):
@@ -1904,6 +1952,7 @@ func open_settings() -> void:
     )
     box.add_child(hints)
     var alternate = CheckButton.new()
+    UiTest.settings_switch(alternate)
     alternate.text = T("Startspieler nach jeder Runde wechseln")
     alternate.button_pressed = bool(data.settings.alternate)
     alternate.toggled.connect(func(enabled):
@@ -1912,6 +1961,7 @@ func open_settings() -> void:
     )
     box.add_child(alternate)
     var swap = CheckButton.new()
+    UiTest.settings_switch(swap)
     swap.text = T("Farbtausch erlauben (nur lokaler Modus)")
     swap.button_pressed = bool(data.settings.swap)
     swap.toggled.connect(func(enabled):
@@ -1920,7 +1970,24 @@ func open_settings() -> void:
     )
     box.add_child(swap)
     button("Musikprobe abspielen",box,music_preview)
-    button("Fertig",box,close_modal,false,true)
+    var scroll: ScrollContainer = box.get_parent() as ScrollContainer
+    var layout := VBoxContainer.new()
+    layout.name = "SettingsDialogLayout"
+    layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    layout.add_theme_constant_override("separation",6)
+    popup.add_child(layout)
+    scroll.reparent(layout)
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var footer := MarginContainer.new()
+    footer.name = "SettingsStickyFooter"
+    footer.add_theme_constant_override("margin_left",12)
+    footer.add_theme_constant_override("margin_right",12)
+    footer.add_theme_constant_override("margin_top",6)
+    footer.add_theme_constant_override("margin_bottom",10)
+    layout.add_child(footer)
+    var finish: Button = button("Fertig",footer,close_modal,false,true)
+    finish.name = "SettingsDoneSticky"
 
 func build_sound() -> void:
     sound_player = AudioStreamPlayer.new()

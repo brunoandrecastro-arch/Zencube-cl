@@ -37,6 +37,8 @@ var details_label: Label
 var rank_label: Label
 var quote_label: Label
 var instructions: Label
+var result_review_button: Button
+var rules_button: Button
 var layer: Control
 var menu_dialog: ConfirmationDialog
 var world_music: AudioStreamPlayer
@@ -387,7 +389,10 @@ func build_interface() -> void:
     row.add_theme_constant_override("separation",6)
     column.add_child(row)
     action(row,Z("Neue Partie"),show_mode_picker)
-    action(row,Z("Regeln ansehen"),show_rules)
+    rules_button = action(row,Z("Regeln ansehen"),show_rules)
+    result_review_button = action(row,_result_button_label(),_reopen_finished_result)
+    result_review_button.name = "ShowFinishedResult"
+    result_review_button.hide()
     var realm_actions: HBoxContainer = HBoxContainer.new()
     realm_actions.add_theme_constant_override("separation",6)
     column.add_child(realm_actions)
@@ -459,6 +464,28 @@ func pname(owner: int) -> String:
     return str(names[clampi(owner,0,1)])
 func move_count() -> int:
     return Mode.CELLS - cells.count(0)
+func _review_board_label() -> String:
+    return "Spielfeld ansehen" if lang()=="de" else ("Ver tabuleiro" if lang()=="pt" else "Inspect board")
+
+func _result_button_label() -> String:
+    return "Ergebnis anzeigen" if lang()=="de" else ("Ver resultado" if lang()=="pt" else "Show result")
+
+func _review_finished_board(dialog: Control) -> void:
+    if result == 0: return
+    _close_realm_dialog(dialog)
+    touch_positions.clear()
+    touched_cell = -1
+    dragged = false
+    mouse_pressed = false
+
+func _reopen_finished_result() -> void:
+    if result == 0 or is_instance_valid(active_realm_dialog): return
+    if shadow_active: _shadow_result()
+    elif abyss_active: _abyss_result()
+    elif realm_story_active: _realm_story_result()
+    elif campaign_practice_active: _campaign_practice_result()
+    else: show_match_result()
+
 func draw() -> void:
     if cube == null: return
     var wins: Array = []
@@ -467,6 +494,10 @@ func draw() -> void:
             for c in line:
                 if not wins.has(c): wins.append(c)
     cube.repaint(cells,wins)
+    if is_instance_valid(rules_button): rules_button.visible = result == 0
+    if is_instance_valid(result_review_button): result_review_button.visible = result != 0
+    if is_instance_valid(instructions):
+        instructions.text = _campaign_phrase("Partie beendet · Drehen und zoomen","Match finished · Rotate and zoom","Partida terminada · Roda e amplia") if result != 0 else Z("Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen")
     rank_label.text = Realms.realm_name(realm_index(),lang())
     if quote_label != null: quote_label.text = realm_quote()
     if result == 3:
@@ -512,7 +543,7 @@ func _pick_position(pos: Vector2) -> int:
     return cube.pick(inside * 960.0)
 
 func cube_input(event: InputEvent) -> void:
-    if result != 0 or busy: return
+    if busy: return
     if event is InputEventScreenTouch:
         heard_touch = true
         if event.pressed:
@@ -526,7 +557,7 @@ func cube_input(event: InputEvent) -> void:
             var single: bool = touch_positions.size() == 1
             if single and not dragged and event.position.distance_to(touch_down) < 13.0:
                 var end_cell: int = _pick_position(event.position)
-                if touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
+                if result == 0 and touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
             touch_positions.erase(event.index)
             if touch_positions.is_empty(): touched_cell = -1
     elif event is InputEventScreenDrag:
@@ -558,7 +589,7 @@ func cube_input(event: InputEvent) -> void:
                 dragged = false
             elif not dragged and event.position.distance_to(touch_down) < 13.0:
                 var end_cell: int = _pick_position(event.position)
-                if touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
+                if result == 0 and touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
     elif event is InputEventMouseMotion and mouse_pressed and not heard_touch:
         if event.position.distance_to(touch_down) > 12.0: dragged = true
         if dragged: cube.rotate_cube(event.relative)
@@ -998,6 +1029,7 @@ func show_realms() -> void:
     text(body,L("subtitle"),15,Color("567b72"))
     text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
     # Story and boss progress live exclusively in Zen Realm Chronicles.
+    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true)
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -1043,6 +1075,10 @@ func _preview_mirror_shatter_qa() -> void:
     preview.present(Realms.REALM_ART[0],Realms.REALM_ART[1],
         Realms.realm_name(1,lang()),true,bool(data.settings.get("sound",true)),
         [world_music],lang())
+
+func _open_campaign_library_from_realms() -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_library()
 
 func _open_realm_chronicles_from_realms() -> void:
     # The button is inside a modal; close it before opening the book. Returning
@@ -1254,7 +1290,8 @@ func show_match_result() -> void:
     if not last_realm_awards.get("new_tasks",[]).is_empty():
         if Achievements.main_title(data,match_realm) != "—":
             text(info,L("rank") + ": " + Achievements.main_title(data,match_realm),15)
-    action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog),true)
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog))
     action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
 
@@ -1454,6 +1491,7 @@ func _realm_story_result() -> void:
     else:
         _realm_story_art(body,realm_story_stage,170)
     text(body,RealmStory.text_for(lang(),key),16)
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if won:
         action(body,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
     else:
@@ -1742,6 +1780,7 @@ func _abyss_result() -> void:
     var body: VBoxContainer = parts.box
     _abyss_add_art(body,190)
     text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if result == 1:
         action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_abyss_victory,true)
     else:
@@ -1919,6 +1958,7 @@ func _shadow_result() -> void:
     var body: VBoxContainer = parts.box
     _shadow_add_art(body,190)
     text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if result == 1:
         action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_shadow_victory,true)
     else:
@@ -2047,6 +2087,7 @@ func _campaign_practice_result() -> void:
             choir.play()
     text(body,_campaign_phrase("Abyss-Challenges: %d/3","Abyss challenges: %d/3","Desafios Abyss: %d/3") %
         Realm2.completed_count(Realm2.load_progress(),1),16,Color("#e8ddc5"))
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     action(body,_campaign_phrase("⚔ Noch eine Partie","⚔ Play Again","⚔ Jogar novamente"),_campaign_practice_begin_again,true)
     action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
     _open_realm_dialog(parts)
