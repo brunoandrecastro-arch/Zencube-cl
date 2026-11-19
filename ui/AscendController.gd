@@ -19,6 +19,7 @@ const SettingsTheme = preload("res://ui/ZenUiTestTheme.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
+const FinalSeries = preload("res://core/ZenFinalGuardianSeries.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
 var data: Dictionary = {}
@@ -644,18 +645,31 @@ func draw() -> void:
         rank_label.text = Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]
         quote_label.text = "Shadow Realm · 4×4"
         status_label.text = ("⚔ " + Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
-        details_label.text = "Shadow · " + str(move_count()) + "/96"
+        details_label.text = _guardian_series_score(shadow_progress) if shadow_index==2 else "Shadow · " + str(move_count()) + "/96"
     if abyss_active:
         rank_label.text = Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]
         quote_label.text = "Abyss of Memories · 4×4"
         status_label.text = ("⚔ " + Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
-        details_label.text = "Abyss · "+str(move_count())+"/96"
+        details_label.text = _guardian_series_score(abyss_progress) if abyss_index==2 else "Abyss · " + str(move_count()) + "/96"
     if realm_story_active:
         rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
         if result == 0:
             status_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage) if busy else RealmStory.text_for(lang(),"story")+" · "+str(move_count())+"/96"
         quote_label.text = RealmStory.text_for(lang(),"react_%d" % realm_story_stage)
         details_label.text = RealmStory.text_for(lang(),"skin")+" · "+str(move_count())+"/96"
+
+func _guardian_series_score(progress: Dictionary) -> String:
+    var tally: Dictionary = FinalSeries.score(progress)
+    return _campaign_phrase("Best of 3 · Kuze %d : %d Wächter","Best of 3 · Kuze %d : %d Guardian","Melhor de 3 · Kuze %d : %d Guardião") % [int(tally.player),int(tally.guardian)]
+
+func _guardian_series_panel(body: VBoxContainer, progress: Dictionary) -> void:
+    text(body,_guardian_series_score(progress),19,Color("#e5ca93"))
+    if FinalSeries.player_won(progress):
+        text(body,_campaign_phrase("Finaler Wächter besiegt","Final Guardian defeated","Guardião final derrotado"),15,Color("#c8e8b4"))
+    elif FinalSeries.guardian_won(progress):
+        text(body,_campaign_phrase("Serie verloren · Neuer Versuch","Series lost · Try again","Série perdida · Tenta novamente"),15)
+    else:
+        text(body,_campaign_phrase("Zwei Siege zum Weiterkommen","Win two rounds to continue","Vence duas rondas para continuar"),15)
 
 func _pick_position(pos: Vector2) -> int:
     if cube_surface == null or cube == null: return -1
@@ -1914,6 +1928,7 @@ func _abyss_intro() -> void:
         "Remember who you were – and why you still fight."
     ]
     text(body,opening[abyss_index],16,Color("#dfd4e5"))
+    if abyss_index==2: _guardian_series_panel(body,abyss_progress)
     var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
@@ -1942,8 +1957,12 @@ func _abyss_result() -> void:
     var body: VBoxContainer = parts.box
     _abyss_add_art(body,190)
     text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
+    if abyss_index==2: _guardian_series_panel(body,abyss_progress)
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
-    if result == 1:
+    if abyss_index==2 and not FinalSeries.player_won(abyss_progress):
+        var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if FinalSeries.guardian_won(abyss_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
+        action(body,"⚔ " + next_label,_abyss_retry,true)
+    elif result == 1:
         action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_abyss_victory,true)
     else:
         action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_abyss_retry,true)
@@ -1951,13 +1970,17 @@ func _abyss_result() -> void:
     _open_realm_dialog(parts)
 
 func _abyss_retry() -> void:
-    if not abyss_active: return
+    if not abyss_active or result==0: return
+    var candidate: Dictionary = abyss_progress.duplicate(true)
+    if abyss_index==2:
+        if not FinalSeries.start_next(candidate): return
+    else: candidate.game = {}
+    # Save the new board and the score in one atomic progress write.
+    var game: Dictionary = Abyss.begin_battle(candidate,abyss_index)
+    if game.is_empty() or not Abyss.save_progress(candidate): return
+    abyss_progress = candidate
     abyss_generation += 1
     match_generation += 1
-    abyss_progress.game = {}
-    if not Abyss.save_progress(abyss_progress): return
-    # This allocates a fresh 96-cell board and alternates the first player.
-    var game: Dictionary = Abyss.begin_battle(abyss_progress,abyss_index)
     cells = game.cells.duplicate()
     turn = int(game.turn)
     result = 0
@@ -1972,6 +1995,7 @@ func _abyss_retry() -> void:
 func _abyss_victory() -> void:
     if not abyss_active or result != 1: return
     if not Realm2.can_face_boss(1,abyss_index): return
+    if abyss_index==2 and not FinalSeries.player_won(abyss_progress): return
     if not Abyss.record_victory(abyss_progress,abyss_index): return
     abyss_generation += 1
     match_generation += 1
@@ -2098,6 +2122,7 @@ func _shadow_intro() -> void:
         "At the veil gate, patience is the final blade."
     ]
     text(body,opening[shadow_index],16,Color("#dfd4e5"))
+    if shadow_index==2: _guardian_series_panel(body,shadow_progress)
     var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
@@ -2126,8 +2151,12 @@ func _shadow_result() -> void:
     var body: VBoxContainer = parts.box
     _shadow_add_art(body,190)
     text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
+    if shadow_index==2: _guardian_series_panel(body,shadow_progress)
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
-    if result == 1:
+    if shadow_index==2 and not FinalSeries.player_won(shadow_progress):
+        var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if FinalSeries.guardian_won(shadow_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
+        action(body,"⚔ " + next_label,_shadow_retry,true)
+    elif result == 1:
         action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_shadow_victory,true)
     else:
         action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_shadow_retry,true)
@@ -2135,13 +2164,17 @@ func _shadow_result() -> void:
     _open_realm_dialog(parts)
 
 func _shadow_retry() -> void:
-    if not shadow_active: return
+    if not shadow_active or result==0: return
+    var candidate: Dictionary = shadow_progress.duplicate(true)
+    if shadow_index==2:
+        if not FinalSeries.start_next(candidate): return
+    else: candidate.game = {}
+    # Save the new board and the score in one atomic progress write.
+    var game: Dictionary = Shadow.begin_battle(candidate,shadow_index)
+    if game.is_empty() or not Shadow.save_progress(candidate): return
+    shadow_progress = candidate
     shadow_generation += 1
     match_generation += 1
-    shadow_progress.game = {}
-    if not Shadow.save_progress(shadow_progress): return
-    # This allocates a fresh 96-cell board and alternates the first player.
-    var game: Dictionary = Shadow.begin_battle(shadow_progress,shadow_index)
     cells = game.cells.duplicate()
     turn = int(game.turn)
     result = 0
@@ -2156,6 +2189,7 @@ func _shadow_retry() -> void:
 func _shadow_victory() -> void:
     if not shadow_active or result != 1: return
     if not Realm2.can_face_boss(0,shadow_index): return
+    if shadow_index==2 and not FinalSeries.player_won(shadow_progress): return
     if not Shadow.record_victory(shadow_progress,shadow_index): return
     shadow_generation += 1
     match_generation += 1

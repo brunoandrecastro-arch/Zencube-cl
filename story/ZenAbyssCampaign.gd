@@ -4,11 +4,12 @@ extends RefCounted
 ## Does not replace the existing Realm Chronicles save or unlock anything.
 const SAVE := "user://zencube_abyss_campaign_v1.json"
 const VERSION := 1
+const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const BOSS_IDS: Array[String] = ["memory_thief", "weeping_blade", "forgotten_shogun"]
 const BOSS_NAMES: Array[String] = ["The Memory Thief", "The Weeping Blade", "The Forgotten Shogun"]
 const GATES: Array[int] = [6, 15, 25]
 const CONTINUE_PAGES: Array[int] = [7, 16, 26]
-const BOT_LEVELS: Array[int] = [1, 2, 3] # Medium, Hard, Master
+const BOT_LEVELS: Array[int] = [1, 2, 2] # final guardian: fixed medium-high / Hard
 const ASSET_ROOT := "res://assets/abyss_of_memories/"
 
 static func page_path(page: int) -> String:
@@ -24,7 +25,7 @@ static func boss_music(index: int) -> String:
     return ASSET_ROOT + "audio/%s.mp3" % BOSS_IDS[index]
 
 static func defaults() -> Dictionary:
-    return {"version":VERSION,"page":1,"defeated":[false,false,false],"attempts":[0,0,0],"game":{},"completed":false}
+    return {"version":VERSION,"page":1,"defeated":[false,false,false],"attempts":[0,0,0],"game":{},"completed":false,"final_series":Series.defaults()}
 
 static func page_limit(data: Dictionary) -> int:
     var won: Array = data.get("defeated",[false,false,false])
@@ -56,11 +57,15 @@ static func load_progress() -> Dictionary:
             for mark in cells:
                 if int(mark) not in [0,1,2]: valid = false
             if valid: data.game = game.duplicate(true)
+    data.final_series = Series.clean(parsed.get("final_series",{}))
+    Series.settle(data)
     data.completed = bool(parsed.get("completed",false)) and bool(data.defeated[0]) and bool(data.defeated[1]) and bool(data.defeated[2])
     return data
 
 static func save_progress(data: Dictionary) -> bool:
+    Series.settle(data)
     var payload: Dictionary = {
+        "final_series":Series.score(data),
         "version":VERSION,"page":clampi(int(data.get("page",1)),1,page_limit(data)),
         "defeated":data.get("defeated",[false,false,false]),
         "attempts":data.get("attempts",[0,0,0]),"game":data.get("game",{}),
@@ -102,6 +107,11 @@ static func record_victory(data: Dictionary, index: int) -> bool:
     ## Call ONLY after a validated victory in the existing native 4x4 engine.
     var action: Dictionary = next_action(data)
     if action.get("type") != "battle" or int(action.get("boss",-1)) != index: return false
+    var battle: Dictionary = data.get("game",{})
+    if int(battle.get("boss",-1)) != index or int(battle.get("result",0)) != 1: return false
+    if index==Series.FINAL_BOSS:
+        Series.settle(data)
+        if not Series.player_won(data): return false
     var won: Array = data.get("defeated",[false,false,false])
     won[index] = true
     data.defeated = won
@@ -201,19 +211,9 @@ static func choose_move(cells: Array, lines: Array, index: int, last_human: int 
         var mirror: int = face * 16 + (3-row)*4 + (3-col)
         if int(cells[mirror]) == 0 and randf() < 0.35: return mirror
     var baseline: int = ZenAscendRealmBot.next_move(cells,lines,2,BOT_LEVELS[boss],false)
-    if boss != 2: return baseline
-    # The Shogun prefers a move with future double-threat pressure when
-    # tactical strength is comparable. Master is still the baseline.
-    var best: int = baseline
-    var highest: float = -1e20
-    for candidate in range(cells.size()):
-        if int(cells[candidate]) != 0: continue
-        var value: float = ZenAscendRealmBot._score(cells,lines,2,candidate)
-        value += ZenAscendRealmBot._fork_score(cells,lines,2,candidate)
-        if value > highest:
-            highest = value
-            best = candidate
-    return best
+    # The final guardian uses the agreed Hard policy in every round,
+    # without the former Master-strength extra fork search.
+    return baseline
 
 static func finish_chapter(data: Dictionary) -> bool:
     var won: Array = data.get("defeated",[false,false,false])

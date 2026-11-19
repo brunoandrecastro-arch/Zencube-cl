@@ -1,6 +1,7 @@
 extends SceneTree
 # Campaign 2.0 Shadow Realm headless native integration checks.
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
+const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const Reader = preload("res://story/ZenShadowReader.gd")
 const Original = preload("res://story/ZenRealmChronicles.gd")
 var failures: int = 0
@@ -72,6 +73,23 @@ func run() -> void:
         check(int(retry.turn)!=int(game.turn),"starter alternates on retry "+str(index))
         retry.result = 1
         state.game = retry
+        check(Shadow.save_progress(state),"save actual round result")
+        if index==2:
+            check(not Shadow.record_victory(state,index),"first final round win keeps gate locked")
+            check(int(Series.score(Shadow.load_progress()).player)==1,"1:0 survives restart")
+            state = Shadow.load_progress()
+            check(Shadow.save_progress(state),"repeated save is idempotent")
+            check(int(Series.score(state).player)==1,"no duplicate round point")
+            check(Series.start_next(state),"advance series")
+            var second: Dictionary = Shadow.begin_battle(state,index)
+            check(int(second.turn)!=int(retry.turn),"alternate series starter")
+            second.result = 2
+            check(Shadow.save_progress(state),"save second round loss")
+            check(int(Series.score(state).guardian)==1,"1:1 allows decider")
+            check(Series.start_next(state),"third round")
+            var third: Dictionary = Shadow.begin_battle(state,index)
+            third.result = 1
+            check(Shadow.save_progress(state),"decider saved")
         check(Shadow.record_victory(state,index),"validated victory opens chapter "+str(index))
         check(int(Shadow.load_progress().page)==Shadow.CONTINUE_PAGES[index],"save resumes after boss "+str(index))
     check(Shadow.page_limit(state)==30,"all 30 Shadow pages unlock after three victories")
