@@ -32,6 +32,32 @@ func run() -> void:
     _backup(Shadow.SAVE)
     _backup(Original.SAVE)
     _backup(SaveManager.PATH)
+    check(Series.REALM_LEVELS==[1,2,3,2,4],"agreed fixed final guardian difficulty policy")
+    var fixture: Dictionary = Shadow.defaults()
+    fixture.defeated = [true,true,false]
+    fixture.page = Shadow.GATES[2]
+    var round_data: Dictionary = Shadow.begin_battle(fixture,2)
+    round_data.result = 3
+    Series.settle(fixture)
+    check(int(Series.score(fixture).player)==0 and int(Series.score(fixture).guardian)==0,"draw earns no series point")
+    check(Series.start_next(fixture),"draw may be replayed")
+    var first_loss: Dictionary = Shadow.begin_battle(fixture,2)
+    check(int(first_loss.turn)!=int(round_data.turn),"starter alternates after draw")
+    first_loss.result = 2
+    Series.settle(fixture)
+    check(Series.start_next(fixture),"one loss does not end series")
+    var second_loss: Dictionary = Shadow.begin_battle(fixture,2)
+    second_loss.result = 2
+    Series.settle(fixture)
+    check(Series.guardian_won(fixture),"two losses end series")
+    check(not Shadow.record_victory(fixture,2),"lost series cannot unlock story")
+    check(Series.start_next(fixture),"explicit retry of lost series")
+    check(int(Series.score(fixture).player)==0 and int(Series.score(fixture).guardian)==0,"retry starts at 0:0")
+    var retry_round: Dictionary = Shadow.begin_battle(fixture,2)
+    retry_round.result = 1
+    Series.settle(fixture)
+    Series.settle(fixture)
+    check(int(Series.score(fixture).player)==1,"count monotonic after restarting series")
     check(Shadow.BOSS_IDS==["mist_guardian","mirror_novice","veil_monk"],"preserve existing Shadow boss identities")
     check(Shadow.GATES==[4,8,15],"story breaks before revealed outcomes on pages 5,9,16")
     check(Shadow.CONTINUE_PAGES==[5,9,16],"resume Manhwa in correct order after wins")

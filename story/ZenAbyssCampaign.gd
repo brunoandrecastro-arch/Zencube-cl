@@ -9,7 +9,7 @@ const BOSS_IDS: Array[String] = ["memory_thief", "weeping_blade", "forgotten_sho
 const BOSS_NAMES: Array[String] = ["The Memory Thief", "The Weeping Blade", "The Forgotten Shogun"]
 const GATES: Array[int] = [6, 15, 25]
 const CONTINUE_PAGES: Array[int] = [7, 16, 26]
-const BOT_LEVELS: Array[int] = [1, 2, 2] # final guardian: fixed medium-high / Hard
+const BOT_LEVELS: Array[int] = [1, 2, Series.REALM_LEVELS[1]] # final guardian: fixed medium-high / Hard
 const ASSET_ROOT := "res://assets/abyss_of_memories/"
 
 static func page_path(page: int) -> String:

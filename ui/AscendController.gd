@@ -663,6 +663,11 @@ func _guardian_series_score(progress: Dictionary) -> String:
     return _campaign_phrase("Best of 3 · Kuze %d : %d Wächter","Best of 3 · Kuze %d : %d Guardian","Melhor de 3 · Kuze %d : %d Guardião") % [int(tally.player),int(tally.guardian)]
 
 func _guardian_series_panel(body: VBoxContainer, progress: Dictionary) -> void:
+    var tally: Dictionary = FinalSeries.score(progress)
+    var current: Dictionary = progress.get("game",{})
+    var decisive: int = int(tally.player)+int(tally.guardian)
+    var round_number: int = clampi(decisive+(0 if int(current.get("result",0)) in [1,2] else 1),1,3)
+    text(body,_campaign_phrase("Runde %d / 3","Round %d / 3","Ronda %d / 3") % round_number,15,Color("#e5ca93"))
     text(body,_guardian_series_score(progress),19,Color("#e5ca93"))
     if FinalSeries.player_won(progress):
         text(body,_campaign_phrase("Finaler Wächter besiegt","Final Guardian defeated","Guardião final derrotado"),15,Color("#c8e8b4"))
