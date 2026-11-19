@@ -505,6 +505,8 @@ func show_ascend_menu() -> void:
     action(body,L("realms"),show_realms)
     action(body,L("challenges"),show_challenges)
     action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms)
+    if Realm2.qa_mode():
+        action(body,"Ember Boss · VFX Test",_show_ember_vfx_test)
     action(body,_achievements_label(),show_realm_titles)
     action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings).name = "AscendSettingsEntry"
     action(body,Z("Hauptmenü"),return_home)
@@ -1275,7 +1277,7 @@ func _add_abyss_realm_card(body: VBoxContainer) -> void:
     thumb.custom_minimum_size.y = 112
     thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
     column.add_child(thumb)
-    text(column,"Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),practice_chapter),15)
+    text(column,"Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),1),15)
     action(column,_campaign_phrase("Realm betreten","Enter Realm","Entrar no reino") if allowed else _campaign_phrase("Freischaltung ansehen","View unlock requirements","Ver requisitos"),_open_campaign_trials_from_realms.bind(1),allowed)
 
 func _open_campaign_trials_from_realms(chapter: int) -> void:
@@ -2551,7 +2553,7 @@ func _campaign_practice_result() -> void:
             add_child(choir)
             choir.finished.connect(choir.queue_free)
             choir.play()
-    text(body,_campaign_phrase("Abyss-Challenges: %d/3","Abyss challenges: %d/3","Desafios Abyss: %d/3") %
+    text(body,_campaign_phrase("Realm-Challenges: %d/3","Realm challenges: %d/3","Desafios do reino: %d/3") %
         Realm2.completed_count(Realm2.load_progress(),practice_chapter),16,Color("#e8ddc5"))
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if Realm2.final_boss_waiting(practice_chapter):
@@ -2610,3 +2612,26 @@ func _campaign_practice_back() -> void:
     sync_realm_music()
     draw()
     ZenChronicles.open_campaign_challenges(practice_chapter)
+
+func _show_ember_vfx_test() -> void:
+    if not Realm2.qa_mode(): return
+    var parts: Dictionary = _realm_dialog("Ember Boss · VFX Test",680)
+    var body: VBoxContainer = parts.box
+    text(body,_campaign_phrase("Nur Vorschau – kein Spielstand wird verändert.","Preview only – no progress is changed.","Pré-visualização sem alterar o progresso."),14)
+    var frame: SubViewportContainer = SubViewportContainer.new()
+    frame.custom_minimum_size = Vector2(0,340)
+    frame.stretch = true
+    body.add_child(frame)
+    var view: SubViewport = SubViewport.new()
+    view.own_world_3d = true
+    view.transparent_bg = true
+    view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    frame.add_child(view)
+    var preview: AscendRenderer = AscendRenderer.new()
+    view.add_child(preview)
+    preview.set_boss_skin(3)
+    for i in range(3):
+        action(body,Ember.BOSS_NAMES[i],preview.set_boss_skin.bind(i+3))
+    action(body,"↻ 90°",preview.rotate_cube.bind(Vector2(196.35,0)))
+    action(body,_campaign_phrase("Zurück","Back","Voltar"),show_ascend_menu)
+    _open_realm_dialog(parts)
