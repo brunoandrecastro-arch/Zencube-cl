@@ -40,6 +40,11 @@ var quote_label: Label
 var instructions: Label
 var result_review_button: Button
 var rules_button: Button
+var new_match_button: Button
+var realms_nav_button: Button
+var challenges_nav_button: Button
+var achievements_nav_button: Button
+var ascend_subtitle: Label
 var layer: Control
 var menu_dialog: ConfirmationDialog
 var world_music: AudioStreamPlayer
@@ -208,6 +213,12 @@ func sync_realm_music(initial: bool = false) -> void:
         push_warning("Zen Ascend: realm soundtrack missing")
         return
     if world_music != null and world_music.stream == song:
+        if initial and is_instance_valid(realm_music_fade):
+            if realm_music_tween != null and realm_music_tween.is_running(): realm_music_tween.kill()
+            realm_music_fade.stop()
+            realm_music_fade.queue_free()
+            realm_music_fade = null
+            world_music.volume_db = -2.0
         if not world_music.playing:
             world_music.volume_db = -2.0
             world_music.play()
@@ -381,7 +392,7 @@ func build_interface() -> void:
     rank_label = text(title_box,"",27,Color("f9e7b7"))
     rank_label.add_theme_font_override("font",ZenType.heading())
     text(title_box,Z("Zen Ascend 4×4"),18,Color("e8d1a9"))
-    text(title_box,L("subtitle"),12,Color("d6bfa4"))
+    ascend_subtitle = text(title_box,L("subtitle"),12,Color("d6bfa4"))
     var scoreboard: PanelContainer = PanelContainer.new()
     scoreboard.add_theme_stylebox_override("panel",style(Color("fff1d9",0.95)))
     column.add_child(scoreboard)
@@ -410,7 +421,7 @@ func build_interface() -> void:
     var row: HBoxContainer = HBoxContainer.new()
     row.add_theme_constant_override("separation",6)
     column.add_child(row)
-    action(row,Z("Neue Partie"),show_mode_picker)
+    new_match_button = action(row,Z("Neue Partie"),show_mode_picker)
     rules_button = action(row,Z("Regeln ansehen"),show_rules)
     result_review_button = action(row,_result_button_label(),_reopen_finished_result)
     result_review_button.name = "ShowFinishedResult"
@@ -418,9 +429,9 @@ func build_interface() -> void:
     var realm_actions: HBoxContainer = HBoxContainer.new()
     realm_actions.add_theme_constant_override("separation",6)
     column.add_child(realm_actions)
-    action(realm_actions,L("realms"),show_realms)
-    action(realm_actions,L("challenges"),show_challenges,true)
-    action(realm_actions,_achievements_label(),show_realm_titles)
+    realms_nav_button = action(realm_actions,L("realms"),show_realms)
+    challenges_nav_button = action(realm_actions,L("challenges"),show_challenges,true)
+    achievements_nav_button = action(realm_actions,_achievements_label(),show_realm_titles)
     var quote_box: PanelContainer = PanelContainer.new()
     quote_box.add_theme_stylebox_override("panel",style(Color("302820",0.94),13))
     column.add_child(quote_box)
@@ -487,6 +498,14 @@ func _save_ascend_setting(key: String, value: Variant) -> void:
     SaveManager.save_data(data)
     if key=="music" or key=="music_mode" or key=="music_track":
         sync_realm_music(true)
+    if key=="language":
+        new_match_button.text = Z("Neue Partie")
+        rules_button.text = Z("Regeln ansehen")
+        result_review_button.text = _result_button_label()
+        realms_nav_button.text = L("realms")
+        challenges_nav_button.text = L("challenges")
+        achievements_nav_button.text = _achievements_label()
+        ascend_subtitle.text = L("subtitle")
     draw()
 
 func _save_ascend_name(index: int, value: String) -> void:
@@ -541,11 +560,11 @@ func show_ascend_settings() -> void:
     SettingsTheme.settings_picker(tracks)
     tracks.name = "AscendSettingsMusicTrack"
     tracks.add_item(MusicPolicy.base_label(lang()),99)
-    var names: Array = ["Zen-Garten (Original)","Klangschalen – Stiller Tempel","Handpan – Sanfter Rhythmus","Nebelpfad","Stein und Wasser","Regentropfen im Zen-Garten","Sternenlicht am Tempel"]
+    var names: Array = ["Zen-Garten (Original)","Klangschalen – Stiller Tempel","Handpan – Sanfter Rhythmus","Nebelpfad","Stein und Wasser","Regentropfen im Zen-Garten","Sternenlicht am Tempel","Whispers of the Ancient Forest","Echoes of a Forgotten Dream","The Path of Serenity","Where the Waters Sleep","Spirit of the Jade River","A Thousand Silent Skies","Tales Beneath the Golden Sun"]
     var selected: int = 0
     for id in [0,1,2,5,6,8,9,10,11,12,13]:
         if not ZenCollection.music_unlocked(data,id): continue
-        var label: String = Locale.translate(str(names[id]),lang()) if id<names.size() else ("Track %d" % id)
+        var label: String = Locale.translate(str(names[id]),lang())
         tracks.add_item(label,id)
         if MusicPolicy.mode(data)=="manual" and int(data.settings.get("music_track",7))==id: selected = tracks.item_count-1
     tracks.select(selected)
@@ -1827,6 +1846,9 @@ func start_abyss_battle() -> void:
         ZenChronicles.open_campaign_challenges(1,true)
         return
     abyss_active = true
+    shadow_active = false
+    campaign_practice_active = false
+    campaign_awards = []
     realm_story_active = false
     abyss_generation += 1
     match_generation += 1
@@ -2007,6 +2029,8 @@ func start_shadow_battle() -> void:
         ZenChronicles.open_campaign_challenges(0,true)
         return
     shadow_active = true
+    campaign_practice_active = false
+    campaign_awards = []
     realm_story_active = false
     abyss_active = false
     shadow_generation += 1

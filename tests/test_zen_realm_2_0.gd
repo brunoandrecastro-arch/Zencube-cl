@@ -71,6 +71,11 @@ func run() -> void:
     check(Realm2.completed_count(Realm2.load_progress(),0)==3,"read Shadow milestones from original 4x4 stats")
     check(Realm2.can_face_boss(0,2),"all three challenges unlock final Shadow boss")
     check(not Realm2.unlocked(1),"Shadow milestones without bosses never unlock Abyss")
+    var final_shadow: Dictionary = Shadow.defaults()
+    final_shadow.defeated = [true,true,false]
+    final_shadow.page = Shadow.GATES[2]
+    check(Shadow.save_progress(final_shadow),"seed final guardian location")
+    check(Realm2.final_boss_waiting(0),"final boss shortcut available at 3/3 and actual boss page")
     seed_story(0,false)
     check(not Realm2.unlocked(1),"no premature breakthrough before Finish Shadow chapter")
     seed_story(0,true)
@@ -118,6 +123,35 @@ func run() -> void:
         check(nav!=null and nav.call("is_open"),"returns to passive challenge overview")
         if nav!=null: nav.call("close_campaign_challenges")
         await process_frame
+        controller.call("show_rules")
+        var dialog: Node = controller.get("active_realm_dialog")
+        check(dialog!=null and dialog.find_child("AscendEntryChronicles",true,false)!=null,"first entry has direct Chronicles")
+        controller.call("show_ascend_menu")
+        dialog = controller.get("active_realm_dialog")
+        check(dialog!=null and dialog.find_child("AscendSettingsEntry",true,false)!=null,"4x4 menu opens Settings")
+        var board_before: Array = (controller.get("cells") as Array).duplicate()
+        controller.call("show_ascend_settings")
+        dialog = controller.get("active_realm_dialog")
+        check(dialog!=null and dialog.find_child("AscendSettingsLanguage",true,false)!=null,"native Settings language picker")
+        check(dialog!=null and dialog.find_child("AscendSettingsMusicTrack",true,false)!=null,"native Settings music picker")
+        controller.call("_save_ascend_setting","language","pt")
+        check(controller.get("cells")==board_before,"language settings do not reset board")
+        controller.call("_save_ascend_setting","music",true)
+        controller.call("_close_realm_dialog",dialog)
+        if nav!=null:
+            nav.call("open_shadow_reader")
+            var old_reader: Node = nav.get("_shadow_reader")
+            check(is_instance_valid(old_reader) and nav.call("campaign_audio_exclusive"),"Shadow owns exclusive music")
+            var scene_music: AudioStreamPlayer = controller.get("world_music")
+            check(is_instance_valid(scene_music) and not scene_music.playing,"scene music stops for Shadow")
+            nav.call("open_abyss_reader")
+            await process_frame
+            var abyss_reader: Node = nav.get("_abyss_reader")
+            check(is_instance_valid(abyss_reader) and nav.get("_story_audio_owner")==abyss_reader,"Abyss owns music after Shadow exit")
+            check(not scene_music.playing,"closing previous reader cannot restart scene music")
+            nav.call("close_abyss_reader")
+            await process_frame
+            check(not nav.call("campaign_audio_exclusive"),"closing final reader releases exclusive music")
         controller.queue_free()
         current_scene=old_scene
         await process_frame

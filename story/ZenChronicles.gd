@@ -699,6 +699,8 @@ func _resume_scene_music_if_free() -> void:
 
 func request_final_guardian(chapter: int) -> void:
     if not Realm2.final_boss_waiting(chapter): return
+    var scene: Node = get_tree().current_scene
+    if is_instance_valid(scene) and scene.has_method("move_count") and int(scene.call("move_count"))>0 and int(scene.get("result"))==0: return
     close_campaign_challenges()
     if chapter==0: request_shadow_battle()
     else: request_abyss_battle()
