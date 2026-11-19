@@ -1,6 +1,6 @@
 extends RefCounted
 ## Campaign 2.0 – independent, 30-page Ember Realm chapter.
-## Reuses the original Realm Chronicles first three bosses and their music.
+## Reuses the original Realm Chronicles Ember boss tactics and music.
 ## Does not modify existing Realm Chronicles progression, 4x4 unlocks or shop.
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const BossMusic = preload("res://core/ZenRealmBossMusic.gd")
@@ -8,11 +8,12 @@ const RealmMusic = preload("res://core/ZenRealmMusic.gd")
 const SAVE := "user://zencube_ember_campaign_v1.json"
 const VERSION := 1
 const Series = preload("res://core/ZenFinalGuardianSeries.gd")
+const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 const BOSS_IDS: Array[String] = ["ash_runner","banner_guardian","ember_high_priest"]
 const BOSS_NAMES: Array[String] = ["Ash Runner","Banner Keeper","High Priest of Embers"]
 const GATES: Array[int] = [8,14,26]
 const CONTINUE_PAGES: Array[int] = [9,15,27]
-const BOT_LEVELS: Array[int] = [2,2,3] # Shadow remains Medium
+const BOT_LEVELS: Array[int] = [2,2,3] # Hard, Hard, Master
 const ASSET_ROOT := "res://assets/ember_campaign/"
 const REALM_ART := "res://assets/ember_campaign/realm.webp"
 
@@ -127,7 +128,7 @@ static func begin_battle(data: Dictionary, index: int) -> Dictionary:
     return game
 
 static func choose_move(cells: Array, lines: Array, index: int, last_human: int = -1) -> int:
-    # The same authored bot logic and Medium tier as Realm Chronicles Shadow bosses.
+    if index==2: return RealmBot.next_move(cells,lines,2,3,false)
     return RealmStory.choose_move(cells,lines,clampi(index,0,2)+3,last_human)
 
 static func record_victory(data: Dictionary, index: int) -> bool:
