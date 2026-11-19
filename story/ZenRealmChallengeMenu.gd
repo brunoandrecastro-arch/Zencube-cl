@@ -134,7 +134,8 @@ func _play_bot() -> void:
 func _back() -> void:
     _chronicles().call("close_campaign_challenges")
     if chapter==0: _chronicles().call_deferred("open_shadow_reader")
-    else: _chronicles().call_deferred("open_abyss_reader")
+    elif chapter==1: _chronicles().call_deferred("open_abyss_reader")
+    else: _chronicles().call_deferred("open_ember_reader")
 
 func _library() -> void:
     _chronicles().call("close_campaign_challenges")
