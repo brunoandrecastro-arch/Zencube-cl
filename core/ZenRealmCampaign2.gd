@@ -116,10 +116,16 @@ static func story_finished(chapter: int) -> bool:
     var saved: Dictionary = Shadow.load_progress() if chapter==0 else Abyss.load_progress()
     return bool(saved.get("completed",false)) and int(saved.get("page",1))==30
 
-# Completing the illustrated epilogue remains separately saved; the final
-# guardian (not manual Realm selection or turning the last page) unlocks travel.
-static func can_unlock(bosses: int, challenges: int, _story_done: bool) -> bool:
-    return bosses==3 and challenges==3
+# The final win opens the remaining pages; Finish Chapter confirms travel.
+static func can_unlock(bosses: int, challenges: int, story_done: bool) -> bool:
+    return bosses==3 and challenges==3 and story_done
+
+static func final_boss_waiting(chapter: int) -> bool:
+    if not can_face_boss(chapter,2): return false
+    if bosses_won(chapter)!=2: return false
+    var progress: Dictionary = Shadow.load_progress() if chapter==0 else Abyss.load_progress()
+    var action: Dictionary = Shadow.next_action(progress) if chapter==0 else Abyss.next_action(progress)
+    return action.get("type")=="battle" and int(action.get("boss",-1))==2
 
 static func can_face_boss(chapter: int, boss: int) -> bool:
     if chapter not in [0,1] or boss not in [0,1,2]: return false
@@ -128,7 +134,8 @@ static func can_face_boss(chapter: int, boss: int) -> bool:
 
 static func ready(chapter: int) -> bool:
     if chapter not in [0,1] or not base_unlocked(): return false
-    return can_unlock(bosses_won(chapter),completed_count(load_progress(),chapter),story_finished(chapter))
+    # Preserve access already earned in Build 361, which recorded travel early.
+    return can_unlock(bosses_won(chapter),completed_count(load_progress(),chapter),story_finished(chapter) or already_entered(chapter))
 
 static func unlocked(chapter: int) -> bool:
     if not base_unlocked(): return false

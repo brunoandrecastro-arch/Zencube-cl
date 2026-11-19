@@ -64,6 +64,8 @@ var _shadow_launch_requested: bool = false
 var _campaign_menu: CanvasLayer
 var _campaign_challenge_requested: Dictionary = {}
 var _campaign_practice_requested: int = -1
+var _story_audio_owner: Node
+var _breakthrough_active: bool = false
 
 func _ready() -> void:
     layer = 90
@@ -670,6 +672,37 @@ func consume_realm_story_launch() -> bool:
     return result
 
 # An isolated reader, not a fifth normal 4x4 realm, with its own progress.
+func campaign_audio_exclusive() -> bool:
+    return _breakthrough_active or is_instance_valid(_story_audio_owner)
+
+func _suspend_scene_music() -> void:
+    var scene: Node = get_tree().current_scene
+    if is_instance_valid(scene) and scene.has_method("suspend_campaign_music"):
+        scene.call("suspend_campaign_music")
+
+func claim_story_audio(owner: Node) -> void:
+    if is_instance_valid(_story_audio_owner) and _story_audio_owner!=owner:
+        _story_audio_owner.call("stop_story_audio")
+    _story_audio_owner = owner
+    _suspend_scene_music()
+
+func release_story_audio(owner: Node) -> void:
+    if _story_audio_owner!=owner: return
+    _story_audio_owner = null
+    call_deferred("_resume_scene_music_if_free")
+
+func _resume_scene_music_if_free() -> void:
+    if campaign_audio_exclusive() or _shadow_launch_requested or _abyss_launch_requested: return
+    var scene: Node = get_tree().current_scene
+    if is_instance_valid(scene) and scene.has_method("resume_campaign_music"):
+        scene.call("resume_campaign_music")
+
+func request_final_guardian(chapter: int) -> void:
+    if not Realm2.final_boss_waiting(chapter): return
+    close_campaign_challenges()
+    if chapter==0: request_shadow_battle()
+    else: request_abyss_battle()
+
 func open_abyss_reader() -> void:
     if not Realm2.unlocked(1):
         _campaign_locked_screen(1)
@@ -686,6 +719,8 @@ func close_abyss_reader() -> void:
     if is_instance_valid(_abyss_reader):
         var old: CanvasLayer = _abyss_reader
         _abyss_reader = null
+        old.call("stop_story_audio")
+        release_story_audio(old)
         old.queue_free()
     if _quick_button != null and _screen == null:
         _quick_button.visible = _show_quick and not _campaign_board_active
@@ -723,6 +758,8 @@ func close_shadow_reader() -> void:
     if is_instance_valid(_shadow_reader):
         var old: CanvasLayer = _shadow_reader
         _shadow_reader = null
+        old.call("stop_story_audio")
+        release_story_audio(old)
         old.queue_free()
     if _quick_button != null and _screen == null:
         _quick_button.visible = _show_quick and not _campaign_board_active
@@ -805,14 +842,20 @@ func consume_campaign_practice_launch() -> int:
     _campaign_practice_requested = -1
     return chapter
 
-# Called only after confirming a real final boss victory on the result screen.
+# Only the chapter's Finish button may request this after page 30 and victory.
 func request_campaign_breakthrough(chapter: int) -> void:
-    if chapter not in [0,1] or not Realm2.ready(chapter): return
+    if _breakthrough_active or chapter not in [0,1] or not Realm2.ready(chapter): return
+    if not Realm2.story_finished(chapter): return
+    _breakthrough_active = true
+    _suspend_scene_music()
     close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     var already: bool = Realm2.already_entered(chapter)
-    if not Realm2.enter_next_realm(chapter): return
+    if not Realm2.enter_next_realm(chapter):
+        _breakthrough_active = false
+        call_deferred("_resume_scene_music_if_free")
+        return
     if already:
         _campaign_after_breakthrough(chapter)
         return
@@ -832,8 +875,10 @@ func request_campaign_breakthrough(chapter: int) -> void:
         str(settings.get("language","de")))
 
 func _campaign_after_breakthrough(chapter: int) -> void:
+    _breakthrough_active = false
     if chapter==0: open_abyss_reader()
     else: open_ember_campaign_preview()
+    call_deferred("_resume_scene_music_if_free")
 
 func open_ember_campaign_preview() -> void:
     if not Realm2.unlocked(2):

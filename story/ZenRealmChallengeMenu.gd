@@ -89,7 +89,10 @@ func _render() -> void:
     scroll.add_child(content)
     _label(content,"The Final Trial" if final_trial else "ZenCube 2.0 Realm",27,Ui.GOLD)
     _label(content,Campaign.REALM_NAMES[chapter],22,Ui.IVORY)
-    if final_trial:
+    var final_ready: bool = Campaign.final_boss_waiting(chapter)
+    if final_ready:
+        _label(content,t("Der letzte Wächter erwartet dich.","You have proven your strength and wisdom. The final guardian awaits.","O último guardião espera por ti."),17,Ui.GOLD)
+    elif final_trial:
         _label(content,t("Du bist noch nicht bereit für den letzten Wächter. Schließe die verbleibenden Prüfungen dieses Realms ab.","You are not yet ready to face the final guardian. Complete the remaining trials of this realm.","Ainda não estás preparado para enfrentar o último guardião. Completa as provas restantes deste reino."),17,Ui.IVORY)
     _label(content,t("Automatisch durch 4×4-Partien gegen den Zen-Bot","Earned automatically in regular 4×4 matches against the Zen-Bot","Conquistados automaticamente em partidas 4×4 contra o Zen-Bot"),14,Ui.IVORY)
     var cleared: int = Campaign.completed_count(Campaign.load_progress(),chapter)
@@ -106,13 +109,23 @@ func _render() -> void:
         _label(details,("✓  " if done else "◇  ") + Campaign.task_title(chapter,i,locale),18,Ui.GOLD)
         _label(details,Campaign.task_description(chapter,i,locale),14,Ui.IVORY)
     _label(content,t("Nicht antippen: Der Fortschritt wird automatisch gezählt.","These are milestones, not selectable puzzle battles.","São objetivos automáticos, não puzzles selecionáveis."),13,Color("#b6c9b9"))
-    _button(content,t("⚔ Gegen Zen-Bot spielen","⚔ Play Zen-Bot","⚔ Jogar contra o Zen-Bot"),_play_bot,true)
+    if final_ready:
+        var final_button: Button = _button(content,t("⚔ Finalen Boss betreten","⚔ Enter Final Boss","⚔ Enfrentar o chefe final"),_enter_final_boss,true)
+        final_button.name = "Campaign2EnterFinalBoss"
+        final_button.add_theme_stylebox_override("normal",Ui.frame(Color("#b99657"),16))
+        final_button.add_theme_color_override("font_color",Ui.NIGHT)
+    elif cleared==3 and defeated<3:
+        _button(content,t("Geschichte fortsetzen","Continue Story","Continuar história"),_back,true)
+    _button(content,t("⚔ Gegen Zen-Bot spielen","⚔ Play Zen-Bot","⚔ Jogar contra o Zen-Bot"),_play_bot,not final_ready)
     if Campaign.ready(chapter):
         _label(content,t("✓ Alle Bosse und Challenges geschafft. Der nächste Realm ist frei!","✓ All bosses and challenges complete. Next realm unlocked!","✓ Todos os chefes e desafios concluídos. Novo reino desbloqueado!"),16,Color("#c3f0bb"))
     elif Campaign.story_finished(chapter):
         _label(content,t("Für den nächsten Realm brauchst du 3 Bosssiege UND 3 Challenges.","The next realm requires 3 boss victories AND 3 challenges.","O próximo reino exige 3 vitórias contra chefes E 3 desafios."),14,Ui.IVORY)
     _button(content,t("‹ Zurück zum Manhwa","‹ Back to Manhwa","‹ Voltar ao Manhwa"),_back)
     _button(content,t("Zur Bibliothek","Library","Biblioteca"),_library)
+
+func _enter_final_boss() -> void:
+    _chronicles().call("request_final_guardian",chapter)
 
 func _play_bot() -> void:
     _chronicles().call("close_campaign_challenges")

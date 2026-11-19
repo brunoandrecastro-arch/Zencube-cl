@@ -2085,8 +2085,21 @@ func music_preview() -> void:
             if is_instance_valid(music_player) and not bool(data.settings.get("music", false)):
                 music_player.stop()
         )
+func suspend_campaign_music() -> void:
+    if music_transition != null and music_transition.is_running(): music_transition.kill()
+    for player in [music_player,music_fade_player,music_preview_player]:
+        if is_instance_valid(player):
+            player.stop()
+            player.stream_paused = false
+
+func resume_campaign_music() -> void:
+    sync_music()
+
 func sync_music() -> void:
     if music_player == null or data == null: return
+    if ZenChronicles.campaign_audio_exclusive():
+        suspend_campaign_music()
+        return
     var chosen: int = MusicPolicy.selected_track(data)
     if not bool(data.settings.get("music", false)):
         if music_transition != null and music_transition.is_running():

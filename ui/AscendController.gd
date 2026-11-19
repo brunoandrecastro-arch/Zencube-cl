@@ -15,6 +15,7 @@ const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
+const SettingsTheme = preload("res://ui/ZenUiTestTheme.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
@@ -177,7 +178,25 @@ func desired_realm_stream() -> AudioStream:
 func start_world_music() -> void:
     sync_realm_music(true)
 
+func suspend_campaign_music() -> void:
+    if realm_music_tween != null and realm_music_tween.is_running(): realm_music_tween.kill()
+    if is_instance_valid(world_music):
+        world_music.stop()
+        world_music.stream_paused = false
+    if is_instance_valid(realm_music_fade):
+        realm_music_fade.stop()
+        realm_music_fade.queue_free()
+        realm_music_fade = null
+
+func resume_campaign_music() -> void:
+    sync_realm_music(true)
+
 func sync_realm_music(initial: bool = false) -> void:
+    if ZenChronicles.campaign_audio_exclusive():
+        suspend_campaign_music()
+        return
+    if shadow_active or abyss_active or realm_story_active or campaign_practice_active:
+        initial = true
     if not bool(data.settings.get("music", false)):
         if realm_music_tween != null and realm_music_tween.is_running():
             realm_music_tween.kill()
@@ -189,7 +208,9 @@ func sync_realm_music(initial: bool = false) -> void:
         push_warning("Zen Ascend: realm soundtrack missing")
         return
     if world_music != null and world_music.stream == song:
-        if not world_music.playing: world_music.play()
+        if not world_music.playing:
+            world_music.volume_db = -2.0
+            world_music.play()
         return
     if realm_music_tween != null and realm_music_tween.is_running():
         realm_music_tween.kill()
@@ -457,7 +478,85 @@ func show_ascend_menu() -> void:
     action(body,L("challenges"),show_challenges)
     action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms)
     action(body,_achievements_label(),show_realm_titles)
+    action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings).name = "AscendSettingsEntry"
     action(body,Z("Hauptmenü"),return_home)
+    _open_realm_dialog(parts)
+
+func _save_ascend_setting(key: String, value: Variant) -> void:
+    data.settings[key] = value
+    SaveManager.save_data(data)
+    if key=="music" or key=="music_mode" or key=="music_track":
+        sync_realm_music(true)
+    draw()
+
+func _save_ascend_name(index: int, value: String) -> void:
+    var default_name: String = "Du" if index==0 else "Spieler 2"
+    var localized: String = Locale.translate(default_name,lang())
+    var cleaned: String = value.strip_edges()
+    if cleaned==localized and str(data.settings.names[index])==default_name: return
+    var names: Array = data.settings.names.duplicate()
+    names[index] = default_name if cleaned.is_empty() else cleaned
+    _save_ascend_setting("names",names)
+
+func show_ascend_settings() -> void:
+    var parts: Dictionary = _realm_dialog(_campaign_phrase("Einstellungen","Settings","Definições"),700)
+    var body: VBoxContainer = parts.box
+    for i in range(2):
+        var index: int = i
+        text(body,_campaign_phrase("Spielername","Player name","Nome do jogador")+" "+str(i+1),15)
+        var field: LineEdit = LineEdit.new()
+        field.name = "AscendSettingsName%d" % i
+        field.max_length = 24
+        var stored: String = str(data.settings.names[i])
+        field.text = Locale.translate(stored,lang()) if stored==("Du" if i==0 else "Spieler 2") else stored
+        SettingsTheme.settings_field(field)
+        body.add_child(field)
+        field.text_submitted.connect(func(value: String): _save_ascend_name(index,value))
+        field.focus_exited.connect(func(): _save_ascend_name(index,field.text))
+    text(body,_campaign_phrase("Sprache","Language","Idioma"),15)
+    var languages: OptionButton = OptionButton.new()
+    languages.name = "AscendSettingsLanguage"
+    SettingsTheme.settings_picker(languages)
+    for label in ["Deutsch","English","Português"]: languages.add_item(label)
+    languages.select(maxi(0,["de","en","pt"].find(lang())))
+    body.add_child(languages)
+    languages.item_selected.connect(func(index: int):
+        _save_ascend_setting("language",["de","en","pt"][index])
+        call_deferred("show_ascend_settings"))
+    var toggles: Array = [
+        ["music",_campaign_phrase("Musik","Music","Música"),false],
+        ["sound",_campaign_phrase("Soundeffekte","Sound effects","Efeitos sonoros"),true],
+        ["haptics",_campaign_phrase("Vibration","Vibration","Vibração"),true]]
+    for entry in toggles:
+        var key: String = str(entry[0])
+        var toggle: CheckButton = CheckButton.new()
+        toggle.name = "AscendSettings_"+key
+        SettingsTheme.settings_switch(toggle)
+        toggle.text = str(entry[1])
+        toggle.button_pressed = bool(data.settings.get(key,entry[2]))
+        body.add_child(toggle)
+        toggle.toggled.connect(func(enabled: bool): _save_ascend_setting(key,enabled))
+    text(body,_campaign_phrase("Musiktitel","Music track","Faixa musical"),15)
+    var tracks: OptionButton = OptionButton.new()
+    SettingsTheme.settings_picker(tracks)
+    tracks.name = "AscendSettingsMusicTrack"
+    tracks.add_item(MusicPolicy.base_label(lang()),99)
+    var names: Array = ["Zen-Garten (Original)","Klangschalen – Stiller Tempel","Handpan – Sanfter Rhythmus","Nebelpfad","Stein und Wasser","Regentropfen im Zen-Garten","Sternenlicht am Tempel"]
+    var selected: int = 0
+    for id in [0,1,2,5,6,8,9,10,11,12,13]:
+        if not ZenCollection.music_unlocked(data,id): continue
+        var label: String = Locale.translate(str(names[id]),lang()) if id<names.size() else ("Track %d" % id)
+        tracks.add_item(label,id)
+        if MusicPolicy.mode(data)=="manual" and int(data.settings.get("music_track",7))==id: selected = tracks.item_count-1
+    tracks.select(selected)
+    body.add_child(tracks)
+    tracks.item_selected.connect(func(index: int):
+        var id: int = tracks.get_item_id(index)
+        data.settings.music_mode = "base" if id==99 else "manual"
+        if id!=99: data.settings.music_track = id
+        SaveManager.save_data(data)
+        sync_realm_music(true))
+    action(body,_campaign_phrase("Fertig","Done","Concluído"),_close_realm_dialog.bind(parts.dialog),true)
     _open_realm_dialog(parts)
 
 func pname(owner: int) -> String:
@@ -855,6 +954,7 @@ func show_rules() -> void:
     text(body,Z("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1)."),15)
     text(body,Z("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert."),15)
     action(body,Z("Neue Partie"),_start_picker_after_rules.bind(parts.dialog),true)
+    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true).name = "AscendEntryChronicles"
     _open_realm_dialog(parts)
 
 func _start_picker_after_rules(dialog: Control) -> void:
@@ -875,6 +975,7 @@ func show_mode_picker() -> void:
     text(body,"Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),18,Color("f4dfbd"))
     action(body,"Play Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),_start_realm_match.bind(true,fixed_level,dialog),true)
     action(body,Z("Zu zweit spielen"),_start_realm_match.bind(false,0,dialog))
+    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true).name = "AscendEntryChronicles"
     _open_realm_dialog(parts)
 
 func _start_realm_match(bot: bool, level: int, dialog: Control) -> void:
@@ -1323,6 +1424,10 @@ func show_match_result() -> void:
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog))
     if against_bot and match_realm==0:
+        if Realm2.final_boss_waiting(0):
+            action(body,_campaign_phrase("⚔ Finalen Boss betreten","⚔ Enter Final Boss","⚔ Enfrentar o chefe final"),_enter_campaign_final_guardian.bind(0),true)
+        elif Realm2.completed_count(Realm2.load_progress(),0)==3 and Realm2.bosses_won(0)<3:
+            action(body,_campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_open_campaign_story_from_match.bind(0),true)
         action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_open_campaign_trials_from_realms.bind(0))
     action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
@@ -1845,7 +1950,6 @@ func _abyss_retry() -> void:
 func _abyss_victory() -> void:
     if not abyss_active or result != 1: return
     if not Realm2.can_face_boss(1,abyss_index): return
-    var final_boss: bool = abyss_index==2
     if not Abyss.record_victory(abyss_progress,abyss_index): return
     abyss_generation += 1
     match_generation += 1
@@ -1853,9 +1957,7 @@ func _abyss_victory() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     # No glass-shatter after ordinary boss victories; the Manhwa resumes.
     # Glass and breakthrough sound are exclusively for actual Realm entry.
-    _abyss_back_to_reader(not final_boss)
-    if final_boss:
-        ZenChronicles.call_deferred("request_campaign_breakthrough",1)
+    _abyss_back_to_reader()
 
 func _abyss_menu() -> void:
     if not abyss_active: return
@@ -1887,9 +1989,9 @@ func _abyss_back_to_reader(open_reader: bool = true) -> void:
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
     ZenChronicles.set_campaign_board_active(false)
-    sync_realm_music()
     draw()
     if open_reader: ZenChronicles.open_abyss_reader()
+    else: sync_realm_music(true)
 
 # -------- Campaign 2.0: Shadow native 4x4 battles and story handoff --------
 func start_shadow_battle() -> void:
@@ -2030,7 +2132,6 @@ func _shadow_retry() -> void:
 func _shadow_victory() -> void:
     if not shadow_active or result != 1: return
     if not Realm2.can_face_boss(0,shadow_index): return
-    var final_boss: bool = shadow_index==2
     if not Shadow.record_victory(shadow_progress,shadow_index): return
     shadow_generation += 1
     match_generation += 1
@@ -2038,9 +2139,7 @@ func _shadow_victory() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     # The Veil dissolves quietly. Epic glass fracture is reserved for
     # Shadow → Abyss and Abyss → Ember after all 3+3 requirements.
-    _shadow_back_to_reader(not final_boss)
-    if final_boss:
-        ZenChronicles.call_deferred("request_campaign_breakthrough",0)
+    _shadow_back_to_reader()
 
 func _shadow_menu() -> void:
     if not shadow_active: return
@@ -2072,9 +2171,9 @@ func _shadow_back_to_reader(open_reader: bool = true) -> void:
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
     ZenChronicles.set_campaign_board_active(false)
-    sync_realm_music()
     draw()
     if open_reader: ZenChronicles.open_shadow_reader()
+    else: sync_realm_music(true)
 
 
 # ---- Zen Realm Chronicles: NORMAL Abyss bot matches, not puzzles ----
@@ -2153,9 +2252,23 @@ func _campaign_practice_result() -> void:
     text(body,_campaign_phrase("Abyss-Challenges: %d/3","Abyss challenges: %d/3","Desafios Abyss: %d/3") %
         Realm2.completed_count(Realm2.load_progress(),1),16,Color("#e8ddc5"))
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    if Realm2.final_boss_waiting(1):
+        action(body,_campaign_phrase("⚔ Finalen Boss betreten","⚔ Enter Final Boss","⚔ Enfrentar o chefe final"),_enter_campaign_final_guardian.bind(1),true)
+    elif Realm2.completed_count(Realm2.load_progress(),1)==3 and Realm2.bosses_won(1)<3:
+        action(body,_campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_open_campaign_story_from_match.bind(1),true)
     action(body,_campaign_phrase("⚔ Noch eine Partie","⚔ Play Again","⚔ Jogar novamente"),_campaign_practice_begin_again,true)
     action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
     _open_realm_dialog(parts)
+
+func _enter_campaign_final_guardian(chapter: int) -> void:
+    if not Realm2.final_boss_waiting(chapter): return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.request_final_guardian(chapter)
+
+func _open_campaign_story_from_match(chapter: int) -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    if chapter==0: ZenChronicles.open_shadow_reader()
+    else: ZenChronicles.open_abyss_reader()
 
 func _campaign_practice_begin_again() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)

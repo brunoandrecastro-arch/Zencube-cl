@@ -20,7 +20,6 @@ var prev_button: Button
 var next_button: Button
 var challenge_button: Button
 var sound: AudioStreamPlayer
-var muted: Array[AudioStreamPlayer] = []
 var start_touch: Vector2 = Vector2.ZERO
 
 func _chronicles() -> Node:
@@ -148,14 +147,12 @@ func _turn(direction: int) -> void:
             _show_page()
         return
     if p >= 30:
-        if not bool(progress.get("completed",false)):
-            if Shadow.finish_chapter(progress): _show_page()
-        elif Realm2.ready(0):
-            _close()
-            _chronicles().call_deferred("open_abyss_reader")
-        else:
-            status.text = "Bosse %d/3 · Challenges %d/3: Beides wird benötigt." % [
-                Realm2.bosses_won(0),Realm2.completed_count(Realm2.load_progress(),0)]
+        if Realm2.bosses_won(0)!=3 or Realm2.completed_count(Realm2.load_progress(),0)!=3:
+            status.text = "Bosses %d/3 · Challenges %d/3" % [Realm2.bosses_won(0),Realm2.completed_count(Realm2.load_progress(),0)]
+            return
+        if not bool(progress.get("completed",false)) and not Shadow.finish_chapter(progress): return
+        # Keep ownership until the ceremony claims silence; do not resume old music.
+        _chronicles().call("request_campaign_breakthrough",0)
         return
     var action: Dictionary = Shadow.next_action(progress)
     if action.get("type") == "battle":
@@ -183,32 +180,19 @@ func _input(event: InputEvent) -> void:
         else:
             var delta: Vector2 = event.position-start_touch
             if absf(delta.x) > 68 and absf(delta.x) > absf(delta.y)*1.4:
+                if delta.x < 0 and int(progress.get("page",1))==30: return
                 _turn(1 if delta.x < 0 else -1)
                 get_viewport().set_input_as_handled()
     elif event is InputEventKey and event.pressed and not event.echo:
-        if event.keycode == KEY_RIGHT: _turn(1)
+        if event.keycode == KEY_RIGHT:
+            if int(progress.get("page",1))<30: _turn(1)
         elif event.keycode == KEY_LEFT: _turn(-1)
         elif event.keycode == KEY_ESCAPE: _return_library()
         else: return
         get_viewport().set_input_as_handled()
 
 func _start_audio() -> void:
-    var scene: Node = get_tree().current_scene
-    if scene != null:
-        var props: Array = scene.get_property_list()
-        for key in ["music_player","music_fade_player","world_music","realm_music_fade"]:
-            var known: bool = false
-            for prop in props:
-                if str(prop.get("name","")) == key:
-                    known = true
-                    break
-            if known:
-                var node: Variant = scene.get(key)
-                if node is AudioStreamPlayer:
-                    var player: AudioStreamPlayer = node
-                    if player.playing and not player.stream_paused:
-                        player.stream_paused = true
-                        muted.append(player)
+    _chronicles().call("claim_story_audio",self)
     var saved: Dictionary = SaveManager.load_data()
     if bool(saved.get("settings",{}).get("music",false)):
         var stream: AudioStream = Shadow.story_stream()
@@ -219,11 +203,13 @@ func _start_audio() -> void:
             add_child(sound)
             sound.play()
 
-func _exit_tree() -> void:
+func stop_story_audio() -> void:
     if is_instance_valid(sound): sound.stop()
-    for player in muted:
-        if is_instance_valid(player): player.stream_paused = false
-    muted.clear()
+
+func _exit_tree() -> void:
+    stop_story_audio()
+    var nav: Node = get_tree().root.get_node_or_null("ZenChronicles")
+    if is_instance_valid(nav): nav.call("release_story_audio",self)
 
 func _return_library() -> void:
     _close()
