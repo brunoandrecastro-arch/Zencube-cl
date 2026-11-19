@@ -82,6 +82,24 @@ jobs:
           else
             echo "::warning::Final arena ZIP missing; source tests can run, but final APK export requires it"
           fi
+      - name: Extract complete Ember Manhwa and portraits
+        if: github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import zipfile, pathlib
+          root = pathlib.Path("assets/ember_campaign")
+          expected = [root / "pages" / f"page_{n:02d}.webp" for n in range(1,31)]
+          expected += [root / "realm.webp"] + [root / "bosses" / (x+".webp") for x in ("ash_runner","banner_guardian","ember_high_priest")]
+          with zipfile.ZipFile("ZenCube_Ember_Media.zip") as z:
+              assert z.testzip() is None
+              for p in expected:
+                  data = z.read(p.as_posix())
+                  assert data[:4] == b"RIFF" and data[8:12] == b"WEBP", p
+                  p.parent.mkdir(parents=True, exist_ok=True)
+                  p.write_bytes(data)
+          print("Verified and extracted all 34 Ember images")
+          PY
       - name: Import project and check GDScript
         run: |
           "$GODOT" --headless --editor --import --quit
@@ -355,6 +373,19 @@ jobs:
       - name: Verify seven final arena textures inside APK
         if: env.ZENCUBE_REALM_2_0_TEST == 'true' && (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback')
         run: python3 tests/test_campaign2_arenas.py --apk build/ZenCube-3D.apk
+      - name: Verify 34 Ember images in APK
+        if: github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile("build/ZenCube-3D.apk") as apk:
+              names = set(apk.namelist())
+              paths = ["pages/page_%02d.webp" % n for n in range(1,31)] + ["realm.webp"] + ["bosses/"+b+".webp" for b in ("ash_runner","banner_guardian","ember_high_priest")]
+              for p in paths:
+                  base = "assets/assets/ember_campaign/"+p
+                  assert base in names or base+".import" in names, base
+          PY
       - name: Name ZenCube 2.0 Realm test APK
         if: env.ZENCUBE_REALM_2_0_TEST == 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-2.0-Realm.apk
