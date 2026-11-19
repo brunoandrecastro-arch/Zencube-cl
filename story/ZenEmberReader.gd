@@ -159,6 +159,10 @@ func _turn(direction: int) -> void:
         # Keep ownership until the ceremony claims silence; do not resume old music.
         _chronicles().call("request_campaign_breakthrough",2)
         return
+    if p == 20 and Realm2.completed_count(Realm2.load_progress(),2) < 3:
+        _close()
+        _chronicles().call_deferred("open_campaign_challenges",2,true)
+        return
     var action: Dictionary = Ember.next_action(progress)
     if action.get("type") == "battle":
         if int(action.boss)==2 and not Realm2.can_face_boss(2,2):
