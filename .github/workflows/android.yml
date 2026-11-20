@@ -280,6 +280,8 @@ jobs:
           timeout 60 "$GODOT" --headless --path . --script tests/test_result_screen.gd
       - name: Verify prequel Acts I–IV trials and independent progress
         run: timeout 100 "$GODOT" --headless --path . --script tests/test_zen_act_one.gd
+      - name: Verify Moon-to-Shadow 3×3/4×4 cinematic and replay-safe checkpoint
+        run: timeout 65 "$GODOT" --headless --path . --script tests/test_moon_shadow_transition.gd
       - name: Tactical simulations
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim
