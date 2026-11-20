@@ -278,8 +278,8 @@ jobs:
       - name: Premium result screen and simplified main menu (headless)
         run: |
           timeout 60 "$GODOT" --headless --path . --script tests/test_result_screen.gd
-      - name: Verify Act I master trial and independent progress
-        run: timeout 65 "$GODOT" --headless --path . --script tests/test_zen_act_one.gd
+      - name: Verify prequel Acts I–III trials and independent progress
+        run: timeout 100 "$GODOT" --headless --path . --script tests/test_zen_act_one.gd
       - name: Tactical simulations
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim

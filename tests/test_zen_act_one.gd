@@ -2,6 +2,7 @@ extends SceneTree
 
 const Act = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
+const ActThree = preload("res://story/ZenActThree.gd")
 var failures := 0
 var backups: Dictionary = {}
 
@@ -33,7 +34,7 @@ func play_result(target: int) -> BoardModel:
     return board
 
 func run() -> void:
-    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, SaveManager.PATH]:
+    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, SaveManager.PATH]:
         if FileAccess.file_exists(path):
             backups[path] = FileAccess.get_file_as_bytes(path)
             DirAccess.remove_absolute(path)
@@ -128,13 +129,40 @@ func run() -> void:
         check(ActTwo.load_progress().complete, "Act II completed")
         check(FileAccess.get_file_as_string(SaveManager.PATH)==regular_before, "Act II boss never inflates rank wins")
         check(Act.load_progress().complete, "Act I progress preserved")
+        check(not ActThree.unlocked(SaveManager.load_data()), "Act II boss does not count towards Medium wins")
+        var medium: Dictionary = SaveManager.load_data()
+        medium.stats.ai_wins[1] = 4
+        check(not ActThree.unlocked(medium), "four Medium wins insufficient")
+        medium.stats.ai_wins[1] = 5
+        check(ActThree.unlocked(medium), "Act II and five Medium wins unlock Act III")
+        if ActThree.media_ready():
+            check(SaveManager.save_data(medium), "seed regular Medium wins")
+            var medium_before: String = FileAccess.get_file_as_string(SaveManager.PATH)
+            reader.open_act_three()
+            for n in range(10): reader._act_one_turn(1)
+            reader._act_one_turn(1)
+            check(ActThree.max_page(ActThree.load_progress())==11, "Act III page 12 locked")
+            game.start_act_one_trial(3)
+            check(game.act_one_active and game.prequel_act==3 and game.board.cells.size()==54, "Aiko live 3x3 trial")
+            game.board = play_result(2)
+            game._act_one_result()
+            check(not ActThree.load_progress().won, "Aiko loss leaves gate closed")
+            game._act_one_retry()
+            game.board = play_result(1)
+            game._act_one_result()
+            game._act_one_continue()
+            check(reader._page_counter.text=="12 / 12", "Aiko victory resumes page twelve")
+            reader._act_one_turn(1)
+            check(ActThree.load_progress().complete, "Act III completed")
+            check(FileAccess.get_file_as_string(SaveManager.PATH)==medium_before, "Aiko victory never affects Classic rank or economy")
+            check(Act.load_progress().complete and ActTwo.load_progress().complete, "previous acts preserved")
     reader.close_chronicles()
     reader.open_act_one()
     check(reader._page_counter.text == "12 / 12", "saved victory does not require replay")
     reader.close_chronicles()
     game.queue_free()
     await process_frame
-    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, SaveManager.PATH]:
+    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, SaveManager.PATH]:
         if FileAccess.file_exists(path): DirAccess.remove_absolute(path)
         if backups.has(path):
             var file := FileAccess.open(path, FileAccess.WRITE)

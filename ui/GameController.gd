@@ -79,6 +79,7 @@ const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const ZenCampaign = preload("res://story/ZenCampaign.gd")
 const ActOne = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
+const ActThree = preload("res://story/ZenActThree.gd")
 var prequel_act: int = 1
 var prequel_model: Script = ActOne
 var act_one_active := false
@@ -2808,10 +2809,11 @@ func _act_one_title() -> String:
 func start_act_one_trial(act: int = 1) -> void:
     if act_one_active or zen_campaign_active or ceremony_active:
         return
-    if act not in [1,2]: return
+    if act not in [1,2,3]: return
     if act==2 and (not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready()): return
+    if act==3 and (not ActThree.unlocked(SaveManager.load_data()) or not ActThree.media_ready()): return
     prequel_act = act
-    prequel_model = ActTwo if act==2 else ActOne
+    prequel_model = ActThree if act==3 else (ActTwo if act==2 else ActOne)
     var progress: Dictionary = prequel_model.load_progress()
     if not bool(progress.reached) or bool(progress.acknowledged):
         return
@@ -2846,7 +2848,7 @@ func _act_one_save() -> bool:
 
 func _act_one_refresh(animate: int) -> void:
     world_title_label.text = _act_one_title()
-    world_quote_label.text = T(WORLD_QUOTES[1]) if prequel_act==2 else "The First Trial · The Roots of Peace"
+    world_quote_label.text = T(WORLD_QUOTES[prequel_act-1]) if prequel_act>=2 else "The First Trial · The Roots of Peace"
     rank_label.visible = true
     rank_label.text = "Kuze · X    /    O · " + _act_one_title()
     if board.winner == 1:
@@ -2956,7 +2958,8 @@ func _act_one_leave() -> void:
     act_one_classic_board = null
     act_one_progress = {}
     refresh(-1, false)
-    if prequel_act==2: chronicles.open_act_two()
+    if prequel_act==3: chronicles.open_act_three()
+    elif prequel_act==2: chronicles.open_act_two()
     else: chronicles.open_act_one()
 
 func _act_one_back() -> void:

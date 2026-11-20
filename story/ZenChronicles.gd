@@ -11,6 +11,7 @@ const MUTED = Color(0.75, 0.78, 0.77)
 const Campaign = preload("res://story/ZenCampaign.gd")
 const ActOne = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
+const ActThree = preload("res://story/ZenActThree.gd")
 var _prequel_act: int = 1
 var _prequel_model: Script = ActOne
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
@@ -295,6 +296,16 @@ func open_library() -> void:
             _make_label(campaign_ui("Reguläre Siege (Leicht): %d/3","Regular wins (Easy): %d/3","Vitórias normais (Fácil): %d/3") % ActTwo.easy_wins(classic),outer,14,GOLD)
         if not ActTwo.media_ready():
             _make_label(campaign_ui("Akt-II-Bilder noch nicht installiert","Act II artwork not installed yet","Imagens do Ato II ainda não instaladas"),outer,13,MUTED)
+        var act_three_ready: bool = ActThree.unlocked(classic) and ActThree.media_ready()
+        var act_three_button: Button = _make_button(("" if act_three_ready else "🔒 ") + "Mountain Temple · Act III — The Beautiful Imperfection",outer,open_act_three)
+        act_three_button.name = "ActThreeEntry"
+        act_three_button.disabled = not act_three_ready
+        if not bool(ActTwo.load_progress().complete):
+            _make_label(campaign_ui("Akt II abschließen","Finish Act II","Concluir o Ato II"),outer,13,MUTED)
+        if ActThree.medium_wins(classic)<5:
+            _make_label(campaign_ui("Reguläre Siege (Mittel): %d/5","Regular wins (Medium): %d/5","Vitórias normais (Médio): %d/5") % ActThree.medium_wins(classic),outer,14,GOLD)
+        if not ActThree.media_ready():
+            _make_label(campaign_ui("Akt-III-Bilder noch nicht installiert","Act III artwork not installed yet","Imagens do Ato III ainda não instaladas"),outer,13,MUTED)
     _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
     _make_label(campaign_ui("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",
         "4×4 · 3 bosses + 3 Realm challenges per chapter",
@@ -1065,8 +1076,21 @@ func open_act_two() -> void:
     _prequel_model = ActTwo
     _open_prequel_reader()
 
+func open_act_three() -> void:
+    if not ActThree.unlocked(SaveManager.load_data()) or not ActThree.media_ready():
+        open_library()
+        return
+    _prequel_act = 3
+    _prequel_model = ActThree
+    _open_prequel_reader()
+
+func _prequel_accessible() -> bool:
+    if _prequel_act==3: return ActThree.unlocked(SaveManager.load_data()) and ActThree.media_ready()
+    if _prequel_act==2: return ActTwo.unlocked(SaveManager.load_data()) and ActTwo.media_ready()
+    return _prequel_act==1
+
 func _open_prequel_reader() -> void:
-    if _prequel_act==2 and (not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready()):
+    if not _prequel_accessible():
         open_library()
         return
     _sync_language()
@@ -1079,7 +1103,8 @@ func _open_prequel_reader() -> void:
     var head := HBoxContainer.new()
     outer.add_child(head)
     _make_button("‹", head, open_library)
-    var title := _make_label("Act II · The Art of Balance" if _prequel_act==2 else "Act I · The Roots of Peace", head, 21, GOLD)
+    var titles: Array[String] = ["Act I · The Roots of Peace","Act II · The Art of Balance","Act III · The Beautiful Imperfection"]
+    var title := _make_label(titles[_prequel_act-1], head, 21, GOLD)
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _page_image = TextureRect.new()
@@ -1139,7 +1164,7 @@ func _act_one_turn(direction: int) -> void:
         _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
 
 func open_act_one_gate() -> void:
-    if _prequel_act==2 and (not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready()):
+    if not _prequel_accessible():
         open_library()
         return
     _act_one_progress = _prequel_model.load_progress()
