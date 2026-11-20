@@ -9,6 +9,7 @@ const GOLD = Color(0.86, 0.72, 0.47)
 const CREAM = Color(0.98, 0.94, 0.84)
 const MUTED = Color(0.75, 0.78, 0.77)
 const Campaign = preload("res://story/ZenCampaign.gd")
+const ActOne = preload("res://story/ZenActOne.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const AbyssReader = preload("res://story/ZenAbyssReader.gd")
 const ShadowReader = preload("res://story/ZenShadowReader.gd")
@@ -71,6 +72,9 @@ var _campaign_challenge_requested: Dictionary = {}
 var _campaign_practice_requested: int = -1
 var _story_audio_owner: Node
 var _breakthrough_active: bool = false
+var _act_one_progress: Dictionary = {}
+var _act_one_back_owned := false
+var _act_one_previous_back := true
 
 func _ready() -> void:
     layer = 90
@@ -263,6 +267,7 @@ func campaign_ui(de: String,en: String,pt: String) -> String:
     return de if _active_language=="de" else (pt if _active_language=="pt" else en)
 
 func open_library() -> void:
+    _act_one_release_back()
     _realm_story_from_realms = false
     _sync_language()
     _active_chapter = -1
@@ -273,6 +278,10 @@ func open_library() -> void:
     var heading := _make_label("ZEN REALM CHRONICLES", head, 24, GOLD)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
+    var active_game: Node = get_tree().current_scene
+    if active_game != null and active_game.has_method("start_act_one_trial"):
+        _make_label("Zen Chronicles · 3×3", outer, 18, GOLD)
+        _make_button("Zen / Zen Garden · Act I", outer, open_act_one)
     _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
     _make_label(campaign_ui("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",
         "4×4 · 3 bosses + 3 Realm challenges per chapter",
@@ -409,6 +418,7 @@ func _turn_page(dir: int) -> void:
     _update_page()
 
 func close_chronicles() -> void:
+    _act_one_release_back()
     _realm_story_from_realms = false
     _active_chapter = -1
     _screen_name = ""
@@ -428,6 +438,9 @@ func is_open() -> bool:
 
 func _input(event: InputEvent) -> void:
     if _screen == null:
+        return
+    if _screen_name.begins_with("act-one"):
+        _act_one_input(event)
         return
     # Godot's nested PanelContainers/TextureRects can intercept touch
     # gestures before ScrollContainer on Android. Drive this ONE chapter list
@@ -986,3 +999,151 @@ func open_realm_story_archive() -> void:
         _campaign_locked_screen(0)
         return
     open_realm_story_overview()
+
+# The prequel is independent of the original 3x3 campaign and 4x4 library.
+func _act_one_hold_back() -> void:
+    if not _act_one_back_owned:
+        _act_one_previous_back = get_tree().quit_on_go_back
+        get_tree().quit_on_go_back = false
+        _act_one_back_owned = true
+
+func _act_one_release_back() -> void:
+    if _act_one_back_owned:
+        get_tree().quit_on_go_back = _act_one_previous_back
+        _act_one_back_owned = false
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST and _act_one_back_owned:
+        _act_one_back()
+
+func _act_one_back() -> void:
+    if _screen_name == "act-one-gate":
+        open_act_one()
+    else:
+        open_library()
+
+func _act_one_input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and not event.echo:
+        if event.keycode == KEY_ESCAPE:
+            _act_one_back()
+            get_viewport().set_input_as_handled()
+        elif _screen_name == "act-one-reader" and event.keycode in [KEY_LEFT, KEY_RIGHT]:
+            _act_one_turn(1 if event.keycode == KEY_RIGHT else -1)
+            get_viewport().set_input_as_handled()
+    elif _screen_name == "act-one-reader" and event is InputEventScreenTouch:
+        if event.pressed:
+            _touch_start = event.position
+        else:
+            var distance: Vector2 = event.position - _touch_start
+            if absf(distance.x) > 70 and absf(distance.x) > absf(distance.y) * 1.3:
+                _act_one_turn(1 if distance.x < 0 else -1)
+                get_viewport().set_input_as_handled()
+
+func open_act_one() -> void:
+    _sync_language()
+    _act_one_progress = ActOne.load_progress()
+    _act_one_hold_back()
+    _active_chapter = -1
+    _screen_name = "act-one-reader"
+    var outer := _make_screen()
+    _screen.color = Color("#27251e")
+    var head := HBoxContainer.new()
+    outer.add_child(head)
+    _make_button("‹", head, open_library)
+    var title := _make_label("Act I · The Roots of Peace", head, 21, GOLD)
+    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _make_button("✕", head, close_chronicles)
+    _page_image = TextureRect.new()
+    _page_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    _page_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    _page_image.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _page_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    outer.add_child(_page_image)
+    var nav := HBoxContainer.new()
+    outer.add_child(nav)
+    _prev_button = _make_button(campaign_ui("‹ Zurück", "‹ Previous", "‹ Anterior"), nav, _act_one_turn.bind(-1))
+    _prev_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _page_counter = _make_label("", nav, 16, GOLD)
+    _page_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _page_counter.custom_minimum_size.x = 68
+    _next_button = _make_button("", nav, _act_one_turn.bind(1))
+    _next_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _act_one_update()
+
+func _act_one_update() -> void:
+    var page: int = clampi(int(_act_one_progress.page), 1, ActOne.max_page(_act_one_progress))
+    _act_one_progress.page = page
+    _page_image.texture = load(ActOne.page_path(page)) as Texture2D
+    _page_counter.text = "%02d / 12" % page
+    _prev_button.disabled = page == 1
+    _next_button.text = campaign_ui("Weiter ›", "Next ›", "Seguinte ›")
+    if page == 11 and ActOne.max_page(_act_one_progress) == 11:
+        _next_button.text = campaign_ui("Prüfung ›", "Trial ›", "Prova ›")
+    elif page == 12:
+        _next_button.text = campaign_ui("Abschließen", "Finish", "Concluir")
+
+func _act_one_turn(direction: int) -> void:
+    if _screen_name != "act-one-reader":
+        return
+    var page: int = int(_act_one_progress.page)
+    if direction > 0 and page == 11 and ActOne.max_page(_act_one_progress) == 11:
+        _act_one_progress.reached = true
+        if ActOne.save_progress(_act_one_progress):
+            open_act_one_gate()
+        else:
+            _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
+        return
+    if direction > 0 and page == 12:
+        _act_one_progress.complete = true
+        if ActOne.save_progress(_act_one_progress):
+            open_library()
+        else:
+            _act_one_progress.complete = false
+            _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
+        return
+    var old_page: int = page
+    _act_one_progress.page = clampi(page + direction, 1, ActOne.max_page(_act_one_progress))
+    if ActOne.save_progress(_act_one_progress):
+        _act_one_update()
+    else:
+        _act_one_progress.page = old_page
+        _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
+
+func open_act_one_gate() -> void:
+    _act_one_progress = ActOne.load_progress()
+    if not bool(_act_one_progress.reached) or bool(_act_one_progress.acknowledged):
+        open_act_one()
+        return
+    _act_one_hold_back()
+    _screen_name = "act-one-gate"
+    var outer := _make_screen()
+    _screen.color = Color("#27251e")
+    _make_button(campaign_ui("‹ Zurück zur Geschichte", "‹ Back to story", "‹ Voltar à história"), outer, open_act_one)
+    var config: Dictionary = ActOne.config()
+    _make_label(str(config.get("title", {}).get(_active_language, "The Zen Master")), outer, 26, GOLD)
+    _make_label(str(config.get("subtitle", {}).get(_active_language, "The First Trial")), outer, 20, CREAM)
+    var portrait := TextureRect.new()
+    portrait.texture = load(ActOne.REFERENCE) as Texture2D
+    portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    outer.add_child(portrait)
+    var saved_game: Dictionary = _act_one_progress.game
+    var dialogue: Dictionary = config.get("dialogue", {})
+    var message := str(dialogue.get("intro", "Before you go, one more game. Show me what you have learned."))
+    if bool(_act_one_progress.won):
+        message = str(dialogue.get("victory", "Well played, Kuze. Take the cube home. Return tomorrow."))
+    _make_label(message, outer, 20, CREAM)
+    _make_label("Kuze · X    /    O · " + str(config.get("title", {}).get(_active_language, "The Zen Master")), outer, 15, GOLD)
+    var action := campaign_ui("Prüfung beginnen", "Start trial", "Iniciar prova")
+    if not saved_game.is_empty():
+        action = campaign_ui("Prüfung fortsetzen", "Resume trial", "Retomar prova")
+    if bool(_act_one_progress.won):
+        action = campaign_ui("Zum Ergebnis", "View result", "Ver resultado")
+    _make_button(action, outer, _act_one_launch)
+
+func _act_one_launch() -> void:
+    var game: Node = get_tree().current_scene
+    if game != null and game.has_method("start_act_one_trial"):
+        game.call("start_act_one_trial")

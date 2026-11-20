@@ -12,10 +12,10 @@ jobs:
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
-      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' }}
-      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' }}
-      ZENCUBE_REALM_2_0_TEST: ${{ github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' }}
-      ZENCUBE_CELESTIAL_TEST: ${{ github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' }}
+      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
+      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
+      ZENCUBE_REALM_2_0_TEST: ${{ github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
+      ZENCUBE_CELESTIAL_TEST: ${{ (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -84,7 +84,7 @@ jobs:
             echo "::warning::Final arena ZIP missing; source tests can run, but final APK export requires it"
           fi
       - name: Extract complete Ember Manhwa and portraits
-        if: github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback'
+        if: (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120')
         shell: bash
         run: |
           python3 - <<'PY'
@@ -278,6 +278,8 @@ jobs:
       - name: Premium result screen and simplified main menu (headless)
         run: |
           timeout 60 "$GODOT" --headless --path . --script tests/test_result_screen.gd
+      - name: Verify Act I master trial and independent progress
+        run: timeout 65 "$GODOT" --headless --path . --script tests/test_zen_act_one.gd
       - name: Tactical simulations
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim
@@ -335,7 +337,7 @@ jobs:
           path: ~/.android/zencube-debug.keystore
           key: zencube-realm-2-0-debug-key-v1
       - name: Require verified final arena pack before Campaign 2.0 APK export
-        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback')
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && ((github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'))
         run: python3 tests/test_campaign2_arenas.py
       - name: Build debug APK
         run: bash scripts/build_android.sh
@@ -378,10 +380,10 @@ jobs:
           grep -F 'assets/assets/realm_boss_music/mist_guardian.ogg' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/veil_monk.ogg' <<< "$contents"
       - name: Verify seven final arena textures inside APK
-        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback')
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && ((github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'))
         run: python3 tests/test_campaign2_arenas.py --apk build/ZenCube-3D.apk
       - name: Verify 34 Ember images in APK
-        if: github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback'
+        if: (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120')
         shell: bash
         run: |
           python3 - <<'PY'
@@ -392,6 +394,18 @@ jobs:
               for p in paths:
                   base = "assets/assets/ember_campaign/"+p
                   assert base in names or base+".import" in names, base
+          PY
+      - name: Verify all Act I assets in APK
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile("build/ZenCube-3D.apk") as apk:
+              names = set(apk.namelist())
+              paths = ["pages/zen_chronicles_ch01_act01_%02d.png" % n for n in range(1, 13)] + ["references/zen_master_reference.png"]
+              for path in paths:
+                  base = "assets/story/act01/" + path
+                  assert base in names or base + ".import" in names, base
+              assert "assets/story/act01/zen_master_trial.json" in names
           PY
       - name: Verify Celestial assets in APK
         if: env.ZENCUBE_CELESTIAL_TEST == 'true'

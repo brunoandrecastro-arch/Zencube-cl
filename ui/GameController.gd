@@ -77,6 +77,14 @@ const ZMode = preload("res://core/ZenAscend.gd")
 const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const ZenCampaign = preload("res://story/ZenCampaign.gd")
+const ActOne = preload("res://story/ZenActOne.gd")
+var act_one_active := false
+var act_one_progress: Dictionary = {}
+var act_one_classic_board: BoardModel
+var act_one_view: Dictionary = {}
+var act_one_controls: HBoxContainer
+var act_one_result_button: Button
+var act_one_back_previous := true
 var zen_campaign_active: bool = false
 var zen_campaign_stage: int = 0
 var zen_campaign_progress: Dictionary = {}
@@ -377,6 +385,10 @@ func build_ui() -> void:
     zen_campaign_undo_button.add_theme_color_override("font_disabled_color", Color("d3c2a7"))
     button(_campaign_text("leave"), zen_campaign_controls, _zen_campaign_leave, true)
     zen_campaign_controls.hide()
+    act_one_controls = row(column)
+    act_one_result_button = button("Ergebnis anzeigen", act_one_controls, _act_one_result, true)
+    button("‹", act_one_controls, _act_one_leave, true)
+    act_one_controls.hide()
     var legend_panel = PanelContainer.new()
     var legend_style = theme_style(Color("30271f",0.89),9)
     legend_style.content_margin_top = 5
@@ -445,6 +457,10 @@ func apply_world() -> void:
     sync_music() # Auto-World theme follows the selected World.
 
 func refresh(animate: int = -1, save_classic: bool = true) -> void:
+    if act_one_active:
+        _act_one_refresh(animate)
+        return
+    if is_instance_valid(act_one_controls): act_one_controls.hide()
     if zen_campaign_active:
         _zen_campaign_refresh(animate)
         return
@@ -523,6 +539,9 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
     if save_classic and tutorial == null and not challenge_active: persist()
     if net_active: update_net()
 func persist() -> void:
+    if act_one_active:
+        _act_one_save()
+        return
     if zen_campaign_active:
         _zen_campaign_save_game()
         return
@@ -543,6 +562,10 @@ func notify_user(message: String) -> void:
     if help_text != null: help_text.text = toast
 func on_cell(cell: int) -> void:
     if cell < 0 or ceremony_active or (popup != null and not net_active): return
+    if act_one_active:
+        if board.winner == 0 and board.turn == 1 and not ai_running and not chronicles.is_open():
+            place(cell)
+        return
     if board.winner != 0 and not challenge_active: return
     if zen_campaign_active:
         if not _zen_campaign_bot_turn() and not ai_running and not chronicles.is_open():
@@ -560,7 +583,7 @@ func on_cell(cell: int) -> void:
     place(cell)
 func place(cell: int) -> void:
     if ceremony_active: return
-    if challenge_active and not zen_campaign_active:
+    if challenge_active and not zen_campaign_active and not act_one_active:
         challenge_try_cell(cell)
         return
     var placed_by_owner: int = board.current_owner()
@@ -570,6 +593,13 @@ func place(cell: int) -> void:
     renderer.selected = cell
     generation += 1
     play_sound(board.winner != 0)
+    if act_one_active:
+        if placed_by_owner == 0: vibrate_on_move()
+        if board.winner != 0 and not board.win_lines.is_empty(): focus_line(board.win_lines[0])
+        _act_one_save()
+        refresh(cell)
+        if board.winner != 0: _act_one_result()
+        return
     if zen_campaign_active:
         _zen_campaign_after_move(cell, placed_by_owner)
         return
@@ -618,6 +648,7 @@ func resolve_swap(accept: bool) -> void:
         generation += 1
         refresh()
 func new_game() -> void:
+    if act_one_active: return
     if zen_campaign_active: return
     ceremony_done_for_match = false
     completed_bot_level = -1
@@ -633,6 +664,7 @@ func new_game() -> void:
     renderer.reset_view()
     refresh()
 func confirm_new() -> void:
+    if act_one_active: return
     if zen_campaign_active: return
     if tutorial != null:
         load_tutorial()
@@ -647,6 +679,7 @@ func confirm_new() -> void:
         new_game()
     )
 func undo() -> void:
+    if act_one_active: return
     if zen_campaign_active:
         _zen_campaign_undo()
         return
@@ -675,10 +708,14 @@ func _process(delta: float) -> void:
         ai_running = false
         var turn_open: bool = not reading and popup == null and board.winner == 0 and not board.swap_pending
         var can_play := not zen_campaign_paused if zen_campaign_active else (not challenge_active and tutorial == null)
+        if act_one_active: can_play = not zen_campaign_paused and board.turn == 2
         if worker_generation == generation and turn_open and can_play:
             place(int(move))
         else:
             refresh(-1, false)
+    if act_one_active:
+        _act_one_tick()
+        return
     if zen_campaign_active:
         _zen_campaign_tick(delta)
         return
@@ -758,6 +795,14 @@ func close_modal() -> void:
         popup.queue_free()
         popup = null
 func open_menu() -> void:
+    if act_one_active:
+        if board.winner != 0:
+            _act_one_result()
+        else:
+            var trial_menu := _zen_campaign_story_box(_act_one_title())
+            premium_button(_act_one_ui("Fortsetzen", "Resume", "Retomar"), trial_menu, close_modal, true)
+            button(_act_one_ui("Zur Geschichte", "Back to story", "Voltar à história"), trial_menu, _act_one_leave, true)
+        return
     if zen_campaign_active:
         if board.winner != 0:
             _zen_campaign_present()
@@ -1206,6 +1251,9 @@ func restore_rank_music() -> void:
             sync_music()
 
 func show_result_screen() -> void:
+    if act_one_active:
+        _act_one_result()
+        return
     if zen_campaign_active: return
     # Called deferred after a real Classic match finishes. A new match cancels it.
     if challenge_active or tutorial != null or board.winner == 0 or popup != null:
@@ -2154,6 +2202,7 @@ func play_sound(win: bool) -> void:
 
 # The campaign borrows the view and the rules, and holds its own BoardModel.
 func start_zen_campaign() -> void:
+    if act_one_active: return
     if zen_campaign_active or ceremony_active:
         return
     chronicles.close_chronicles()
@@ -2389,7 +2438,11 @@ func _zen_campaign_save_game() -> bool:
     return true
 
 func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST and act_one_active:
+        _act_one_back()
+        return
     if what == NOTIFICATION_APPLICATION_PAUSED:
+        if act_one_active: _act_one_save()
         zen_campaign_paused = true
         if zen_campaign_active and zen_campaign_stage == ZenCampaign.NIGHT and not zen_campaign_progress.game.is_empty():
             _zen_campaign_save_game()
@@ -2740,3 +2793,170 @@ func _zen_campaign_leave() -> void:
     zen_campaign_progress = {}
     refresh(-1, false)
     chronicles.open_campaign_overview()
+
+# Act I reuses the live Classic 3x3 board and renderer, but not Classic stats,
+# ranks, economy, results, settings, or the original campaign's progress.
+func _act_one_ui(de: String, en: String, pt: String) -> String:
+    return de if language_code() == "de" else (pt if language_code() == "pt" else en)
+
+func _act_one_title() -> String:
+    return str(ActOne.config().get("title", {}).get(language_code(), "The Zen Master"))
+
+func start_act_one_trial() -> void:
+    if act_one_active or zen_campaign_active or ceremony_active:
+        return
+    var progress := ActOne.load_progress()
+    if not bool(progress.reached) or bool(progress.acknowledged):
+        return
+    chronicles.close_chronicles()
+    close_modal()
+    generation += 1
+    act_one_classic_board = board
+    act_one_view = {"background": world_background.texture, "tint": world_background.modulate,
+        "basis": renderer.pivot.basis, "zoom": renderer.camera.position.z, "preview": preview}
+    preview = []
+    act_one_active = true
+    chronicles.set_campaign_board_active(true)
+    act_one_back_previous = get_tree().quit_on_go_back
+    get_tree().quit_on_go_back = false
+    act_one_progress = progress
+    board = ActOne.restore_board(progress.game)
+    renderer.reset_view()
+    world_background.texture = Asc.WORLD_TEXTURES[0]
+    world_background.modulate = Color.WHITE
+    _act_one_save()
+    refresh()
+    if board.winner != 0: _act_one_result()
+
+func _act_one_save() -> bool:
+    if not act_one_active:
+        return false
+    ActOne.capture(act_one_progress, board)
+    if not ActOne.save_progress(act_one_progress):
+        notify_user(_act_one_ui("Speichern fehlgeschlagen.", "Could not save progress.", "Não foi possível guardar."))
+        return false
+    return true
+
+func _act_one_refresh(animate: int) -> void:
+    world_title_label.text = _act_one_title()
+    world_quote_label.text = "The First Trial · The Roots of Peace"
+    rank_label.visible = true
+    rank_label.text = "Kuze · X    /    O · " + _act_one_title()
+    if board.winner == 1:
+        status.text = _act_one_ui("Prüfung bestanden!", "Trial passed!", "Prova concluída!")
+    elif board.winner == 2:
+        status.text = _act_one_ui("Der Meister gewinnt", "The Master wins", "O Mestre vence")
+    elif board.winner == 3:
+        status.text = _act_one_ui("Unentschieden", "Draw", "Empate")
+    elif board.turn == 1:
+        status.text = _act_one_ui("Du bist am Zug · X", "Your turn · X", "A tua vez · X")
+    else:
+        status.text = _act_one_ui("Der Meister ist am Zug · O", "Master's turn · O", "Vez do Mestre · O")
+    status.add_theme_color_override("font_color", Color("453329"))
+    detail.text = _act_one_ui("Zug ", "Move ", "Jogada ") + str(board.move_count()) + " · 3×3"
+    help_text.text = _act_one_ui("Drehen · Tippen · Zoomen", "Rotate · Tap · Zoom", "Rodar · Tocar · Ampliar")
+    swap_row.hide()
+    tutorial_row.hide()
+    challenge_role_panel.hide()
+    challenge_row.hide()
+    challenge_leave_row.hide()
+    classic_views.show()
+    classic_views.get_child(2).hide()
+    classic_actions.hide()
+    zen_campaign_controls.hide()
+    act_one_controls.show()
+    act_one_result_button.visible = board.winner != 0
+    act_one_result_button.text = _classic_result_label()
+    var leave_button := act_one_controls.get_child(1) as Button
+    leave_button.text = _act_one_ui("Zur Geschichte", "Back to story", "Voltar à história")
+    renderer.selected = board.last_cell
+    renderer.paint(board, bool(data.settings.hints) and board.winner == 0, [], animate)
+    if net_active: update_net()
+
+func _act_one_tick() -> void:
+    if zen_campaign_paused or board.winner != 0 or board.turn != 2 or popup != null or worker != null:
+        return
+    var cells: Array = board.cells.duplicate()
+    var seed_value := int(Time.get_ticks_usec())
+    worker_generation = generation
+    ai_running = true
+    worker = Thread.new()
+    worker.start(func(): return AIEngine.new(seed_value).choose(cells, 2, 0, 45))
+
+func _act_one_result() -> void:
+    if not act_one_active or board.winner == 0: return
+    var saved := _act_one_save()
+    var config: Dictionary = ActOne.config()
+    var dialogue: Dictionary = config.get("dialogue", {})
+    var outcome := "victory" if board.winner == 1 else ("defeat" if board.winner == 2 else "draw")
+    var box := _zen_campaign_story_box(_act_one_title())
+    popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.985), 22))
+    var art := ZenCampaign.artwork(ActOne.REFERENCE, 190)
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    box.add_child(art)
+    _zen_campaign_paragraph(box, str(dialogue.get(outcome, "")))
+    if not saved:
+        _zen_campaign_paragraph(box, _act_one_ui("Speichern fehlgeschlagen. Bitte erneut versuchen.", "Save failed. Please try again.", "Erro ao guardar. Tenta novamente."))
+    if board.winner == 1 and bool(act_one_progress.won):
+        premium_button(_act_one_ui("Fortsetzen", "Continue", "Continuar"), box, _act_one_continue, true)
+    else:
+        premium_button(_act_one_ui("Erneut versuchen", "Try again", "Tentar novamente"), box, _act_one_retry, true)
+    button(_inspect_label(), box, _inspect_classic_finished_board, true)
+    button(_act_one_ui("Zur Geschichte", "Back to story", "Voltar à história"), box, _act_one_leave, true)
+
+func _act_one_retry() -> void:
+    if not act_one_active or board.winner not in [2, 3]: return
+    if not _act_one_save(): return
+    var old_board: BoardModel = board
+    var old_progress: Dictionary = act_one_progress.duplicate(true)
+    generation += 1
+    board = ActOne.new_board()
+    if not _act_one_save():
+        board = old_board
+        act_one_progress = old_progress
+        _act_one_result()
+        return
+    close_modal()
+    renderer.reset_view()
+    refresh()
+
+func _act_one_continue() -> void:
+    if not act_one_active or board.winner != 1 or not bool(act_one_progress.won): return
+    act_one_progress.acknowledged = true
+    act_one_progress.page = 12
+    if not _act_one_save():
+        act_one_progress.acknowledged = false
+        act_one_progress.page = 11
+        _act_one_result()
+        return
+    _act_one_leave()
+
+func _act_one_leave() -> void:
+    if not act_one_active or not _act_one_save(): return
+    close_modal()
+    generation += 1
+    act_one_active = false
+    chronicles.set_campaign_board_active(false)
+    get_tree().quit_on_go_back = act_one_back_previous
+    board = act_one_classic_board
+    world_background.texture = act_one_view.background
+    world_background.modulate = act_one_view.tint
+    renderer.pivot.basis = act_one_view.basis
+    renderer.camera.position.z = act_one_view.zoom
+    preview = act_one_view.preview
+    act_one_view = {}
+    act_one_classic_board = null
+    act_one_progress = {}
+    refresh(-1, false)
+    chronicles.open_act_one()
+
+func _act_one_back() -> void:
+    if popup != null:
+        close_modal()
+    else:
+        open_menu()
+
+func _unhandled_key_input(event: InputEvent) -> void:
+    if act_one_active and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+        _act_one_back()
+        get_viewport().set_input_as_handled()
