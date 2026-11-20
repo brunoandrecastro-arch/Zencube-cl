@@ -2891,7 +2891,7 @@ func _act_one_result() -> void:
     var outcome := "victory" if board.winner == 1 else ("defeat" if board.winner == 2 else "draw")
     var box := _zen_campaign_story_box(_act_one_title())
     popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.985), 22))
-    var art := ZenCampaign.artwork(ActOne.REFERENCE, 190)
+    var art := ZenCampaign.artwork(ActOne.portrait_path(), 190)
     art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     box.add_child(art)
     _zen_campaign_paragraph(box, str(dialogue.get(outcome, "")))

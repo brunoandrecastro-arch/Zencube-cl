@@ -162,8 +162,11 @@ func _tile_mat(face_index: int, highlight: bool) -> StandardMaterial3D:
     return m
 
 # Ember VFX are cosmetic only: no collisions, no extra cells or shop ownership.
+# Disabled pending a higher quality full-cube fire effect.
+const EMBER_FIRE_ENABLED := false
+
 func _ember_fire_active() -> bool:
-    return abyss_skin_id < 0 and boss_skin_id >= 3 and boss_skin_id <= 5
+    return EMBER_FIRE_ENABLED and abyss_skin_id < 0 and boss_skin_id >= 3 and boss_skin_id <= 5
 
 func _ember_glow() -> Color:
     match boss_skin_id:

@@ -4,6 +4,10 @@ const SAVE_FILE := "user://zen_chronicles_act01_master_trial_v1.json"
 const ROOT := "res://story/act01/"
 const CONFIG := ROOT + "zen_master_trial.json"
 const REFERENCE := ROOT + "references/zen_master_reference.png"
+const PORTRAIT := ROOT + "references/zen_master_portrait.jpg"
+
+static func portrait_path() -> String:
+    return PORTRAIT if ResourceLoader.exists(PORTRAIT) else REFERENCE
 
 static func page_path(page: int) -> String:
     return ROOT + "pages/zen_chronicles_ch01_act01_%02d.png" % page

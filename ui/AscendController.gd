@@ -687,30 +687,84 @@ func draw() -> void:
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
+    if is_instance_valid(new_match_button):
+        new_match_button.text = _campaign_phrase("Neustart","Restart","Reiniciar") if (ember_active or shadow_active or abyss_active or realm_story_active) and result==0 else Z("Neue Partie")
     if campaign_practice_active:
         rank_label.text = Realm2.REALM_NAMES[practice_chapter] + " · Zen-Bot"
-        quote_label.text = "Zen Realm Chronicles · 4×4"
+        quote_label.text = _campaign_realm_quote(practice_chapter)
         details_label.text = Realm2.REALM_NAMES[practice_chapter] + " · %d/96 · Challenges %d/3" % [move_count(),Realm2.completed_count(Realm2.load_progress(),practice_chapter)]
     if ember_active:
         rank_label.text = ember_model.BOSS_NAMES[clampi(ember_index,0,2)]
-        quote_label.text = Realm2.REALM_NAMES[guardian_chapter] + " · 4×4"
-        details_label.text = _guardian_series_score(ember_progress)
+        quote_label.text = _campaign_realm_quote(guardian_chapter)
+        status_label.text = _boss_turn_status(rank_label.text)
+        details_label.text = _guardian_series_score(ember_progress) + " · %d/96" % move_count()
     if shadow_active:
         rank_label.text = Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]
-        quote_label.text = "Shadow Realm · 4×4"
-        status_label.text = ("⚔ " + Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
+        quote_label.text = _campaign_realm_quote(0)
+        status_label.text = _boss_turn_status(rank_label.text)
         details_label.text = _guardian_series_score(shadow_progress) if shadow_index==2 else "Shadow · " + str(move_count()) + "/96"
     if abyss_active:
         rank_label.text = Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]
-        quote_label.text = "Abyss of Memories · 4×4"
-        status_label.text = ("⚔ " + Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
+        quote_label.text = _campaign_realm_quote(1)
+        status_label.text = _boss_turn_status(rank_label.text)
         details_label.text = _guardian_series_score(abyss_progress) if abyss_index==2 else "Abyss · " + str(move_count()) + "/96"
     if realm_story_active:
         rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
-        if result == 0:
-            status_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage) if busy else RealmStory.text_for(lang(),"story")+" · "+str(move_count())+"/96"
+        status_label.text = _boss_turn_status(rank_label.text)
         quote_label.text = RealmStory.text_for(lang(),"react_%d" % realm_story_stage)
         details_label.text = RealmStory.text_for(lang(),"skin")+" · "+str(move_count())+"/96"
+
+func _boss_turn_status(boss_name: String) -> String:
+    if result==1: return _campaign_phrase("Du hast gewonnen · X","You won · X","Venceste · X")
+    if result==2: return boss_name + " · " + _campaign_phrase("Sieg · O","Victory · O","Vitória · O")
+    if result==3: return _campaign_phrase("Unentschieden","Draw","Empate")
+    if turn==1: return _campaign_phrase("Du bist am Zug · X","Your turn · X","A tua vez · X")
+    return boss_name + " · " + _campaign_phrase("überlegt … · O","thinking … · O","a pensar … · O")
+
+func _campaign_realm_quote(chapter: int) -> String:
+    var de: Array[String] = ["Auch der tiefste Schatten kann einen Weg zeigen.","Was du erinnerst, muss dich nicht gefangen halten.","Ein ruhiger Geist überdauert jede Flamme.","Über den Wolken beginnt die Klarheit.","In der Stille findet jeder Zug seine Bedeutung."]
+    var en: Array[String] = ["Even the deepest shadow can reveal a path.","What you remember need not hold you captive.","A steady mind outlasts the brightest flame.","Above the clouds, clarity begins.","In stillness, every move finds its meaning."]
+    var pt: Array[String] = ["Até a sombra mais profunda pode revelar um caminho.","O que recordas não tem de te aprisionar.","Uma mente serena resiste à chama mais forte.","Acima das nuvens começa a clareza.","Na quietude, cada jogada ganha sentido."]
+    var pool: Array[String] = de if lang()=="de" else (pt if lang()=="pt" else en)
+    return "“" + pool[clampi(chapter,0,4)] + "”"
+
+func _confirm_boss_restart() -> void:
+    if result!=0: 
+        _reopen_finished_result()
+        return
+    var parts: Dictionary = _realm_dialog(_campaign_phrase("Runde neu starten?","Restart round?","Reiniciar ronda?"),430)
+    var body: VBoxContainer = parts.box
+    var series: bool = ember_active or (shadow_active and shadow_index==2) or (abyss_active and abyss_index==2)
+    if series:
+        text(body,_campaign_phrase("Die laufende Runde zählt als Niederlage. Bisherige Punkte bleiben gespeichert.","The current round counts as a loss. Existing series points remain saved.","A ronda atual conta como derrota. Os pontos anteriores ficam guardados."),16)
+    else:
+        text(body,_campaign_phrase("Das aktuelle Spielfeld wird zurückgesetzt.","The current board will be reset.","O tabuleiro atual será reiniciado."),16)
+    action(body,_campaign_phrase("Neustart bestätigen","Confirm restart","Confirmar reinício"),_restart_boss_round,true)
+    _open_realm_dialog(parts)
+
+func _restart_boss_round() -> void:
+    if result!=0: return
+    if not (ember_active or shadow_active or abyss_active or realm_story_active): return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    match_generation += 1
+    busy = false
+    if realm_story_active:
+        _realm_story_retry()
+        return
+    # Explicit forfeit for series; never erase already earned round points.
+    result = 2
+    recorded = true
+    if ember_active:
+        if _ember_save(): _ember_result()
+    elif shadow_active:
+        if _shadow_save():
+            if shadow_index==2: _shadow_result()
+            else: _shadow_retry()
+    elif abyss_active:
+        if _abyss_save():
+            if abyss_index==2: _abyss_result()
+            else: _abyss_retry()
+    draw()
 
 func _guardian_series_score(progress: Dictionary) -> String:
     var tally: Dictionary = FinalSeries.score(progress)
@@ -1068,8 +1122,11 @@ func _start_picker_after_rules(dialog: Control) -> void:
     show_mode_picker()
 
 func show_mode_picker() -> void:
-    if realm_story_active:
-        _realm_story_menu()
+    if ember_active or shadow_active or abyss_active or realm_story_active:
+        _confirm_boss_restart()
+        return
+    if campaign_practice_active:
+        _campaign_practice_menu()
         return
     var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
     var dialog: Control = parts.dialog

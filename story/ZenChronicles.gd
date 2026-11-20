@@ -1123,7 +1123,7 @@ func open_act_one_gate() -> void:
     _make_label(str(config.get("title", {}).get(_active_language, "The Zen Master")), outer, 26, GOLD)
     _make_label(str(config.get("subtitle", {}).get(_active_language, "The First Trial")), outer, 20, CREAM)
     var portrait := TextureRect.new()
-    portrait.texture = load(ActOne.REFERENCE) as Texture2D
+    portrait.texture = load(ActOne.portrait_path()) as Texture2D
     portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
