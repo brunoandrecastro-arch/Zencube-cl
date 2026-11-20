@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "zen_master_trial",
+  "title": {
+    "en": "The Zen Master",
+    "de": "Der Zen-Meister",
+    "pt": "O Mestre Zen"
+  },
+  "subtitle": {
+    "en": "The First Trial",
+    "de": "Die erste Prüfung",
+    "pt": "A primeira prova"
+  },
+  "campaign": "zen_chronicles_prequel",
+  "act": 1,
+  "path": "Zen Garden",
+  "next_act_path": "Bamboo Path",
+  "narrative_role": "friendly_teacher",
+  "board": {
+    "size": 3,
+    "faces": 6,
+    "cells": 54,
+    "winning_length": 4,
+    "rules": "existing_classic_108_cross_face_lines"
+  },
+  "gate": {
+    "after_page": 11,
+    "before_page": 12,
+    "required_wins": 1,
+    "series": "single_match",
+    "on_loss": "retry_same_boss",
+    "on_draw": "retry_same_boss",
+    "on_victory": "unlock_page_12"
+  },
+  "difficulty": {
+    "target": "easy",
+    "human_mark": "X",
+    "master_mark": "O",
+    "use_existing_classic_ai": true,
+    "no_turn_timer": true
+  },
+  "dialogue": {
+    "intro": "Before you go, one more game. Show me what you have learned.",
+    "victory": "Well played, Kuze. Take the cube home. Return tomorrow.",
+    "defeat": "No hurry. Turn the cube, breathe, and try again.",
+    "draw": "Neither of us has found the answer yet. Let us try again."
+  },
+  "persistence": {
+    "separate_id": "zen_chronicles_act01_master_trial_v1",
+    "save_in_progress": true,
+    "save_win": true,
+    "reward_once": true,
+    "loss_resets_act": false,
+    "keep_classic_and_realm_saves": true
+  },
+  "references": {
+    "boss": "references/zen_master_reference.png",
+    "manhwa_portrait": "pages/zen_chronicles_ch01_act01_07.png",
+    "temple_and_cube": "pages/zen_chronicles_ch01_act01_08.png"
+  },
+  "story_continuity": {
+    "page_11": "The existing fixed loss is the teaching demonstration, preceding the player's real trial.",
+    "bridge": "After page 11 show the boss-intro dialogue, then launch the actual classic 3x3 match.",
+    "page_12": "Show only after the player's real victory and the Master's victory dialogue; keep the existing happy homecoming.",
+    "failure": "Keep page 12 locked and offer a friendly retry without erasing earlier reading progress."
+  },
+  "status": {
+    "twelve_original_pages": "included_unchanged",
+    "boss_visual_reference": "included_as_supplied",
+    "story_gate": "specified",
+    "app_code": "not_modified",
+    "new_portrait_and_arena": "not_generated_usage_limit",
+    "earliest_reported_image_reset_berlin": "2026-11-20T17:52:53+01:00"
+  }
+}
