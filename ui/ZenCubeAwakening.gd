@@ -143,7 +143,7 @@ func present(mode: int, language: String = "en") -> void:
     _active = true
     set_process(true)
 
-func _words(options: Array[String]) -> String:
+func _words(options: Array) -> String:
     return options[1] if _lang=="de" else (options[2] if _lang=="pt" else options[0])
 
 func _material(base: Color, glow: float) -> StandardMaterial3D:

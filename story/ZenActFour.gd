@@ -6,7 +6,7 @@ const CONFIG := ROOT + "shadow_kuze_trial.json"
 const REFERENCE := ROOT + "references/shadow_kuze_portrait.png"
 const PORTRAIT := ROOT + "references/shadow_kuze_portrait.png"
 
-const ActTwo = preload("res://story/ZenActTwo.gd")
+const ActThree = preload("res://story/ZenActThree.gd")
 
 static func portrait_path() -> String:
     return PORTRAIT
@@ -16,7 +16,7 @@ static func hard_wins(data: Dictionary) -> int:
     return clampi(int(wins[2]) if wins.size()>2 else 0,0,7)
 
 static func unlocked(data: Dictionary) -> bool:
-    return bool(ActTwo.load_progress().complete) and hard_wins(data)>=7 and ZenAscension.world_unlocked(data,3)
+    return bool(ActThree.load_progress().complete) and hard_wins(data)>=7 and ZenAscension.world_unlocked(data,3)
 
 static func media_ready() -> bool:
     if not ResourceLoader.exists(PORTRAIT): return false

@@ -128,6 +128,9 @@ func run() -> void:
         check(reader._page_counter.text=="12 / 12", "Act II victory resumes story")
         reader._act_one_turn(1)
         check(ActTwo.load_progress().complete, "Act II completed")
+        var early_hard: Dictionary = SaveManager.load_data()
+        early_hard.stats.ai_wins[2] = 7
+        check(not ActFour.unlocked(early_hard), "Act IV requires Act III completion even with seven Hard wins")
         check(FileAccess.get_file_as_string(SaveManager.PATH)==regular_before, "Act II boss never inflates rank wins")
         check(Act.load_progress().complete, "Act I progress preserved")
         check(not ActThree.unlocked(SaveManager.load_data()), "Act II boss does not count towards Medium wins")
