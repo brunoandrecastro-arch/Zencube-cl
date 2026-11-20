@@ -40,4 +40,4 @@ assert 'level == 1 and rng.randf() < 0.62' in ai
 assert 'level == 3 and rng.randf() < 0.24' in ai
 assert 'if placed <= 3 or rng.randf() < block_probability: return blocks[0]' in ai
 assert 'func search(' in ai and '[0, 0, 2, 4, 5][level]' in ai, 'original advanced bot structure must remain'
-print('RC5 PASS: seven fantasy titles, consistent DE/EN/PT, stable music ID, Zen Meister release unlock, locked 4x4 in all builds and friendly bot tiers')
+print('RC5 PASS: seven fantasy titles, consistent DE/EN/PT, stable music ID, Zen Meister release unlock, normal debug/Play rank gate and friendly bot tiers')
