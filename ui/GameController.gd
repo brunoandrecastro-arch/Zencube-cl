@@ -78,6 +78,9 @@ const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const ZenCampaign = preload("res://story/ZenCampaign.gd")
 const ActOne = preload("res://story/ZenActOne.gd")
+const ActTwo = preload("res://story/ZenActTwo.gd")
+var prequel_act: int = 1
+var prequel_model: Script = ActOne
 var act_one_active := false
 var act_one_progress: Dictionary = {}
 var act_one_classic_board: BoardModel
@@ -2800,12 +2803,16 @@ func _act_one_ui(de: String, en: String, pt: String) -> String:
     return de if language_code() == "de" else (pt if language_code() == "pt" else en)
 
 func _act_one_title() -> String:
-    return str(ActOne.config().get("title", {}).get(language_code(), "The Zen Master"))
+    return str(prequel_model.config().get("title", {}).get(language_code(), "The Zen Master"))
 
-func start_act_one_trial() -> void:
+func start_act_one_trial(act: int = 1) -> void:
     if act_one_active or zen_campaign_active or ceremony_active:
         return
-    var progress := ActOne.load_progress()
+    if act not in [1,2]: return
+    if act==2 and (not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready()): return
+    prequel_act = act
+    prequel_model = ActTwo if act==2 else ActOne
+    var progress: Dictionary = prequel_model.load_progress()
     if not bool(progress.reached) or bool(progress.acknowledged):
         return
     chronicles.close_chronicles()
@@ -2820,9 +2827,9 @@ func start_act_one_trial() -> void:
     act_one_back_previous = get_tree().quit_on_go_back
     get_tree().quit_on_go_back = false
     act_one_progress = progress
-    board = ActOne.restore_board(progress.game)
+    board = prequel_model.restore_board(progress.game)
     renderer.reset_view()
-    world_background.texture = Asc.WORLD_TEXTURES[0]
+    world_background.texture = Asc.WORLD_TEXTURES[prequel_act-1]
     world_background.modulate = Color.WHITE
     _act_one_save()
     refresh()
@@ -2831,27 +2838,27 @@ func start_act_one_trial() -> void:
 func _act_one_save() -> bool:
     if not act_one_active:
         return false
-    ActOne.capture(act_one_progress, board)
-    if not ActOne.save_progress(act_one_progress):
+    prequel_model.capture(act_one_progress, board)
+    if not prequel_model.save_progress(act_one_progress):
         notify_user(_act_one_ui("Speichern fehlgeschlagen.", "Could not save progress.", "Não foi possível guardar."))
         return false
     return true
 
 func _act_one_refresh(animate: int) -> void:
     world_title_label.text = _act_one_title()
-    world_quote_label.text = "The First Trial · The Roots of Peace"
+    world_quote_label.text = T(WORLD_QUOTES[1]) if prequel_act==2 else "The First Trial · The Roots of Peace"
     rank_label.visible = true
     rank_label.text = "Kuze · X    /    O · " + _act_one_title()
     if board.winner == 1:
         status.text = _act_one_ui("Prüfung bestanden!", "Trial passed!", "Prova concluída!")
     elif board.winner == 2:
-        status.text = _act_one_ui("Der Meister gewinnt", "The Master wins", "O Mestre vence")
+        status.text = _act_one_title() + " · " + _act_one_ui("Sieg · O", "Victory · O", "Vitória · O")
     elif board.winner == 3:
         status.text = _act_one_ui("Unentschieden", "Draw", "Empate")
     elif board.turn == 1:
         status.text = _act_one_ui("Du bist am Zug · X", "Your turn · X", "A tua vez · X")
     else:
-        status.text = _act_one_ui("Der Meister ist am Zug · O", "Master's turn · O", "Vez do Mestre · O")
+        status.text = _act_one_title() + " · " + _act_one_ui("ist am Zug · O", "turn · O", "a jogar · O")
     status.add_theme_color_override("font_color", Color("453329"))
     detail.text = _act_one_ui("Zug ", "Move ", "Jogada ") + str(board.move_count()) + " · 3×3"
     help_text.text = _act_one_ui("Drehen · Tippen · Zoomen", "Rotate · Tap · Zoom", "Rodar · Tocar · Ampliar")
@@ -2881,17 +2888,18 @@ func _act_one_tick() -> void:
     worker_generation = generation
     ai_running = true
     worker = Thread.new()
-    worker.start(func(): return AIEngine.new(seed_value).choose(cells, 2, 0, 45))
+    var trial_level: int = prequel_act-1
+    worker.start(func(): return AIEngine.new(seed_value).choose(cells, 2, trial_level, 45))
 
 func _act_one_result() -> void:
     if not act_one_active or board.winner == 0: return
     var saved := _act_one_save()
-    var config: Dictionary = ActOne.config()
-    var dialogue: Dictionary = config.get("dialogue", {})
+    var config: Dictionary = prequel_model.config()
+    var dialogue: Dictionary = config.get("dialogue_"+language_code(),config.get("dialogue", {}))
     var outcome := "victory" if board.winner == 1 else ("defeat" if board.winner == 2 else "draw")
     var box := _zen_campaign_story_box(_act_one_title())
     popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.985), 22))
-    var art := ZenCampaign.artwork(ActOne.portrait_path(), 190)
+    var art := ZenCampaign.artwork(prequel_model.portrait_path(), 190)
     art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     box.add_child(art)
     _zen_campaign_paragraph(box, str(dialogue.get(outcome, "")))
@@ -2910,7 +2918,7 @@ func _act_one_retry() -> void:
     var old_board: BoardModel = board
     var old_progress: Dictionary = act_one_progress.duplicate(true)
     generation += 1
-    board = ActOne.new_board()
+    board = prequel_model.new_board()
     if not _act_one_save():
         board = old_board
         act_one_progress = old_progress
@@ -2948,7 +2956,8 @@ func _act_one_leave() -> void:
     act_one_classic_board = null
     act_one_progress = {}
     refresh(-1, false)
-    chronicles.open_act_one()
+    if prequel_act==2: chronicles.open_act_two()
+    else: chronicles.open_act_one()
 
 func _act_one_back() -> void:
     if popup != null:

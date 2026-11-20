@@ -10,6 +10,9 @@ const CREAM = Color(0.98, 0.94, 0.84)
 const MUTED = Color(0.75, 0.78, 0.77)
 const Campaign = preload("res://story/ZenCampaign.gd")
 const ActOne = preload("res://story/ZenActOne.gd")
+const ActTwo = preload("res://story/ZenActTwo.gd")
+var _prequel_act: int = 1
+var _prequel_model: Script = ActOne
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const AbyssReader = preload("res://story/ZenAbyssReader.gd")
 const ShadowReader = preload("res://story/ZenShadowReader.gd")
@@ -282,6 +285,16 @@ func open_library() -> void:
     if active_game != null and active_game.has_method("start_act_one_trial"):
         _make_label("Zen Chronicles · 3×3", outer, 18, GOLD)
         _make_button("Zen / Zen Garden · Act I", outer, open_act_one)
+        var classic: Dictionary = SaveManager.load_data()
+        var act_two_button: Button = _make_button("Bamboo Path · Act II — The Art of Balance" if ActTwo.unlocked(classic) and ActTwo.media_ready() else "🔒 Bamboo Path · Act II — The Art of Balance", outer, open_act_two)
+        act_two_button.name = "ActTwoEntry"
+        act_two_button.disabled = not ActTwo.unlocked(classic) or not ActTwo.media_ready()
+        if not bool(ActOne.load_progress().complete):
+            _make_label(campaign_ui("Akt I abschließen", "Finish Act I", "Concluir o Ato I"),outer,13,MUTED)
+        if ActTwo.easy_wins(classic)<3:
+            _make_label(campaign_ui("Reguläre Siege (Leicht): %d/3","Regular wins (Easy): %d/3","Vitórias normais (Fácil): %d/3") % ActTwo.easy_wins(classic),outer,14,GOLD)
+        if not ActTwo.media_ready():
+            _make_label(campaign_ui("Akt-II-Bilder noch nicht installiert","Act II artwork not installed yet","Imagens do Ato II ainda não instaladas"),outer,13,MUTED)
     _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
     _make_label(campaign_ui("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",
         "4×4 · 3 bosses + 3 Realm challenges per chapter",
@@ -1018,7 +1031,7 @@ func _notification(what: int) -> void:
 
 func _act_one_back() -> void:
     if _screen_name == "act-one-gate":
-        open_act_one()
+        _open_prequel_reader()
     else:
         open_library()
 
@@ -1040,8 +1053,24 @@ func _act_one_input(event: InputEvent) -> void:
                 get_viewport().set_input_as_handled()
 
 func open_act_one() -> void:
+    _prequel_act = 1
+    _prequel_model = ActOne
+    _open_prequel_reader()
+
+func open_act_two() -> void:
+    if not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready():
+        open_library()
+        return
+    _prequel_act = 2
+    _prequel_model = ActTwo
+    _open_prequel_reader()
+
+func _open_prequel_reader() -> void:
+    if _prequel_act==2 and (not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready()):
+        open_library()
+        return
     _sync_language()
-    _act_one_progress = ActOne.load_progress()
+    _act_one_progress = _prequel_model.load_progress()
     _act_one_hold_back()
     _active_chapter = -1
     _screen_name = "act-one-reader"
@@ -1050,7 +1079,7 @@ func open_act_one() -> void:
     var head := HBoxContainer.new()
     outer.add_child(head)
     _make_button("‹", head, open_library)
-    var title := _make_label("Act I · The Roots of Peace", head, 21, GOLD)
+    var title := _make_label("Act II · The Art of Balance" if _prequel_act==2 else "Act I · The Roots of Peace", head, 21, GOLD)
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
     _page_image = TextureRect.new()
@@ -1071,13 +1100,13 @@ func open_act_one() -> void:
     _act_one_update()
 
 func _act_one_update() -> void:
-    var page: int = clampi(int(_act_one_progress.page), 1, ActOne.max_page(_act_one_progress))
+    var page: int = clampi(int(_act_one_progress.page), 1, _prequel_model.max_page(_act_one_progress))
     _act_one_progress.page = page
-    _page_image.texture = load(ActOne.page_path(page)) as Texture2D
+    _page_image.texture = load(_prequel_model.page_path(page)) as Texture2D
     _page_counter.text = "%02d / 12" % page
     _prev_button.disabled = page == 1
     _next_button.text = campaign_ui("Weiter ›", "Next ›", "Seguinte ›")
-    if page == 11 and ActOne.max_page(_act_one_progress) == 11:
+    if page == 11 and _prequel_model.max_page(_act_one_progress) == 11:
         _next_button.text = campaign_ui("Prüfung ›", "Trial ›", "Prova ›")
     elif page == 12:
         _next_button.text = campaign_ui("Abschließen", "Finish", "Concluir")
@@ -1086,51 +1115,54 @@ func _act_one_turn(direction: int) -> void:
     if _screen_name != "act-one-reader":
         return
     var page: int = int(_act_one_progress.page)
-    if direction > 0 and page == 11 and ActOne.max_page(_act_one_progress) == 11:
+    if direction > 0 and page == 11 and _prequel_model.max_page(_act_one_progress) == 11:
         _act_one_progress.reached = true
-        if ActOne.save_progress(_act_one_progress):
+        if _prequel_model.save_progress(_act_one_progress):
             open_act_one_gate()
         else:
             _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
         return
     if direction > 0 and page == 12:
         _act_one_progress.complete = true
-        if ActOne.save_progress(_act_one_progress):
+        if _prequel_model.save_progress(_act_one_progress):
             open_library()
         else:
             _act_one_progress.complete = false
             _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
         return
     var old_page: int = page
-    _act_one_progress.page = clampi(page + direction, 1, ActOne.max_page(_act_one_progress))
-    if ActOne.save_progress(_act_one_progress):
+    _act_one_progress.page = clampi(page + direction, 1, _prequel_model.max_page(_act_one_progress))
+    if _prequel_model.save_progress(_act_one_progress):
         _act_one_update()
     else:
         _act_one_progress.page = old_page
         _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
 
 func open_act_one_gate() -> void:
-    _act_one_progress = ActOne.load_progress()
+    if _prequel_act==2 and (not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready()):
+        open_library()
+        return
+    _act_one_progress = _prequel_model.load_progress()
     if not bool(_act_one_progress.reached) or bool(_act_one_progress.acknowledged):
-        open_act_one()
+        _open_prequel_reader()
         return
     _act_one_hold_back()
     _screen_name = "act-one-gate"
     var outer := _make_screen()
     _screen.color = Color("#27251e")
-    _make_button(campaign_ui("‹ Zurück zur Geschichte", "‹ Back to story", "‹ Voltar à história"), outer, open_act_one)
-    var config: Dictionary = ActOne.config()
+    _make_button(campaign_ui("‹ Zurück zur Geschichte", "‹ Back to story", "‹ Voltar à história"), outer, _open_prequel_reader)
+    var config: Dictionary = _prequel_model.config()
     _make_label(str(config.get("title", {}).get(_active_language, "The Zen Master")), outer, 26, GOLD)
     _make_label(str(config.get("subtitle", {}).get(_active_language, "The First Trial")), outer, 20, CREAM)
     var portrait := TextureRect.new()
-    portrait.texture = load(ActOne.portrait_path()) as Texture2D
+    portrait.texture = load(_prequel_model.portrait_path()) as Texture2D
     portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
     portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
     outer.add_child(portrait)
     var saved_game: Dictionary = _act_one_progress.game
-    var dialogue: Dictionary = config.get("dialogue", {})
+    var dialogue: Dictionary = config.get("dialogue_"+_active_language,config.get("dialogue", {}))
     var message := str(dialogue.get("intro", "Before you go, one more game. Show me what you have learned."))
     if bool(_act_one_progress.won):
         message = str(dialogue.get("victory", "Well played, Kuze. Take the cube home. Return tomorrow."))
@@ -1146,4 +1178,4 @@ func open_act_one_gate() -> void:
 func _act_one_launch() -> void:
     var game: Node = get_tree().current_scene
     if game != null and game.has_method("start_act_one_trial"):
-        game.call("start_act_one_trial")
+        game.call("start_act_one_trial",_prequel_act)
