@@ -362,10 +362,10 @@ func open_library() -> void:
     var tabs: HBoxContainer = HBoxContainer.new()
     tabs.add_theme_constant_override("separation",8)
     outer.add_child(tabs)
-    var story_tab: Button = _make_button("Story · 3×3",tabs,_select_library_tab.bind(0))
+    var story_tab: Button = _make_button(campaign_ui("Geschichte · 3×3","Story · 3×3","História · 3×3"),tabs,_select_library_tab.bind(0))
     story_tab.name = "ZenChroniclesTab3"
     story_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var realm_tab: Button = _make_button("Realms · 4×4",tabs,_select_library_tab.bind(1))
+    var realm_tab: Button = _make_button(campaign_ui("Reiche · 4×4","Realms · 4×4","Reinos · 4×4"),tabs,_select_library_tab.bind(1))
     realm_tab.name = "ZenChroniclesTab4"
     realm_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     var active_tab: Button = story_tab if _library_tab==0 else realm_tab

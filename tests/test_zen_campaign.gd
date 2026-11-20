@@ -419,9 +419,10 @@ func _verify_languages() -> void:
         # Change the selected locale as the main settings menu would do.
         game.choose_language(language)
         reader.open_library()
-        var archived: String = "📖 Originale Zen-Kampagne · 3×3" if language=="de" else (
-            "📖 Original Zen Campaign · 3×3" if language=="en" else "📖 Campanha Zen original · 3×3")
-        _check(_button(reader._screen, archived) != null, "hub follows selected language " + language)
+        var tab_story: String = {"de":"Geschichte · 3×3","en":"Story · 3×3","pt":"História · 3×3"}[language]
+        var tab_realm: String = {"de":"Reiche · 4×4","en":"Realms · 4×4","pt":"Reinos · 4×4"}[language]
+        _check(_button(reader._screen, tab_story) != null and _button(reader._screen, tab_realm) != null, "hub follows selected language " + language)
+        _check(_button(reader._screen,"📖 Originale Zen-Kampagne · 3×3")==null,"legacy archive remains hidden for " + language)
         reader.open_campaign_overview()
         _check(_button(reader._screen, Campaign.text_for(language, "open_epilogue")) != null, "overview follows selected language " + language)
         game.start_zen_campaign()
