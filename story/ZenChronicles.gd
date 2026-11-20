@@ -16,6 +16,7 @@ const ActFour = preload("res://story/ZenActFour.gd")
 const FractureState = preload("res://story/ZenFractureState.gd")
 const Awakening = preload("res://ui/ZenCubeAwakening.gd")
 var _library_tab: int = 0
+var _fracture_replaying: bool = false
 var _prequel_act: int = 1
 var _prequel_model: Script = ActOne
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
@@ -330,6 +331,9 @@ func _library_story_cards(parent: VBoxContainer) -> void:
     var fourth_hint: String = "Moon Garden · "+campaign_ui("Schwer %d/7","Hard %d/7","Difícil %d/7") % ActFour.hard_wins(classic)
     if not bool(ActThree.load_progress().complete): fourth_hint += " · "+campaign_ui("Akt III abschließen","Finish Act III","Concluir Ato III")
     _library_card(parent,"ACT IV · The Day Everything Broke",ActFour.page_path(1),fourth_hint,fourth_allowed,bool(ActFour.load_progress().complete),open_act_four,"ActFourCard")
+    if bool(ActFour.load_progress().complete):
+        var replay_button: Button = _make_button(campaign_ui("✦ Übergang erneut ansehen","✦ Replay the Awakening","✦ Rever o Despertar"),parent,replay_moon_shadow_transition)
+        replay_button.name = "ReplayMoonShadowTransition"
     _make_label(campaign_ui("Sky Garden · Epilog nach Abschluss aller Realms","Sky Garden · Epilogue after all Realms","Sky Garden · Epílogo após todos os Reinos"),parent,14,MUTED)
 
 func _library_realm_cards(parent: VBoxContainer) -> void:
@@ -806,6 +810,7 @@ func request_final_guardian(chapter: int) -> void:
     else: request_celestial_battle()
 
 func open_abyss_reader() -> void:
+    _library_tab = 1
     if not Realm2.unlocked(1):
         _campaign_locked_screen(1)
         return
@@ -846,6 +851,7 @@ func consume_abyss_launch() -> bool:
 # Campaign 2.0 – Shadow Realm chapter, isolated from the existing 12
 # Realm Chronicles bosses and independent of the Abyss chapter save.
 func open_shadow_reader() -> void:
+    _library_tab = 1
     if not Realm2.unlocked(0):
         _campaign_locked_screen(0)
         return
@@ -884,6 +890,7 @@ func consume_shadow_launch() -> bool:
     return flag
 
 func open_ember_reader() -> void:
+    _library_tab = 1
     if not Realm2.unlocked(2):
         _campaign_locked_screen(2)
         return
@@ -1118,6 +1125,7 @@ func _act_one_input(event: InputEvent) -> void:
                 get_viewport().set_input_as_handled()
 
 func open_act_one() -> void:
+    _library_tab = 0
     _prequel_act = 1
     _prequel_model = ActOne
     _open_prequel_reader()
@@ -1126,6 +1134,7 @@ func open_act_two() -> void:
     if not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready():
         open_library()
         return
+    _library_tab = 0
     _prequel_act = 2
     _prequel_model = ActTwo
     _open_prequel_reader()
@@ -1134,6 +1143,7 @@ func open_act_three() -> void:
     if not ActThree.unlocked(SaveManager.load_data()) or not ActThree.media_ready():
         open_library()
         return
+    _library_tab = 0
     _prequel_act = 3
     _prequel_model = ActThree
     _open_prequel_reader()
@@ -1142,6 +1152,7 @@ func open_act_four() -> void:
     if not ActFour.unlocked(SaveManager.load_data()) or not ActFour.media_ready():
         open_library()
         return
+    _library_tab = 0
     _prequel_act = 4
     _prequel_model = ActFour
     _open_prequel_reader()
@@ -1291,6 +1302,29 @@ func _begin_moon_garden_breakthrough() -> void:
 
 # On Shadow page 1 the original 3×3 appears one last time.
 # The second transition reveals the real four-by-four grid before page 2.
+# Optional library replay never awards currency, rank or a second unlock.
+func replay_moon_shadow_transition() -> void:
+    if _fracture_replaying or not bool(ActFour.load_progress().complete): return
+    _fracture_replaying = true
+    close_chronicles()
+    _suspend_scene_music()
+    var first: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(first)
+    first.finished.connect(_replay_moon_shadow_part_two)
+    first.call("present",0,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+func _replay_moon_shadow_part_two() -> void:
+    var second: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(second)
+    second.finished.connect(_finish_moon_shadow_replay)
+    second.call("present",1,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+func _finish_moon_shadow_replay() -> void:
+    _fracture_replaying = false
+    _library_tab = 0
+    open_library()
+    call_deferred("_resume_scene_music_if_free")
+
 func shadow_first_page_awakening(continue_reading: Callable) -> void:
     if FractureState.awakening_seen() or not bool(ActFour.load_progress().complete):
         continue_reading.call()
