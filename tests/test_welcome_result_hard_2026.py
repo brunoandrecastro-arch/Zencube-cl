@@ -16,6 +16,7 @@ assert 'var detail_label' not in result
 assert 'popup.anchor_top = 0.52 if special else 0.56' in result
 assert 'premium_button("Noch eine Partie"' in result
 assert 'premium_button("Hauptmenü"' in result
-assert '[0.70, 0.66, 0.80, 0.91, 1.0][level]' in ai
-assert 'if level == 2 and rng.randf() < 0.28' in ai
+assert '[0.70, 0.66, 0.75, 0.91, 1.0][level]' in ai
+assert 'if level == 2 and rng.randf() < 0.38' in ai
+assert 'return soft_choice(order, [], 6)' in ai
 print('OK: Touch-scroll intro, immediate start buttons, compact result, softer Classic Hard')
