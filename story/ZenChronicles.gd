@@ -12,6 +12,9 @@ const Campaign = preload("res://story/ZenCampaign.gd")
 const ActOne = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
 const ActThree = preload("res://story/ZenActThree.gd")
+const ActFour = preload("res://story/ZenActFour.gd")
+const FractureState = preload("res://story/ZenFractureState.gd")
+const Awakening = preload("res://ui/ZenCubeAwakening.gd")
 var _prequel_act: int = 1
 var _prequel_model: Script = ActOne
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
@@ -306,6 +309,16 @@ func open_library() -> void:
             _make_label(campaign_ui("Reguläre Siege (Mittel): %d/5","Regular wins (Medium): %d/5","Vitórias normais (Médio): %d/5") % ActThree.medium_wins(classic),outer,14,GOLD)
         if not ActThree.media_ready():
             _make_label(campaign_ui("Akt-III-Bilder noch nicht installiert","Act III artwork not installed yet","Imagens do Ato III ainda não instaladas"),outer,13,MUTED)
+        var act_four_ready: bool = ActFour.unlocked(classic) and ActFour.media_ready()
+        var fourth: Button = _make_button(("" if act_four_ready else "🔒 ") + "Moon Garden · Act IV — The Day Everything Broke",outer,open_act_four)
+        fourth.name = "ActFourEntry"
+        fourth.disabled = not act_four_ready
+        if not bool(ActThree.load_progress().complete):
+            _make_label(campaign_ui("Akt III abschließen","Finish Act III","Concluir o Ato III"),outer,13,MUTED)
+        if ActFour.hard_wins(classic)<7:
+            _make_label(campaign_ui("Reguläre Siege (Schwer): %d/7","Regular wins (Hard): %d/7","Vitórias normais (Difícil): %d/7") % ActFour.hard_wins(classic),outer,14,GOLD)
+        if not ActFour.media_ready():
+            _make_label(campaign_ui("Akt-IV-Bilder noch nicht installiert","Act IV artwork not installed yet","Imagens do Ato IV ainda não instaladas"),outer,13,MUTED)
     _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
     _make_label(campaign_ui("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",
         "4×4 · 3 bosses + 3 Realm challenges per chapter",
@@ -1084,7 +1097,16 @@ func open_act_three() -> void:
     _prequel_model = ActThree
     _open_prequel_reader()
 
+func open_act_four() -> void:
+    if not ActFour.unlocked(SaveManager.load_data()) or not ActFour.media_ready():
+        open_library()
+        return
+    _prequel_act = 4
+    _prequel_model = ActFour
+    _open_prequel_reader()
+
 func _prequel_accessible() -> bool:
+    if _prequel_act==4: return ActFour.unlocked(SaveManager.load_data()) and ActFour.media_ready()
     if _prequel_act==3: return ActThree.unlocked(SaveManager.load_data()) and ActThree.media_ready()
     if _prequel_act==2: return ActTwo.unlocked(SaveManager.load_data()) and ActTwo.media_ready()
     return _prequel_act==1
@@ -1103,7 +1125,7 @@ func _open_prequel_reader() -> void:
     var head := HBoxContainer.new()
     outer.add_child(head)
     _make_button("‹", head, open_library)
-    var titles: Array[String] = ["Act I · The Roots of Peace","Act II · The Art of Balance","Act III · The Beautiful Imperfection"]
+    var titles: Array[String] = ["Act I · The Roots of Peace","Act II · The Art of Balance","Act III · The Beautiful Imperfection","Act IV · The Day Everything Broke"]
     var title := _make_label(titles[_prequel_act-1], head, 21, GOLD)
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _make_button("✕", head, close_chronicles)
@@ -1134,7 +1156,7 @@ func _act_one_update() -> void:
     if page == 11 and _prequel_model.max_page(_act_one_progress) == 11:
         _next_button.text = campaign_ui("Prüfung ›", "Trial ›", "Prova ›")
     elif page == 12:
-        _next_button.text = campaign_ui("Abschließen", "Finish", "Concluir")
+        _next_button.text = campaign_ui("Ins Shadow Realm", "Into the Shadow Realm", "Entrar no Shadow Realm") if _prequel_act==4 else campaign_ui("Abschließen", "Finish", "Concluir")
 
 func _act_one_turn(direction: int) -> void:
     if _screen_name != "act-one-reader":
@@ -1150,7 +1172,10 @@ func _act_one_turn(direction: int) -> void:
     if direction > 0 and page == 12:
         _act_one_progress.complete = true
         if _prequel_model.save_progress(_act_one_progress):
-            open_library()
+            if _prequel_act==4:
+                _begin_moon_garden_breakthrough()
+            else:
+                open_library()
         else:
             _act_one_progress.complete = false
             _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
@@ -1204,3 +1229,34 @@ func _act_one_launch() -> void:
     var game: Node = get_tree().current_scene
     if game != null and game.has_method("start_act_one_trial"):
         game.call("start_act_one_trial",_prequel_act)
+
+# Act IV ends the 3×3 prequel. Play the portal only once, then open Shadow page 1.
+func _begin_moon_garden_breakthrough() -> void:
+    if not bool(ActFour.load_progress().complete): return
+    if not ZenAscend.unlocked(SaveManager.load_data()):
+        open_library()
+        return
+    _act_one_release_back()
+    if FractureState.portal_seen():
+        open_shadow_reader()
+        return
+    _suspend_scene_music()
+    var ceremony: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(ceremony)
+    ceremony.finished.connect(func():
+        if not FractureState.mark_portal(): return
+        open_shadow_reader())
+    ceremony.call("present",0,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+# On Shadow page 1 the original 3×3 appears one last time.
+# The second transition reveals the real four-by-four grid before page 2.
+func shadow_first_page_awakening(continue_reading: Callable) -> void:
+    if FractureState.awakening_seen() or not bool(ActFour.load_progress().complete):
+        continue_reading.call()
+        return
+    var ceremony: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(ceremony)
+    ceremony.finished.connect(func():
+        if FractureState.mark_awakening(): continue_reading.call())
+    ceremony.call("present",1,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+

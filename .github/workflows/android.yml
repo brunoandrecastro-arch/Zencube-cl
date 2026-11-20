@@ -278,7 +278,7 @@ jobs:
       - name: Premium result screen and simplified main menu (headless)
         run: |
           timeout 60 "$GODOT" --headless --path . --script tests/test_result_screen.gd
-      - name: Verify prequel Acts I–III trials and independent progress
+      - name: Verify prequel Acts I–IV trials and independent progress
         run: timeout 100 "$GODOT" --headless --path . --script tests/test_zen_act_one.gd
       - name: Tactical simulations
         run: |

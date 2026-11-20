@@ -3,6 +3,7 @@ extends SceneTree
 const Act = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
 const ActThree = preload("res://story/ZenActThree.gd")
+const ActFour = preload("res://story/ZenActFour.gd")
 var failures := 0
 var backups: Dictionary = {}
 
@@ -34,7 +35,7 @@ func play_result(target: int) -> BoardModel:
     return board
 
 func run() -> void:
-    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, SaveManager.PATH]:
+    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, ActFour.SAVE_FILE, SaveManager.PATH]:
         if FileAccess.file_exists(path):
             backups[path] = FileAccess.get_file_as_bytes(path)
             DirAccess.remove_absolute(path)
@@ -156,13 +157,38 @@ func run() -> void:
             check(ActThree.load_progress().complete, "Act III completed")
             check(FileAccess.get_file_as_string(SaveManager.PATH)==medium_before, "Aiko victory never affects Classic rank or economy")
             check(Act.load_progress().complete and ActTwo.load_progress().complete, "previous acts preserved")
+            check(not ActFour.unlocked(SaveManager.load_data()), "Aiko victory is not a regular Hard win")
+            var hard: Dictionary = SaveManager.load_data()
+            hard.stats.ai_wins[2] = 6
+            check(not ActFour.unlocked(hard), "6 Hard regular wins cannot unlock Act IV")
+            hard.stats.ai_wins[2] = 7
+            check(ActFour.unlocked(hard), "Act III plus 7 real Hard wins unlock Act IV")
+            if ActFour.media_ready():
+                check(SaveManager.save_data(hard), "seed rank up Hard wins")
+                reader.open_act_four()
+                for n in range(10): reader._act_one_turn(1)
+                reader._act_one_turn(1)
+                check(ActFour.max_page(ActFour.load_progress())==11, "Act IV final page gated by real Boss")
+                game.start_act_one_trial(4)
+                check(game.act_one_active and game.prequel_act==4, "Shadow Kuze 3x3 match launched")
+                game.board = play_result(2)
+                game._act_one_result()
+                check(not ActFour.load_progress().won, "Shadow Kuze defeats do not open finale")
+                game._act_one_retry()
+                game.board = play_result(1)
+                game._act_one_result()
+                game._act_one_continue()
+                check(reader._page_counter.text=="12 / 12", "Act IV final page after victory")
+                # Do not trigger the cinematic in this isolated save regression test.
+                check(not ActFour.load_progress().complete, "Finish Chapter remains explicit")
+                check(ActThree.load_progress().complete, "Act III survives")
     reader.close_chronicles()
     reader.open_act_one()
     check(reader._page_counter.text == "12 / 12", "saved victory does not require replay")
     reader.close_chronicles()
     game.queue_free()
     await process_frame
-    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, SaveManager.PATH]:
+    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, ActFour.SAVE_FILE, SaveManager.PATH]:
         if FileAccess.file_exists(path): DirAccess.remove_absolute(path)
         if backups.has(path):
             var file := FileAccess.open(path, FileAccess.WRITE)
