@@ -1255,6 +1255,22 @@ func restore_rank_music() -> void:
         if not music_player.playing:
             sync_music()
 
+func _continue_newly_unlocked_story() -> void:
+    var act: int = _newly_unlocked_story_act()
+    if act==0: return
+    close_modal()
+    if act==2: chronicles.open_act_two()
+    elif act==3: chronicles.open_act_three()
+    elif act==4: chronicles.open_act_four()
+
+func _newly_unlocked_story_act() -> int:
+    if not bool(last_rank_up.get("rank_up",false)): return 0
+    var rank_after: int = int(data.ascension.rank)
+    if rank_after==1 and ActTwo.unlocked(data) and ActTwo.media_ready(): return 2
+    if rank_after==2 and ActThree.unlocked(data) and ActThree.media_ready(): return 3
+    if rank_after==3 and ActFour.unlocked(data) and ActFour.media_ready(): return 4
+    return 0
+
 func show_result_screen() -> void:
     if act_one_active:
         _act_one_result()
@@ -1333,6 +1349,10 @@ func show_result_screen() -> void:
     if versus_bot and last_leaf_reward > 0:
         var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var story_act: int = _newly_unlocked_story_act()
+    if story_act>0:
+        var story_button: Button = premium_button(_act_one_ui("📖 Geschichte fortsetzen · Akt %d","📖 Continue Story · Act %d","📖 Continuar história · Ato %d") % story_act,box,_continue_newly_unlocked_story,true)
+        story_button.name = "NewlyUnlockedActStory"
     var inspect: Button = premium_button("Spielfeld ansehen",box,_inspect_classic_finished_board,true)
     inspect.text = _inspect_label()
     inspect.name = "InspectClassicFinishedBoard"

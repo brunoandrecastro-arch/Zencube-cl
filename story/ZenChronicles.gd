@@ -15,6 +15,7 @@ const ActThree = preload("res://story/ZenActThree.gd")
 const ActFour = preload("res://story/ZenActFour.gd")
 const FractureState = preload("res://story/ZenFractureState.gd")
 const Awakening = preload("res://ui/ZenCubeAwakening.gd")
+var _library_tab: int = 0
 var _prequel_act: int = 1
 var _prequel_model: Script = ActOne
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
@@ -273,70 +274,110 @@ func _chapter_accessible(i: int) -> bool:
 func campaign_ui(de: String,en: String,pt: String) -> String:
     return de if _active_language=="de" else (pt if _active_language=="pt" else en)
 
+func _select_library_tab(index: int) -> void:
+    _library_tab = clampi(index,0,1)
+    open_library()
+
+func _library_card(parent: Node, title: String, image_path: String, hint: String, allowed: bool, complete: bool, entry: Callable, tag: String, show_lock_info: bool = false) -> void:
+    var panel: PanelContainer = PanelContainer.new()
+    panel.name = tag
+    var background: StyleBoxFlat = _style(Color("#182d33"),16)
+    background.border_color = Color("#a58b5e") if allowed else Color("#555661")
+    background.set_border_width_all(2)
+    panel.add_theme_stylebox_override("panel",background)
+    parent.add_child(panel)
+    var row: HBoxContainer = HBoxContainer.new()
+    row.add_theme_constant_override("separation",12)
+    panel.add_child(row)
+    var preview: TextureRect = TextureRect.new()
+    preview.custom_minimum_size = Vector2(90,128)
+    preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    if ResourceLoader.exists(image_path): preview.texture = load(image_path) as Texture2D
+    row.add_child(preview)
+    var stack: VBoxContainer = VBoxContainer.new()
+    stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    stack.add_theme_constant_override("separation",5)
+    row.add_child(stack)
+    var headline: Label = _make_label(title,stack,17,CREAM)
+    headline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _make_label(hint,stack,13,Color("#d5c19b") if allowed else MUTED)
+    var label_text: String = campaign_ui("Geschichte lesen ›","Continue Story ›","Continuar história ›") if allowed else (campaign_ui("Freischaltbedingungen","Unlock requirements","Como desbloquear") if show_lock_info else campaign_ui("Gesperrt","Locked","Bloqueado"))
+    if complete: label_text = campaign_ui("Erneut lesen ›","Read again ›","Ler novamente ›")
+    var button: Button = _make_button(label_text,stack,entry)
+    button.disabled = not allowed and not show_lock_info
+    button.custom_minimum_size.y = 40
+    button.name = tag+"Button"
+
+func _library_story_cards(parent: VBoxContainer) -> void:
+    _make_label(campaign_ui("Kuzes Weg · 3×3","Kuze's Path · 3×3","O Caminho de Kuze · 3×3"),parent,18,GOLD)
+    var active_game: Node = get_tree().current_scene
+    var playable: bool = active_game != null and active_game.has_method("start_act_one_trial")
+    if not playable:
+        _make_label(campaign_ui("Wechsle zum klassischen 3×3, um diese Geschichte zu spielen.","Return to Classic 3×3 to play this story.","Regressa ao Clássico 3×3 para jogar esta história."),parent,14,MUTED)
+    var classic: Dictionary = SaveManager.load_data()
+    _library_card(parent,"ACT I · The Roots of Peace","res://story/act01/pages/zen_chronicles_ch01_act01_01.png","Zen Garden",playable,bool(ActOne.load_progress().complete),open_act_one,"ActOneCard")
+    var second_allowed: bool = ActTwo.unlocked(classic) and ActTwo.media_ready() and playable
+    var second_hint: String = "Bamboo Path · "+campaign_ui("Leicht %d/3","Easy %d/3","Fácil %d/3") % ActTwo.easy_wins(classic)
+    if not bool(ActOne.load_progress().complete): second_hint += " · "+campaign_ui("Akt I abschließen","Finish Act I","Concluir Ato I")
+    _library_card(parent,"ACT II · The Art of Balance",ActTwo.page_path(1),second_hint,second_allowed,bool(ActTwo.load_progress().complete),open_act_two,"ActTwoCard")
+    var third_allowed: bool = ActThree.unlocked(classic) and ActThree.media_ready() and playable
+    var third_hint: String = "Mountain Temple · "+campaign_ui("Mittel %d/5","Medium %d/5","Médio %d/5") % ActThree.medium_wins(classic)
+    if not bool(ActTwo.load_progress().complete): third_hint += " · "+campaign_ui("Akt II abschließen","Finish Act II","Concluir Ato II")
+    _library_card(parent,"ACT III · The Beautiful Imperfection",ActThree.page_path(1),third_hint,third_allowed,bool(ActThree.load_progress().complete),open_act_three,"ActThreeCard")
+    var fourth_allowed: bool = ActFour.unlocked(classic) and ActFour.media_ready() and playable
+    var fourth_hint: String = "Moon Garden · "+campaign_ui("Schwer %d/7","Hard %d/7","Difícil %d/7") % ActFour.hard_wins(classic)
+    if not bool(ActThree.load_progress().complete): fourth_hint += " · "+campaign_ui("Akt III abschließen","Finish Act III","Concluir Ato III")
+    _library_card(parent,"ACT IV · The Day Everything Broke",ActFour.page_path(1),fourth_hint,fourth_allowed,bool(ActFour.load_progress().complete),open_act_four,"ActFourCard")
+    _make_label(campaign_ui("Sky Garden · Epilog nach Abschluss aller Realms","Sky Garden · Epilogue after all Realms","Sky Garden · Epílogo após todos os Reinos"),parent,14,MUTED)
+
+func _library_realm_cards(parent: VBoxContainer) -> void:
+    _make_label(campaign_ui("Zen Ascend · 4×4","Zen Ascend · 4×4","Zen Ascend · 4×4"),parent,18,GOLD)
+    var openers: Array[Callable] = [open_shadow_reader,open_abyss_reader,open_ember_campaign_preview,open_celestial_campaign_preview,open_satori_campaign_preview]
+    var titles: Array[String] = ["🌘 Shadow Realm","🌊 Abyss of Memories","🔥 Ember Temple","☁️ Celestial Realm","☀️ Satori Realm"]
+    var unlock_hints: Array[String] = ["Zen Ascend 4×4","Shadow 3/3 + 3/3","Abyss 3/3 + 3/3","Ember 3/3 + 3/3","Celestial 3/3 + 3/3"]
+    for i in range(5):
+        var permitted: bool = Realm2.unlocked(i)
+        var finished: bool = Realm2.story_finished(i)
+        var hint: String = campaign_ui("Bosse %d/3 · Herausforderungen %d/3","Bosses %d/3 · Challenges %d/3","Chefes %d/3 · Desafios %d/3") % [Realm2.bosses_won(i),Realm2.completed_count(Realm2.load_progress(),i)] if permitted else campaign_ui("Freischalten: ","Unlock: ","Desbloquear: ")+unlock_hints[i]
+        _library_card(parent,titles[i],Realm2.SOURCE_ART[i],hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
+
 func open_library() -> void:
     _act_one_release_back()
     _realm_story_from_realms = false
     _sync_language()
     _active_chapter = -1
     _screen_name = "library"
-    var outer := _make_screen()
-    var head := HBoxContainer.new()
+    var outer: VBoxContainer = _make_screen()
+    var head: HBoxContainer = HBoxContainer.new()
     outer.add_child(head)
-    var heading := _make_label("ZEN REALM CHRONICLES", head, 24, GOLD)
+    var heading: Label = _make_label("ZEN CHRONICLES",head,24,GOLD)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    _make_button("✕", head, close_chronicles)
-    var active_game: Node = get_tree().current_scene
-    if active_game != null and active_game.has_method("start_act_one_trial"):
-        _make_label("Zen Chronicles · 3×3", outer, 18, GOLD)
-        _make_button("Zen / Zen Garden · Act I", outer, open_act_one)
-        var classic: Dictionary = SaveManager.load_data()
-        var act_two_button: Button = _make_button("Bamboo Path · Act II — The Art of Balance" if ActTwo.unlocked(classic) and ActTwo.media_ready() else "🔒 Bamboo Path · Act II — The Art of Balance", outer, open_act_two)
-        act_two_button.name = "ActTwoEntry"
-        act_two_button.disabled = not ActTwo.unlocked(classic) or not ActTwo.media_ready()
-        if not bool(ActOne.load_progress().complete):
-            _make_label(campaign_ui("Akt I abschließen", "Finish Act I", "Concluir o Ato I"),outer,13,MUTED)
-        if ActTwo.easy_wins(classic)<3:
-            _make_label(campaign_ui("Reguläre Siege (Leicht): %d/3","Regular wins (Easy): %d/3","Vitórias normais (Fácil): %d/3") % ActTwo.easy_wins(classic),outer,14,GOLD)
-        if not ActTwo.media_ready():
-            _make_label(campaign_ui("Akt-II-Bilder noch nicht installiert","Act II artwork not installed yet","Imagens do Ato II ainda não instaladas"),outer,13,MUTED)
-        var act_three_ready: bool = ActThree.unlocked(classic) and ActThree.media_ready()
-        var act_three_button: Button = _make_button(("" if act_three_ready else "🔒 ") + "Mountain Temple · Act III — The Beautiful Imperfection",outer,open_act_three)
-        act_three_button.name = "ActThreeEntry"
-        act_three_button.disabled = not act_three_ready
-        if not bool(ActTwo.load_progress().complete):
-            _make_label(campaign_ui("Akt II abschließen","Finish Act II","Concluir o Ato II"),outer,13,MUTED)
-        if ActThree.medium_wins(classic)<5:
-            _make_label(campaign_ui("Reguläre Siege (Mittel): %d/5","Regular wins (Medium): %d/5","Vitórias normais (Médio): %d/5") % ActThree.medium_wins(classic),outer,14,GOLD)
-        if not ActThree.media_ready():
-            _make_label(campaign_ui("Akt-III-Bilder noch nicht installiert","Act III artwork not installed yet","Imagens do Ato III ainda não instaladas"),outer,13,MUTED)
-        var act_four_ready: bool = ActFour.unlocked(classic) and ActFour.media_ready()
-        var fourth: Button = _make_button(("" if act_four_ready else "🔒 ") + "Moon Garden · Act IV — The Day Everything Broke",outer,open_act_four)
-        fourth.name = "ActFourEntry"
-        fourth.disabled = not act_four_ready
-        if not bool(ActThree.load_progress().complete):
-            _make_label(campaign_ui("Akt III abschließen","Finish Act III","Concluir o Ato III"),outer,13,MUTED)
-        if ActFour.hard_wins(classic)<7:
-            _make_label(campaign_ui("Reguläre Siege (Schwer): %d/7","Regular wins (Hard): %d/7","Vitórias normais (Difícil): %d/7") % ActFour.hard_wins(classic),outer,14,GOLD)
-        if not ActFour.media_ready():
-            _make_label(campaign_ui("Akt-IV-Bilder noch nicht installiert","Act IV artwork not installed yet","Imagens do Ato IV ainda não instaladas"),outer,13,MUTED)
-    _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
-    _make_label(campaign_ui("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",
-        "4×4 · 3 bosses + 3 Realm challenges per chapter",
-        "4×4 · 3 chefes + 3 desafios de reino por capítulo"),outer,15,CREAM)
-    var access: bool = Realm2.unlocked(0)
-    _make_button("🌘 Shadow Realm" if access else campaign_ui("🔒 Shadow Realm · Zen Ascend 4×4 freischalten",
-        "🔒 Shadow Realm · Unlock Zen Ascend 4×4","🔒 Shadow Realm · Desbloqueia Zen Ascend 4×4"),outer,open_shadow_reader)
-    _make_button("🌑 Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · Shadow 3+3",outer,open_abyss_reader)
-    _make_button("🔥 Ember Temple" if Realm2.unlocked(2) else "🔒 Ember Temple · Abyss 3+3",outer,open_ember_campaign_preview)
-    _make_button(("Celestial Realm" + (" · The Enlightened Mind" if Realm2.story_finished(3) else "")) if Realm2.unlocked(3) else "🔒 Celestial Realm · Ember 3+3",outer,open_celestial_campaign_preview)
-    if Realm2.unlocked(4): _make_button("Satori Realm",outer,open_satori_campaign_preview)
-    _make_label(campaign_ui("Originalarchive","Original Archives","Arquivos originais"),outer,18,GOLD)
-    _make_button(campaign_ui("📜 Original Realm Chronicles · 12 Bosse",
-        "📜 Original Realm Chronicles · 12 Bosses","📜 Realm Chronicles originais · 12 chefes"),outer,open_realm_story_archive)
-    _make_button(campaign_ui("📖 Originale Zen-Kampagne · 3×3",
-        "📖 Original Zen Campaign · 3×3","📖 Campanha Zen original · 3×3"),outer,open_campaign_overview)
-    _make_button(campaign_ui("📚 Originaler Zen-Webcomic",
-        "📚 Original Zen Webcomic","📚 Webcomic Zen original"),outer,open_comic_library)
+    _make_button("✕",head,close_chronicles)
+    var tabs: HBoxContainer = HBoxContainer.new()
+    tabs.add_theme_constant_override("separation",8)
+    outer.add_child(tabs)
+    var story_tab: Button = _make_button("Story · 3×3",tabs,_select_library_tab.bind(0))
+    story_tab.name = "ZenChroniclesTab3"
+    story_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var realm_tab: Button = _make_button("Realms · 4×4",tabs,_select_library_tab.bind(1))
+    realm_tab.name = "ZenChroniclesTab4"
+    realm_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var active_tab: Button = story_tab if _library_tab==0 else realm_tab
+    active_tab.add_theme_stylebox_override("normal",_style(Color("#5c4930"),12))
+    active_tab.add_theme_color_override("font_color",Color("#ffe2a3"))
+    var scroll: ScrollContainer = ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    outer.add_child(scroll)
+    var cards: VBoxContainer = VBoxContainer.new()
+    cards.name = "ZenChroniclesCards"
+    cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    cards.add_theme_constant_override("separation",12)
+    scroll.add_child(cards)
+    if _library_tab==0: _library_story_cards(cards)
+    else: _library_realm_cards(cards)
 
 func open_comic_library() -> void:
     _sync_language()
