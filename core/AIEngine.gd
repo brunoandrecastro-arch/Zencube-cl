@@ -81,7 +81,7 @@ func choose(cells_in: Array, player: int, level: int, budget_ms: int = 220) -> i
 		return tied[rng.randi_range(0,tied.size()-1)][0]
 	# Hard retains its two-ply search, but occasionally chooses from
 	# strong alternatives; Easy, Medium, Master, Grandmaster are unchanged.
-	if level == 2 and rng.randf() < 0.18:
+	if level == 2 and rng.randf() < 0.28:
 		return soft_choice(order, [], 5)
 	# Master plays strategically, but not like a flawless solver.
 	if level == 3 and rng.randf() < 0.24:

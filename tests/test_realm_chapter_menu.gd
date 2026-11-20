@@ -54,7 +54,7 @@ func run() -> void:
                 test(ResourceLoader.exists(Story.CHAPTER_ART[chapter]),"chapter hero art included "+str(chapter))
         chronicles.call("close_chronicles")
     # New single entrance: Legacy/Manhwa belongs in Zen Realm Chronicles,
-    # while the normal 4x4 Realm screen contains ONLY four Realm cards.
+    # while the normal 4x4 Realm screen contains five ordered Realm cards.
     var ascend_scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     test(ascend_scene != null,"4x4 Ascend scene is still loadable")
     if ascend_scene != null and chronicles != null:
@@ -78,7 +78,17 @@ func run() -> void:
                 for item in content.get_children():
                     for card in item.get_children():
                         if card is PanelContainer: count += 1
-                test(count==4,"four Realm cards (Shadow/Ember/Celestial/Satori) only")
+                test(count==5,"five Realm cards including Abyss")
+                var ordered: Array[String] = []
+                for item in content.get_children():
+                    for card in item.get_children():
+                        if card is PanelContainer:
+                            var labels_in_card: Array = []
+                            _buttons(card,labels_in_card)
+                            ordered.append(str(card.name))
+                test(modal.find_child("Campaign2AbyssRealmCard",true,false)!=null,"Abyss card exists")
+                test(modal.find_child("Campaign2ChroniclesEntry",true,false)!=null,"dedicated Chronicles entry exists")
+                test(ordered.size()==5 and ordered[1]=="Campaign2AbyssRealmCard","Abyss is immediately after Shadow")
         chronicles.call("open_library")
         test(chronicles.get("_screen_name")=="library","Zen Realm Chronicles is the sole story entry")
         var screen: Node = chronicles.get("_screen")

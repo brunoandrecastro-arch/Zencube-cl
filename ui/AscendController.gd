@@ -15,9 +15,13 @@ const Realms = preload("res://core/ZenAscendRealms.gd")
 const RealmBot = preload("res://core/ZenAscendRealmBot.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
+const SettingsTheme = preload("res://ui/ZenUiTestTheme.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
+const Ember = preload("res://story/ZenEmberCampaign.gd")
+const Celestial = preload("res://story/ZenCelestialCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
+const FinalSeries = preload("res://core/ZenFinalGuardianSeries.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
 # ZENCUBE WORLD MUSIC PATCH 1
 var data: Dictionary = {}
@@ -37,12 +41,21 @@ var details_label: Label
 var rank_label: Label
 var quote_label: Label
 var instructions: Label
+var result_review_button: Button
+var rules_button: Button
+var new_match_button: Button
+var realms_nav_button: Button
+var challenges_nav_button: Button
+var achievements_nav_button: Button
+var ascend_subtitle: Label
 var layer: Control
 var menu_dialog: ConfirmationDialog
 var world_music: AudioStreamPlayer
 var realm_music_fade: AudioStreamPlayer
 var realm_music_tween: Tween
 var realm_backdrop: TextureRect
+var realm_backdrop_shade: ColorRect
+const ARENA_BACKDROP_SHADER = preload("res://ui/RealmArenaBackdrop.gdshader")
 var match_realm: int = 0
 var match_blocked_threat: bool = false
 var bot_level: int = 1
@@ -77,8 +90,17 @@ var shadow_progress: Dictionary = {}
 var shadow_index: int = -1
 var shadow_generation: int = 0
 var shadow_last_human: int = -1
+var ember_active: bool = false
+var ember_model: Variant = Ember
+var guardian_chapter: int = 2
+var ember_index: int = -1
+var ember_generation: int = 0
+var ember_last_human: int = -1
+var ember_progress: Dictionary = {}
+var practice_chapter: int = 1
 var campaign_practice_active: bool = false
 var campaign_awards: Array[String] = []
+var practice_choir_played: bool = false
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -127,8 +149,14 @@ func _ready() -> void:
     start_world_music()
     draw()
     var practice_launch: int = ZenChronicles.consume_campaign_practice_launch()
-    if practice_launch == 1:
+    if practice_launch in [0,1,2,3]:
         call_deferred("start_campaign_practice",practice_launch)
+        return
+    if ZenChronicles.consume_celestial_launch():
+        call_deferred("start_celestial_battle")
+        return
+    if ZenChronicles.consume_ember_launch():
+        call_deferred("start_ember_battle")
         return
     if ZenChronicles.consume_shadow_launch():
         call_deferred("start_shadow_battle")
@@ -152,8 +180,11 @@ func _ready() -> void:
 # its own realm soundtrack; a manually owned track overrides it everywhere.
 func desired_realm_stream() -> AudioStream:
     if campaign_practice_active:
-        var stream: AudioStream = Abyss.story_stream()
+        var stream: AudioStream = Celestial.story_stream() if practice_chapter==3 else (Ember.story_stream() if practice_chapter==2 else Abyss.story_stream())
         if stream != null: return stream
+    if ember_active:
+        var ember_stream: AudioStream = ember_model.boss_stream(ember_index)
+        if ember_stream != null: return ember_stream
     if shadow_active:
         var shadow_stream: AudioStream = Shadow.boss_stream(shadow_index)
         if shadow_stream != null: return shadow_stream
@@ -174,7 +205,25 @@ func desired_realm_stream() -> AudioStream:
 func start_world_music() -> void:
     sync_realm_music(true)
 
+func suspend_campaign_music() -> void:
+    if realm_music_tween != null and realm_music_tween.is_running(): realm_music_tween.kill()
+    if is_instance_valid(world_music):
+        world_music.stop()
+        world_music.stream_paused = false
+    if is_instance_valid(realm_music_fade):
+        realm_music_fade.stop()
+        realm_music_fade.queue_free()
+        realm_music_fade = null
+
+func resume_campaign_music() -> void:
+    sync_realm_music(true)
+
 func sync_realm_music(initial: bool = false) -> void:
+    if ZenChronicles.campaign_audio_exclusive():
+        suspend_campaign_music()
+        return
+    if ember_active or shadow_active or abyss_active or realm_story_active or campaign_practice_active:
+        initial = true
     if not bool(data.settings.get("music", false)):
         if realm_music_tween != null and realm_music_tween.is_running():
             realm_music_tween.kill()
@@ -186,7 +235,15 @@ func sync_realm_music(initial: bool = false) -> void:
         push_warning("Zen Ascend: realm soundtrack missing")
         return
     if world_music != null and world_music.stream == song:
-        if not world_music.playing: world_music.play()
+        if initial and is_instance_valid(realm_music_fade):
+            if realm_music_tween != null and realm_music_tween.is_running(): realm_music_tween.kill()
+            realm_music_fade.stop()
+            realm_music_fade.queue_free()
+            realm_music_fade = null
+            world_music.volume_db = -2.0
+        if not world_music.playing:
+            world_music.volume_db = -2.0
+            world_music.play()
         return
     if realm_music_tween != null and realm_music_tween.is_running():
         realm_music_tween.kill()
@@ -327,6 +384,7 @@ func build_interface() -> void:
     layer.add_child(backdrop)
     backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var shade: ColorRect = ColorRect.new()
+    realm_backdrop_shade = shade
     shade.color = Color("241f1a",0.24)
     shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
     layer.add_child(shade)
@@ -357,7 +415,7 @@ func build_interface() -> void:
     rank_label = text(title_box,"",27,Color("f9e7b7"))
     rank_label.add_theme_font_override("font",ZenType.heading())
     text(title_box,Z("Zen Ascend 4×4"),18,Color("e8d1a9"))
-    text(title_box,L("subtitle"),12,Color("d6bfa4"))
+    ascend_subtitle = text(title_box,L("subtitle"),12,Color("d6bfa4"))
     var scoreboard: PanelContainer = PanelContainer.new()
     scoreboard.add_theme_stylebox_override("panel",style(Color("fff1d9",0.95)))
     column.add_child(scoreboard)
@@ -386,18 +444,43 @@ func build_interface() -> void:
     var row: HBoxContainer = HBoxContainer.new()
     row.add_theme_constant_override("separation",6)
     column.add_child(row)
-    action(row,Z("Neue Partie"),show_mode_picker)
-    action(row,Z("Regeln ansehen"),show_rules)
+    new_match_button = action(row,Z("Neue Partie"),show_mode_picker)
+    rules_button = action(row,Z("Regeln ansehen"),show_rules)
+    result_review_button = action(row,_result_button_label(),_reopen_finished_result)
+    result_review_button.name = "ShowFinishedResult"
+    result_review_button.hide()
     var realm_actions: HBoxContainer = HBoxContainer.new()
     realm_actions.add_theme_constant_override("separation",6)
     column.add_child(realm_actions)
-    action(realm_actions,L("realms"),show_realms)
-    action(realm_actions,L("challenges"),show_challenges,true)
-    action(realm_actions,_achievements_label(),show_realm_titles)
+    realms_nav_button = action(realm_actions,L("realms"),show_realms)
+    challenges_nav_button = action(realm_actions,L("challenges"),show_challenges,true)
+    achievements_nav_button = action(realm_actions,_achievements_label(),show_realm_titles)
     var quote_box: PanelContainer = PanelContainer.new()
     quote_box.add_theme_stylebox_override("panel",style(Color("302820",0.94),13))
     column.add_child(quote_box)
     quote_label = text(quote_box,"",12,Color("f4dfbd"))
+
+# Portrait art and all normal game UI keep the original presentation.
+# Only landscape campaign arenas get the reduced crop and mild sharpening.
+func _refresh_arena_presentation() -> void:
+    if not is_instance_valid(realm_backdrop): return
+    var tex: Texture2D = realm_backdrop.texture
+    var landscape: bool = false
+    if tex != null:
+        var path: String = tex.resource_path
+        landscape = tex.get_width()>tex.get_height() and ("/arenas/" in path or path.ends_with("/abyss_of_memories/gameplay.webp"))
+    if landscape:
+        var mat := ShaderMaterial.new()
+        mat.shader = ARENA_BACKDROP_SHADER
+        realm_backdrop.material = mat
+        realm_backdrop.stretch_mode = TextureRect.STRETCH_SCALE
+        realm_backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+    else:
+        realm_backdrop.material = null
+        realm_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        realm_backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_PARENT_NODE
+    if is_instance_valid(realm_backdrop_shade):
+        realm_backdrop_shade.color = Color("241f1a",0.08 if landscape else 0.24)
 
 func realm_quote() -> String:
     var index: int = realm_index()
@@ -433,6 +516,9 @@ func show_ascend_menu() -> void:
     if campaign_practice_active:
         _campaign_practice_menu()
         return
+    if ember_active:
+        _ember_menu()
+        return
     if shadow_active:
         _shadow_menu()
         return
@@ -449,16 +535,132 @@ func show_ascend_menu() -> void:
     action(body,Z("Regeln ansehen"),show_rules)
     action(body,L("realms"),show_realms)
     action(body,L("challenges"),show_challenges)
+    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms)
+    if Realm2.qa_mode():
+        action(body,"Ember Boss · VFX Test",_show_ember_vfx_test)
     action(body,_achievements_label(),show_realm_titles)
+    action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings).name = "AscendSettingsEntry"
     action(body,Z("Hauptmenü"),return_home)
+    _open_realm_dialog(parts)
+
+func _save_ascend_setting(key: String, value: Variant) -> void:
+    data.settings[key] = value
+    SaveManager.save_data(data)
+    if key=="music" or key=="music_mode" or key=="music_track":
+        sync_realm_music(true)
+    if key=="language":
+        new_match_button.text = Z("Neue Partie")
+        rules_button.text = Z("Regeln ansehen")
+        result_review_button.text = _result_button_label()
+        realms_nav_button.text = L("realms")
+        challenges_nav_button.text = L("challenges")
+        achievements_nav_button.text = _achievements_label()
+        ascend_subtitle.text = L("subtitle")
+    draw()
+
+func _save_ascend_name(index: int, value: String) -> void:
+    var default_name: String = "Du" if index==0 else "Spieler 2"
+    var localized: String = Locale.translate(default_name,lang())
+    var cleaned: String = value.strip_edges()
+    if cleaned==localized and str(data.settings.names[index])==default_name: return
+    var names: Array = data.settings.names.duplicate()
+    names[index] = default_name if cleaned.is_empty() else cleaned
+    _save_ascend_setting("names",names)
+
+func show_ascend_settings() -> void:
+    var parts: Dictionary = _realm_dialog(_campaign_phrase("Einstellungen","Settings","Definições"),700)
+    var body: VBoxContainer = parts.box
+    for i in range(2):
+        var index: int = i
+        text(body,_campaign_phrase("Spielername","Player name","Nome do jogador")+" "+str(i+1),15)
+        var field: LineEdit = LineEdit.new()
+        field.name = "AscendSettingsName%d" % i
+        field.max_length = 24
+        var stored: String = str(data.settings.names[i])
+        field.text = Locale.translate(stored,lang()) if stored==("Du" if i==0 else "Spieler 2") else stored
+        SettingsTheme.settings_field(field)
+        body.add_child(field)
+        field.text_submitted.connect(func(value: String): _save_ascend_name(index,value))
+        field.focus_exited.connect(func(): _save_ascend_name(index,field.text))
+    text(body,_campaign_phrase("Sprache","Language","Idioma"),15)
+    var languages: OptionButton = OptionButton.new()
+    languages.name = "AscendSettingsLanguage"
+    SettingsTheme.settings_picker(languages)
+    for label in ["Deutsch","English","Português"]: languages.add_item(label)
+    languages.select(maxi(0,["de","en","pt"].find(lang())))
+    body.add_child(languages)
+    languages.item_selected.connect(func(index: int):
+        _save_ascend_setting("language",["de","en","pt"][index])
+        call_deferred("show_ascend_settings"))
+    var toggles: Array = [
+        ["music",_campaign_phrase("Musik","Music","Música"),false],
+        ["sound",_campaign_phrase("Soundeffekte","Sound effects","Efeitos sonoros"),true],
+        ["haptics",_campaign_phrase("Vibration","Vibration","Vibração"),true]]
+    for entry in toggles:
+        var key: String = str(entry[0])
+        var toggle: CheckButton = CheckButton.new()
+        toggle.name = "AscendSettings_"+key
+        SettingsTheme.settings_switch(toggle)
+        toggle.text = str(entry[1])
+        toggle.button_pressed = bool(data.settings.get(key,entry[2]))
+        body.add_child(toggle)
+        toggle.toggled.connect(func(enabled: bool): _save_ascend_setting(key,enabled))
+    text(body,_campaign_phrase("Musiktitel","Music track","Faixa musical"),15)
+    var tracks: OptionButton = OptionButton.new()
+    SettingsTheme.settings_picker(tracks)
+    tracks.name = "AscendSettingsMusicTrack"
+    tracks.add_item(MusicPolicy.base_label(lang()),99)
+    var names: Array = ["Zen-Garten (Original)","Klangschalen – Stiller Tempel","Handpan – Sanfter Rhythmus","Nebelpfad","Stein und Wasser","Regentropfen im Zen-Garten","Sternenlicht am Tempel","Whispers of the Ancient Forest","Echoes of a Forgotten Dream","The Path of Serenity","Where the Waters Sleep","Spirit of the Jade River","A Thousand Silent Skies","Tales Beneath the Golden Sun"]
+    var selected: int = 0
+    for id in [0,1,2,5,6,8,9,10,11,12,13]:
+        if not ZenCollection.music_unlocked(data,id): continue
+        var label: String = Locale.translate(str(names[id]),lang())
+        tracks.add_item(label,id)
+        if MusicPolicy.mode(data)=="manual" and int(data.settings.get("music_track",7))==id: selected = tracks.item_count-1
+    tracks.select(selected)
+    body.add_child(tracks)
+    tracks.item_selected.connect(func(index: int):
+        var id: int = tracks.get_item_id(index)
+        data.settings.music_mode = "base" if id==99 else "manual"
+        if id!=99: data.settings.music_track = id
+        SaveManager.save_data(data)
+        sync_realm_music(true))
+    action(body,_campaign_phrase("Fertig","Done","Concluído"),_close_realm_dialog.bind(parts.dialog),true)
     _open_realm_dialog(parts)
 
 func pname(owner: int) -> String:
     if against_bot and owner == 1: return zen_ascend_bot_name()
     var names: Array = data.settings.names
-    return str(names[clampi(owner,0,1)])
+    var index: int = clampi(owner,0,1)
+    var stored: String = str(names[index])
+    if stored == ("Du" if index==0 else "Spieler 2"):
+        return _campaign_phrase(stored,"You" if index==0 else "Player 2","Tu" if index==0 else "Jogador 2")
+    return stored
 func move_count() -> int:
     return Mode.CELLS - cells.count(0)
+func _review_board_label() -> String:
+    return "Spielfeld ansehen" if lang()=="de" else ("Ver tabuleiro" if lang()=="pt" else "Inspect board")
+
+func _result_button_label() -> String:
+    return "Ergebnis anzeigen" if lang()=="de" else ("Ver resultado" if lang()=="pt" else "Show result")
+
+func _review_finished_board(dialog: Control) -> void:
+    if result == 0: return
+    _close_realm_dialog(dialog)
+    touch_positions.clear()
+    touched_cell = -1
+    dragged = false
+    mouse_pressed = false
+
+func _reopen_finished_result() -> void:
+    if result == 0 or is_instance_valid(active_realm_dialog): return
+    if ember_active: _ember_result()
+    elif shadow_active: _shadow_result()
+    elif abyss_active: _abyss_result()
+    elif realm_story_active: _realm_story_result()
+    elif campaign_practice_active: _campaign_practice_result()
+    else: show_match_result()
+
 func draw() -> void:
     if cube == null: return
     var wins: Array = []
@@ -467,6 +669,10 @@ func draw() -> void:
             for c in line:
                 if not wins.has(c): wins.append(c)
     cube.repaint(cells,wins)
+    if is_instance_valid(rules_button): rules_button.visible = result == 0
+    if is_instance_valid(result_review_button): result_review_button.visible = result != 0
+    if is_instance_valid(instructions):
+        instructions.text = _campaign_phrase("Partie beendet · Drehen und zoomen","Match finished · Rotate and zoom","Partida terminada · Roda e amplia") if result != 0 else Z("Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen")
     rank_label.text = Realms.realm_name(realm_index(),lang())
     if quote_label != null: quote_label.text = realm_quote()
     if result == 3:
@@ -482,25 +688,47 @@ func draw() -> void:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
     if campaign_practice_active:
-        rank_label.text = "Abyss of Memories · Zen-Bot"
+        rank_label.text = Realm2.REALM_NAMES[practice_chapter] + " · Zen-Bot"
         quote_label.text = "Zen Realm Chronicles · 4×4"
-        details_label.text = "Abyss · %d/96 · Challenges %d/3" % [move_count(),Realm2.completed_count(Realm2.load_progress(),1)]
+        details_label.text = Realm2.REALM_NAMES[practice_chapter] + " · %d/96 · Challenges %d/3" % [move_count(),Realm2.completed_count(Realm2.load_progress(),practice_chapter)]
+    if ember_active:
+        rank_label.text = ember_model.BOSS_NAMES[clampi(ember_index,0,2)]
+        quote_label.text = Realm2.REALM_NAMES[guardian_chapter] + " · 4×4"
+        details_label.text = _guardian_series_score(ember_progress)
     if shadow_active:
         rank_label.text = Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]
         quote_label.text = "Shadow Realm · 4×4"
         status_label.text = ("⚔ " + Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
-        details_label.text = "Shadow · " + str(move_count()) + "/96"
+        details_label.text = _guardian_series_score(shadow_progress) if shadow_index==2 else "Shadow · " + str(move_count()) + "/96"
     if abyss_active:
         rank_label.text = Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]
         quote_label.text = "Abyss of Memories · 4×4"
         status_label.text = ("⚔ " + Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
-        details_label.text = "Abyss · "+str(move_count())+"/96"
+        details_label.text = _guardian_series_score(abyss_progress) if abyss_index==2 else "Abyss · " + str(move_count()) + "/96"
     if realm_story_active:
         rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
         if result == 0:
             status_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage) if busy else RealmStory.text_for(lang(),"story")+" · "+str(move_count())+"/96"
         quote_label.text = RealmStory.text_for(lang(),"react_%d" % realm_story_stage)
         details_label.text = RealmStory.text_for(lang(),"skin")+" · "+str(move_count())+"/96"
+
+func _guardian_series_score(progress: Dictionary) -> String:
+    var tally: Dictionary = FinalSeries.score(progress)
+    return _campaign_phrase("Best of 3 · Kuze %d : %d Wächter","Best of 3 · Kuze %d : %d Guardian","Melhor de 3 · Kuze %d : %d Guardião") % [int(tally.player),int(tally.guardian)]
+
+func _guardian_series_panel(body: VBoxContainer, progress: Dictionary) -> void:
+    var tally: Dictionary = FinalSeries.score(progress)
+    var current: Dictionary = progress.get("game",{})
+    var decisive: int = int(tally.player)+int(tally.guardian)
+    var round_number: int = clampi(decisive+(0 if int(current.get("result",0)) in [1,2] else 1),1,3)
+    text(body,_campaign_phrase("Runde %d / 3","Round %d / 3","Ronda %d / 3") % round_number,15,Color("#e5ca93"))
+    text(body,_guardian_series_score(progress),19,Color("#e5ca93"))
+    if FinalSeries.player_won(progress):
+        text(body,_campaign_phrase("Finaler Wächter besiegt","Final Guardian defeated","Guardião final derrotado"),15,Color("#c8e8b4"))
+    elif FinalSeries.guardian_won(progress):
+        text(body,_campaign_phrase("Serie verloren · Neuer Versuch","Series lost · Try again","Série perdida · Tenta novamente"),15)
+    else:
+        text(body,_campaign_phrase("Zwei Siege zum Weiterkommen","Win two rounds to continue","Vence duas rondas para continuar"),15)
 
 func _pick_position(pos: Vector2) -> int:
     if cube_surface == null or cube == null: return -1
@@ -512,7 +740,7 @@ func _pick_position(pos: Vector2) -> int:
     return cube.pick(inside * 960.0)
 
 func cube_input(event: InputEvent) -> void:
-    if result != 0 or busy: return
+    if busy: return
     if event is InputEventScreenTouch:
         heard_touch = true
         if event.pressed:
@@ -526,7 +754,7 @@ func cube_input(event: InputEvent) -> void:
             var single: bool = touch_positions.size() == 1
             if single and not dragged and event.position.distance_to(touch_down) < 13.0:
                 var end_cell: int = _pick_position(event.position)
-                if touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
+                if result == 0 and touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
             touch_positions.erase(event.index)
             if touch_positions.is_empty(): touched_cell = -1
     elif event is InputEventScreenDrag:
@@ -558,7 +786,7 @@ func cube_input(event: InputEvent) -> void:
                 dragged = false
             elif not dragged and event.position.distance_to(touch_down) < 13.0:
                 var end_cell: int = _pick_position(event.position)
-                if touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
+                if result == 0 and touched_cell >= 0 and touched_cell == end_cell: play(end_cell)
     elif event is InputEventMouseMotion and mouse_pressed and not heard_touch:
         if event.position.distance_to(touch_down) > 12.0: dragged = true
         if dragged: cube.rotate_cube(event.relative)
@@ -566,6 +794,9 @@ func cube_input(event: InputEvent) -> void:
 func start_game(bot: bool, level: int = -1) -> void:
     if campaign_practice_active:
         _campaign_practice_restart()
+        return
+    if ember_active:
+        _ember_retry()
         return
     if shadow_active:
         _shadow_retry()
@@ -609,10 +840,12 @@ func play(cell: int) -> void:
     if against_bot and turn == 2: return
     if realm_story_active: realm_story_last_human = cell
     if abyss_active: abyss_last_human = cell
+    if ember_active: ember_last_human = cell
     if shadow_active: shadow_last_human = cell
     _commit(cell)
     if realm_story_active and result == 0: _realm_story_save()
     if abyss_active and result == 0: _abyss_save()
+    if ember_active and result == 0: _ember_save()
     if shadow_active and result == 0: _shadow_save()
     if against_bot and result == 0 and turn == 2:
         busy = true
@@ -653,11 +886,12 @@ func bot_turn() -> void:
     if began_in_shadow and (not shadow_active or shadow_generation != started_shadow): return
     if not began_in_shadow and shadow_active: return
     if began_in_practice != campaign_practice_active: return
-    var cell: int = Shadow.choose_move(cells,lines,shadow_index,shadow_last_human) if shadow_active else (Abyss.choose_move(cells,lines,abyss_index,abyss_last_human) if abyss_active else (RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)))
+    var cell: int = ember_model.choose_move(cells,lines,ember_index,ember_last_human) if ember_active else Shadow.choose_move(cells,lines,shadow_index,shadow_last_human) if shadow_active else (Abyss.choose_move(cells,lines,abyss_index,abyss_last_human) if abyss_active else (RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)))
     busy = false
     if cell >= 0: _commit(cell)
     if realm_story_active and result == 0: _realm_story_save()
     if abyss_active and result == 0: _abyss_save()
+    if ember_active and result == 0: _ember_save()
     if shadow_active and result == 0: _shadow_save()
     draw()
 
@@ -672,8 +906,16 @@ func finish() -> void:
                 if int(line[0]/16) != int(line[3]/16):
                     crossed = true
                     break
-        campaign_awards = Realm2.record_abyss_match(1 if result==1 else (0 if result==3 else -1),crossed)
+        var outcome: int = 1 if result==1 else (0 if result==3 else -1)
+        campaign_awards = Realm2.record_celestial_match(outcome,crossed,match_blocked_threat) if practice_chapter==3 else (Realm2.record_ember_match(outcome,crossed) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed))
         call_deferred("_campaign_practice_result")
+        return
+    if ember_active:
+        if recorded: return
+        recorded = true
+        busy = false
+        _ember_save()
+        call_deferred("_ember_result")
         return
     if shadow_active:
         if recorded: return
@@ -736,18 +978,8 @@ func finish() -> void:
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":str(secret.name),"quote":str(secret.quote)})
         if bool(last_realm_awards.get("realm_completed",false)):
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":Achievements.MAIN_TITLES[match_realm],"quote":Achievements.main_quote(match_realm)})
-        # Realm access may unlock earlier, but AUTOMATIC travel requires all 8
-        # challenges completed in the current Realm. Once-only persisted gate.
-        if Realms.ready_for_breakthrough(data,match_realm):
-            var journey: Dictionary = Realms.state(data)
-            if not journey.get("auto_transitions") is Dictionary:
-                journey["auto_transitions"] = {}
-            if not bool(journey.auto_transitions.get(str(match_realm),false)):
-                journey.auto_transitions[str(match_realm)] = true
-                var destination: int = match_realm + 1
-                queued_unlocks.push_front({"kind":"realm","realm":destination,"name":Realms.REALM_NAMES[destination],"quote":"A new path opens beyond the known world."})
-                journey["selected"] = destination
-                if realm_backdrop != null: realm_backdrop.texture = load(Realms.REALM_ART[destination])
+        # Ordinary matches still earn existing achievements and leaves.
+        # They never trigger the Campaign 2.0 breakthrough.
         var realm_state: Dictionary = Realms.state(data)
         if match_realm == 3 and bool(last_realm_awards.get("realm_completed", false)) and Realms.current_title(data,3) == "Fully Aware" and not bool(realm_state.get("fully_aware_ceremony_seen", false)):
             realm_state["fully_aware_ceremony_seen"] = true
@@ -828,6 +1060,7 @@ func show_rules() -> void:
     text(body,Z("Gewinne mit vier X oder O in einer Reihe: waagerecht, senkrecht oder diagonal auf einer Fläche ODER gerade über eine Würfelkante (1+3, 2+2, 3+1)."),15)
     text(body,Z("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert."),15)
     action(body,Z("Neue Partie"),_start_picker_after_rules.bind(parts.dialog),true)
+    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true).name = "AscendEntryChronicles"
     _open_realm_dialog(parts)
 
 func _start_picker_after_rules(dialog: Control) -> void:
@@ -848,6 +1081,7 @@ func show_mode_picker() -> void:
     text(body,"Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),18,Color("f4dfbd"))
     action(body,"Play Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),_start_realm_match.bind(true,fixed_level,dialog),true)
     action(body,Z("Zu zweit spielen"),_start_realm_match.bind(false,0,dialog))
+    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true).name = "AscendEntryChronicles"
     _open_realm_dialog(parts)
 
 func _start_realm_match(bot: bool, level: int, dialog: Control) -> void:
@@ -888,6 +1122,9 @@ func show_statistics() -> void:
 func return_home() -> void:
     if campaign_practice_active:
         _campaign_practice_back()
+        return
+    if ember_active:
+        _ember_back_to_reader()
         return
     if shadow_active:
         _shadow_back_to_reader()
@@ -989,6 +1226,12 @@ func _realm_unlocked_hint(realm: int) -> String:
     return Realms.missing_reason(data,realm,lang())
 
 func show_realms() -> void:
+    if ember_active or shadow_active or abyss_active:
+        if result!=0: _reopen_finished_result()
+        elif ember_active: _ember_menu()
+        elif shadow_active: _shadow_menu()
+        else: _abyss_menu()
+        return
     if realm_story_active:
         _realm_story_menu()
         return
@@ -998,6 +1241,8 @@ func show_realms() -> void:
     text(body,L("subtitle"),15,Color("567b72"))
     text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
     # Story and boss progress live exclusively in Zen Realm Chronicles.
+    var chronicles_button: Button = action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true)
+    chronicles_button.name = "Campaign2ChroniclesEntry"
     for i in range(4):
         var number: int = i
         var allowed: bool = Realms.unlocked(data,i)
@@ -1028,6 +1273,9 @@ func show_realms() -> void:
         else:
             choose = action(column,L("selected") if selected else L("select"),_choose_realm_from_dialog.bind(number,ui_parts.dialog),true)
             choose.disabled = selected or (move_count() > 0 and result == 0)
+        if i==0:
+            action(column,"Realm Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),0),_open_campaign_trials_from_realms.bind(0))
+            _add_abyss_realm_card(body)
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
 
@@ -1043,6 +1291,33 @@ func _preview_mirror_shatter_qa() -> void:
     preview.present(Realms.REALM_ART[0],Realms.REALM_ART[1],
         Realms.realm_name(1,lang()),true,bool(data.settings.get("sound",true)),
         [world_music],lang())
+
+func _add_abyss_realm_card(body: VBoxContainer) -> void:
+    var card: PanelContainer = PanelContainer.new()
+    card.name = "Campaign2AbyssRealmCard"
+    card.add_theme_stylebox_override("panel",style(Color("252034"),18))
+    body.add_child(card)
+    var column: VBoxContainer = VBoxContainer.new()
+    card.add_child(column)
+    var allowed: bool = Realm2.unlocked(1)
+    text(column,"Abyss of Memories" + ("" if allowed else "  🔒"),20,Color("f7dfaa"))
+    var thumb: TextureRect = TextureRect.new()
+    thumb.texture = Abyss.battle_backdrop()
+    thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    thumb.custom_minimum_size.y = 112
+    thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    column.add_child(thumb)
+    text(column,"Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),1),15)
+    action(column,_campaign_phrase("Realm betreten","Enter Realm","Entrar no reino") if allowed else _campaign_phrase("Freischaltung ansehen","View unlock requirements","Ver requisitos"),_open_campaign_trials_from_realms.bind(1),allowed)
+
+func _open_campaign_trials_from_realms(chapter: int) -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_campaign_challenges(chapter)
+
+func _open_campaign_library_from_realms() -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_library()
 
 func _open_realm_chronicles_from_realms() -> void:
     # The button is inside a modal; close it before opening the book. Returning
@@ -1091,20 +1366,11 @@ func select_realm(number: int) -> bool:
     bot_level = Realms.fixed_bot_level(number)
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[number])
-    var first_open: bool = false
-    var transition_from: int = from_realm
-    if number > 0 and Realms.ready_for_breakthrough(data,number-1):
-        var state: Dictionary = Realms.state(data)
-        if not state.get("auto_transitions") is Dictionary:
-            state["auto_transitions"] = {}
-        if not bool(state.auto_transitions.get(str(number-1),false)):
-            state.auto_transitions[str(number-1)] = true
-            first_open = true
-            transition_from = number-1
+        _refresh_arena_presentation()
     SaveManager.save_data(data)
     draw()
-    if from_realm != number or first_open:
-        call_deferred("_show_manual_realm_journey",transition_from,number,first_open)
+    if from_realm != number:
+        call_deferred("_show_manual_realm_journey",from_realm,number,false)
     else:
         sync_realm_music()
     return true
@@ -1157,7 +1423,20 @@ func _challenge_items(list: VBoxContainer, realm: int) -> void:
     text(list,L("bot_only"),13,Color("cdbd9d"))
 
 func show_challenges() -> void:
-    # The Realm is chosen in Realms, not again in Challenges. More space for cards.
+    if ember_active or shadow_active or abyss_active or realm_story_active:
+        if result!=0: _reopen_finished_result()
+        elif ember_active: _ember_menu()
+        elif shadow_active: _shadow_menu()
+        elif abyss_active: _abyss_menu()
+        else: _realm_story_menu()
+        return
+    if campaign_practice_active and move_count()>0 and result==0:
+        _campaign_practice_menu()
+        return
+    if campaign_practice_active or realm_index()==0:
+        _open_campaign_trials_from_realms(practice_chapter if campaign_practice_active else 0)
+        return
+    # Original archive Realms retain their achievement interface until migrated.
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + L("challenges"))
     var body: VBoxContainer = parts.box
     var tasks_box: VBoxContainer = VBoxContainer.new()
@@ -1254,7 +1533,14 @@ func show_match_result() -> void:
     if not last_realm_awards.get("new_tasks",[]).is_empty():
         if Achievements.main_title(data,match_realm) != "—":
             text(info,L("rank") + ": " + Achievements.main_title(data,match_realm),15)
-    action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog),true)
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    action(body,Z("Neue Partie"),_replay_after_result.bind(parts.dialog))
+    if against_bot and match_realm==0:
+        if Realm2.final_boss_waiting(0):
+            action(body,_campaign_phrase("⚔ Finalen Boss betreten","⚔ Enter Final Boss","⚔ Enfrentar o chefe final"),_enter_campaign_final_guardian.bind(0),true)
+        elif Realm2.completed_count(Realm2.load_progress(),0)==3 and Realm2.bosses_won(0)<3:
+            action(body,_campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_open_campaign_story_from_match.bind(0),true)
+        action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_open_campaign_trials_from_realms.bind(0))
     action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
 
@@ -1350,6 +1636,7 @@ func _realm_story_set_stage(stage: int) -> void:
     cube.set_boss_skin(realm_story_stage)
     if realm_backdrop != null:
         realm_backdrop.texture = load(RealmStory.CHAPTER_ART[match_realm])
+        _refresh_arena_presentation()
     draw()
     # Follow the new Realm's EXISTING song on actual chapter travel.
     # No new music and no modification to the Classic soundtrack.
@@ -1454,6 +1741,7 @@ func _realm_story_result() -> void:
     else:
         _realm_story_art(body,realm_story_stage,170)
     text(body,RealmStory.text_for(lang(),key),16)
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if won:
         action(body,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
     else:
@@ -1616,6 +1904,7 @@ func _realm_story_return_to_ascend() -> void:
     against_bot = true
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     # Leaving a boss restores the normal Realm/Shop soundtrack immediately.
     # Reuse the existing 1.8-second crossfade; keep the selected music intact.
     sync_realm_music()
@@ -1648,7 +1937,14 @@ func start_abyss_battle() -> void:
         return
     abyss_index = int(next_action.get("boss",-1))
     if abyss_index < 0 or abyss_index >= 3: return
+    if not Realm2.can_face_boss(1,abyss_index):
+        ZenChronicles.open_campaign_challenges(1,true)
+        return
     abyss_active = true
+    shadow_active = false
+    ember_active = false
+    campaign_practice_active = false
+    campaign_awards = []
     realm_story_active = false
     abyss_generation += 1
     match_generation += 1
@@ -1669,8 +1965,9 @@ func start_abyss_battle() -> void:
     cube.clear_boss_skin()
     cube.set_abyss_skin(abyss_index+1)
     if realm_backdrop != null:
-        var arena: Texture2D = Abyss.battle_backdrop()
+        var arena: Texture2D = Abyss.battle_backdrop(abyss_index)
         if arena != null: realm_backdrop.texture = arena
+        _refresh_arena_presentation()
     _abyss_save()
     sync_realm_music()
     draw()
@@ -1714,6 +2011,7 @@ func _abyss_intro() -> void:
         "Remember who you were – and why you still fight."
     ]
     text(body,opening[abyss_index],16,Color("#dfd4e5"))
+    if abyss_index==2: _guardian_series_panel(body,abyss_progress)
     var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
@@ -1742,7 +2040,12 @@ func _abyss_result() -> void:
     var body: VBoxContainer = parts.box
     _abyss_add_art(body,190)
     text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
-    if result == 1:
+    if abyss_index==2: _guardian_series_panel(body,abyss_progress)
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    if abyss_index==2 and not FinalSeries.player_won(abyss_progress):
+        var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if FinalSeries.guardian_won(abyss_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
+        action(body,"⚔ " + next_label,_abyss_retry,true)
+    elif result == 1:
         action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_abyss_victory,true)
     else:
         action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_abyss_retry,true)
@@ -1750,13 +2053,17 @@ func _abyss_result() -> void:
     _open_realm_dialog(parts)
 
 func _abyss_retry() -> void:
-    if not abyss_active: return
+    if not abyss_active or result==0: return
+    var candidate: Dictionary = abyss_progress.duplicate(true)
+    if abyss_index==2:
+        if not FinalSeries.start_next(candidate): return
+    else: candidate.game = {}
+    # Save the new board and the score in one atomic progress write.
+    var game: Dictionary = Abyss.begin_battle(candidate,abyss_index)
+    if game.is_empty() or not Abyss.save_progress(candidate): return
+    abyss_progress = candidate
     abyss_generation += 1
     match_generation += 1
-    abyss_progress.game = {}
-    if not Abyss.save_progress(abyss_progress): return
-    # This allocates a fresh 96-cell board and alternates the first player.
-    var game: Dictionary = Abyss.begin_battle(abyss_progress,abyss_index)
     cells = game.cells.duplicate()
     turn = int(game.turn)
     result = 0
@@ -1770,6 +2077,8 @@ func _abyss_retry() -> void:
 
 func _abyss_victory() -> void:
     if not abyss_active or result != 1: return
+    if not Realm2.can_face_boss(1,abyss_index): return
+    if abyss_index==2 and not FinalSeries.player_won(abyss_progress): return
     if not Abyss.record_victory(abyss_progress,abyss_index): return
     abyss_generation += 1
     match_generation += 1
@@ -1789,7 +2098,7 @@ func _abyss_menu() -> void:
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
 
-func _abyss_back_to_reader() -> void:
+func _abyss_back_to_reader(open_reader: bool = true) -> void:
     if not abyss_active: return
     abyss_generation += 1
     match_generation += 1
@@ -1808,10 +2117,11 @@ func _abyss_back_to_reader() -> void:
     abyss_last_human = -1
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
-    sync_realm_music()
     draw()
-    ZenChronicles.open_abyss_reader()
+    if open_reader: ZenChronicles.open_abyss_reader()
+    else: sync_realm_music(true)
 
 # -------- Campaign 2.0: Shadow native 4x4 battles and story handoff --------
 func start_shadow_battle() -> void:
@@ -1823,7 +2133,12 @@ func start_shadow_battle() -> void:
         return
     shadow_index = int(next_action.get("boss",-1))
     if shadow_index < 0 or shadow_index >= 3: return
+    if not Realm2.can_face_boss(0,shadow_index):
+        ZenChronicles.open_campaign_challenges(0,true)
+        return
     shadow_active = true
+    campaign_practice_active = false
+    campaign_awards = []
     realm_story_active = false
     abyss_active = false
     shadow_generation += 1
@@ -1848,6 +2163,7 @@ func start_shadow_battle() -> void:
     if realm_backdrop != null:
         var arena: Texture2D = Shadow.battle_backdrop(shadow_index)
         if arena != null: realm_backdrop.texture = arena
+        _refresh_arena_presentation()
     _shadow_save()
     sync_realm_music()
     draw()
@@ -1891,6 +2207,7 @@ func _shadow_intro() -> void:
         "At the veil gate, patience is the final blade."
     ]
     text(body,opening[shadow_index],16,Color("#dfd4e5"))
+    if shadow_index==2: _guardian_series_panel(body,shadow_progress)
     var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
@@ -1919,7 +2236,12 @@ func _shadow_result() -> void:
     var body: VBoxContainer = parts.box
     _shadow_add_art(body,190)
     text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
-    if result == 1:
+    if shadow_index==2: _guardian_series_panel(body,shadow_progress)
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    if shadow_index==2 and not FinalSeries.player_won(shadow_progress):
+        var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if FinalSeries.guardian_won(shadow_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
+        action(body,"⚔ " + next_label,_shadow_retry,true)
+    elif result == 1:
         action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_shadow_victory,true)
     else:
         action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_shadow_retry,true)
@@ -1927,13 +2249,17 @@ func _shadow_result() -> void:
     _open_realm_dialog(parts)
 
 func _shadow_retry() -> void:
-    if not shadow_active: return
+    if not shadow_active or result==0: return
+    var candidate: Dictionary = shadow_progress.duplicate(true)
+    if shadow_index==2:
+        if not FinalSeries.start_next(candidate): return
+    else: candidate.game = {}
+    # Save the new board and the score in one atomic progress write.
+    var game: Dictionary = Shadow.begin_battle(candidate,shadow_index)
+    if game.is_empty() or not Shadow.save_progress(candidate): return
+    shadow_progress = candidate
     shadow_generation += 1
     match_generation += 1
-    shadow_progress.game = {}
-    if not Shadow.save_progress(shadow_progress): return
-    # This allocates a fresh 96-cell board and alternates the first player.
-    var game: Dictionary = Shadow.begin_battle(shadow_progress,shadow_index)
     cells = game.cells.duplicate()
     turn = int(game.turn)
     result = 0
@@ -1947,6 +2273,8 @@ func _shadow_retry() -> void:
 
 func _shadow_victory() -> void:
     if not shadow_active or result != 1: return
+    if not Realm2.can_face_boss(0,shadow_index): return
+    if shadow_index==2 and not FinalSeries.player_won(shadow_progress): return
     if not Shadow.record_victory(shadow_progress,shadow_index): return
     shadow_generation += 1
     match_generation += 1
@@ -1966,7 +2294,7 @@ func _shadow_menu() -> void:
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
 
-func _shadow_back_to_reader() -> void:
+func _shadow_back_to_reader(open_reader: bool = true) -> void:
     if not shadow_active: return
     shadow_generation += 1
     match_generation += 1
@@ -1985,28 +2313,267 @@ func _shadow_back_to_reader() -> void:
     shadow_last_human = -1
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
+    draw()
+    if open_reader: ZenChronicles.open_shadow_reader()
+    else: sync_realm_music(true)
+
+
+func start_ember_battle() -> void:
+    if not Realm2.unlocked(2): return
+    guardian_chapter = 2
+    ember_model = Ember
+    _start_guardian_battle()
+
+func start_celestial_battle() -> void:
+    if not Realm2.unlocked(3): return
+    guardian_chapter = 3
+    ember_model = Celestial
+    _start_guardian_battle()
+
+func _open_guardian_reader() -> void:
+    if guardian_chapter==3: ZenChronicles.open_celestial_campaign_preview()
+    else: ZenChronicles.open_ember_reader()
+
+func _start_guardian_battle() -> void:
+    ember_progress = ember_model.load_progress()
+    var next_action: Dictionary = ember_model.next_action(ember_progress)
+    if next_action.get("type") != "battle":
+        _open_guardian_reader()
+        return
+    ember_index = int(next_action.get("boss",-1))
+    if ember_index < 0 or ember_index >= 3: return
+    if not Realm2.can_face_boss(guardian_chapter,ember_index):
+        ZenChronicles.open_campaign_challenges(guardian_chapter,true)
+        return
+    ember_active = true
+    campaign_practice_active = false
+    campaign_awards = []
+    realm_story_active = false
+    abyss_active = false
+    shadow_active = false
+    ember_generation += 1
+    match_generation += 1
+    ZenChronicles.set_campaign_board_active(true)
+    against_bot = true
+    owners = [0,1]
+    recorded = false
+    busy = false
+    var game: Dictionary = ember_model.begin_battle(ember_progress,ember_index)
+    if game.is_empty(): return
+    cells = game.cells.duplicate()
+    turn = clampi(int(game.get("turn",1)),1,2)
+    result = clampi(int(game.get("result",0)),0,3)
+    recorded = result != 0
+    ember_last_human = int(game.get("last_human",-1))
+    bot_level = ember_model.BOT_LEVELS[ember_index]
+    cube.reset_view()
+    cube.clear_abyss_skin()
+    cube.clear_boss_skin()
+    cube.set_boss_skin(ember_index+(6 if guardian_chapter==3 else 3))
+    if realm_backdrop != null:
+        var arena: Texture2D = ember_model.battle_backdrop(ember_index)
+        if arena != null: realm_backdrop.texture = arena
+        _refresh_arena_presentation()
+    _ember_save()
     sync_realm_music()
     draw()
-    ZenChronicles.open_shadow_reader()
+    if result != 0: _ember_result()
+    else: _ember_intro()
+
+func _ember_save() -> bool:
+    if not ember_active: return false
+    ember_progress.game = {
+        "boss":ember_index,
+        "cells":cells.duplicate(),
+        "turn":turn,
+        "result":result,
+        "last_human":ember_last_human
+    }
+    var ok: bool = ember_model.save_progress(ember_progress)
+    if not ok: push_warning("Ember Temple: could not save battle")
+    return ok
+
+func _ember_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
+    var portrait: Texture2D = ember_model.boss_art(ember_index)
+    if portrait == null: return
+    var art := TextureRect.new()
+    art.texture = portrait
+    art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    art.custom_minimum_size.y = height
+    art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent.add_child(art)
+
+func _ember_intro() -> void:
+    if not ember_active: return
+    var parts: Dictionary = _realm_dialog(ember_model.BOSS_NAMES[ember_index],670)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    _ember_add_art(body)
+    var opening: Array = [
+        "See beyond the first move.",
+        "A strategy without discipline is only a spark.",
+        "Show me the shape of your fire."
+    ]
+    if guardian_chapter==3: opening = ["Every decision creates a thousand possibilities.","Let thunder shake the heavens.","Then show me what you have become."]
+    text(body,opening[ember_index],16,Color("#dfd4e5"))
+    _guardian_series_panel(body,ember_progress)
+    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
+    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
+    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
+    text(body,starter,14,Color("#e1c99d"))
+    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_ember_begin,true)
+    action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _ember_begin() -> void:
+    if not ember_active: return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    if result == 0 and turn == 2 and not busy:
+        busy = true
+        call_deferred("bot_turn")
+    draw()
+
+func _ember_result() -> void:
+    if not ember_active or result == 0: return
+    var label: String = "Die Flamme wird ruhig" if result == 1 else ("Unentschieden" if result == 3 else "Niederlage")
+    if lang() == "en":
+        label = "The flame grows quiet" if result == 1 else ("Draw" if result == 3 else "Defeat")
+    elif lang() == "pt":
+        label = "A chama acalma" if result == 1 else ("Empate" if result == 3 else "Derrota")
+    if guardian_chapter==3 and result==1: label = _campaign_phrase("Klarheit","Clarity","Clareza")
+    var parts: Dictionary = _realm_dialog(label,520)
+    _campaign_result_compact(parts)
+    var body: VBoxContainer = parts.box
+    _ember_add_art(body,190)
+    text(body,ember_model.BOSS_NAMES[ember_index],18,Color("#e8d4b5"))
+    _guardian_series_panel(body,ember_progress)
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    if not ember_model.player_won(ember_progress):
+        var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if ember_model.guardian_won(ember_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
+        action(body,"⚔ " + next_label,_ember_retry,true)
+    elif result == 1:
+        action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_ember_victory,true)
+    else:
+        action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_ember_retry,true)
+    action(body,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_ember_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _ember_retry() -> void:
+    if not ember_active or result==0: return
+    var candidate: Dictionary = ember_progress.duplicate(true)
+    if not ember_model.start_next(candidate): return
+    # Save the new board and the score in one atomic progress write.
+    var game: Dictionary = ember_model.begin_battle(candidate,ember_index)
+    if game.is_empty() or not ember_model.save_progress(candidate): return
+    ember_progress = candidate
+    ember_generation += 1
+    match_generation += 1
+    cells = game.cells.duplicate()
+    turn = int(game.turn)
+    result = 0
+    recorded = false
+    busy = false
+    ember_last_human = -1
+    cube.reset_view()
+    _ember_save()
+    draw()
+    _ember_intro()
+
+func _ember_victory() -> void:
+    if not ember_active or result != 1: return
+    if not Realm2.can_face_boss(guardian_chapter,ember_index): return
+    if not ember_model.player_won(ember_progress): return
+    if not ember_model.record_victory(ember_progress,ember_index): return
+    ember_generation += 1
+    match_generation += 1
+    busy = false
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    # The Veil dissolves quietly. Epic glass fracture is reserved for
+    # Shadow → Abyss and Abyss → Ember after all 3+3 requirements.
+    _ember_back_to_reader()
+
+func _ember_menu() -> void:
+    if not ember_active: return
+    var parts: Dictionary = _realm_dialog(Realm2.REALM_NAMES[guardian_chapter],410)
+    _realm_story_compact(parts)
+    var body: VBoxContainer = parts.box
+    text(body,ember_model.BOSS_NAMES[clampi(ember_index,0,2)],20,Color("#dfd4e5"))
+    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_ember_begin,true)
+    action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
+    _open_realm_dialog(parts)
+
+func _ember_back_to_reader(open_reader: bool = true) -> void:
+    if not ember_active: return
+    ember_generation += 1
+    match_generation += 1
+    if not bool(ember_progress.defeated[ember_index]): _ember_save()
+    ember_active = false
+    busy = false
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    cube.clear_boss_skin()
+    cube.set_skin(int(data.economy.get("equipped",0)))
+    match_realm = int(Realms.state(data).selected)
+    bot_level = Realms.fixed_bot_level(match_realm)
+    cells.fill(0)
+    turn = 1
+    result = 0
+    recorded = false
+    ember_last_human = -1
+    if realm_backdrop != null:
+        realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
+    ZenChronicles.set_campaign_board_active(false)
+    draw()
+    if open_reader: _open_guardian_reader()
+    else: sync_realm_music(true)
 
 
 # ---- Zen Realm Chronicles: NORMAL Abyss bot matches, not puzzles ----
 func start_campaign_practice(chapter: int) -> void:
-    if chapter != 1 or not Realm2.unlocked(1): return
+    if chapter not in [0,1,2,3] or not Realm2.unlocked(chapter): return
+    if move_count()>0 and result==0:
+        # Do not replace a live board when moving between Realms.
+        if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+        return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    if chapter==0:
+        if not Realms.select(data,0): return
+        campaign_practice_active = false
+        campaign_awards = []
+        cube.clear_abyss_skin()
+        cube.set_skin(int(data.economy.get("equipped",0)))
+        ZenChronicles.set_campaign_board_active(false)
+        SaveManager.save_data(data)
+        if realm_backdrop != null:
+            realm_backdrop.texture = load(Realms.REALM_ART[0])
+            _refresh_arena_presentation()
+        sync_realm_music()
+        start_game(true,Realms.fixed_bot_level(0))
+        return
+    if chapter==3 and int(Celestial.load_progress().page)<19: return
     campaign_practice_active = true
+    practice_chapter = chapter
+    ember_active = false
     abyss_active = false
     shadow_active = false
     realm_story_active = false
     against_bot = true
-    bot_level = 1
+    bot_level = 2 if practice_chapter in [2,3] else 1
     owners = [0,1]
     ZenChronicles.set_campaign_board_active(true)
     cube.clear_boss_skin()
-    cube.set_abyss_skin(0)
+    if practice_chapter in [2,3]:
+        cube.clear_abyss_skin()
+    else:
+        cube.set_abyss_skin(0)
     if realm_backdrop != null:
-        var arena: Texture2D = Abyss.battle_backdrop()
+        var arena: Texture2D = Celestial.battle_backdrop() if practice_chapter==3 else (Ember.battle_backdrop() if practice_chapter==2 else Abyss.battle_backdrop())
         if arena != null: realm_backdrop.texture = arena
+        _refresh_arena_presentation()
     sync_realm_music()
     _campaign_practice_restart()
 
@@ -2018,7 +2585,9 @@ func _campaign_practice_restart() -> void:
     recorded = false
     busy = false
     campaign_awards = []
-    var total: int = int(Realm2.load_progress().abyss_stats.played)
+    practice_choir_played = false
+    match_blocked_threat = false
+    var total: int = int(Realm2.load_progress().celestial_stats.played if practice_chapter==3 else (Realm2.load_progress().ember_stats.played if practice_chapter==2 else Realm2.load_progress().abyss_stats.played))
     turn = 1 if total % 2 == 0 else 2
     cube.reset_view()
     draw()
@@ -2034,22 +2603,40 @@ func _campaign_practice_result() -> void:
     var parts: Dictionary = _realm_dialog(heading,520)
     _campaign_result_compact(parts)
     var body: VBoxContainer = parts.box
-    text(body,"Abyss of Memories · Zen-Bot",20,Color("#e5d2ac"))
+    text(body,Realm2.REALM_NAMES[practice_chapter] + " · Zen-Bot",20,Color("#e5d2ac"))
     if not campaign_awards.is_empty():
         text(body,_campaign_phrase("🏆 Realm-Challenge abgeschlossen!","🏆 Realm challenge earned!","🏆 Desafio de reino concluído!"),18,Color("#c8e8b4"))
         for title_name in campaign_awards:
             text(body,"✓ " + title_name,17,Color("#e5d2ac"))
-        if bool(data.get("settings",{}).get("sound",true)):
+        if not practice_choir_played and bool(data.get("settings",{}).get("sound",true)):
+            practice_choir_played = true
             var choir: AudioStreamPlayer = AudioStreamPlayer.new()
             choir.stream = load("res://assets/audio/zen_achievement_choir.wav") as AudioStream
             add_child(choir)
             choir.finished.connect(choir.queue_free)
             choir.play()
-    text(body,_campaign_phrase("Abyss-Challenges: %d/3","Abyss challenges: %d/3","Desafios Abyss: %d/3") %
-        Realm2.completed_count(Realm2.load_progress(),1),16,Color("#e8ddc5"))
+    text(body,_campaign_phrase("Realm-Challenges: %d/3","Realm challenges: %d/3","Desafios do reino: %d/3") %
+        Realm2.completed_count(Realm2.load_progress(),practice_chapter),16,Color("#e8ddc5"))
+    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    if Realm2.final_boss_waiting(practice_chapter):
+        action(body,_campaign_phrase("⚔ Finalen Boss betreten","⚔ Enter Final Boss","⚔ Enfrentar o chefe final"),_enter_campaign_final_guardian.bind(practice_chapter),true)
+    elif Realm2.completed_count(Realm2.load_progress(),practice_chapter)==3 and Realm2.bosses_won(practice_chapter)<3:
+        action(body,_campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_open_campaign_story_from_match.bind(practice_chapter),true)
     action(body,_campaign_phrase("⚔ Noch eine Partie","⚔ Play Again","⚔ Jogar novamente"),_campaign_practice_begin_again,true)
     action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
     _open_realm_dialog(parts)
+
+func _enter_campaign_final_guardian(chapter: int) -> void:
+    if not Realm2.final_boss_waiting(chapter): return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.request_final_guardian(chapter)
+
+func _open_campaign_story_from_match(chapter: int) -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    if chapter==0: ZenChronicles.open_shadow_reader()
+    elif chapter==1: ZenChronicles.open_abyss_reader()
+    elif chapter==2: ZenChronicles.open_ember_campaign_preview()
+    else: ZenChronicles.open_celestial_campaign_preview()
 
 func _campaign_practice_begin_again() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
@@ -2057,7 +2644,7 @@ func _campaign_practice_begin_again() -> void:
 
 func _campaign_practice_menu() -> void:
     if not campaign_practice_active: return
-    var parts: Dictionary = _realm_dialog("Abyss of Memories · Zen-Bot",420)
+    var parts: Dictionary = _realm_dialog(Realm2.REALM_NAMES[practice_chapter] + " · Zen-Bot",420)
     _realm_story_compact(parts)
     var body: VBoxContainer = parts.box
     action(body,_campaign_phrase("⚔ Partie fortsetzen","⚔ Continue Match","⚔ Continuar partida"),_campaign_practice_begin,true)
@@ -2084,7 +2671,31 @@ func _campaign_practice_back() -> void:
     recorded = false
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
     sync_realm_music()
     draw()
-    ZenChronicles.open_campaign_challenges(1)
+    ZenChronicles.open_campaign_challenges(practice_chapter)
+
+func _show_ember_vfx_test() -> void:
+    if not Realm2.qa_mode(): return
+    var parts: Dictionary = _realm_dialog("Ember Boss · VFX Test",680)
+    var body: VBoxContainer = parts.box
+    text(body,_campaign_phrase("Nur Vorschau – kein Spielstand wird verändert.","Preview only – no progress is changed.","Pré-visualização sem alterar o progresso."),14)
+    var frame: SubViewportContainer = SubViewportContainer.new()
+    frame.custom_minimum_size = Vector2(0,340)
+    frame.stretch = true
+    body.add_child(frame)
+    var view: SubViewport = SubViewport.new()
+    view.own_world_3d = true
+    view.transparent_bg = true
+    view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    frame.add_child(view)
+    var preview: AscendRenderer = AscendRenderer.new()
+    view.add_child(preview)
+    preview.set_boss_skin(3)
+    for i in range(3):
+        action(body,Ember.BOSS_NAMES[i],preview.set_boss_skin.bind(i+3))
+    action(body,"↻ 90°",preview.rotate_cube.bind(Vector2(196.35,0)))
+    action(body,_campaign_phrase("Zurück","Back","Voltar"),show_ascend_menu)
+    _open_realm_dialog(parts)

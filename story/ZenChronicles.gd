@@ -12,6 +12,8 @@ const Campaign = preload("res://story/ZenCampaign.gd")
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const AbyssReader = preload("res://story/ZenAbyssReader.gd")
 const ShadowReader = preload("res://story/ZenShadowReader.gd")
+const EmberReader = preload("res://story/ZenEmberReader.gd")
+const CelestialReader = preload("res://story/ZenCelestialReader.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const ChallengeMenu = preload("res://story/ZenRealmChallengeMenu.gd")
@@ -61,9 +63,14 @@ var _abyss_reader: CanvasLayer
 var _abyss_launch_requested: bool = false
 var _shadow_reader: CanvasLayer
 var _shadow_launch_requested: bool = false
+var _ember_reader: CanvasLayer
+var _ember_launch_requested: bool = false
+var _celestial_launch_requested: bool = false
 var _campaign_menu: CanvasLayer
 var _campaign_challenge_requested: Dictionary = {}
 var _campaign_practice_requested: int = -1
+var _story_audio_owner: Node
+var _breakthrough_active: bool = false
 
 func _ready() -> void:
     layer = 90
@@ -275,6 +282,8 @@ func open_library() -> void:
         "🔒 Shadow Realm · Unlock Zen Ascend 4×4","🔒 Shadow Realm · Desbloqueia Zen Ascend 4×4"),outer,open_shadow_reader)
     _make_button("🌑 Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · Shadow 3+3",outer,open_abyss_reader)
     _make_button("🔥 Ember Temple" if Realm2.unlocked(2) else "🔒 Ember Temple · Abyss 3+3",outer,open_ember_campaign_preview)
+    _make_button(("Celestial Realm" + (" · The Enlightened Mind" if Realm2.story_finished(3) else "")) if Realm2.unlocked(3) else "🔒 Celestial Realm · Ember 3+3",outer,open_celestial_campaign_preview)
+    if Realm2.unlocked(4): _make_button("Satori Realm",outer,open_satori_campaign_preview)
     _make_label(campaign_ui("Originalarchive","Original Archives","Arquivos originais"),outer,18,GOLD)
     _make_button(campaign_ui("📜 Original Realm Chronicles · 12 Bosse",
         "📜 Original Realm Chronicles · 12 Bosses","📜 Realm Chronicles originais · 12 chefes"),outer,open_realm_story_archive)
@@ -415,7 +424,7 @@ func set_campaign_board_active(active: bool) -> void:
     _quick_button.visible = _show_quick and not active and _screen == null
 
 func is_open() -> bool:
-    return _screen != null or is_instance_valid(_abyss_reader) or is_instance_valid(_shadow_reader) or is_instance_valid(_campaign_menu)
+    return _screen != null or is_instance_valid(_abyss_reader) or is_instance_valid(_shadow_reader) or is_instance_valid(_ember_reader) or is_instance_valid(_campaign_menu)
 
 func _input(event: InputEvent) -> void:
     if _screen == null:
@@ -670,16 +679,48 @@ func consume_realm_story_launch() -> bool:
     return result
 
 # An isolated reader, not a fifth normal 4x4 realm, with its own progress.
+func campaign_audio_exclusive() -> bool:
+    return _breakthrough_active or is_instance_valid(_story_audio_owner)
+
+func _suspend_scene_music() -> void:
+    var scene: Node = get_tree().current_scene
+    if is_instance_valid(scene) and scene.has_method("suspend_campaign_music"):
+        scene.call("suspend_campaign_music")
+
+func claim_story_audio(owner: Node) -> void:
+    if is_instance_valid(_story_audio_owner) and _story_audio_owner!=owner:
+        _story_audio_owner.call("stop_story_audio")
+    _story_audio_owner = owner
+    _suspend_scene_music()
+
+func release_story_audio(owner: Node) -> void:
+    if _story_audio_owner!=owner: return
+    _story_audio_owner = null
+    call_deferred("_resume_scene_music_if_free")
+
+func _resume_scene_music_if_free() -> void:
+    if campaign_audio_exclusive() or _shadow_launch_requested or _abyss_launch_requested or _ember_launch_requested or _celestial_launch_requested: return
+    var scene: Node = get_tree().current_scene
+    if is_instance_valid(scene) and scene.has_method("resume_campaign_music"):
+        scene.call("resume_campaign_music")
+
+func request_final_guardian(chapter: int) -> void:
+    if not Realm2.final_boss_waiting(chapter): return
+    var scene: Node = get_tree().current_scene
+    if is_instance_valid(scene) and scene.has_method("move_count") and int(scene.call("move_count"))>0 and int(scene.get("result"))==0: return
+    close_campaign_challenges()
+    if chapter==0: request_shadow_battle()
+    elif chapter==1: request_abyss_battle()
+    elif chapter==2: request_ember_battle()
+    else: request_celestial_battle()
+
 func open_abyss_reader() -> void:
     if not Realm2.unlocked(1):
         _campaign_locked_screen(1)
         return
-    # Entering from the library must not skip the FIRST Realm breakthrough.
-    if not Realm2.already_entered(0):
-        request_campaign_breakthrough(0)
-        return
     close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     if _screen != null: close_chronicles()
     _abyss_reader = AbyssReader.new()
@@ -690,6 +731,8 @@ func close_abyss_reader() -> void:
     if is_instance_valid(_abyss_reader):
         var old: CanvasLayer = _abyss_reader
         _abyss_reader = null
+        old.call("stop_story_audio")
+        release_story_audio(old)
         old.queue_free()
     if _quick_button != null and _screen == null:
         _quick_button.visible = _show_quick and not _campaign_board_active
@@ -718,6 +761,7 @@ func open_shadow_reader() -> void:
     close_campaign_challenges()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
     if _screen != null: close_chronicles()
     _shadow_reader = ShadowReader.new()
     _root.add_child(_shadow_reader)
@@ -727,6 +771,8 @@ func close_shadow_reader() -> void:
     if is_instance_valid(_shadow_reader):
         var old: CanvasLayer = _shadow_reader
         _shadow_reader = null
+        old.call("stop_story_audio")
+        release_story_audio(old)
         old.queue_free()
     if _quick_button != null and _screen == null:
         _quick_button.visible = _show_quick and not _campaign_board_active
@@ -746,21 +792,60 @@ func consume_shadow_launch() -> bool:
     _shadow_launch_requested = false
     return flag
 
+func open_ember_reader() -> void:
+    if not Realm2.unlocked(2):
+        _campaign_locked_screen(2)
+        return
+    close_campaign_challenges()
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
+    if _screen != null: close_chronicles()
+    _ember_reader = EmberReader.new()
+    _root.add_child(_ember_reader)
+    if _quick_button != null: _quick_button.hide()
+
+func close_ember_reader() -> void:
+    if is_instance_valid(_ember_reader):
+        var old: CanvasLayer = _ember_reader
+        _ember_reader = null
+        old.call("stop_story_audio")
+        release_story_audio(old)
+        old.queue_free()
+    if _quick_button != null and _screen == null:
+        _quick_button.visible = _show_quick and not _campaign_board_active
+
+func request_ember_battle() -> void:
+    _ember_launch_requested = true
+    close_ember_reader()
+    var current: Node = get_tree().current_scene
+    if current != null and current.scene_file_path == "res://Ascend.tscn" and current.has_method("start_ember_battle"):
+        _ember_launch_requested = false
+        current.call_deferred("start_ember_battle")
+    else:
+        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+func consume_ember_launch() -> bool:
+    var flag: bool = _ember_launch_requested
+    _ember_launch_requested = false
+    return flag
+
 # ----- ZenCube 2.0 Realm – stage-aware campaign navigation -----
 func _campaign_locked_screen(chapter: int) -> void:
     close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     _sync_language()
     _screen_name = "realm-2-locked"
     var outer: VBoxContainer = _make_screen()
-    _make_label("🔒  " + Realm2.REALM_NAMES[clampi(chapter,0,2)],outer,23,GOLD)
+    _make_label("🔒  " + Realm2.REALM_NAMES[clampi(chapter,0,4)],outer,23,GOLD)
     if not Realm2.base_unlocked():
         _make_label(campaign_ui("Zen Ascend 4×4 muss zunächst regulär freigeschaltet werden.",
             "First unlock Zen Ascend 4×4 through normal progression.",
             "Desbloqueia primeiro o Zen Ascend 4×4 na progressão normal."),outer,17,CREAM)
     else:
-        var prev: int = clampi(chapter-1,0,1)
+        var prev: int = clampi(chapter-1,0,3)
         _make_label(campaign_ui("Bosse %d/3 + Challenges %d/3",
             "Bosses %d/3 + Challenges %d/3","Chefes %d/3 + Desafios %d/3") % [
             Realm2.bosses_won(prev),Realm2.completed_count(Realm2.load_progress(),prev)],outer,19,CREAM)
@@ -771,16 +856,18 @@ func _campaign_locked_screen(chapter: int) -> void:
             _make_button("✦ Realm-Challenges",outer,open_campaign_challenges.bind(prev))
     _make_button(campaign_ui("‹ Zur Bibliothek","‹ Library","‹ Biblioteca"),outer,open_library)
 
-func open_campaign_challenges(chapter: int) -> void:
-    if chapter not in [0,1] or not Realm2.unlocked(chapter):
+func open_campaign_challenges(chapter: int, final_trial: bool = false) -> void:
+    if chapter not in [0,1,2,3] or not Realm2.unlocked(chapter):
         _campaign_locked_screen(chapter)
         return
     if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     if _screen != null: close_chronicles()
     close_campaign_challenges()
     _campaign_menu = ChallengeMenu.new()
     _campaign_menu.chapter = chapter
+    _campaign_menu.final_trial = final_trial
     _root.add_child(_campaign_menu)
     if _quick_button != null: _quick_button.hide()
 
@@ -793,7 +880,7 @@ func close_campaign_challenges() -> void:
         _quick_button.visible = _show_quick and not _campaign_board_active
 
 func request_campaign_practice(chapter: int) -> void:
-    if chapter != 1 or not Realm2.unlocked(1): return
+    if chapter not in [0,1,2,3] or not Realm2.unlocked(chapter): return
     _campaign_practice_requested = chapter
     close_campaign_challenges()
     var scene: Node = get_tree().current_scene
@@ -808,13 +895,21 @@ func consume_campaign_practice_launch() -> int:
     _campaign_practice_requested = -1
     return chapter
 
+# Only the chapter's Finish button may request this after page 30 and victory.
 func request_campaign_breakthrough(chapter: int) -> void:
-    if chapter not in [0,1] or not Realm2.ready(chapter): return
+    if _breakthrough_active or chapter not in [0,1,2,3] or not Realm2.ready(chapter): return
+    if not Realm2.story_finished(chapter): return
+    _breakthrough_active = true
+    _suspend_scene_music()
     close_campaign_challenges()
     if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
     var already: bool = Realm2.already_entered(chapter)
-    if not Realm2.enter_next_realm(chapter): return
+    if not Realm2.enter_next_realm(chapter):
+        _breakthrough_active = false
+        call_deferred("_resume_scene_music_if_free")
+        return
     if already:
         _campaign_after_breakthrough(chapter)
         return
@@ -822,39 +917,68 @@ func request_campaign_breakthrough(chapter: int) -> void:
     get_tree().root.add_child(transition)
     transition.finished.connect(_campaign_after_breakthrough.bind(chapter))
     var settings: Dictionary = SaveManager.load_data().get("settings",{})
+    var from_art: String = Realm2.SOURCE_ART[chapter]
+    var to_art: String = Realm2.SOURCE_ART[chapter+1]
+    var abyss_art: String = "res://assets/abyss_of_memories/gameplay.webp"
+    if ResourceLoader.exists(abyss_art):
+        if chapter==0: to_art = abyss_art
+        elif chapter==1: from_art = abyss_art
     transition.present(
-        Realm2.SOURCE_ART[chapter],Realm2.SOURCE_ART[chapter+1],
+        from_art,to_art,
         Realm2.REALM_NAMES[chapter+1],true,bool(settings.get("sound",true)),[],
         str(settings.get("language","de")))
 
 func _campaign_after_breakthrough(chapter: int) -> void:
+    _breakthrough_active = false
     if chapter==0: open_abyss_reader()
-    else: open_ember_campaign_preview()
+    elif chapter==1: open_ember_campaign_preview()
+    elif chapter==2: open_celestial_campaign_preview()
+    else: open_satori_campaign_preview()
+    call_deferred("_resume_scene_music_if_free")
 
 func open_ember_campaign_preview() -> void:
-    if not Realm2.unlocked(2):
-        _campaign_locked_screen(2)
-        return
-    if not Realm2.already_entered(1):
-        request_campaign_breakthrough(1)
+    open_ember_reader()
+
+func open_celestial_campaign_preview() -> void:
+    if not Realm2.unlocked(3):
+        _campaign_locked_screen(3)
         return
     close_campaign_challenges()
-    if is_instance_valid(_shadow_reader): close_shadow_reader()
     if is_instance_valid(_abyss_reader): close_abyss_reader()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
+    if _screen != null: close_chronicles()
+    _ember_reader = CelestialReader.new()
+    _root.add_child(_ember_reader)
+    if _quick_button != null: _quick_button.hide()
+
+func request_celestial_battle() -> void:
+    _celestial_launch_requested = true
+    close_ember_reader()
+    var current: Node = get_tree().current_scene
+    if current != null and current.scene_file_path == "res://Ascend.tscn" and current.has_method("start_celestial_battle"):
+        _celestial_launch_requested = false
+        current.call_deferred("start_celestial_battle")
+    else:
+        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+func consume_celestial_launch() -> bool:
+    var flag: bool = _celestial_launch_requested
+    _celestial_launch_requested = false
+    return flag
+
+func open_satori_campaign_preview() -> void:
+    if not Realm2.unlocked(4):
+        _campaign_locked_screen(4)
+        return
     _sync_language()
-    _screen_name = "realm-2-ember-preview"
+    _screen_name = "realm-3-satori-preview"
     var outer: VBoxContainer = _make_screen()
-    _make_label("🔥 Ember Temple",outer,27,GOLD)
-    _make_label("✦ Realm freigeschaltet",outer,19,CREAM)
-    var pic: TextureRect = TextureRect.new()
-    pic.texture = load(Realm2.SOURCE_ART[2]) as Texture2D
-    pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    pic.custom_minimum_size.y = 360
-    pic.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    outer.add_child(pic)
-    _make_label("Das vollständige Campaign-2.0-Kapitel für Ember Temple folgt in einer späteren Testversion.",outer,15,CREAM)
-    _make_button("‹ Zur Bibliothek",outer,open_library)
+    _make_label("The Enlightened Mind",outer,24,GOLD)
+    _make_label("Satori Realm",outer,27,GOLD)
+    outer.add_child(Campaign.artwork(Realm2.SOURCE_ART[4],360))
+    _make_label(campaign_ui("Satori Realm freigeschaltet. Die Geschichte folgt.","Satori Realm unlocked. The story is coming.","Satori Realm desbloqueado. A história será acrescentada."),outer,16,CREAM)
+    _make_button(campaign_ui("‹ Zur Bibliothek","‹ Library","‹ Biblioteca"),outer,open_library)
 
 func open_realm_story_archive() -> void:
     # Preserve the original 12 boss story without another entrance in Realms.

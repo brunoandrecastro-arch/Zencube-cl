@@ -12,9 +12,10 @@ jobs:
     env:
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
-      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' }}
-      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' }}
-      ZENCUBE_REALM_2_0_TEST: ${{ github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' }}
+      ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' }}
+      ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' }}
+      ZENCUBE_REALM_2_0_TEST: ${{ github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' }}
+      ZENCUBE_CELESTIAL_TEST: ${{ github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -72,9 +73,43 @@ jobs:
           else
             echo "::notice::HD arena/preview ZIP not yet uploaded; QA APK uses safe legacy backgrounds until media upload"
           fi
+      - name: Extract final approved Campaign 2.0 arena ZIP
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f ZenCube_Campaign2_Final_Arenas.zip ]]; then
+            python3 tests/test_campaign2_arenas.py --extract
+          else
+            echo "::warning::Final arena ZIP missing; source tests can run, but final APK export requires it"
+          fi
+      - name: Extract complete Ember Manhwa and portraits
+        if: github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import zipfile, pathlib
+          root = pathlib.Path("assets/ember_campaign")
+          expected = [root / "pages" / f"page_{n:02d}.webp" for n in range(1,31)]
+          expected += [root / "realm.webp"] + [root / "bosses" / (x+".webp") for x in ("ash_runner","banner_guardian","ember_high_priest")]
+          with zipfile.ZipFile("ZenCube_Ember_Media.zip") as z:
+              assert z.testzip() is None
+              for p in expected:
+                  data = z.read(p.as_posix())
+                  assert data[:4] == b"RIFF" and data[8:12] == b"WEBP", p
+                  p.parent.mkdir(parents=True, exist_ok=True)
+                  p.write_bytes(data)
+          print("Verified and extracted all 34 Ember images")
+          PY
+      - name: Extract and verify Celestial 3.0 media
+        if: env.ZENCUBE_CELESTIAL_TEST == 'true'
+        run: python3 tests/test_celestial_media.py --extract
       - name: Import project and check GDScript
         run: |
           "$GODOT" --headless --editor --import --quit
+      - name: Verify actual loaded boss arena paths and texture dimensions
+        if: env.ZENCUBE_CELESTIAL_TEST == 'true'
+        run: timeout 55 "$GODOT" --headless --path . --script tests/test_realm_arena_resolution.gd
       - name: Verify 108 lines and simulated games
         run: python3 tests/test_108_rules.py
       - name: Verify German/English strings and music WAV
@@ -299,6 +334,9 @@ jobs:
         with:
           path: ~/.android/zencube-debug.keystore
           key: zencube-realm-2-0-debug-key-v1
+      - name: Require verified final arena pack before Campaign 2.0 APK export
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback')
+        run: python3 tests/test_campaign2_arenas.py
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -339,11 +377,40 @@ jobs:
           grep -F 'assets/assets/shadow_campaign/pages/page_30.webp' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/mist_guardian.ogg' <<< "$contents"
           grep -F 'assets/assets/realm_boss_music/veil_monk.ogg' <<< "$contents"
+      - name: Verify seven final arena textures inside APK
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback')
+        run: python3 tests/test_campaign2_arenas.py --apk build/ZenCube-3D.apk
+      - name: Verify 34 Ember images in APK
+        if: github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile("build/ZenCube-3D.apk") as apk:
+              names = set(apk.namelist())
+              paths = ["pages/page_%02d.webp" % n for n in range(1,31)] + ["realm.webp"] + ["bosses/"+b+".webp" for b in ("ash_runner","banner_guardian","ember_high_priest")]
+              for p in paths:
+                  base = "assets/assets/ember_campaign/"+p
+                  assert base in names or base+".import" in names, base
+          PY
+      - name: Verify Celestial assets in APK
+        if: env.ZENCUBE_CELESTIAL_TEST == 'true'
+        run: python3 tests/test_celestial_media.py --apk build/ZenCube-3D.apk
+      - name: Name ZenCube 3.0 test APK
+        if: env.ZENCUBE_CELESTIAL_TEST == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-3D-3.0.apk
+      - name: Upload ZenCube 3.0 test APK
+        if: env.ZENCUBE_CELESTIAL_TEST == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-3D-3.0
+          path: build/ZenCube-3D-3.0.apk
+          if-no-files-found: error
       - name: Name ZenCube 2.0 Realm test APK
-        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && env.ZENCUBE_CELESTIAL_TEST != 'true'
         run: mv build/ZenCube-3D.apk build/ZenCube-2.0-Realm.apk
       - name: Upload ZenCube 2.0 Realm test APK
-        if: env.ZENCUBE_REALM_2_0_TEST == 'true'
+        if: env.ZENCUBE_REALM_2_0_TEST == 'true' && env.ZENCUBE_CELESTIAL_TEST != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ZenCube-2.0-Realm

@@ -1,6 +1,7 @@
 extends SceneTree
 ## Campaign 2.0 headless smoke and save-isolation test.
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
+const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const Skins = preload("res://core/ZenAbyssSkins.gd")
 const Reader = preload("res://story/ZenAbyssReader.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
@@ -38,7 +39,7 @@ func run() -> void:
     check(Abyss.BOSS_IDS.size()==3,"three unique bosses")
     check(Abyss.GATES==[6,15,25],"bosses appear on pages 6, 15 and 25")
     check(Abyss.CONTINUE_PAGES==[7,16,26],"post-victory pages correct")
-    check(Abyss.BOT_LEVELS==[1,2,3],"Medium Hard Master progression")
+    check(Abyss.BOT_LEVELS==[1,2,2],"Medium Hard fixed final guardian difficulty")
     check(Abyss.page_path(1).ends_with("page_01.webp"),"first page path")
     check(Abyss.page_path(30).ends_with("page_30.webp"),"last page path")
     check(Abyss.page_path(31)=="","no page beyond story")
@@ -69,6 +70,18 @@ func run() -> void:
         state.game = {}
         var retry: Dictionary = Abyss.begin_battle(state,boss)
         check(retry.turn != first.turn,"alternate starter on retry "+str(boss))
+        retry.result = 1
+        state.game = retry
+        check(Abyss.save_progress(state),"save actual round result")
+        if boss==2:
+            check(not Abyss.record_victory(state,boss),"only one final round win cannot advance")
+            check(int(Series.score(Abyss.load_progress()).player)==1,"1:0 persists across restart")
+            state = Abyss.load_progress()
+            check(Series.start_next(state),"next round enabled")
+            var second: Dictionary = Abyss.begin_battle(state,boss)
+            check(int(second.turn)!=int(retry.turn),"starter alternates in series")
+            second.result = 1
+            check(Abyss.save_progress(state),"second round saved")
         check(Abyss.record_victory(state,boss),"record a real engine-approved victory "+str(boss))
         check(int(state.page)==Abyss.CONTINUE_PAGES[boss],"new page unlocked "+str(boss))
         check(Abyss.load_progress().page==Abyss.CONTINUE_PAGES[boss],"victory survives restart "+str(boss))

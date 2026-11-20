@@ -4,6 +4,7 @@ const Campaign = preload("res://core/ZenRealmCampaign2.gd")
 const Ui = preload("res://ui/ZenUiTestTheme.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 var chapter: int = 0
+var final_trial: bool = false
 var locale: String = "en"
 var panel: Control
 
@@ -60,7 +61,10 @@ func _render() -> void:
     add_child(panel)
     panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var scenery := TextureRect.new()
-    scenery.texture = load(Campaign.SOURCE_ART[chapter]) if ResourceLoader.exists(Campaign.SOURCE_ART[chapter]) else null
+    var art_path: String = Campaign.SOURCE_ART[chapter]
+    if chapter==1 and ResourceLoader.exists("res://assets/abyss_of_memories/gameplay.webp"):
+        art_path = "res://assets/abyss_of_memories/gameplay.webp"
+    scenery.texture = load(art_path) if ResourceLoader.exists(art_path) else null
     scenery.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     scenery.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     scenery.modulate = Color(0.50,0.55,0.63,0.40)
@@ -83,8 +87,13 @@ func _render() -> void:
     content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     content.add_theme_constant_override("separation",13)
     scroll.add_child(content)
-    _label(content,"ZenCube 2.0 Realm",27,Ui.GOLD)
+    _label(content,"The Final Trial" if final_trial else "ZenCube 2.0 Realm",27,Ui.GOLD)
     _label(content,Campaign.REALM_NAMES[chapter],22,Ui.IVORY)
+    var final_ready: bool = Campaign.final_boss_waiting(chapter)
+    if final_ready:
+        _label(content,t("Der letzte Wächter erwartet dich.","You have proven your strength and wisdom. The final guardian awaits.","O último guardião espera por ti."),17,Ui.GOLD)
+    elif final_trial:
+        _label(content,t("Du bist noch nicht bereit für den letzten Wächter. Schließe die verbleibenden Prüfungen dieses Realms ab.","You are not yet ready to face the final guardian. Complete the remaining trials of this realm.","Ainda não estás preparado para enfrentar o último guardião. Completa as provas restantes deste reino."),17,Ui.IVORY)
     _label(content,t("Automatisch durch 4×4-Partien gegen den Zen-Bot","Earned automatically in regular 4×4 matches against the Zen-Bot","Conquistados automaticamente em partidas 4×4 contra o Zen-Bot"),14,Ui.IVORY)
     var cleared: int = Campaign.completed_count(Campaign.load_progress(),chapter)
     var defeated: int = Campaign.bosses_won(chapter)
@@ -100,35 +109,38 @@ func _render() -> void:
         _label(details,("✓  " if done else "◇  ") + Campaign.task_title(chapter,i,locale),18,Ui.GOLD)
         _label(details,Campaign.task_description(chapter,i,locale),14,Ui.IVORY)
     _label(content,t("Nicht antippen: Der Fortschritt wird automatisch gezählt.","These are milestones, not selectable puzzle battles.","São objetivos automáticos, não puzzles selecionáveis."),13,Color("#b6c9b9"))
-    _button(content,t("⚔ Gegen Zen-Bot spielen","⚔ Play Zen-Bot","⚔ Jogar contra o Zen-Bot"),_play_bot,true)
+    if final_ready:
+        var final_button: Button = _button(content,t("⚔ Finalen Boss betreten","⚔ Enter Final Boss","⚔ Enfrentar o chefe final"),_enter_final_boss,true)
+        final_button.name = "Campaign2EnterFinalBoss"
+        final_button.add_theme_stylebox_override("normal",Ui.frame(Color("#b99657"),16))
+        final_button.add_theme_color_override("font_color",Ui.NIGHT)
+    elif cleared==3 and defeated<3:
+        _button(content,t("Geschichte fortsetzen","Continue Story","Continuar história"),_back,true)
+    _button(content,t("⚔ Gegen Zen-Bot spielen","⚔ Play Zen-Bot","⚔ Jogar contra o Zen-Bot"),_play_bot,not final_ready)
     if Campaign.ready(chapter):
         _label(content,t("✓ Alle Bosse und Challenges geschafft. Der nächste Realm ist frei!","✓ All bosses and challenges complete. Next realm unlocked!","✓ Todos os chefes e desafios concluídos. Novo reino desbloqueado!"),16,Color("#c3f0bb"))
-        _button(content,t("✦ Realm betreten","✦ Enter next realm","✦ Entrar no próximo reino"),_next_realm,true)
     elif Campaign.story_finished(chapter):
         _label(content,t("Für den nächsten Realm brauchst du 3 Bosssiege UND 3 Challenges.","The next realm requires 3 boss victories AND 3 challenges.","O próximo reino exige 3 vitórias contra chefes E 3 desafios."),14,Ui.IVORY)
     _button(content,t("‹ Zurück zum Manhwa","‹ Back to Manhwa","‹ Voltar ao Manhwa"),_back)
     _button(content,t("Zur Bibliothek","Library","Biblioteca"),_library)
 
+func _enter_final_boss() -> void:
+    _chronicles().call("request_final_guardian",chapter)
+
 func _play_bot() -> void:
     _chronicles().call("close_campaign_challenges")
-    if chapter==0:
-        # Existing Shadow Realm tasks only progress in normal Zen-Bot games.
-        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
-    else:
-        # Abyss-specific free-play, never an individual puzzle shortcut.
-        _chronicles().call_deferred("request_campaign_practice",chapter)
+    _chronicles().call_deferred("request_campaign_practice",chapter)
 
 func _back() -> void:
     _chronicles().call("close_campaign_challenges")
     if chapter==0: _chronicles().call_deferred("open_shadow_reader")
-    else: _chronicles().call_deferred("open_abyss_reader")
+    elif chapter==1: _chronicles().call_deferred("open_abyss_reader")
+    elif chapter==2: _chronicles().call_deferred("open_ember_reader")
+    else: _chronicles().call_deferred("open_celestial_campaign_preview")
 
 func _library() -> void:
     _chronicles().call("close_campaign_challenges")
     _chronicles().call_deferred("open_library")
-
-func _next_realm() -> void:
-    _chronicles().call("request_campaign_breakthrough",chapter)
 
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE:

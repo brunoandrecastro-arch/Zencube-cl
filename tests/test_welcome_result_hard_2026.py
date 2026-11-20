@@ -17,5 +17,5 @@ assert 'popup.anchor_top = 0.52 if special else 0.56' in result
 assert 'premium_button("Noch eine Partie"' in result
 assert 'premium_button("Hauptmenü"' in result
 assert '[0.70, 0.66, 0.80, 0.91, 1.0][level]' in ai
-assert 'if level == 2 and rng.randf() < 0.18' in ai
+assert 'if level == 2 and rng.randf() < 0.28' in ai
 print('OK: Touch-scroll intro, immediate start buttons, compact result, softer Classic Hard')

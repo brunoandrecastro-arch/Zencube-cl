@@ -1,6 +1,7 @@
 extends SceneTree
 # Campaign 2.0 Shadow Realm headless native integration checks.
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
+const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const Reader = preload("res://story/ZenShadowReader.gd")
 const Original = preload("res://story/ZenRealmChronicles.gd")
 var failures: int = 0
@@ -31,6 +32,32 @@ func run() -> void:
     _backup(Shadow.SAVE)
     _backup(Original.SAVE)
     _backup(SaveManager.PATH)
+    check(Series.REALM_LEVELS==[1,2,3,2,4],"agreed fixed final guardian difficulty policy")
+    var fixture: Dictionary = Shadow.defaults()
+    fixture.defeated = [true,true,false]
+    fixture.page = Shadow.GATES[2]
+    var round_data: Dictionary = Shadow.begin_battle(fixture,2)
+    round_data.result = 3
+    Series.settle(fixture)
+    check(int(Series.score(fixture).player)==0 and int(Series.score(fixture).guardian)==0,"draw earns no series point")
+    check(Series.start_next(fixture),"draw may be replayed")
+    var first_loss: Dictionary = Shadow.begin_battle(fixture,2)
+    check(int(first_loss.turn)!=int(round_data.turn),"starter alternates after draw")
+    first_loss.result = 2
+    Series.settle(fixture)
+    check(Series.start_next(fixture),"one loss does not end series")
+    var second_loss: Dictionary = Shadow.begin_battle(fixture,2)
+    second_loss.result = 2
+    Series.settle(fixture)
+    check(Series.guardian_won(fixture),"two losses end series")
+    check(not Shadow.record_victory(fixture,2),"lost series cannot unlock story")
+    check(Series.start_next(fixture),"explicit retry of lost series")
+    check(int(Series.score(fixture).player)==0 and int(Series.score(fixture).guardian)==0,"retry starts at 0:0")
+    var retry_round: Dictionary = Shadow.begin_battle(fixture,2)
+    retry_round.result = 1
+    Series.settle(fixture)
+    Series.settle(fixture)
+    check(int(Series.score(fixture).player)==1,"count monotonic after restarting series")
     check(Shadow.BOSS_IDS==["mist_guardian","mirror_novice","veil_monk"],"preserve existing Shadow boss identities")
     check(Shadow.GATES==[4,8,15],"story breaks before revealed outcomes on pages 5,9,16")
     check(Shadow.CONTINUE_PAGES==[5,9,16],"resume Manhwa in correct order after wins")
@@ -72,6 +99,23 @@ func run() -> void:
         check(int(retry.turn)!=int(game.turn),"starter alternates on retry "+str(index))
         retry.result = 1
         state.game = retry
+        check(Shadow.save_progress(state),"save actual round result")
+        if index==2:
+            check(not Shadow.record_victory(state,index),"first final round win keeps gate locked")
+            check(int(Series.score(Shadow.load_progress()).player)==1,"1:0 survives restart")
+            state = Shadow.load_progress()
+            check(Shadow.save_progress(state),"repeated save is idempotent")
+            check(int(Series.score(state).player)==1,"no duplicate round point")
+            check(Series.start_next(state),"advance series")
+            var second: Dictionary = Shadow.begin_battle(state,index)
+            check(int(second.turn)!=int(retry.turn),"alternate series starter")
+            second.result = 2
+            check(Shadow.save_progress(state),"save second round loss")
+            check(int(Series.score(state).guardian)==1,"1:1 allows decider")
+            check(Series.start_next(state),"third round")
+            var third: Dictionary = Shadow.begin_battle(state,index)
+            third.result = 1
+            check(Shadow.save_progress(state),"decider saved")
         check(Shadow.record_victory(state,index),"validated victory opens chapter "+str(index))
         check(int(Shadow.load_progress().page)==Shadow.CONTINUE_PAGES[index],"save resumes after boss "+str(index))
     check(Shadow.page_limit(state)==30,"all 30 Shadow pages unlock after three victories")

@@ -15,8 +15,9 @@ assert 'menu_button: Button = action(header_row,"☰",show_ascend_menu)' in ui
 assert 'action(footer,Z("Hauptmenü")' not in ui
 assert 'func realm_quote() -> String:' in ui and 'quote_label.text = realm_quote()' in ui
 finish=ui.split('func finish() -> void:',1)[1].split('func _show_next_unlock()',1)[0]
-assert 'Realms.ready_for_breakthrough(data,match_realm)' in finish
-assert 'auto_transitions' in finish
+assert 'Realms.ready_for_breakthrough(data,match_realm)' not in finish
+assert 'auto_transitions' not in finish
+assert 'Realms.record_bot_match' in finish
 assert 'previously_open' not in finish
 assert 'HINT_PRICE: int = 50' in ach
 assert 'purchased_hints' in ach

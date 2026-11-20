@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Both debug preview and Play release enforce rank >=3 or 850-leaf ownership.
+# Normal debug and Play enforce rank >=3 or ownership; only the isolated Celestial QA export permits free entry.
 from pathlib import Path
 import re
 root = Path(__file__).resolve().parents[1]
@@ -19,8 +19,14 @@ assert "--export-debug Android " in build
 assert 'const TEST_UNLOCKED: bool = false' in mode
 assert 'static func test_access_enabled() -> bool:' in mode
 assert 'return OS.has_feature("debug")' not in mode
-assert 'return false' in mode.split('static func test_access_enabled() -> bool:', 1)[1].split('static func unlocked(', 1)[0]
-assert 'static func unlocked(data: Dictionary) -> bool:\n    return unlocked_for_release(data)' in mode
+assert 'return OS.has_feature("zencube_celestial_qa")' in mode.split('static func test_access_enabled() -> bool:', 1)[1].split('static func unlocked(', 1)[0]
+assert 'static func unlocked(data: Dictionary) -> bool:\n    if test_access_enabled(): return true\n    return unlocked_for_release(data)' in mode
+assert "zencube_celestial_qa" not in preset
+assert 'if [[ "$celestial_test" == true ]]; then' in build
+assert 'if [[ "$celestial_test" == true && "$realm2_test" == true ]]; then' in build
+assert 'campaign_package="com.zencube.game.realm2"' in build
+assert 'zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test,zencube_celestial_qa' in build
+assert 'ZENCUBE_CELESTIAL_TEST:' in workflow
 assert 'get("rank",0)) >= 3' in mode
 assert 'get("ascend_owned",false)' in mode
 assert 'const PRICE: int = 850' in mode and 'data.economy.leaves -= PRICE' in mode
@@ -37,4 +43,4 @@ assert "test_rc6_release_gate.py" in workflow
 def allowed(rank=0, bought=False): return rank >= 3 or bought
 assert not allowed(0) and not allowed(1) and not allowed(2)
 assert allowed(3) and allowed(4) and allowed(0, True)
-print("PASS: debug and Play builds require rank 3 or 850-leaf purchase; Android QA bypass disabled")
+print("PASS: normal debug and Play retain rank/purchase gate; isolated Celestial QA feature only")

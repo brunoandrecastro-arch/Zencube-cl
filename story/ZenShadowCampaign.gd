@@ -7,11 +7,12 @@ const BossMusic = preload("res://core/ZenRealmBossMusic.gd")
 const RealmMusic = preload("res://core/ZenRealmMusic.gd")
 const SAVE := "user://zencube_shadow_campaign_v1.json"
 const VERSION := 1
+const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const BOSS_IDS: Array[String] = ["mist_guardian","mirror_novice","veil_monk"]
 const BOSS_NAMES: Array[String] = ["Mist Guardian","Mirror Novice","Veil Monk"]
 const GATES: Array[int] = [4,8,15]
 const CONTINUE_PAGES: Array[int] = [5,9,16]
-const BOT_LEVELS: Array[int] = [1,1,1] # Shadow remains Medium
+const BOT_LEVELS: Array[int] = [1,1,Series.REALM_LEVELS[0]] # Shadow remains Medium
 const ASSET_ROOT := "res://assets/shadow_campaign/"
 const REALM_ART := "res://assets/realms/shadow_realm.webp"
 
@@ -44,7 +45,7 @@ static func battle_backdrop(index: int = -1) -> Texture2D:
     return load(REALM_ART) as Texture2D
 
 static func defaults() -> Dictionary:
-    return {"version":VERSION,"page":1,"defeated":[false,false,false],"attempts":[0,0,0],"game":{},"completed":false}
+    return {"version":VERSION,"page":1,"defeated":[false,false,false],"attempts":[0,0,0],"game":{},"completed":false,"final_series":Series.defaults()}
 
 static func page_limit(data: Dictionary) -> int:
     var won: Array = data.get("defeated",[false,false,false])
@@ -76,11 +77,15 @@ static func load_progress() -> Dictionary:
             for mark in marks:
                 if int(mark) not in [0,1,2]: valid = false
             if valid: data.game = saved_game.duplicate(true)
+    data.final_series = Series.clean(parsed.get("final_series",{}))
+    Series.settle(data)
     data.completed = bool(parsed.get("completed",false)) and bool(data.defeated[0]) and bool(data.defeated[1]) and bool(data.defeated[2])
     return data
 
 static func save_progress(data: Dictionary) -> bool:
+    Series.settle(data)
     var payload: Dictionary = {
+        "final_series":Series.score(data),
         "version":VERSION,
         "page":clampi(int(data.get("page",1)),1,page_limit(data)),
         "defeated":data.get("defeated",[false,false,false]),
@@ -130,6 +135,9 @@ static func record_victory(data: Dictionary, index: int) -> bool:
     # Do not unlock story pages from an unfinished/lost/drawn match.
     var battle: Dictionary = data.get("game",{})
     if int(battle.get("boss",-1)) != index or int(battle.get("result",0)) != 1: return false
+    if index==Series.FINAL_BOSS:
+        Series.settle(data)
+        if not Series.player_won(data): return false
     var won: Array = data.get("defeated",[false,false,false])
     won[index] = true
     data.defeated = won

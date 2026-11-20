@@ -17,6 +17,8 @@ var boss_skin_cache: Dictionary = {}
 var abyss_skin_id: int = -1
 var abyss_skin_texture: Texture2D
 var abyss_skin_cache: Dictionary = {}
+var ember_fire: Node3D
+var ember_flame_material: ShaderMaterial
 func _ready() -> void:
     pivot = Node3D.new()
     add_child(pivot)
@@ -132,7 +134,15 @@ func _apply_core_skin() -> void:
     if pivot == null or not pivot.has_node("CubeCore"): return
     var core: MeshInstance3D = pivot.get_node("CubeCore") as MeshInstance3D
     var core_color: Color = Color(str(AbyssSkins.get_profile(abyss_skin_id).core)) if abyss_skin_id >= 0 else (Color(str(BossSkins.get_profile(boss_skin_id).core)) if boss_skin_id >= 0 else Color(str(skin.core)))
-    core.material_override = mat(core_color)
+    var core_material: StandardMaterial3D = mat(core_color)
+    if _ember_fire_active():
+        core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        core_material.albedo_color = _ember_glow()
+        core_material.emission_enabled = true
+        core_material.emission = _ember_glow()
+        core_material.emission_energy_multiplier = 0.7
+    core.material_override = core_material
+    _sync_ember_fire()
 
 func _tile_mat(face_index: int, highlight: bool) -> StandardMaterial3D:
     var palette: Dictionary = AbyssSkins.get_profile(abyss_skin_id) if abyss_skin_id >= 0 else (BossSkins.get_profile(boss_skin_id) if boss_skin_id >= 0 else skin)
@@ -144,7 +154,78 @@ func _tile_mat(face_index: int, highlight: bool) -> StandardMaterial3D:
     m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
     var texture: Texture2D = abyss_skin_texture if abyss_skin_id >= 0 else (boss_skin_texture if boss_skin_id >= 0 else skin_texture)
     if texture != null: m.albedo_texture = texture
+    if _ember_fire_active():
+        m.emission_enabled = true
+        m.emission = _ember_glow()
+        m.emission_texture = texture
+        m.emission_energy_multiplier = 0.20 if highlight else 0.38
     return m
+
+# Ember VFX are cosmetic only: no collisions, no extra cells or shop ownership.
+func _ember_fire_active() -> bool:
+    return abyss_skin_id < 0 and boss_skin_id >= 3 and boss_skin_id <= 5
+
+func _ember_glow() -> Color:
+    match boss_skin_id:
+        3: return Color("#ff5920")
+        4: return Color("#ff932a")
+        _: return Color("#ffc052")
+
+func _sync_ember_fire() -> void:
+    if not _ember_fire_active():
+        if is_instance_valid(ember_fire):
+            ember_fire.visible = false
+        return
+    if not is_instance_valid(ember_fire):
+        ember_fire = Node3D.new()
+        ember_fire.name = "EmberFlameVFX"
+        pivot.add_child(ember_fire)
+        # Explicit geometry + unshaded shader works without bloom or GPU particles.
+        var flame_shader: Shader = Shader.new()
+        flame_shader.code = """
+shader_type spatial;
+render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
+uniform vec4 flame_tint : source_color = vec4(1.0, 0.35, 0.06, 1.0);
+void fragment() {
+    float h = 1.0 - UV.y;
+    float x = UV.x;
+    float t = TIME;
+    float wave = sin(x*37.0 + sin(t*3.0+x*10.0)*1.3);
+    float tips = 0.28 + 0.44*pow(0.5+0.5*wave,1.8) + 0.12*sin(x*16.0-t*5.0);
+    float cut = 1.0-smoothstep(tips-0.10,tips+0.035,h);
+    float base = smoothstep(0.0,0.10,h);
+    float ends = smoothstep(0.0,0.045,x)*(1.0-smoothstep(0.955,1.0,x));
+    float inner = clamp(1.0-h/max(tips,0.1),0.0,1.0);
+    vec3 hot = mix(flame_tint.rgb,vec3(1.0,0.9,0.42),smoothstep(0.15,0.85,inner));
+    ALBEDO = hot;
+    ALPHA = cut*base*ends*(0.72+0.27*inner);
+}
+"""
+        ember_flame_material = ShaderMaterial.new()
+        ember_flame_material.shader = flame_shader
+        var flame_mesh: QuadMesh = QuadMesh.new()
+        flame_mesh.size = Vector2(3.32,1.28)
+        for side in range(4):
+            var flame: MeshInstance3D = MeshInstance3D.new()
+            flame.name = "AnimatedFlame%d" % side
+            flame.mesh = flame_mesh
+            flame.material_override = ember_flame_material
+            flame.position = Vector3(0,2.13,0)
+            if side < 2:
+                flame.position.z = 1.67 if side == 0 else -1.67
+            else:
+                flame.position.x = 1.67 if side == 2 else -1.67
+                flame.rotation.y = PI*0.5
+            ember_fire.add_child(flame)
+        # Bright actual 3D outer edges; do not cover the X/O tiles.
+        var d: float = 1.64
+        for sign_a in [-1.0,1.0]:
+            for sign_b in [-1.0,1.0]:
+                _rod(ember_fire,Vector3(-d,sign_a*d,sign_b*d),Vector3(d,sign_a*d,sign_b*d),Color("#ff9c36"),0.018)
+                _rod(ember_fire,Vector3(sign_a*d,-d,sign_b*d),Vector3(sign_a*d,d,sign_b*d),Color("#ff9c36"),0.018)
+                _rod(ember_fire,Vector3(sign_a*d,sign_b*d,-d),Vector3(sign_a*d,sign_b*d,d),Color("#ff9c36"),0.018)
+    ember_flame_material.set_shader_parameter("flame_tint",_ember_glow())
+    ember_fire.visible = true
 
 func _rod(parent: Node3D, from: Vector3, to: Vector3, color: Color, width: float) -> void:
     var mesh: CylinderMesh = CylinderMesh.new()

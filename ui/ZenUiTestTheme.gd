@@ -17,9 +17,9 @@ static func frame(color: Color, radius: int = 20, border: int = 2) -> StyleBoxFl
     panel.content_margin_right = 12.0
     panel.content_margin_top = 8.0
     panel.content_margin_bottom = 8.0
-    panel.shadow_color = Color("#070c09", 0.40)
-    panel.shadow_size = 6
-    panel.shadow_offset = Vector2(0, 3)
+    panel.shadow_color = Color("#070c09", 0.12)
+    panel.shadow_size = 2
+    panel.shadow_offset = Vector2(0, 1)
     return panel
 
 static func install_main_theme(theme: Theme) -> void:
@@ -209,3 +209,4 @@ static func show_language_selection(popup: PanelContainer, box: VBoxContainer, o
     var victory := caption(box, "勝利  |  VIER IN EINER REIHE", 16, GOLD)
     victory.name = "UiTestVictoryCaption"
     caption(box, "Vier Zeichen über die Kante – 2 + 2", 14, IVORY)
+    caption(box, "Fall seven times, stand up eight.", 15, GOLD).name = "UiTestJapaneseProverb"
