@@ -19,6 +19,7 @@ const SettingsTheme = preload("res://ui/ZenUiTestTheme.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Ember = preload("res://story/ZenEmberCampaign.gd")
+const Celestial = preload("res://story/ZenCelestialCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const FinalSeries = preload("res://core/ZenFinalGuardianSeries.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
@@ -88,6 +89,8 @@ var shadow_index: int = -1
 var shadow_generation: int = 0
 var shadow_last_human: int = -1
 var ember_active: bool = false
+var ember_model: Variant = Ember
+var guardian_chapter: int = 2
 var ember_index: int = -1
 var ember_generation: int = 0
 var ember_last_human: int = -1
@@ -144,8 +147,11 @@ func _ready() -> void:
     start_world_music()
     draw()
     var practice_launch: int = ZenChronicles.consume_campaign_practice_launch()
-    if practice_launch in [0,1,2]:
+    if practice_launch in [0,1,2,3]:
         call_deferred("start_campaign_practice",practice_launch)
+        return
+    if ZenChronicles.consume_celestial_launch():
+        call_deferred("start_celestial_battle")
         return
     if ZenChronicles.consume_ember_launch():
         call_deferred("start_ember_battle")
@@ -172,10 +178,10 @@ func _ready() -> void:
 # its own realm soundtrack; a manually owned track overrides it everywhere.
 func desired_realm_stream() -> AudioStream:
     if campaign_practice_active:
-        var stream: AudioStream = Ember.story_stream() if practice_chapter==2 else Abyss.story_stream()
+        var stream: AudioStream = Celestial.story_stream() if practice_chapter==3 else (Ember.story_stream() if practice_chapter==2 else Abyss.story_stream())
         if stream != null: return stream
     if ember_active:
-        var ember_stream: AudioStream = Ember.boss_stream(ember_index)
+        var ember_stream: AudioStream = ember_model.boss_stream(ember_index)
         if ember_stream != null: return ember_stream
     if shadow_active:
         var shadow_stream: AudioStream = Shadow.boss_stream(shadow_index)
@@ -661,8 +667,8 @@ func draw() -> void:
         quote_label.text = "Zen Realm Chronicles · 4×4"
         details_label.text = Realm2.REALM_NAMES[practice_chapter] + " · %d/96 · Challenges %d/3" % [move_count(),Realm2.completed_count(Realm2.load_progress(),practice_chapter)]
     if ember_active:
-        rank_label.text = Ember.BOSS_NAMES[clampi(ember_index,0,2)]
-        quote_label.text = "Ember Temple · 4×4"
+        rank_label.text = ember_model.BOSS_NAMES[clampi(ember_index,0,2)]
+        quote_label.text = Realm2.REALM_NAMES[guardian_chapter] + " · 4×4"
         details_label.text = _guardian_series_score(ember_progress)
     if shadow_active:
         rank_label.text = Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]
@@ -855,7 +861,7 @@ func bot_turn() -> void:
     if began_in_shadow and (not shadow_active or shadow_generation != started_shadow): return
     if not began_in_shadow and shadow_active: return
     if began_in_practice != campaign_practice_active: return
-    var cell: int = Ember.choose_move(cells,lines,ember_index,ember_last_human) if ember_active else Shadow.choose_move(cells,lines,shadow_index,shadow_last_human) if shadow_active else (Abyss.choose_move(cells,lines,abyss_index,abyss_last_human) if abyss_active else (RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)))
+    var cell: int = ember_model.choose_move(cells,lines,ember_index,ember_last_human) if ember_active else Shadow.choose_move(cells,lines,shadow_index,shadow_last_human) if shadow_active else (Abyss.choose_move(cells,lines,abyss_index,abyss_last_human) if abyss_active else (RealmStory.choose_move(cells,lines,realm_story_stage,realm_story_last_human) if realm_story_active else RealmBot.next_move(cells,lines,2,bot_level,match_realm == 0)))
     busy = false
     if cell >= 0: _commit(cell)
     if realm_story_active and result == 0: _realm_story_save()
@@ -876,7 +882,7 @@ func finish() -> void:
                     crossed = true
                     break
         var outcome: int = 1 if result==1 else (0 if result==3 else -1)
-        campaign_awards = Realm2.record_ember_match(outcome,crossed) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed)
+        campaign_awards = Realm2.record_celestial_match(outcome,crossed,match_blocked_threat) if practice_chapter==3 else (Realm2.record_ember_match(outcome,crossed) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed))
         call_deferred("_campaign_practice_result")
         return
     if ember_active:
@@ -2284,15 +2290,30 @@ func _shadow_back_to_reader(open_reader: bool = true) -> void:
 
 func start_ember_battle() -> void:
     if not Realm2.unlocked(2): return
-    ember_progress = Ember.load_progress()
-    var next_action: Dictionary = Ember.next_action(ember_progress)
+    guardian_chapter = 2
+    ember_model = Ember
+    _start_guardian_battle()
+
+func start_celestial_battle() -> void:
+    if not Realm2.unlocked(3): return
+    guardian_chapter = 3
+    ember_model = Celestial
+    _start_guardian_battle()
+
+func _open_guardian_reader() -> void:
+    if guardian_chapter==3: ZenChronicles.open_celestial_campaign_preview()
+    else: ZenChronicles.open_ember_reader()
+
+func _start_guardian_battle() -> void:
+    ember_progress = ember_model.load_progress()
+    var next_action: Dictionary = ember_model.next_action(ember_progress)
     if next_action.get("type") != "battle":
-        ZenChronicles.open_ember_reader()
+        _open_guardian_reader()
         return
     ember_index = int(next_action.get("boss",-1))
     if ember_index < 0 or ember_index >= 3: return
-    if not Realm2.can_face_boss(2,ember_index):
-        ZenChronicles.open_campaign_challenges(2,true)
+    if not Realm2.can_face_boss(guardian_chapter,ember_index):
+        ZenChronicles.open_campaign_challenges(guardian_chapter,true)
         return
     ember_active = true
     campaign_practice_active = false
@@ -2307,20 +2328,20 @@ func start_ember_battle() -> void:
     owners = [0,1]
     recorded = false
     busy = false
-    var game: Dictionary = Ember.begin_battle(ember_progress,ember_index)
+    var game: Dictionary = ember_model.begin_battle(ember_progress,ember_index)
     if game.is_empty(): return
     cells = game.cells.duplicate()
     turn = clampi(int(game.get("turn",1)),1,2)
     result = clampi(int(game.get("result",0)),0,3)
     recorded = result != 0
     ember_last_human = int(game.get("last_human",-1))
-    bot_level = Ember.BOT_LEVELS[ember_index]
+    bot_level = ember_model.BOT_LEVELS[ember_index]
     cube.reset_view()
     cube.clear_abyss_skin()
     cube.clear_boss_skin()
-    cube.set_boss_skin(ember_index+3)
+    cube.set_boss_skin(ember_index+(6 if guardian_chapter==3 else 3))
     if realm_backdrop != null:
-        var arena: Texture2D = Ember.battle_backdrop(ember_index)
+        var arena: Texture2D = ember_model.battle_backdrop(ember_index)
         if arena != null: realm_backdrop.texture = arena
     _ember_save()
     sync_realm_music()
@@ -2337,12 +2358,12 @@ func _ember_save() -> bool:
         "result":result,
         "last_human":ember_last_human
     }
-    var ok: bool = Ember.save_progress(ember_progress)
+    var ok: bool = ember_model.save_progress(ember_progress)
     if not ok: push_warning("Ember Temple: could not save battle")
     return ok
 
 func _ember_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
-    var portrait: Texture2D = Ember.boss_art(ember_index)
+    var portrait: Texture2D = ember_model.boss_art(ember_index)
     if portrait == null: return
     var art := TextureRect.new()
     art.texture = portrait
@@ -2355,7 +2376,7 @@ func _ember_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
 
 func _ember_intro() -> void:
     if not ember_active: return
-    var parts: Dictionary = _realm_dialog(Ember.BOSS_NAMES[ember_index],670)
+    var parts: Dictionary = _realm_dialog(ember_model.BOSS_NAMES[ember_index],670)
     _realm_story_compact(parts)
     var body: VBoxContainer = parts.box
     _ember_add_art(body)
@@ -2364,6 +2385,7 @@ func _ember_intro() -> void:
         "A strategy without discipline is only a spark.",
         "Show me the shape of your fire."
     ]
+    if guardian_chapter==3: opening = ["Every decision creates a thousand possibilities.","Let thunder shake the heavens.","Then show me what you have become."]
     text(body,opening[ember_index],16,Color("#dfd4e5"))
     _guardian_series_panel(body,ember_progress)
     var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
@@ -2389,15 +2411,16 @@ func _ember_result() -> void:
         label = "The flame grows quiet" if result == 1 else ("Draw" if result == 3 else "Defeat")
     elif lang() == "pt":
         label = "A chama acalma" if result == 1 else ("Empate" if result == 3 else "Derrota")
+    if guardian_chapter==3 and result==1: label = _campaign_phrase("Klarheit","Clarity","Clareza")
     var parts: Dictionary = _realm_dialog(label,520)
     _campaign_result_compact(parts)
     var body: VBoxContainer = parts.box
     _ember_add_art(body,190)
-    text(body,Ember.BOSS_NAMES[ember_index],18,Color("#e8d4b5"))
+    text(body,ember_model.BOSS_NAMES[ember_index],18,Color("#e8d4b5"))
     _guardian_series_panel(body,ember_progress)
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
-    if not Ember.player_won(ember_progress):
-        var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if Ember.guardian_won(ember_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
+    if not ember_model.player_won(ember_progress):
+        var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if ember_model.guardian_won(ember_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
         action(body,"⚔ " + next_label,_ember_retry,true)
     elif result == 1:
         action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_ember_victory,true)
@@ -2409,10 +2432,10 @@ func _ember_result() -> void:
 func _ember_retry() -> void:
     if not ember_active or result==0: return
     var candidate: Dictionary = ember_progress.duplicate(true)
-    if not Ember.start_next(candidate): return
+    if not ember_model.start_next(candidate): return
     # Save the new board and the score in one atomic progress write.
-    var game: Dictionary = Ember.begin_battle(candidate,ember_index)
-    if game.is_empty() or not Ember.save_progress(candidate): return
+    var game: Dictionary = ember_model.begin_battle(candidate,ember_index)
+    if game.is_empty() or not ember_model.save_progress(candidate): return
     ember_progress = candidate
     ember_generation += 1
     match_generation += 1
@@ -2429,9 +2452,9 @@ func _ember_retry() -> void:
 
 func _ember_victory() -> void:
     if not ember_active or result != 1: return
-    if not Realm2.can_face_boss(2,ember_index): return
-    if not Ember.player_won(ember_progress): return
-    if not Ember.record_victory(ember_progress,ember_index): return
+    if not Realm2.can_face_boss(guardian_chapter,ember_index): return
+    if not ember_model.player_won(ember_progress): return
+    if not ember_model.record_victory(ember_progress,ember_index): return
     ember_generation += 1
     match_generation += 1
     busy = false
@@ -2442,10 +2465,10 @@ func _ember_victory() -> void:
 
 func _ember_menu() -> void:
     if not ember_active: return
-    var parts: Dictionary = _realm_dialog("Ember Temple",410)
+    var parts: Dictionary = _realm_dialog(Realm2.REALM_NAMES[guardian_chapter],410)
     _realm_story_compact(parts)
     var body: VBoxContainer = parts.box
-    text(body,Ember.BOSS_NAMES[clampi(ember_index,0,2)],20,Color("#dfd4e5"))
+    text(body,ember_model.BOSS_NAMES[clampi(ember_index,0,2)],20,Color("#dfd4e5"))
     action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_ember_begin,true)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
     _open_realm_dialog(parts)
@@ -2471,13 +2494,13 @@ func _ember_back_to_reader(open_reader: bool = true) -> void:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
     ZenChronicles.set_campaign_board_active(false)
     draw()
-    if open_reader: ZenChronicles.open_ember_reader()
+    if open_reader: _open_guardian_reader()
     else: sync_realm_music(true)
 
 
 # ---- Zen Realm Chronicles: NORMAL Abyss bot matches, not puzzles ----
 func start_campaign_practice(chapter: int) -> void:
-    if chapter not in [0,1,2] or not Realm2.unlocked(chapter): return
+    if chapter not in [0,1,2,3] or not Realm2.unlocked(chapter): return
     if move_count()>0 and result==0:
         # Do not replace a live board when moving between Realms.
         if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
@@ -2495,6 +2518,7 @@ func start_campaign_practice(chapter: int) -> void:
         sync_realm_music()
         start_game(true,Realms.fixed_bot_level(0))
         return
+    if chapter==3 and int(Celestial.load_progress().page)<19: return
     campaign_practice_active = true
     practice_chapter = chapter
     ember_active = false
@@ -2502,16 +2526,16 @@ func start_campaign_practice(chapter: int) -> void:
     shadow_active = false
     realm_story_active = false
     against_bot = true
-    bot_level = 2 if practice_chapter==2 else 1
+    bot_level = 2 if practice_chapter in [2,3] else 1
     owners = [0,1]
     ZenChronicles.set_campaign_board_active(true)
     cube.clear_boss_skin()
-    if practice_chapter==2:
+    if practice_chapter in [2,3]:
         cube.clear_abyss_skin()
     else:
         cube.set_abyss_skin(0)
     if realm_backdrop != null:
-        var arena: Texture2D = Ember.battle_backdrop() if practice_chapter==2 else Abyss.battle_backdrop()
+        var arena: Texture2D = Celestial.battle_backdrop() if practice_chapter==3 else (Ember.battle_backdrop() if practice_chapter==2 else Abyss.battle_backdrop())
         if arena != null: realm_backdrop.texture = arena
     sync_realm_music()
     _campaign_practice_restart()
@@ -2525,7 +2549,8 @@ func _campaign_practice_restart() -> void:
     busy = false
     campaign_awards = []
     practice_choir_played = false
-    var total: int = int(Realm2.load_progress().ember_stats.played if practice_chapter==2 else Realm2.load_progress().abyss_stats.played)
+    match_blocked_threat = false
+    var total: int = int(Realm2.load_progress().celestial_stats.played if practice_chapter==3 else (Realm2.load_progress().ember_stats.played if practice_chapter==2 else Realm2.load_progress().abyss_stats.played))
     turn = 1 if total % 2 == 0 else 2
     cube.reset_view()
     draw()
@@ -2573,7 +2598,8 @@ func _open_campaign_story_from_match(chapter: int) -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     if chapter==0: ZenChronicles.open_shadow_reader()
     elif chapter==1: ZenChronicles.open_abyss_reader()
-    else: ZenChronicles.open_ember_campaign_preview()
+    elif chapter==2: ZenChronicles.open_ember_campaign_preview()
+    else: ZenChronicles.open_celestial_campaign_preview()
 
 func _campaign_practice_begin_again() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)

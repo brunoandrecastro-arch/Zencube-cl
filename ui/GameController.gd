@@ -1405,7 +1405,7 @@ func open_ascend_intro() -> void:
     elif language=="pt": tagline = "96 casas · 6 faces · 204 linhas de vitória"
     var summary: Label = label(tagline,box,17,Color("#315846"))
     summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    if ZMode.unlocked_for_release(data):
+    if ZMode.unlocked(data):
         premium_button("Zen Ascend betreten" if language=="de" else ("Enter Zen Ascend" if language=="en" else "Entrar no Zen Ascend"),box,start_ascend,true)
     else:
         label("🔒 Ab Zen-Meister oder im Shop für 850 Zen-Blätter." if language=="de" else (

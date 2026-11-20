@@ -70,11 +70,11 @@ static func unlocked_for_release(data: Dictionary) -> bool:
     return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 3
 
 static func test_access_enabled() -> bool:
-    # Never bypass player progression in debug or Play builds.
-    return false
+    # Only the isolated 3.0 test export has this capability.
+    return OS.has_feature("zencube_celestial_qa")
 
 static func unlocked(data: Dictionary) -> bool:
-    return unlocked_for_release(data)
+    return test_access_enabled() or unlocked_for_release(data)
 
 static func buy(data: Dictionary) -> bool:
     # Do not charge anyone who already unlocked the mode through Zen-Meister.
