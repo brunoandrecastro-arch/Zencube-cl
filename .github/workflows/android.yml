@@ -107,6 +107,9 @@ jobs:
       - name: Import project and check GDScript
         run: |
           "$GODOT" --headless --editor --import --quit
+      - name: Verify actual loaded boss arena paths and texture dimensions
+        if: env.ZENCUBE_CELESTIAL_TEST == 'true'
+        run: timeout 55 "$GODOT" --headless --path . --script tests/test_realm_arena_resolution.gd
       - name: Verify 108 lines and simulated games
         run: python3 tests/test_108_rules.py
       - name: Verify German/English strings and music WAV

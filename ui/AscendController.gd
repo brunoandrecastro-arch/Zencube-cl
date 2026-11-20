@@ -54,6 +54,8 @@ var world_music: AudioStreamPlayer
 var realm_music_fade: AudioStreamPlayer
 var realm_music_tween: Tween
 var realm_backdrop: TextureRect
+var realm_backdrop_shade: ColorRect
+const ARENA_BACKDROP_SHADER = preload("res://ui/RealmArenaBackdrop.gdshader")
 var match_realm: int = 0
 var match_blocked_threat: bool = false
 var bot_level: int = 1
@@ -382,6 +384,7 @@ func build_interface() -> void:
     layer.add_child(backdrop)
     backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var shade: ColorRect = ColorRect.new()
+    realm_backdrop_shade = shade
     shade.color = Color("241f1a",0.24)
     shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
     layer.add_child(shade)
@@ -456,6 +459,28 @@ func build_interface() -> void:
     quote_box.add_theme_stylebox_override("panel",style(Color("302820",0.94),13))
     column.add_child(quote_box)
     quote_label = text(quote_box,"",12,Color("f4dfbd"))
+
+# Portrait art and all normal game UI keep the original presentation.
+# Only landscape campaign arenas get the reduced crop and mild sharpening.
+func _refresh_arena_presentation() -> void:
+    if not is_instance_valid(realm_backdrop): return
+    var tex: Texture2D = realm_backdrop.texture
+    var landscape: bool = false
+    if tex != null:
+        var path: String = tex.resource_path
+        landscape = tex.get_width()>tex.get_height() and ("/arenas/" in path or path.ends_with("/abyss_of_memories/gameplay.webp"))
+    if landscape:
+        var mat := ShaderMaterial.new()
+        mat.shader = ARENA_BACKDROP_SHADER
+        realm_backdrop.material = mat
+        realm_backdrop.stretch_mode = TextureRect.STRETCH_SCALE
+        realm_backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+    else:
+        realm_backdrop.material = null
+        realm_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        realm_backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_PARENT_NODE
+    if is_instance_valid(realm_backdrop_shade):
+        realm_backdrop_shade.color = Color("241f1a",0.08 if landscape else 0.24)
 
 func realm_quote() -> String:
     var index: int = realm_index()
@@ -1341,6 +1366,7 @@ func select_realm(number: int) -> bool:
     bot_level = Realms.fixed_bot_level(number)
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[number])
+        _refresh_arena_presentation()
     SaveManager.save_data(data)
     draw()
     if from_realm != number:
@@ -1610,6 +1636,7 @@ func _realm_story_set_stage(stage: int) -> void:
     cube.set_boss_skin(realm_story_stage)
     if realm_backdrop != null:
         realm_backdrop.texture = load(RealmStory.CHAPTER_ART[match_realm])
+        _refresh_arena_presentation()
     draw()
     # Follow the new Realm's EXISTING song on actual chapter travel.
     # No new music and no modification to the Classic soundtrack.
@@ -1877,6 +1904,7 @@ func _realm_story_return_to_ascend() -> void:
     against_bot = true
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     # Leaving a boss restores the normal Realm/Shop soundtrack immediately.
     # Reuse the existing 1.8-second crossfade; keep the selected music intact.
     sync_realm_music()
@@ -1939,6 +1967,7 @@ func start_abyss_battle() -> void:
     if realm_backdrop != null:
         var arena: Texture2D = Abyss.battle_backdrop(abyss_index)
         if arena != null: realm_backdrop.texture = arena
+        _refresh_arena_presentation()
     _abyss_save()
     sync_realm_music()
     draw()
@@ -2088,6 +2117,7 @@ func _abyss_back_to_reader(open_reader: bool = true) -> void:
     abyss_last_human = -1
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
     draw()
     if open_reader: ZenChronicles.open_abyss_reader()
@@ -2133,6 +2163,7 @@ func start_shadow_battle() -> void:
     if realm_backdrop != null:
         var arena: Texture2D = Shadow.battle_backdrop(shadow_index)
         if arena != null: realm_backdrop.texture = arena
+        _refresh_arena_presentation()
     _shadow_save()
     sync_realm_music()
     draw()
@@ -2282,6 +2313,7 @@ func _shadow_back_to_reader(open_reader: bool = true) -> void:
     shadow_last_human = -1
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
     draw()
     if open_reader: ZenChronicles.open_shadow_reader()
@@ -2343,6 +2375,7 @@ func _start_guardian_battle() -> void:
     if realm_backdrop != null:
         var arena: Texture2D = ember_model.battle_backdrop(ember_index)
         if arena != null: realm_backdrop.texture = arena
+        _refresh_arena_presentation()
     _ember_save()
     sync_realm_music()
     draw()
@@ -2492,6 +2525,7 @@ func _ember_back_to_reader(open_reader: bool = true) -> void:
     ember_last_human = -1
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
     draw()
     if open_reader: _open_guardian_reader()
@@ -2514,7 +2548,9 @@ func start_campaign_practice(chapter: int) -> void:
         cube.set_skin(int(data.economy.get("equipped",0)))
         ZenChronicles.set_campaign_board_active(false)
         SaveManager.save_data(data)
-        if realm_backdrop != null: realm_backdrop.texture = load(Realms.REALM_ART[0])
+        if realm_backdrop != null:
+            realm_backdrop.texture = load(Realms.REALM_ART[0])
+            _refresh_arena_presentation()
         sync_realm_music()
         start_game(true,Realms.fixed_bot_level(0))
         return
@@ -2537,6 +2573,7 @@ func start_campaign_practice(chapter: int) -> void:
     if realm_backdrop != null:
         var arena: Texture2D = Celestial.battle_backdrop() if practice_chapter==3 else (Ember.battle_backdrop() if practice_chapter==2 else Abyss.battle_backdrop())
         if arena != null: realm_backdrop.texture = arena
+        _refresh_arena_presentation()
     sync_realm_music()
     _campaign_practice_restart()
 
@@ -2634,6 +2671,7 @@ func _campaign_practice_back() -> void:
     recorded = false
     if realm_backdrop != null:
         realm_backdrop.texture = load(Realms.REALM_ART[match_realm])
+        _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
     sync_realm_music()
     draw()
