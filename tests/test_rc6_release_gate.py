@@ -20,7 +20,7 @@ assert 'const TEST_UNLOCKED: bool = false' in mode
 assert 'static func test_access_enabled() -> bool:' in mode
 assert 'return OS.has_feature("debug")' not in mode
 assert 'return OS.has_feature("zencube_celestial_qa")' in mode.split('static func test_access_enabled() -> bool:', 1)[1].split('static func unlocked(', 1)[0]
-assert 'static func unlocked(data: Dictionary) -> bool:\n    return test_access_enabled() or unlocked_for_release(data)' in mode
+assert 'static func unlocked(data: Dictionary) -> bool:\n    if test_access_enabled(): return true\n    return unlocked_for_release(data)' in mode
 assert "zencube_celestial_qa" not in preset
 assert 'if [[ "$celestial_test" == true ]]; then' in build
 assert 'if [[ "$celestial_test" == true && "$realm2_test" == true ]]; then' in build

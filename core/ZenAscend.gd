@@ -74,7 +74,8 @@ static func test_access_enabled() -> bool:
     return OS.has_feature("zencube_celestial_qa")
 
 static func unlocked(data: Dictionary) -> bool:
-    return test_access_enabled() or unlocked_for_release(data)
+    if test_access_enabled(): return true
+    return unlocked_for_release(data)
 
 static func buy(data: Dictionary) -> bool:
     # Do not charge anyone who already unlocked the mode through Zen-Meister.

@@ -9,7 +9,7 @@ ui=(ROOT/'ui/AscendController.gd').read_text()
 renderer=(ROOT/'ui/AscendRenderer.gd').read_text()
 save=(ROOT/'core/SaveManager.gd').read_text()
 assert 'const TEST_UNLOCKED: bool = false' in new
-assert 'return test_access_enabled() or unlocked_for_release(data)' in new
+assert 'if test_access_enabled(): return true\n    return unlocked_for_release(data)' in new
 assert 'return OS.has_feature("zencube_celestial_qa")' in new
 assert 'return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 3' in new
 assert 'const PRICE: int = 850' in new
