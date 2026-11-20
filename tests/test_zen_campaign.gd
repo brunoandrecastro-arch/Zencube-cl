@@ -42,13 +42,18 @@ func _verify() -> void:
 
     game.open_menu()
     _press(game.popup, game.T("Zen Realm Chronicles 📖"))
-    _press(reader._screen, "📚 Originaler Zen-Webcomic")
+    _check(reader._screen.find_child("ZenChroniclesTab3",true,false)!=null and reader._screen.find_child("ZenChroniclesTab4",true,false)!=null,
+        "new 3×3/4×4 library tabs are present")
+    _check(_button(reader._screen,"📚 Originaler Zen-Webcomic")==null,
+        "legacy archives no longer crowd the public Chronicles menu")
+    # Archived media remains testable via the retained internal entry points.
+    reader.open_comic_library()
     var read: Button = _button(reader._screen, "Lesen  ›")
     _check(read != null and not read.disabled, "webcomic has its original unlocked chapter")
     reader.open_chapter(0)
     _check(reader._page_image.texture != null and reader._page_counter.text == "1 / 4", "original comic has working pages")
     reader.open_library()
-    _press(reader._screen, "📖 Originale Zen-Kampagne · 3×3")
+    reader.open_campaign_overview()
     await process_frame
     _check(bool(reader.is_open()), "campaign overview is reachable")
     _check(_art_count(reader._screen) == 6, "complete hero art and five thumbnail textures are bound to controls")
