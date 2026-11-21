@@ -7,6 +7,7 @@ signal finished
 const FRACTURE_SOUND = preload("res://assets/audio/zen_mirror_shatter.wav")
 const ASCEND_SOUND = preload("res://assets/audio/zen_realm_breakthrough.wav")
 const MOON_ART = preload("res://assets/zen_world_moon.webp")
+const SHARDS = preload("res://ui/ZenCubeFractureFX.gd")
 const SHADOW_ART = preload("res://assets/realms/shadow_realm.webp")
 const PORTAL_SHADER := """
 shader_type canvas_item;
@@ -26,7 +27,7 @@ void fragment() {
 
 var _mode: int = 0
 var _time: float = 0.0
-var _duration: float = 6.2
+var _duration: float = 6.8
 var _active: bool = false
 var _triggered_sound: bool = false
 var _cube3: Node3D
@@ -37,10 +38,17 @@ var _caption: Label
 var _skip: Button
 var _effect: AudioStreamPlayer
 var _lang: String = "en"
+var _fx: Node3D
+var _camera: Camera3D
+var _blackout: ColorRect
+var _flash: ColorRect
+var _title: Label
+var _lighting: OmniLight3D
 
 func present(mode: int, language: String = "en") -> void:
     _mode = clampi(mode,0,1)
     _lang = language if language in ["de","en","pt"] else "en"
+    _duration = 6.8 if _mode==0 else 9.2
     layer = 160
     var background: ColorRect = ColorRect.new()
     background.color = Color("#0b0b19")
@@ -90,11 +98,13 @@ func present(mode: int, language: String = "en") -> void:
     stage.add_child(camera)
     camera.look_at(Vector3.ZERO,Vector3.UP)
     camera.current = true
+    _camera = camera
     var light: OmniLight3D = OmniLight3D.new()
     light.position = Vector3(2.7,4.6,3.2)
     light.light_color = Color("#c9a9ff")
     light.light_energy = 2.8
     stage.add_child(light)
+    _lighting = light
     var fill: OmniLight3D = OmniLight3D.new()
     fill.position = Vector3(-3.0,-1.0,-1.0)
     fill.light_color = Color("#b869ee")
@@ -107,6 +117,25 @@ func present(mode: int, language: String = "en") -> void:
     _turner.add_child(_cube3)
     _turner.add_child(_cube4)
     _cube4.visible = false
+    _fx = SHARDS.new()
+    _turner.add_child(_fx)
+    _fx.call("build")
+    # Postprocess: a blackout between acts, then a brief chromatic shock flash.
+    # Both are screen-space, independent of devices' HDR support.
+    _blackout = ColorRect.new()
+    _blackout.name = "CinematicBlackout"
+    _blackout.color = Color("#05030b")
+    _blackout.modulate.a = 0.0 if _mode==0 else 1.0
+    _blackout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    background.add_child(_blackout)
+    _blackout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _flash = ColorRect.new()
+    _flash.name = "DimensionalImpact"
+    _flash.color = Color("#efe2ff")
+    _flash.modulate.a = 0.0
+    _flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    background.add_child(_flash)
+    _flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var info: VBoxContainer = VBoxContainer.new()
     info.anchor_left = 0.05
     info.anchor_right = 0.95
@@ -120,6 +149,7 @@ func present(mode: int, language: String = "en") -> void:
     heading.add_theme_font_size_override("font_size",31)
     heading.add_theme_color_override("font_color",Color("#e3caf8"))
     info.add_child(heading)
+    _title = heading
     _caption = Label.new()
     _caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -221,21 +251,52 @@ func _process(delta: float) -> void:
     if not _active: return
     _time += delta
     var t: float = clampf(_time/_duration,0.0,1.0)
-    _turner.rotation.y += delta*0.45
-    _turner.rotation.x = 0.13+sin(_time*0.65)*0.10
-    _portal_material.set_shader_parameter("phase",_time)
+    _turner.rotation.y += delta*(0.25+0.95*smoothstep(0.33,0.70,t))
+    _turner.rotation.x = 0.13+sin(_time*0.76)*0.13
+    _portal_material.set_shader_parameter("phase",_time*1.8)
     _portal_material.set_shader_parameter("progress",t)
     if _mode==0:
-        _cube3.scale = Vector3.ONE*(1.0+0.10*sin(_time*2.8))
-        if t>0.55:
-            _cube3.scale *= 1.0-0.45*(t-0.55)/0.45
-    else:
-        if t>0.47:
+        # Act IV: an intact 3x3 fractures into physically separated shells.
+        _camera.position = Vector3(3.9,3.1,5.4).lerp(Vector3(3.2,2.6,4.4),smoothstep(0.1,0.38,t))
+        _camera.look_at(Vector3.ZERO,Vector3.UP)
+        if t<0.39:
+            _cube3.visible = true
+            _cube4.visible = false
+            _fx.call("hide_effects")
+            _cube3.scale = Vector3.ONE*(1.0+0.06*sin(_time*7.0)*smoothstep(0.18,0.39,t))
+        else:
             _cube3.visible = false
+            _cube4.visible = false
+            _fx.call("fracture",smoothstep(0.39,0.78,t))
+            _caption.text = _words(["Everything I knew has fallen apart.","Alles, was ich kannte, ist zerbrochen.","Tudo o que conhecia se desfez."])
+        _blackout.modulate.a = smoothstep(0.75,0.97,t)
+        _flash.modulate.a = 0.38*(1.0-smoothstep(0.39,0.51,t))*smoothstep(0.36,0.40,t)
+        _lighting.light_energy = 2.8+3.5*smoothstep(0.34,0.42,t)*(1.0-smoothstep(0.42,0.61,t))
+    else:
+        # Chapter transition: silent darkness -> 56 flying 4x4 surface fragments
+        # -> visible dimensional reassembly -> violet shockwave and reveal.
+        _camera.position = Vector3(4.8,3.7,7.3).lerp(Vector3(3.9,3.1,5.4),smoothstep(0.42,0.85,t))
+        _camera.look_at(Vector3.ZERO,Vector3.UP)
+        _blackout.modulate.a = 1.0-smoothstep(0.11,0.31,t)
+        _cube3.visible = false
+        if t<0.13:
+            _cube4.visible = false
+            _fx.call("hide_effects")
+            _caption.text = _words(["Silence.","Stille.","Silêncio."])
+        elif t<0.61:
+            _cube4.visible = false
+            _fx.call("assemble",smoothstep(0.13,0.61,t))
+            _caption.text = _words(["Something new is taking shape.","Etwas Neues nimmt Gestalt an.","Algo novo está a ganhar forma."])
+        else:
+            _fx.call("hide_effects")
             _cube4.visible = true
-            _cube4.scale = Vector3.ONE*(0.62+0.38*minf(1.0,(t-0.47)/0.31))
+            _cube4.scale = Vector3.ONE*(0.93+0.07*smoothstep(0.61,0.77,t))
             _caption.text = _words(["ZEN ASCEND · 4×4 UNLOCKED","ZEN ASCEND · 4×4 FREIGESCHALTET","ZEN ASCEND · 4×4 DESBLOQUEADO"])
-    if not _triggered_sound and _time>=2.6:
+            _fx.call("shockwave",smoothstep(0.61,0.94,t))
+        _lighting.light_energy = 1.8+5.2*(1.0-smoothstep(0.66,0.86,t))*smoothstep(0.51,0.62,t)
+        _flash.modulate.a = 0.92*(1.0-smoothstep(0.62,0.74,t))*smoothstep(0.595,0.62,t)
+    var start_sound: float = 0.39 if _mode==0 else 0.60
+    if not _triggered_sound and t>=start_sound:
         _triggered_sound = true
         if bool(SaveManager.load_data().get("settings",{}).get("sound",true)): _effect.play()
     if t>=1.0: _finish()
