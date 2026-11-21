@@ -875,12 +875,13 @@ func open_store() -> void:
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
     label("Zen Ascend",box,20,Color("526943"))
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
+    label(_act_one_ui("Wird nach dem Sieg über Dark Kuze in Akt IV freigeschaltet.",
+        "Unlocks after defeating Dark Kuze in Act IV.",
+        "Desbloqueia após derrotares Dark Kuze no Ato IV."),box,13)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
     else:
-        var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true)
-        unlock_button.disabled = int(data.economy.leaves) < ZMode.PRICE
+        button(_act_one_ui("Zen Chronicles öffnen","Open Zen Chronicles","Abrir Zen Chronicles"),box,func(): chronicles.open_library(),true)
     shop_page = clampi(shop_page, 0, 3)
     store_page_buttons(box)
     for i in range(shop_page * 5, mini((shop_page + 1) * 5, Collection.SKINS.size())):
@@ -1461,7 +1462,7 @@ const FractureState = preload("res://story/ZenFractureState.gd")
 
 func _ascend_revealed() -> bool:
     # Existing players keep their entitlement and can still enter Zen Ascend.
-    return FractureState.awakening_seen() or int(data.get("ascend",{}).get("played",0))>0
+    return ZMode.unlocked(data) and (FractureState.awakening_seen() or int(data.get("ascend",{}).get("played",0))>0)
 
 func open_ascend_intro() -> void:
     ZMode.ensure(data)
@@ -1489,20 +1490,16 @@ func open_ascend_intro() -> void:
     if ZMode.unlocked(data):
         premium_button("Zen Ascend betreten" if language=="de" else ("Enter Zen Ascend" if language=="en" else "Entrar no Zen Ascend"),box,start_ascend,true)
     else:
-        label("🔒 Ab Zen-Meister oder im Shop für 850 Zen-Blätter." if language=="de" else (
-            "🔒 Unlock at Zen Master or for 850 Zen Leaves." if language=="en" else
-            "🔒 Desbloqueia ao atingir Mestre Zen ou por 850 Folhas Zen."),box,15)
-        var buy_button: Button = premium_button(
-            "Freischalten · 🍃 850" if language=="de" else ("Unlock · 🍃 850" if language=="en" else "Desbloquear · 🍃 850"),
-            box,buy_ascend,true)
-        buy_button.disabled = int(data.economy.leaves) < ZMode.PRICE
-        button("Zen-Shop",box,open_store,true)
+        label(_act_one_ui("🔒 Schließe Zen Chronicles Akt IV ab und besiege Dark Kuze.",
+            "🔒 Finish Zen Chronicles Act IV and defeat Dark Kuze.",
+            "🔒 Conclui o Ato IV de Zen Chronicles e derrota Dark Kuze."),box,15)
+        premium_button(_act_one_ui("Zur Geschichte","Go to Story","Ir à História"),box,func(): chronicles.open_library(),true)
 
 func buy_ascend() -> void:
-    if not ZMode.buy(data):
-        notify_user("Nicht genug Zen-Blätter.")
-        return
-    persist()
+    # Keep legacy signals safe: direct calls cannot buy an early 4x4 unlock.
+    notify_user(_act_one_ui("Besiege zuerst Dark Kuze in Akt IV.",
+        "Defeat Dark Kuze in Act IV first.",
+        "Derrota primeiro Dark Kuze no Ato IV."))
     open_ascend_intro()
 
 func start_ascend() -> void:
@@ -2931,7 +2928,9 @@ func _act_one_result() -> void:
     var outcome := "victory" if board.winner == 1 else ("defeat" if board.winner == 2 else "draw")
     var box := _zen_campaign_story_box(_act_one_title())
     popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.985), 22))
-    var art := ZenCampaign.artwork(prequel_model.portrait_path(), 190)
+    # Result art matches the large full-height Act I-IV introduction portrait.
+    var art := ZenCampaign.artwork(prequel_model.portrait_path(),
+        clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,880.0))
     art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     box.add_child(art)
     _zen_campaign_paragraph(box, str(dialogue.get(outcome, "")))

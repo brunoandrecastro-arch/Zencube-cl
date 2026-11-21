@@ -1,5 +1,5 @@
 name: Android debug APK
-run-name: ${{ (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') && 'ZenCube Chronicles 4.0.2 · Realm Boss Portraits' || 'Android debug APK' }}
+run-name: ${{ (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') && 'ZenCube Chronicles 4.0.3 · Dark Kuze Gate & Cinematic Boss Results' || 'Android debug APK' }}
 on:
   workflow_dispatch:
   push:
@@ -339,7 +339,7 @@ jobs:
       - name: Require approved new Kuze / Shadow Kuze launcher icon
         if: (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120')
         run: python3 tests/test_zencube_new_icon.py
-      - name: Verify Zen Ascend locks and purchased access for 4.0.1
+      - name: Verify Zen Ascend only after real Dark Kuze Act IV victory
         if: env.ZENCUBE_RELEASE_GATES == 'true'
         run: |
           python3 tests/test_zen_ascend_locked_update.py
@@ -419,13 +419,13 @@ jobs:
         run: python3 tests/test_celestial_media.py --apk build/ZenCube-3D.apk
       - name: Name ZenCube Chronicles 4.0.1 APK
         if: github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'
-        run: mv build/ZenCube-3D.apk build/ZenCube-Chronicles-4.0.2.apk
+        run: mv build/ZenCube-3D.apk build/ZenCube-Chronicles-4.0.3.apk
       - name: Upload ZenCube Chronicles 4.0.1 APK
         if: github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'
         uses: actions/upload-artifact@v4
         with:
-          name: ZenCube-Chronicles-4.0.2
-          path: build/ZenCube-Chronicles-4.0.2.apk
+          name: ZenCube-Chronicles-4.0.3
+          path: build/ZenCube-Chronicles-4.0.3.apk
           if-no-files-found: error
       - name: Name ZenCube 3.0 test APK
         if: env.ZENCUBE_CELESTIAL_TEST == 'true' && github.head_ref != 'feature/zen-act1-integration-20261120' && github.ref_name != 'feature/zen-act1-integration-20261120'

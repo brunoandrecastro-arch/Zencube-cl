@@ -1,12 +1,13 @@
 class_name ZenAscend
 extends RefCounted
 # Separate 4x4 mode: the existing Classic 3x3 rules and saves are untouched.
-# All Android builds, including debug previews, require Zen Master or permanent purchase.
-# Historic compatibility flag remains permanently disabled.
+# Zen Ascend is a story reward: complete Act IV by genuinely defeating Dark Kuze.
+# No rank, old purchase or QA feature may bypass the illustrated story.
 const TEST_UNLOCKED: bool = false
 const PRICE: int = 850
 const CELLS: int = 96
 const SIDE: int = 4
+const DarkKuze = preload("res://story/ZenActFour.gd")
 
 const WORDS: Dictionary = {
     "Zen Ascend 4×4": ["Zen Ascend 4×4", "Zen Ascend 4×4"],
@@ -65,25 +66,22 @@ static func t(source: String, language: String) -> String:
         if language == "pt": return str(phrase[1])
     return source
 
-# Production entitlement, independent from the temporary test override.
-static func unlocked_for_release(data: Dictionary) -> bool:
-    return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 3
+# Strict canonical story checkpoint; Dark Kuze's real winning board is validated
+# by ZenActFour.load_progress(). Purchased flags and Classic ranks are irrelevant.
+static func unlocked_for_release(_data: Dictionary) -> bool:
+    return bool(DarkKuze.load_progress().complete)
 
 static func test_access_enabled() -> bool:
-    # Only the isolated 3.0 test export has this capability.
-    return OS.has_feature("zencube_celestial_qa")
+    # Legacy QA feature cannot bypass the story in production or previews.
+    return false
 
 static func unlocked(data: Dictionary) -> bool:
-    if test_access_enabled(): return true
     return unlocked_for_release(data)
 
-static func buy(data: Dictionary) -> bool:
-    # Do not charge anyone who already unlocked the mode through Zen-Meister.
-    if unlocked_for_release(data): return false
-    if int(data.get("economy",{}).get("leaves",0)) < PRICE: return false
-    data.economy.leaves -= PRICE
-    data.economy["ascend_owned"] = true
-    return true
+static func buy(_data: Dictionary) -> bool:
+    # The 4×4 experience cannot be purchased before completing Act IV.
+    # Keep the entry point for old save compatibility; never deduct currency.
+    return false
 
 static func ensure(data: Dictionary) -> void:
     if not data.get("ascend") is Dictionary: data["ascend"] = {}
