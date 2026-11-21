@@ -1,16 +1,20 @@
-name: Google Play unsigned AAB
+name: ZenCube 4.0.4 unsigned AAB candidate
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [fix/campaign2-build337-feedback]
 permissions:
   contents: read
 jobs:
   export:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/zen-act1-integration-20261120'
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -41,12 +45,68 @@ jobs:
           unzip -joq templates.tpz 'templates/android_source.zip' 'templates/version.txt' -d "$templates_dir"
           printf 'GODOT=%s/Godot_v4.5.1-stable_linux.x86_64\nBUNDLETOOL_JAR=%s/bundletool.jar\n' \
             "$download_dir" "$download_dir" >> "$GITHUB_ENV"
+      - name: Check Play preset 4.0.4 and disable development/QA flags
+        run: |
+          python3 - <<'PY'
+          import configparser, json
+          c=configparser.ConfigParser(interpolation=None); c.read('export_presets.cfg')
+          p=next(x for x in c.sections() if c[x].get('name')=='"Android Play"')
+          opt=c[p+'.options']
+          assert opt['version/code']=='44'
+          assert json.loads(opt['version/name'])=='4.0.4'
+          assert json.loads(opt['package/unique_name'])=='com.zencube.game.play'
+          assert c[p]['custom_features']=='""'
+          assert opt['package/signed']=='false'
+          assert opt['gradle_build/use_gradle_build']=='true'
+          assert opt['gradle_build/export_format']=='1'
+          assert json.loads(opt['gradle_build/target_sdk'])=='36'
+          print('PRESET PASS. Package ID still needs verification in the existing Play Console.')
+          PY
+      - name: Extract premium Manhwa, portraits and Realm scenes
+        run: |
+          set -euo pipefail
+          unzip -oq ZenCube_Abyss_Media_Pages.zip -d .
+          unzip -oq ZenCube_Abyss_Media_Boss_Audio.zip -d .
+          python3 tests/test_shadow_remake_media.py --extract
+          unzip -oq ZenCube_2.0_Realm_Artwork.zip -d .
+          python3 tests/test_campaign2_arenas.py --extract
+          unzip -oq ZenCube_Ember_Media.zip -d .
+          python3 tests/test_celestial_media.py --extract
+          python3 - <<'PY'
+          from pathlib import Path
+          for stem in ('shadow_campaign','abyss_of_memories','ember_campaign','celestial_campaign'):
+              root=Path('assets')/stem/'pages'
+              files=sorted(root.glob('page_*.webp'))
+              assert [p.name for p in files]==[f'page_{n:02d}.webp' for n in range(1,31)],(stem,len(files))
+              print(stem, '30 ordered pages')
+          for boss in ('mist_guardian','mirror_novice','veil_monk'):
+              assert (Path('assets/shadow_campaign/portraits')/(boss+'.webp')).is_file(),boss
+          PY
+      - name: Run Zen gameplay, story, unlock, localization and portrait preflight
+        run: |
+          python3 tests/test_zen_chronicles_i18n.py
+          python3 tests/test_zen_ascend_locked_update.py
+          python3 tests/test_realm_boss_portraits.py
+          python3 tests/test_realm_challenge_ceremony.py
+          python3 tests/test_i18n_3_languages.py
+          python3 tests/test_realm_boss_audio.py
+          python3 tests/test_campaign2_arenas.py
+          python3 tests/test_zencube_new_icon.py
       - name: Check Chronicles and export the unsigned release bundle
         run: |
           python3 tests/test_zen_chronicles_i18n.py
           bash scripts/build_play_aab.sh
+      - name: Package unsigned ZenCube 3D 4.0.4 and record SHA-256
+        run: |
+          set -euo pipefail
+          mv build/ZenCube-3D-unsigned.aab build/ZenCube-3D-4.0.4-unsigned.aab
+          sha256sum build/ZenCube-3D-4.0.4-unsigned.aab | tee build/ZenCube-3D-4.0.4-SHA256.txt
+          stat -c 'AAB size: %s bytes' build/ZenCube-3D-4.0.4-unsigned.aab | tee -a build/ZenCube-3D-4.0.4-SHA256.txt
+          echo 'Candidate only: verify live Play package identifier, highest existing Play version code, and active upload certificate before signing.' >> build/ZenCube-3D-4.0.4-SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ZenCube-3D-unsigned-${{ github.sha }}
-          path: build/ZenCube-3D-unsigned.aab
+          name: ZenCube-3D-4.0.4-unsigned-candidate
+          path: |
+            build/ZenCube-3D-4.0.4-unsigned.aab
+            build/ZenCube-3D-4.0.4-SHA256.txt
           if-no-files-found: error
