@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Standalone Realm Chronicles smoke and regression tests.
 const Story = preload("res://story/ZenRealmChronicles.gd")
 const BossSkins = preload("res://core/ZenRealmBossSkins.gd")
@@ -66,6 +67,8 @@ func run() -> void:
     for stage in range(12):
         var choice: int = Story.choose_move(empty,lines,stage)
         check(choice >= 0 and choice < 96,"legal opening for boss %d" % stage)
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
@@ -163,6 +166,18 @@ func run() -> void:
         check(int(controller.get("bot_level"))==[1,2,3,4][int(stage/3)],"fixed Realm bot tier remains unchanged")
     renderer.call("clear_boss_skin")
     check(int(renderer.get("boss_skin_id"))==-1,"normal player skin can be restored")
+    controller.set("result",2)
+    controller.call("_realm_story_result")
+    var result_dialog: Control = controller.get("active_realm_dialog") as Control
+    var large_boss: TextureRect = result_dialog.find_child("RealmChroniclesBossArt",true,false) as TextureRect
+    check(large_boss!=null and large_boss.custom_minimum_size.y>=400.0,"boss loss now uses large cinematic picture")
+    var result_frame: PanelContainer = result_dialog.get_child(1) as PanelContainer
+    check(is_equal_approx(result_frame.anchor_top,0.035) and is_equal_approx(result_frame.anchor_bottom,0.965),"boss result takes full screen height")
+    var actions: int = 0
+    for child in result_frame.get_child(0).get_children():
+        if child is Button: actions+=1
+    check(actions==3,"all 3 result buttons remain visible beneath the artwork")
+    controller.set("result",0)
     controller.call("_realm_story_leave")
     check(FileAccess.get_file_as_string(SaveManager.PATH)==classic_disk,"leaving story preserves normal saves")
     # Normal 4x4 Realm bot matches, not only story bosses, must also alternate.
@@ -174,6 +189,7 @@ func run() -> void:
     check(int(controller.get("turn"))==1,"ordinary 4x4 third match starts with human")
     check(int(controller.get("data").ascend.get("normal_bot_start_counter",0))==3,"ordinary 4x4 starting parity saved")
     controller.queue_free()
+    dark_kuze_gate.restore()
     _restore()
     print("Realm Chronicles tests: ",errors," failure(s)")
     quit(1 if errors > 0 else 0)

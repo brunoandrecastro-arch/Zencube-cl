@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # ZenCube 2.0 Realm regression: real auto-awarded Realm tasks vs active Zen Challenges.
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
@@ -48,6 +49,8 @@ func run() -> void:
     check(not Realm2.can_unlock(2,3,true),"3/3 story bosses mandatory")
     check(not Realm2.can_unlock(3,3,false),"final victory must wait for Finish Chapter")
     check(Realm2.can_unlock(3,3,true),"3+3 unlock predicate")
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true,true,true,false,false]
@@ -159,6 +162,7 @@ func run() -> void:
         "Abyss practice does not invent shop rewards")
     check(int(SaveManager.load_data().ascend.played)==ascended_before,
         "Abyss practice does not inflate regular 4x4 wins")
+    dark_kuze_gate.restore()
     restore()
     print("ZENCUBE 2.0 REALM FAILURES=",failed)
     quit(0 if failed==0 else 1)

@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Smoke-test the real Zen Chronicles chapter overview and isolated QA buttons
 # for the two new Realms. Does not start a new release or change game stats.
 const Story = preload("res://story/ZenRealmChronicles.gd")
@@ -25,6 +26,8 @@ func run() -> void:
     var path: String = SaveManager.PATH
     existed = FileAccess.file_exists(path)
     if existed: save_backup = FileAccess.get_file_as_bytes(path)
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    test(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
@@ -100,6 +103,7 @@ func run() -> void:
         current_scene = previous_scene
         controller.queue_free()
     ProjectSettings.set_setting("application/config/realm_chronicles_qa",old_qa)
+    dark_kuze_gate.restore()
     if existed:
         var f := FileAccess.open(path,FileAccess.WRITE)
         f.store_buffer(save_backup)

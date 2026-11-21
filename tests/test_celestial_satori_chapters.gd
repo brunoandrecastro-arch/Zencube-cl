@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Complete 4x4 Celestial + Satori story, 6 sequential real four-in-a-row
 # victories, 6 distinct 3D tile skins, image decoding, saves and exact
 # Master/Grandmaster AI stages. Never writes ordinary player rewards.
@@ -39,6 +40,8 @@ func run() -> void:
     var previous_qa: bool = bool(ProjectSettings.get_setting(qa_key,false))
     ProjectSettings.set_setting(qa_key,false)
     assert_ok(Story.save_progress(Story.defaults()),"seed empty Realm Chronicles to test combined gates")
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
@@ -137,6 +140,7 @@ func run() -> void:
     assert_ok(FileAccess.get_file_as_string(SaveManager.PATH)==ordinary_save,"normal game entirely unchanged after six battles")
     game.queue_free()
     ProjectSettings.set_setting(qa_key,previous_qa)
+    dark_kuze_gate.restore()
     _restore()
     print("Celestial and Satori 6-boss end-to-end tests: ",failures," failure(s)")
     quit(1 if failures>0 else 0)
