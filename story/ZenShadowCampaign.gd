@@ -24,8 +24,22 @@ static func page_path(page: int) -> String:
     if page < 1 or page > 30: return ""
     return ASSET_ROOT + "pages/page_%02d.webp" % page
 
+# Canonical Shadow Manhwa designs (9:16): wolf-like Mist Guardian,
+# mirror-faced hooded novice, and the haloed Veil Monk.
+# Swap in independently illustrated portraits without changing boss IDs,
+# music, saves or battle difficulty. Existing art remains a safe fallback.
+const PORTRAIT_ROOT := "res://assets/shadow_campaign/portraits/"
+
+static func boss_portrait_path(index: int) -> String:
+    if index < 0 or index >= 3: return ""
+    return PORTRAIT_ROOT + BOSS_IDS[index] + ".webp"
+
 static func boss_art(index: int) -> Texture2D:
     if index < 0 or index >= 3: return null
+    var approved_portrait: String = boss_portrait_path(index)
+    if ResourceLoader.exists(approved_portrait):
+        var portrait: Texture2D = load(approved_portrait) as Texture2D
+        if portrait != null: return portrait
     return RealmStory.boss_texture(index)
 
 static func story_stream() -> AudioStream:

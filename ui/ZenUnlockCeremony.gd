@@ -24,7 +24,7 @@ func _text(parent: Node, value: String, points: int, tint: Color) -> Label:
     parent.add_child(l)
     return l
 
-func present(kind: String, picture: String, title: String, quote: String, sound_on: bool, songs: Array) -> void:
+func present(kind: String, picture: String, title: String, quote: String, sound_on: bool, songs: Array, language: String = "en") -> void:
     layer = 25
     _music_sources = songs.duplicate()
     _root = Control.new()
@@ -72,13 +72,19 @@ func present(kind: String, picture: String, title: String, quote: String, sound_
     column.add_theme_constant_override("separation",22)
     column.alignment = BoxContainer.ALIGNMENT_CENTER
     _root.add_child(column)
-    _text(column,"✦   NEW REALM UNLOCKED   ✦" if kind == "realm" else "✦   ACHIEVEMENT UNLOCKED   ✦",20,Color("f6e7b6"))
+    var heading_words: String = "✦   NEW REALM UNLOCKED   ✦" if kind == "realm" else "✦   ACHIEVEMENT UNLOCKED   ✦"
+    if kind == "challenge":
+        heading_words = ("✦   REALM-HERAUSFORDERUNG GESCHAFFT   ✦" if language == "de" else
+            ("✦   DESAFIO DO REINO CONCLUÍDO   ✦" if language == "pt" else "✦   REALM CHALLENGE COMPLETE   ✦"))
+    var heading_label: Label = _text(column,heading_words,20,Color("f6e7b6"))
+    heading_label.name = "RealmChallengeCeremonyHeading" if kind == "challenge" else "ZenUnlockCeremonyHeading"
     var title_label: Label = _text(column,title,32,Color("fff2cf"))
     title_label.pivot_offset = Vector2(0,24)
     title_label.scale = Vector2(0.92,0.92)
     _text(column,quote,17,Color("e0e8dc"))
     var skip: Button = Button.new()
-    skip.text = "Continue ›"
+    skip.text = ("Weiter ›" if language == "de" else ("Continuar ›" if language == "pt" else "Continue ›"))
+    skip.name = "ZenUnlockContinue"
     skip.custom_minimum_size = Vector2(130,52)
     skip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
     var normal: StyleBoxFlat = StyleBoxFlat.new()

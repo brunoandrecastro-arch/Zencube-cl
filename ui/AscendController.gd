@@ -100,7 +100,7 @@ var ember_progress: Dictionary = {}
 var practice_chapter: int = 1
 var campaign_practice_active: bool = false
 var campaign_awards: Array[String] = []
-var practice_choir_played: bool = false
+var campaign_award_index: int = 0
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -964,7 +964,13 @@ func finish() -> void:
                     break
         var outcome: int = 1 if result==1 else (0 if result==3 else -1)
         campaign_awards = Realm2.record_celestial_match(outcome,crossed,match_blocked_threat) if practice_chapter==3 else (Realm2.record_ember_match(outcome,crossed) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed))
-        call_deferred("_campaign_practice_result")
+        campaign_award_index = 0
+        # A newly earned 4x4 Realm challenge gets the same full-screen
+        # ceremony as a secret achievement before the normal result screen.
+        if campaign_awards.is_empty():
+            call_deferred("_campaign_practice_result")
+        else:
+            call_deferred("_campaign_practice_show_next_award")
         return
     if ember_active:
         if recorded: return
@@ -2679,7 +2685,7 @@ func _campaign_practice_restart() -> void:
     recorded = false
     busy = false
     campaign_awards = []
-    practice_choir_played = false
+    campaign_award_index = 0
     match_blocked_threat = false
     var total: int = int(Realm2.load_progress().celestial_stats.played if practice_chapter==3 else (Realm2.load_progress().ember_stats.played if practice_chapter==2 else Realm2.load_progress().abyss_stats.played))
     turn = 1 if total % 2 == 0 else 2
@@ -2688,6 +2694,34 @@ func _campaign_practice_restart() -> void:
     if turn == 2:
         busy = true
         call_deferred("bot_turn")
+
+# Only first-time achievements returned by record_abyss/ember/celestial_match
+# are celebrated. Reopening a match result never repeats the ceremony or sound.
+func _campaign_practice_show_next_award() -> void:
+    if not is_inside_tree() or not campaign_practice_active or result == 0: return
+    if campaign_award_index >= campaign_awards.size():
+        call_deferred("_campaign_practice_result")
+        return
+    var title_name: String = campaign_awards[campaign_award_index]
+    campaign_award_index += 1
+    var description: String = ""
+    for task_index in range(3):
+        if Realm2.task_title(practice_chapter,task_index) == title_name:
+            description = Realm2.task_description(practice_chapter,task_index,lang())
+            break
+    if description.is_empty():
+        description = _campaign_phrase("Ein neuer Schritt auf deinem Zen-Pfad.",
+            "A new step on your Zen path.","Mais um passo no teu caminho Zen.")
+    var saved_match_generation: int = match_generation
+    var celebration: ZenUnlockCeremony = UnlockCeremony.new()
+    celebration.name = "RealmChallengeEarnedCeremony"
+    add_child(celebration)
+    celebration.finished.connect(func():
+        if is_inside_tree() and campaign_practice_active and result != 0 and match_generation == saved_match_generation:
+            call_deferred("_campaign_practice_show_next_award")
+    )
+    celebration.present("challenge",Realm2.SOURCE_ART[practice_chapter],
+        title_name,description,bool(data.settings.get("sound",true)),[world_music],lang())
 
 func _campaign_practice_result() -> void:
     if not campaign_practice_active: return
@@ -2702,13 +2736,6 @@ func _campaign_practice_result() -> void:
         text(body,_campaign_phrase("🏆 Realm-Challenge abgeschlossen!","🏆 Realm challenge earned!","🏆 Desafio de reino concluído!"),18,Color("#c8e8b4"))
         for title_name in campaign_awards:
             text(body,"✓ " + title_name,17,Color("#e5d2ac"))
-        if not practice_choir_played and bool(data.get("settings",{}).get("sound",true)):
-            practice_choir_played = true
-            var choir: AudioStreamPlayer = AudioStreamPlayer.new()
-            choir.stream = load("res://assets/audio/zen_achievement_choir.wav") as AudioStream
-            add_child(choir)
-            choir.finished.connect(choir.queue_free)
-            choir.play()
     text(body,_campaign_phrase("Realm-Challenges: %d/3","Realm challenges: %d/3","Desafios do reino: %d/3") %
         Realm2.completed_count(Realm2.load_progress(),practice_chapter),16,Color("#e8ddc5"))
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)

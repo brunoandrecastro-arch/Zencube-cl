@@ -1,5 +1,5 @@
 name: Android debug APK
-run-name: ${{ (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') && 'ZenCube Chronicles 4.0.3 · Dark Kuze Gate & Cinematic Boss Results' || 'Android debug APK' }}
+run-name: ${{ (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') && 'ZenCube Chronicles 4.0.4 · Realm Challenge Celebration' || 'Android debug APK' }}
 on:
   workflow_dispatch:
   push:
@@ -346,6 +346,10 @@ jobs:
           timeout 45 "$GODOT" --headless --path . --script tests/test_zen_ascend_locked_update.gd
       - name: Verify cinematic Realm boss portraits
         run: python3 tests/test_realm_boss_portraits.py
+      - name: Verify Realm Challenge full-screen reward and Shadow portrait mapping
+        run: |
+          python3 tests/test_realm_challenge_ceremony.py
+          timeout 45 "$GODOT" --headless --path . --script tests/test_realm_challenge_ceremony.gd
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -417,15 +421,15 @@ jobs:
       - name: Verify Celestial assets in APK
         if: env.ZENCUBE_CELESTIAL_TEST == 'true'
         run: python3 tests/test_celestial_media.py --apk build/ZenCube-3D.apk
-      - name: Name ZenCube Chronicles 4.0.1 APK
+      - name: Name ZenCube Chronicles 4.0.4 APK
         if: github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'
-        run: mv build/ZenCube-3D.apk build/ZenCube-Chronicles-4.0.3.apk
-      - name: Upload ZenCube Chronicles 4.0.1 APK
+        run: mv build/ZenCube-3D.apk build/ZenCube-Chronicles-4.0.4.apk
+      - name: Upload ZenCube Chronicles 4.0.4 APK
         if: github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'
         uses: actions/upload-artifact@v4
         with:
-          name: ZenCube-Chronicles-4.0.3
-          path: build/ZenCube-Chronicles-4.0.3.apk
+          name: ZenCube-Chronicles-4.0.4
+          path: build/ZenCube-Chronicles-4.0.4.apk
           if-no-files-found: error
       - name: Name ZenCube 3.0 test APK
         if: env.ZENCUBE_CELESTIAL_TEST == 'true' && github.head_ref != 'feature/zen-act1-integration-20261120' && github.ref_name != 'feature/zen-act1-integration-20261120'
