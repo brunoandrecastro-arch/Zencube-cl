@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 const Story = preload("res://story/ZenRealmChronicles.gd")
 # Runtime test; does not access the real user's save file.
 var failures: int = 0
@@ -19,6 +20,8 @@ func run() -> void:
             check((stream as AudioStreamOggVorbis).loop,"realm %d loops" % realm)
     check(ZenRealmMusic.stream_for(-1) == null,"negative realm rejected")
     check(ZenRealmMusic.stream_for(4) == null,"out of range realm rejected")
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"valid Dark Kuze Act IV checkpoint")
     var data: Dictionary = SaveManager.defaults()
     ZenCollection.ensure(data)
     ZenAscendRealms.ensure(data)
@@ -68,5 +71,6 @@ func run() -> void:
         file.close()
     elif FileAccess.file_exists(Story.SAVE):
         DirAccess.remove_absolute(ProjectSettings.globalize_path(Story.SAVE))
+    dark_kuze_gate.restore()
     print("REALM AUDIO/CEREMONY FAILURES=",failures)
     quit(1 if failures > 0 else 0)

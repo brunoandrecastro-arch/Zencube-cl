@@ -166,8 +166,6 @@ func _build(rank: int, language: String) -> void:
         _make_text(content, prefix + "  ·  " + Locale.translate(str(Asc.WORLDS[rank]), language), 16, Color("cce4ba"))
     else:
         _make_text(content, _copy("Höchster Zen-Rang erreicht!", "Highest Zen rank reached!", "Atingiste o nível Zen máximo!", language), 16, Color("cce4ba"))
-    if rank == 3:
-        _make_text(content, _copy("ZEN ASCEND 4×4 FREIGESCHALTET", "ZEN ASCEND 4×4 UNLOCKED", "ZEN ASCEND 4×4 DESBLOQUEADO", language), 17, Color("f7cd73"))
 
     var skip_button: Button = Button.new()
     skip_button.name = "SkipCeremony"

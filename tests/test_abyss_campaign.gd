@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 ## Campaign 2.0 headless smoke and save-isolation test.
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Series = preload("res://core/ZenFinalGuardianSeries.gd")
@@ -105,6 +106,8 @@ func run() -> void:
         print("ABYSS MEDIA PENDING: upload both ZIPs for complete Android build")
     # Exercise the actual Ascend.tscn controller and full-screen ZenChronicles reader.
     # This is a separately saved campaign and never awards normal rank/leaf wins.
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine completed Dark Kuze story unlock")
     var user: Dictionary = SaveManager.defaults()
     user.ascension.rank = 3
     user.ascension.completed = [true,true,true,false,false]
@@ -153,6 +156,7 @@ func run() -> void:
         await process_frame
     check(int(SaveManager.load_data().get("ascend",{}).get("played",0))==0,
         "Abyss match does not add normal 4x4 rank wins")
+    dark_kuze_gate.restore()
     _restore()
     print("ABYSS CAMPAIGN TEST FAILURES=",failures)
     quit(0 if failures==0 else 1)

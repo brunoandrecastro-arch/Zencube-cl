@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Runtime animation smoke check, no data or game states changed.
 const Story = preload("res://story/ZenRealmChronicles.gd")
 var failures: int = 0
@@ -12,6 +13,8 @@ func run() -> void:
     var existed: bool = FileAccess.file_exists(Story.SAVE)
     var previous: PackedByteArray = FileAccess.get_file_as_bytes(Story.SAVE) if existed else PackedByteArray()
     check(Story.save_progress(Story.defaults()),"start with zero defeated bosses")
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine completed Dark Kuze story unlock")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     ZenAscendRealms.ensure(data)
@@ -39,5 +42,6 @@ func run() -> void:
         restored.close()
     elif FileAccess.file_exists(Story.SAVE):
         DirAccess.remove_absolute(ProjectSettings.globalize_path(Story.SAVE))
+    dark_kuze_gate.restore()
     print("ZEN REALM PORTAL FAILURES=", failures)
     quit(0 if failures == 0 else 1)

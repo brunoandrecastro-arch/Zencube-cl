@@ -1,0 +1,36 @@
+{
+  "id": "shin_trial",
+  "title": {
+    "en": "Shin",
+    "de": "Shin",
+    "pt": "Shin"
+  },
+  "subtitle": {
+    "en": "The Art of Balance",
+    "de": "Die Kunst des Gleichgewichts",
+    "pt": "A arte do equilíbrio"
+  },
+  "dialogue": {
+    "intro": "One more game, Father? This time, let us see both sides.",
+    "victory": "Well played, Father. Tomorrow we play again. Together.",
+    "defeat": "Try again, Father. Look at the other side.",
+    "draw": "Neither of us has found the answer yet. One more game?"
+  },
+  "dialogue_de": {
+    "intro": "Noch eine Partie, Vater? Diesmal betrachten wir beide Seiten.",
+    "victory": "Gut gespielt, Vater. Morgen spielen wir wieder. Zusammen.",
+    "defeat": "Versuch es noch einmal, Vater. Schau auf die andere Seite.",
+    "draw": "Keiner von uns hat die Antwort gefunden. Noch eine Partie?"
+  },
+  "dialogue_pt": {
+    "intro": "Mais uma partida, pai? Desta vez, vamos olhar para os dois lados.",
+    "victory": "Bem jogado, pai. Amanhã jogamos outra vez. Juntos.",
+    "defeat": "Tenta outra vez, pai. Olha para o outro lado.",
+    "draw": "Nenhum de nós encontrou a resposta. Mais uma partida?"
+  },
+  "gate": {
+    "after_page": 11,
+    "required_wins": 1
+  },
+  "difficulty": 1
+}

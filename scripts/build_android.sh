@@ -35,6 +35,7 @@ abyss_test="${ZENCUBE_ABYSS_TEST:-false}"
 shadow_test="${ZENCUBE_SHADOW_TEST:-false}"
 realm2_test="${ZENCUBE_REALM_2_0_TEST:-false}"
 celestial_test="${ZENCUBE_CELESTIAL_TEST:-false}"
+release_gates="${ZENCUBE_RELEASE_GATES:-false}"
 campaign_package="com.zencube.game.campaign"
 campaign_label="ZenCube Campaign Test"
 if [[ "$realm_test" == true ]]; then
@@ -59,6 +60,9 @@ if [[ "$realm2_test" == true ]]; then
 fi
 if [[ "$celestial_test" == true && "$realm2_test" == true ]]; then
   campaign_label="ZenCube 3D 3.0"
+  if [[ "${GITHUB_HEAD_REF:-}" == "feature/zen-act1-integration-20261120" || "${GITHUB_REF_NAME:-}" == "feature/zen-act1-integration-20261120" ]]; then
+    campaign_label="ZenCube Chronicles 4.0"
+  fi
 fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.
@@ -69,15 +73,21 @@ if [[ "$campaign_test" == true ]]; then
     s|^package/unique_name=.*|package/unique_name=\"$campaign_package\"|
     s|^package/name=.*|package/name=\"$campaign_label\"|
   }" export_presets.cfg
-  # A private export-only feature permits the player to TEST this campaign
-  # even before Zen Master; it does not modify the 4x4 production gates.
+  # Production-like 4.0.1 preview: preserve media extraction but never
+  # embed QA feature flags that bypass Zen-Meister / shop ownership.
   if [[ "$realm2_test" == true ]]; then
-    # QA only: enter the 4x4 battle via its Campaign entry point.
-    # Never bypass the 3 boss + 3 challenge inter-realm gates.
-    sed -i '0,/custom_features=""/s//custom_features="zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test"/' export_presets.cfg
+    if [[ "$release_gates" != true ]]; then
+      # Legacy, separately signed QA builds retain their preview access.
+      sed -i '0,/custom_features=""/s//custom_features="zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test"/' export_presets.cfg
+      if [[ "$celestial_test" == true ]]; then
+        sed -i '0,/zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test/s//zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test,zencube_celestial_qa/' export_presets.cfg
+      fi
+    fi
     if [[ "$celestial_test" == true ]]; then
-      sed -i '0,/zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test/s//zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test,zencube_celestial_qa/' export_presets.cfg
       sed -i '/^\[preset\.0\.options\]$/,/^\[/ { s|^version/code=.*|version/code=30|; s|^version/name=.*|version/name="3.0"|; }' export_presets.cfg
+      if [[ "${GITHUB_HEAD_REF:-}" == "feature/zen-act1-integration-20261120" || "${GITHUB_REF_NAME:-}" == "feature/zen-act1-integration-20261120" ]]; then
+        sed -i '/^\[preset\.0\.options\]$/,/^\[/ { s|^version/code=.*|version/code=43|; s|^version/name=.*|version/name="4.0.3"|; }' export_presets.cfg
+      fi
     fi
   elif [[ "$shadow_test" == true ]]; then
     # Both chapters are testable in this separate Campaign 2.0 build.
@@ -87,6 +97,13 @@ if [[ "$campaign_test" == true ]]; then
   fi
 fi
 
+# Android production-gated previews obey the same persistent ownership checks as Play.
+if [[ "$release_gates" == true ]]; then
+  if grep -Eq 'custom_features="[^"]+"' export_presets.cfg; then
+    echo 'ERROR: release-gated preview must not contain QA feature flags' >&2
+    exit 1
+  fi
+fi
 # Android previews use the very same access gates as the future Play release.
 # No QA or chapter-skip setting may be embedded in the shipped APK.
 if grep -q 'config/realm_chronicles_qa=true' project.godot; then

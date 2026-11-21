@@ -1,0 +1,36 @@
+{
+  "id": "aiko_trial",
+  "title": {
+    "en": "Aiko Tadanobu",
+    "de": "Aiko Tadanobu",
+    "pt": "Aiko Tadanobu"
+  },
+  "subtitle": {
+    "en": "The Blossom of Wisdom",
+    "de": "Die Blüte der Weisheit",
+    "pt": "A flor da sabedoria"
+  },
+  "dialogue": {
+    "intro": "One final game, brother? And this time, enjoy every move.",
+    "victory": "Beautifully played. Not every move needs to be perfect.",
+    "defeat": "Even mistakes can become something beautiful. Shall we try again?",
+    "draw": "Perhaps balance is our answer. One more game?"
+  },
+  "dialogue_de": {
+    "intro": "Eine letzte Partie, Bruder? Und diesmal genieße jeden Zug.",
+    "victory": "Wunderschön gespielt. Nicht jeder Zug muss perfekt sein.",
+    "defeat": "Auch aus Fehlern kann etwas Schönes entstehen. Versuchen wir es noch einmal?",
+    "draw": "Vielleicht ist Gleichgewicht unsere Antwort. Noch eine Partie?"
+  },
+  "dialogue_pt": {
+    "intro": "Uma última partida, irmão? E desta vez, desfruta de cada jogada.",
+    "victory": "Jogaste lindamente. Nem todas as jogadas têm de ser perfeitas.",
+    "defeat": "Até os erros podem tornar-se algo belo. Tentamos novamente?",
+    "draw": "Talvez o equilíbrio seja a resposta. Mais uma partida?"
+  },
+  "gate": {
+    "after_page": 11,
+    "required_wins": 1
+  },
+  "difficulty": 2
+}
