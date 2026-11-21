@@ -50,16 +50,9 @@ jobs:
               echo "::notice::Upload $archive to this branch to complete the real Abyss APK"
             fi
           done
-      - name: Extract original Shadow Realm 30 Manhwa pages
+      - name: Verify and extract Shadow Realm premium remake (30 lossless pages)
         if: env.ZENCUBE_SHADOW_TEST == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -f ZenCube_Shadow_Media_Pages.zip ]]; then
-            unzip -oq ZenCube_Shadow_Media_Pages.zip -d .
-          else
-            echo "::notice::Upload ZenCube_Shadow_Media_Pages.zip to this branch to package the Shadow manhwa"
-          fi
+        run: python3 tests/test_shadow_remake_media.py --extract
       - name: Extract ZenCube 2.0 Realm HD arenas and sneak preview
         if: env.ZENCUBE_REALM_2_0_TEST == 'true'
         shell: bash

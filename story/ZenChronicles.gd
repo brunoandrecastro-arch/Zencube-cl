@@ -852,6 +852,11 @@ func consume_abyss_launch() -> bool:
 # Realm Chronicles bosses and independent of the Abyss chapter save.
 func open_shadow_reader() -> void:
     _library_tab = 1
+    # Also migrate players who saw page 1 in the earlier test build.
+    # Do not interrupt page 1→2 or replay old rewards.
+    if bool(ActFour.load_progress().complete) and not FractureState.awakening_seen():
+        _start_awakening_before_shadow()
+        return
     if not Realm2.unlocked(0):
         _campaign_locked_screen(0)
         return
@@ -1290,18 +1295,38 @@ func _begin_moon_garden_breakthrough() -> void:
         return
     _act_one_release_back()
     if FractureState.portal_seen():
+        _start_awakening_before_shadow()
+        return
+    _suspend_scene_music()
+    var ceremony: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(ceremony)
+    ceremony.finished.connect(_after_moon_portal)
+    ceremony.call("present",0,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+# The REMADE Shadow page 1 already contains 4×4. Both cinematic stages
+# therefore finish BEFORE the first illustrated page is displayed.
+func _after_moon_portal() -> void:
+    if not FractureState.mark_portal():
+        open_library()
+        return
+    _start_awakening_before_shadow()
+
+func _start_awakening_before_shadow() -> void:
+    if FractureState.awakening_seen():
         open_shadow_reader()
         return
     _suspend_scene_music()
     var ceremony: CanvasLayer = Awakening.new()
     get_tree().root.add_child(ceremony)
-    ceremony.finished.connect(func():
-        if not FractureState.mark_portal(): return
-        open_shadow_reader())
-    ceremony.call("present",0,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+    ceremony.finished.connect(_after_moon_awakening)
+    ceremony.call("present",1,str(SaveManager.load_data().get("settings",{}).get("language","en")))
 
-# On Shadow page 1 the original 3×3 appears one last time.
-# The second transition reveals the real four-by-four grid before page 2.
+func _after_moon_awakening() -> void:
+    if not FractureState.mark_awakening():
+        open_library()
+        return
+    open_shadow_reader()
+
 # Optional library replay never awards currency, rank or a second unlock.
 func replay_moon_shadow_transition() -> void:
     if _fracture_replaying or not bool(ActFour.load_progress().complete): return
@@ -1324,14 +1349,4 @@ func _finish_moon_shadow_replay() -> void:
     _library_tab = 0
     open_library()
     call_deferred("_resume_scene_music_if_free")
-
-func shadow_first_page_awakening(continue_reading: Callable) -> void:
-    if FractureState.awakening_seen() or not bool(ActFour.load_progress().complete):
-        continue_reading.call()
-        return
-    var ceremony: CanvasLayer = Awakening.new()
-    get_tree().root.add_child(ceremony)
-    ceremony.finished.connect(func():
-        if FractureState.mark_awakening(): continue_reading.call())
-    ceremony.call("present",1,str(SaveManager.load_data().get("settings",{}).get("language","en")))
 

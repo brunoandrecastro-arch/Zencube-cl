@@ -10,8 +10,9 @@ const VERSION := 1
 const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const BOSS_IDS: Array[String] = ["mist_guardian","mirror_novice","veil_monk"]
 const BOSS_NAMES: Array[String] = ["Mist Guardian","Mirror Novice","Veil Monk"]
-const GATES: Array[int] = [4,8,15]
-const CONTINUE_PAGES: Array[int] = [5,9,16]
+# Remade Manhwa: play each real boss BEFORE its illustrated victory (pages 11,21,28).
+const GATES: Array[int] = [10,20,27]
+const CONTINUE_PAGES: Array[int] = [11,21,28]
 const BOT_LEVELS: Array[int] = [1,1,Series.REALM_LEVELS[0]] # Shadow remains Medium
 const ASSET_ROOT := "res://assets/shadow_campaign/"
 const REALM_ART := "res://assets/realms/shadow_realm.webp"

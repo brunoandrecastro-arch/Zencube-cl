@@ -21,9 +21,8 @@ var next_button: Button
 var challenge_button: Button
 var sound: AudioStreamPlayer
 var start_touch: Vector2 = Vector2.ZERO
-var _awakening_active: bool = false
-const ActFour = preload("res://story/ZenActFour.gd")
-const Rift = preload("res://story/ZenFractureState.gd")
+# The remake already reveals the true 4×4 cube on PAGE ONE.
+# Awakening plays before the reader opens (in ZenChronicles), never after page one.
 
 func _chronicles() -> Node:
     # Avoid circular script preload resolution in Godot headless Android CI.
@@ -142,7 +141,6 @@ func _show_page() -> void:
     next_button.disabled = false
 
 func _turn(direction: int) -> void:
-    if _awakening_active: return
     var p: int = int(progress.get("page",1))
     if direction < 0:
         if p > 1:
@@ -170,18 +168,8 @@ func _turn(direction: int) -> void:
             return
         _chronicles().call("request_shadow_battle")
     elif action.get("type") == "page":
-        if p==1 and int(action.page)==2 and bool(ActFour.load_progress().complete) and not Rift.awakening_seen():
-            _awakening_active = true
-            _chronicles().call("shadow_first_page_awakening",Callable(self,"_finish_awakening"))
-        else:
-            progress.page = int(action.page)
-            if Shadow.save_progress(progress): _show_page()
-
-func _finish_awakening() -> void:
-    if not is_inside_tree(): return
-    _awakening_active = false
-    progress.page = 2
-    if Shadow.save_progress(progress): _show_page()
+        progress.page = int(action.page)
+        if Shadow.save_progress(progress): _show_page()
 
 func _open_challenges() -> void:
     _close()

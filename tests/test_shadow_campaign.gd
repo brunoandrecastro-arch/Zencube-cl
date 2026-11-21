@@ -59,8 +59,8 @@ func run() -> void:
     Series.settle(fixture)
     check(int(Series.score(fixture).player)==1,"count monotonic after restarting series")
     check(Shadow.BOSS_IDS==["mist_guardian","mirror_novice","veil_monk"],"preserve existing Shadow boss identities")
-    check(Shadow.GATES==[4,8,15],"story breaks before revealed outcomes on pages 5,9,16")
-    check(Shadow.CONTINUE_PAGES==[5,9,16],"resume Manhwa in correct order after wins")
+    check(Shadow.GATES==[10,20,27],"remake gates before victories on pages 11,21,28")
+    check(Shadow.CONTINUE_PAGES==[11,21,28],"remake resumes after each boss without skipping its victory page")
     check(Shadow.BOT_LEVELS==[1,1,1],"all Shadow bosses retain Medium AI")
     check(Shadow.page_path(1).ends_with("page_01.webp"),"first page")
     check(Shadow.page_path(30).ends_with("page_30.webp"),"last page")
@@ -84,7 +84,7 @@ func run() -> void:
     check(page_files==0 or page_files==30,"all 30 pages must be supplied together")
     var state: Dictionary = Shadow.defaults()
     check(Shadow.save_progress(state),"independent Shadow save writes")
-    check(Shadow.page_limit(state)==4,"first gate cannot be skipped")
+    check(Shadow.page_limit(state)==10,"first gate cannot be skipped before the first depicted win")
     for index in range(3):
         state.page = Shadow.GATES[index]
         check(Shadow.next_action(state).get("type")=="battle","boss gate "+str(index))
@@ -153,7 +153,7 @@ func run() -> void:
         await process_frame
         var book: Node = root.get_node("ZenChronicles")
         check(bool(book.call("is_open")),"Shadow reader returns after boss")
-        check(int(Shadow.load_progress().page)==4,"unfinished fight does not skip gate")
+        check(int(Shadow.load_progress().page)==10,"unfinished fight does not skip the new gate")
         book.call("close_shadow_reader")
         await process_frame
         controller.queue_free()
