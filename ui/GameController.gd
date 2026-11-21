@@ -825,11 +825,12 @@ func open_menu() -> void:
     var subtitle: Label = label("Denke über die Kanten hinaus.", box, 17, Color("e7d0a7"))
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Spielen", box, open_play_menu, true)
+    var story_entry: Button = premium_button(_act_one_ui("Zen Chronicles · Geschichte 📖", "Zen Chronicles · Story 📖", "Zen Chronicles · História 📖"), box, func(): get_node("/root/ZenChronicles").open_library())
+    story_entry.name = "MainMenuZenChronicles"
     premium_button("Zen Challenges · 100 Aufgaben", box, begin_challenges)
     premium_button("Zen-Aufstieg", box, open_ascension)
-    premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
+    premium_button("Zen Ascend" + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
     premium_button("Welten", box, open_worlds)
-    premium_button("Zen Realm Chronicles 📖", box, func(): get_node("/root/ZenChronicles").open_library())
     premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
     premium_button("Einstellungen", box, open_settings)
@@ -873,7 +874,7 @@ func open_store() -> void:
         rewards += T(Asc.LEVELS[i]) + ": +" + str(Collection.BOT_REWARDS[i])
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
-    label(ZMode.t("Zen Ascend 4×4",language_code()),box,20,Color("526943"))
+    label("Zen Ascend",box,20,Color("526943"))
     label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
@@ -1131,7 +1132,7 @@ func open_play_menu() -> void:
             b.text += "  🔒"
         else:
             label(T("Sieg-Belohnung: 🍃 %d") % int(Collection.BOT_REWARDS[i]), box, 12)
-    premium_button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro)
+    premium_button("Zen Ascend",box,open_ascend_intro)
     premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
     button("Training", box, func(): start_mode(2, 0), true)
     button("Viererlinien lernen", box, start_tutorial, true)
@@ -1170,7 +1171,7 @@ func open_ascension() -> void:
         box.add_child(progress_bar)
     label("Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.",box,13)
     label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
-    button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro,true)
+    button("Zen Ascend",box,open_ascend_intro,true)
     button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
 
@@ -1334,8 +1335,8 @@ func show_result_screen() -> void:
                 label(T("Neue Welt freigeschaltet: %s") % T(Asc.WORLDS[rank_after]),box,15,Color("e7d3aa"))
             else:
                 label("Zen-Wächter erreicht – höchste Rangstufe!",box,15,Color("e7d3aa"))
-            if rank_after == 3:
-                label(ZMode.t("Zen Ascend freigeschaltet!",language_code()),box,15,Color("d3e5b6"))
+            # The next dimension is revealed only after the Moon Garden finale.
+            # Unlock ownership remains unchanged.
     elif board.winner in [1, 2]:
         var winning_symbol: String = "X" if board.winner == 1 else "O"
         var summary: String = ""
@@ -1428,10 +1429,10 @@ func open_stats() -> void:
         box.add_child(rank_bar)
     ZMode.ensure(data)
     var zs: Dictionary = data.ascend
-    label(ZMode.t("4×4 Partien",language_code()) + ": %d" % int(zs.played),box,18,Color("526943"))
+    label((ZMode.t("4×4 Partien",language_code()) if _ascend_revealed() else "Zen Ascend") + ": %d" % int(zs.played),box,18,Color("526943"))
     stat_detail = "%s: %d  ·  %s: %d  ·  %s: %d" % [ZMode.t("Siege",language_code()),int(zs.p1),ZMode.t("Niederlagen",language_code()),int(zs.bot_losses),ZMode.t("Unentschieden",language_code()),int(zs.draw)]
     label(stat_detail,box,14)
-    stat_detail = "%s: %d  ·  %s: %d" % [ZMode.t("4×4 gegen Bot",language_code()),int(zs.bot_played),ZMode.t("4×4 zu zweit",language_code()),int(zs.local_played)]
+    stat_detail = "%s: %d  ·  %s: %d" % [("Zen Ascend Bot" if not _ascend_revealed() else ZMode.t("4×4 gegen Bot",language_code())),int(zs.bot_played),("Zen Ascend Local" if not _ascend_revealed() else ZMode.t("4×4 zu zweit",language_code())),int(zs.local_played)]
     label(stat_detail,box,14)
     stat_detail = "%s: %d  ·  %s: %d" % [ZMode.t("Beste Siegesserie",language_code()),int(zs.best_streak),ZMode.t("Aktuelle Siegesserie",language_code()),int(zs.current_streak)]
     label(stat_detail,box,14)
@@ -1455,15 +1456,21 @@ func save_player_name(index: int, value: String) -> void:
     data.settings.names[index] = cleaned
     persist()
 
+const FractureState = preload("res://story/ZenFractureState.gd")
+
+func _ascend_revealed() -> bool:
+    # Existing players keep their entitlement and can still enter Zen Ascend.
+    return FractureState.awakening_seen() or int(data.get("ascend",{}).get("played",0))>0
+
 func open_ascend_intro() -> void:
     ZMode.ensure(data)
     var language: String = language_code()
-    var box: VBoxContainer = modal(ZMode.t("Zen Ascend 4×4",language))
-    var heading: Label = label("A New Dimension of Strategy",box,20,Color("#284735"))
+    var box: VBoxContainer = modal("Zen Ascend")
+    var heading: Label = label(("A New Dimension of Strategy" if _ascend_revealed() else _act_one_ui("Ein verborgener Pfad", "A Hidden Path", "Um Caminho Oculto")),box,20,Color("#284735"))
     heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var preview: TextureRect = TextureRect.new()
     preview.name = "ZenAscendSneakPreview"
-    var art_path: String = "res://assets/zen_realm2/ascend_preview.webp"
+    var art_path: String = "res://assets/zen_realm2/ascend_preview.webp" if _ascend_revealed() else "res://assets/zen_world_moon.webp"
     if not ResourceLoader.exists(art_path):
         art_path = "res://assets/realms/shadow_realm.webp"
     preview.texture = load(art_path) as Texture2D
@@ -1473,9 +1480,9 @@ func open_ascend_intro() -> void:
     preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
     box.add_child(preview)
-    var tagline: String = "96 Felder · 6 Seiten · 204 Gewinnlinien"
-    if language=="en": tagline = "96 Cells · 6 Faces · 204 Winning Lines"
-    elif language=="pt": tagline = "96 casas · 6 faces · 204 linhas de vitória"
+    var tagline: String = "Ein verborgener Pfad wartet." if not _ascend_revealed() else "96 Felder · 6 Seiten · 204 Gewinnlinien"
+    if language=="en": tagline = "A hidden path awaits." if not _ascend_revealed() else "96 Cells · 6 Faces · 204 Winning Lines"
+    elif language=="pt": tagline = "Um caminho oculto aguarda-te." if not _ascend_revealed() else "96 casas · 6 faces · 204 linhas de vitória"
     var summary: Label = label(tagline,box,17,Color("#315846"))
     summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     if ZMode.unlocked(data):

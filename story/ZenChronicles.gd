@@ -275,8 +275,13 @@ func _chapter_accessible(i: int) -> bool:
 func campaign_ui(de: String,en: String,pt: String) -> String:
     return de if _active_language=="de" else (pt if _active_language=="pt" else en)
 
+func _realms_revealed() -> bool:
+    # Do not reveal the Realm cards before Act IV's transformation.
+    # Save migration: keep access for veteran Realm players and QA builds.
+    return FractureState.awakening_seen() or Realm2.already_entered(0) or Realm2.bosses_won(0)>0 or ZenAscend.test_access_enabled()
+
 func _select_library_tab(index: int) -> void:
-    _library_tab = clampi(index,0,1)
+    _library_tab = clampi(index,0,1) if _realms_revealed() else 0
     open_library()
 
 func _library_card(parent: Node, title: String, image_path: String, hint: String, allowed: bool, complete: bool, entry: Callable, tag: String, show_lock_info: bool = false) -> void:
@@ -337,10 +342,10 @@ func _library_story_cards(parent: VBoxContainer) -> void:
     _make_label(campaign_ui("Sky Garden · Epilog nach Abschluss aller Realms","Sky Garden · Epilogue after all Realms","Sky Garden · Epílogo após todos os Reinos"),parent,14,MUTED)
 
 func _library_realm_cards(parent: VBoxContainer) -> void:
-    _make_label(campaign_ui("Zen Ascend · 4×4","Zen Ascend · 4×4","Zen Ascend · 4×4"),parent,18,GOLD)
+    _make_label("Zen Ascend",parent,18,GOLD)
     var openers: Array[Callable] = [open_shadow_reader,open_abyss_reader,open_ember_campaign_preview,open_celestial_campaign_preview,open_satori_campaign_preview]
     var titles: Array[String] = ["🌘 Shadow Realm","🌊 Abyss of Memories","🔥 Ember Temple","☁️ Celestial Realm","☀️ Satori Realm"]
-    var unlock_hints: Array[String] = ["Zen Ascend 4×4","Shadow 3/3 + 3/3","Abyss 3/3 + 3/3","Ember 3/3 + 3/3","Celestial 3/3 + 3/3"]
+    var unlock_hints: Array[String] = ["Zen Ascend","Shadow 3/3 + 3/3","Abyss 3/3 + 3/3","Ember 3/3 + 3/3","Celestial 3/3 + 3/3"]
     for i in range(5):
         var permitted: bool = Realm2.unlocked(i)
         var finished: bool = Realm2.story_finished(i)
@@ -362,13 +367,17 @@ func open_library() -> void:
     var tabs: HBoxContainer = HBoxContainer.new()
     tabs.add_theme_constant_override("separation",8)
     outer.add_child(tabs)
-    var story_tab: Button = _make_button(campaign_ui("Geschichte · 3×3","Story · 3×3","História · 3×3"),tabs,_select_library_tab.bind(0))
+    var revealed: bool = _realms_revealed()
+    if not revealed: _library_tab = 0
+    var story_tab: Button = _make_button(campaign_ui("Geschichte","Story","História"),tabs,_select_library_tab.bind(0))
     story_tab.name = "ZenChroniclesTab3"
     story_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var realm_tab: Button = _make_button(campaign_ui("Reiche · 4×4","Realms · 4×4","Reinos · 4×4"),tabs,_select_library_tab.bind(1))
-    realm_tab.name = "ZenChroniclesTab4"
-    realm_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var active_tab: Button = story_tab if _library_tab==0 else realm_tab
+    var realm_tab: Button = null
+    if revealed:
+        realm_tab = _make_button(campaign_ui("Reiche","Realms","Reinos"),tabs,_select_library_tab.bind(1))
+        realm_tab.name = "ZenChroniclesTab4"
+        realm_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var active_tab: Button = story_tab if _library_tab==0 or realm_tab==null else realm_tab
     active_tab.add_theme_stylebox_override("normal",_style(Color("#5c4930"),12))
     active_tab.add_theme_color_override("font_color",Color("#ffe2a3"))
     var scroll: ScrollContainer = ScrollContainer.new()

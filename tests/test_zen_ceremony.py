@@ -26,7 +26,7 @@ assert '_closed = true' in ceremony and 'finished.emit()' in ceremony
 assert 'if effects_on:' in ceremony and '_gong_player.play()' in ceremony
 assert 'source.playing' in ceremony and '"volume_db"' in ceremony
 assert 'Locale.translate(str(Asc.RANKS[rank]), language)' in ceremony
-assert 'if rank == 3:' in ceremony and 'ZEN ASCEND 4×4' in ceremony
+assert 'ZEN ASCEND 4×4' not in ceremony
 assert 'if rank <= 4:' in ceremony
 assert '"music_mode":"base"' in save and 'const VERSION = 3' in save
 assert 'test_zen_ceremony.py' in flow and 'test_zen_ceremony.gd' in flow
@@ -38,4 +38,4 @@ with wave.open(str(BASE/'assets/audio/zen_temple_gong.wav'),'rb') as gong:
     data = gong.readframes(gong.getnframes())
     samples = struct.unpack('<'+str(len(data)//2)+'h', data)
     assert 1000 < max(samples) < 30000
-print('PASS: one-time Zen rank-up ceremony, skip, multilingual rank/world/4x4, original gong, no rank/save mutation')
+print('PASS: one-time Zen rank-up ceremony, skip, multilingual rank/world, secret 4x4, original gong, no rank/save mutation')
