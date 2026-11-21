@@ -278,7 +278,7 @@ func campaign_ui(de: String,en: String,pt: String) -> String:
 func _realms_revealed() -> bool:
     # Do not reveal the Realm cards before Act IV's transformation.
     # Save migration: keep access for veteran Realm players and QA builds.
-    return FractureState.awakening_seen() or Realm2.already_entered(0) or Realm2.bosses_won(0)>0 or ZenAscend.test_access_enabled()
+    return FractureState.awakening_seen() or Realm2.already_entered(0) or Realm2.bosses_won(0)>0
 
 func _select_library_tab(index: int) -> void:
     _library_tab = clampi(index,0,1) if _realms_revealed() else 0
