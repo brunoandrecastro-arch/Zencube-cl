@@ -17,6 +17,7 @@ jobs:
       ZENCUBE_SHADOW_TEST: ${{ github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
       ZENCUBE_REALM_2_0_TEST: ${{ github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
       ZENCUBE_CELESTIAL_TEST: ${{ (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
+      ZENCUBE_RELEASE_GATES: ${{ github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -338,6 +339,11 @@ jobs:
       - name: Require approved new Kuze / Shadow Kuze launcher icon
         if: (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120')
         run: python3 tests/test_zencube_new_icon.py
+      - name: Verify Zen Ascend locks and purchased access for 4.0.1
+        if: env.ZENCUBE_RELEASE_GATES == 'true'
+        run: |
+          python3 tests/test_zen_ascend_locked_update.py
+          timeout 45 "$GODOT" --headless --path . --script tests/test_zen_ascend_locked_update.gd
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
@@ -409,15 +415,15 @@ jobs:
       - name: Verify Celestial assets in APK
         if: env.ZENCUBE_CELESTIAL_TEST == 'true'
         run: python3 tests/test_celestial_media.py --apk build/ZenCube-3D.apk
-      - name: Name ZenCube Chronicles 4.0 APK
+      - name: Name ZenCube Chronicles 4.0.1 APK
         if: github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'
-        run: mv build/ZenCube-3D.apk build/ZenCube-Chronicles-4.0.apk
-      - name: Upload ZenCube Chronicles 4.0 APK
+        run: mv build/ZenCube-3D.apk build/ZenCube-Chronicles-4.0.1.apk
+      - name: Upload ZenCube Chronicles 4.0.1 APK
         if: github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'
         uses: actions/upload-artifact@v4
         with:
-          name: ZenCube-Chronicles-4.0
-          path: build/ZenCube-Chronicles-4.0.apk
+          name: ZenCube-Chronicles-4.0.1
+          path: build/ZenCube-Chronicles-4.0.1.apk
           if-no-files-found: error
       - name: Name ZenCube 3.0 test APK
         if: env.ZENCUBE_CELESTIAL_TEST == 'true' && github.head_ref != 'feature/zen-act1-integration-20261120' && github.ref_name != 'feature/zen-act1-integration-20261120'
