@@ -34,7 +34,8 @@ assert 'const TEST_UNLOCKED: bool = false' in mode, 'debug must obey Zen-Meister
 assert 'static func unlocked_for_release(data: Dictionary)' in mode
 assert 'get("rank",0)) >= 3' in mode, 'production unlock must start at Zen Meister rank (3)'
 assert 'if unlocked_for_release(data): return false' in mode, 'already earned mode must not charge leaves'
-assert 'rank_after == 3' in ui and 'Zen Ascend freigeschaltet!' in ui
+assert 'if bool(last_rank_up.get("rank_up",false))' in ui, 'rank-up ceremony must still trigger'
+assert 'Zen Ascend freigeschaltet!' not in ui, 'never reveal the new dimension at Zen Master rank'
 assert 'var block_probability: float = [0.70, 0.66, 0.75, 0.91, 1.0][level]' in ai
 assert 'level == 1 and rng.randf() < 0.62' in ai
 assert 'level == 3 and rng.randf() < 0.24' in ai
