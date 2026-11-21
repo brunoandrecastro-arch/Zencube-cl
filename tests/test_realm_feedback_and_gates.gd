@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Regression test for the approved feedback: no duplicate library entry,
 # working finger swipe, 4x4 return, twelve victory art configurations,
 # preserved shop skins and full-screen shatter for real Realm unlocks.
@@ -42,6 +43,8 @@ func run() -> void:
     var qkey: String = "application/config/realm_chronicles_qa"
     var oldqa: bool = bool(ProjectSettings.get_setting(qkey,false))
     ProjectSettings.set_setting(qkey,false)
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
@@ -202,6 +205,7 @@ func run() -> void:
     controller.queue_free()
     current_scene = previous
     ProjectSettings.set_setting(qkey,oldqa)
+    dark_kuze_gate.restore()
     _restore()
     print("Realm feedback and combined gate: ",failures," failure(s)")
     quit(1 if failures>0 else 0)

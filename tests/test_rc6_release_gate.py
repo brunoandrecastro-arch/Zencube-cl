@@ -19,18 +19,17 @@ assert "--export-debug Android " in build
 assert 'const TEST_UNLOCKED: bool = false' in mode
 assert 'static func test_access_enabled() -> bool:' in mode
 assert 'return OS.has_feature("debug")' not in mode
-assert 'return OS.has_feature("zencube_celestial_qa")' in mode.split('static func test_access_enabled() -> bool:', 1)[1].split('static func unlocked(', 1)[0]
-assert 'static func unlocked(data: Dictionary) -> bool:\n    if test_access_enabled(): return true\n    return unlocked_for_release(data)' in mode
+assert 'return false' in mode.split('static func test_access_enabled() -> bool:', 1)[1].split('static func unlocked(', 1)[0]
+assert 'static func unlocked(data: Dictionary) -> bool:\n    return unlocked_for_release(data)' in mode
 assert "zencube_celestial_qa" not in preset
 assert 'if [[ "$celestial_test" == true ]]; then' in build
 assert 'if [[ "$celestial_test" == true && "$realm2_test" == true ]]; then' in build
 assert 'campaign_package="com.zencube.game.realm2"' in build
 assert 'zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test,zencube_celestial_qa' in build
 assert 'ZENCUBE_CELESTIAL_TEST:' in workflow
-assert 'get("rank",0)) >= 3' in mode
-assert 'get("ascend_owned",false)' in mode
-assert 'const PRICE: int = 850' in mode and 'data.economy.leaves -= PRICE' in mode
-assert 'if unlocked_for_release(data): return false' in mode, "No double charge"
+assert 'DarkKuze.load_progress().complete' in mode
+assert 'const DarkKuze = preload("res://story/ZenActFour.gd")' in mode
+assert 'static func buy(_data: Dictionary) -> bool:' in mode and 'data.economy.leaves -= PRICE' not in mode, "No purchase bypass"
 assert 'if ZMode.unlocked(data):' in ui and 'if not ZMode.unlocked(data): return' in ui
 assert 'if not Mode.unlocked(data):' in ascend
 assert 'if ZMode.test_access_enabled():' not in ui
@@ -40,7 +39,7 @@ assert 'ZenCube 3D Preview' in build
 story = (root/"story/ZenRealmChronicles.gd").read_text(encoding="utf8")
 assert 'OS.get_name() != "Android" and bool(ProjectSettings.get_setting("application/config/realm_chronicles_qa",false))' in story
 assert "test_rc6_release_gate.py" in workflow
-def allowed(rank=0, bought=False): return rank >= 3 or bought
-assert not allowed(0) and not allowed(1) and not allowed(2)
-assert allowed(3) and allowed(4) and allowed(0, True)
+def allowed(act_four_complete=False, rank=0, bought=False): return act_four_complete
+assert not allowed(False,3,True) and not allowed(False,4,False)
+assert allowed(True,0,False)
 print("PASS: normal debug and Play retain rank/purchase gate; isolated Celestial QA feature only")

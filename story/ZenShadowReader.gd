@@ -21,6 +21,8 @@ var next_button: Button
 var challenge_button: Button
 var sound: AudioStreamPlayer
 var start_touch: Vector2 = Vector2.ZERO
+# The remake already reveals the true 4×4 cube on PAGE ONE.
+# Awakening plays before the reader opens (in ZenChronicles), never after page one.
 
 func _chronicles() -> Node:
     # Avoid circular script preload resolution in Godot headless Android CI.

@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Real Godot end-to-end QA for the entire Ember Temple chapter.
 # Covers chapter entry, 3 authentic 4x4 victories, six-boss independent
 # save, 3 real boss materials, high-resolution portrait assets, translations,
@@ -35,6 +36,8 @@ func run() -> void:
     _backup(Story.SAVE)
     # Stable test data has real Zen Ascend entitlement, but starts with
     # *no* completed Shadow challenges. The release gate must stay locked.
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
@@ -129,6 +132,7 @@ func run() -> void:
     check(FileAccess.get_file_as_string(SaveManager.PATH)==normal_save,"main saves unchanged after all three Ember bosses")
     game.queue_free()
     ProjectSettings.set_setting(qa_key,prior_qa)
+    dark_kuze_gate.restore()
     _restore()
     print("Ember Temple end-to-end test: ",failed," failure(s)")
     quit(1 if failed>0 else 0)

@@ -10,8 +10,9 @@ const VERSION := 1
 const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const BOSS_IDS: Array[String] = ["mist_guardian","mirror_novice","veil_monk"]
 const BOSS_NAMES: Array[String] = ["Mist Guardian","Mirror Novice","Veil Monk"]
-const GATES: Array[int] = [4,8,15]
-const CONTINUE_PAGES: Array[int] = [5,9,16]
+# Remade Manhwa: play each real boss BEFORE its illustrated victory (pages 11,21,28).
+const GATES: Array[int] = [10,20,27]
+const CONTINUE_PAGES: Array[int] = [11,21,28]
 const BOT_LEVELS: Array[int] = [1,1,Series.REALM_LEVELS[0]] # Shadow remains Medium
 const ASSET_ROOT := "res://assets/shadow_campaign/"
 const REALM_ART := "res://assets/realms/shadow_realm.webp"
@@ -23,8 +24,22 @@ static func page_path(page: int) -> String:
     if page < 1 or page > 30: return ""
     return ASSET_ROOT + "pages/page_%02d.webp" % page
 
+# Canonical Shadow Manhwa designs (9:16): wolf-like Mist Guardian,
+# mirror-faced hooded novice, and the haloed Veil Monk.
+# Swap in independently illustrated portraits without changing boss IDs,
+# music, saves or battle difficulty. Existing art remains a safe fallback.
+const PORTRAIT_ROOT := "res://assets/shadow_campaign/portraits/"
+
+static func boss_portrait_path(index: int) -> String:
+    if index < 0 or index >= 3: return ""
+    return PORTRAIT_ROOT + BOSS_IDS[index] + ".webp"
+
 static func boss_art(index: int) -> Texture2D:
     if index < 0 or index >= 3: return null
+    var approved_portrait: String = boss_portrait_path(index)
+    if ResourceLoader.exists(approved_portrait):
+        var portrait: Texture2D = load(approved_portrait) as Texture2D
+        if portrait != null: return portrait
     return RealmStory.boss_texture(index)
 
 static func story_stream() -> AudioStream:

@@ -206,7 +206,7 @@ static func show_language_selection(popup: PanelContainer, box: VBoxContainer, o
     _language_button(box, "🇬🇧  English", on_language.bind("en"))
     _language_button(box, "🇵🇹  Português", on_language.bind("pt"))
     _make_preview(box)
-    var victory := caption(box, "勝利  |  VIER IN EINER REIHE", 16, GOLD)
+    var victory := caption(box, "勝利  |  FOUR IN A ROW", 16, GOLD)
     victory.name = "UiTestVictoryCaption"
-    caption(box, "Vier Zeichen über die Kante – 2 + 2", 14, IVORY)
+    caption(box, "Four symbols across an edge — 2 + 2", 14, IVORY)
     caption(box, "Fall seven times, stand up eight.", 15, GOLD).name = "UiTestJapaneseProverb"

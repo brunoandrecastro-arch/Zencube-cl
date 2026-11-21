@@ -33,7 +33,8 @@ assert 'const VERSION = 3' in save
 assert 'const CELLS: int = 96' in mode and 'const PRICE: int = 850' in mode
 assert 'const TEST_UNLOCKED: bool = false' in mode
 assert 'return unlocked_for_release(data)' in mode
-assert 'return OS.has_feature("zencube_celestial_qa")' in mode
+assert 'DarkKuze.load_progress().complete' in mode
+assert 'return false' in mode.split('static func test_access_enabled() -> bool:',1)[1].split('static func unlocked(',1)[0]
 assert 'res://assets/realms/shadow_realm.webp' in (ROOT/'core/ZenAscendRealms.gd').read_text()
 
 def webp_dimensions(path: Path):

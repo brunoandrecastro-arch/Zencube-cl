@@ -1,0 +1,36 @@
+{
+  "id": "shadow_kuze_trial",
+  "title": {
+    "en": "Shadow Kuze — The Broken Self",
+    "de": "Shadow Kuze — Das gebrochene Selbst",
+    "pt": "Shadow Kuze — O Eu Partido"
+  },
+  "subtitle": {
+    "en": "The Day Everything Broke",
+    "de": "Der Tag, an dem alles zerbrach",
+    "pt": "O Dia em que Tudo se Quebrou"
+  },
+  "dialogue": {
+    "intro": "You cannot defeat what you refuse to accept.",
+    "victory": "Then I will face you.",
+    "defeat": "You cannot outrun what you carry. Face me again.",
+    "draw": "Neither of us can escape this truth. Again."
+  },
+  "dialogue_de": {
+    "intro": "Du kannst nicht besiegen, was du nicht akzeptieren willst.",
+    "victory": "Dann werde ich mich dir stellen.",
+    "defeat": "Du kannst nicht vor dem davonlaufen, was du mit dir trägst. Stell dich mir erneut.",
+    "draw": "Keiner von uns kann dieser Wahrheit entkommen. Noch einmal."
+  },
+  "dialogue_pt": {
+    "intro": "Não podes vencer aquilo que te recusas a aceitar.",
+    "victory": "Então vou enfrentar-te.",
+    "defeat": "Não podes fugir do que carregas. Enfrenta-me novamente.",
+    "draw": "Nenhum de nós consegue escapar a esta verdade. Mais uma vez."
+  },
+  "gate": {
+    "after_page": 11,
+    "required_wins": 1
+  },
+  "difficulty": 3
+}

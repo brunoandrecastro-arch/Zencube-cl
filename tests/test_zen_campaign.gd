@@ -41,14 +41,19 @@ func _verify() -> void:
     var on_disk := FileAccess.get_file_as_string(SaveManager.PATH)
 
     game.open_menu()
-    _press(game.popup, game.T("Zen Realm Chronicles 📖"))
-    _press(reader._screen, "📚 Originaler Zen-Webcomic")
+    _press(game.popup, "Zen Chronicles · Geschichte 📖")
+    _check(reader._screen.find_child("ZenChroniclesTab3",true,false)!=null,"main Story tab present")
+    _check((reader._screen.find_child("ZenChroniclesTab4",true,false)!=null)==reader._realms_revealed(),"realm tab appears only after the dimensional reveal")
+    _check(_button(reader._screen,"📚 Originaler Zen-Webcomic")==null,
+        "legacy archives no longer crowd the public Chronicles menu")
+    # Archived media remains testable via the retained internal entry points.
+    reader.open_comic_library()
     var read: Button = _button(reader._screen, "Lesen  ›")
     _check(read != null and not read.disabled, "webcomic has its original unlocked chapter")
     reader.open_chapter(0)
     _check(reader._page_image.texture != null and reader._page_counter.text == "1 / 4", "original comic has working pages")
     reader.open_library()
-    _press(reader._screen, "📖 Originale Zen-Kampagne · 3×3")
+    reader.open_campaign_overview()
     await process_frame
     _check(bool(reader.is_open()), "campaign overview is reachable")
     _check(_art_count(reader._screen) == 6, "complete hero art and five thumbnail textures are bound to controls")
@@ -414,9 +419,12 @@ func _verify_languages() -> void:
         # Change the selected locale as the main settings menu would do.
         game.choose_language(language)
         reader.open_library()
-        var archived: String = "📖 Originale Zen-Kampagne · 3×3" if language=="de" else (
-            "📖 Original Zen Campaign · 3×3" if language=="en" else "📖 Campanha Zen original · 3×3")
-        _check(_button(reader._screen, archived) != null, "hub follows selected language " + language)
+        var tab_story: String = {"de":"Geschichte","en":"Story","pt":"História"}[language]
+        var tab_realm: String = {"de":"Reiche","en":"Realms","pt":"Reinos"}[language]
+        _check(_button(reader._screen, tab_story) != null, "story tab translated " + language)
+        var previously_started_realms: bool = reader._realms_revealed()
+        _check((_button(reader._screen,tab_realm)!=null)==previously_started_realms, "realm tab visibility reflects story breakthrough " + language)
+        _check(_button(reader._screen,"📖 Originale Zen-Kampagne · 3×3")==null,"legacy archive remains hidden for " + language)
         reader.open_campaign_overview()
         _check(_button(reader._screen, Campaign.text_for(language, "open_epilogue")) != null, "overview follows selected language " + language)
         game.start_zen_campaign()

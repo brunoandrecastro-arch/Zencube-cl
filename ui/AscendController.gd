@@ -100,7 +100,7 @@ var ember_progress: Dictionary = {}
 var practice_chapter: int = 1
 var campaign_practice_active: bool = false
 var campaign_awards: Array[String] = []
-var practice_choir_played: bool = false
+var campaign_award_index: int = 0
 
 func lang() -> String:
     return str(data.get("settings",{}).get("language","de"))
@@ -113,6 +113,11 @@ func _ready() -> void:
     Mode.ensure(data)
     Realms.ensure(data)
     Achievements.ensure(data)
+    # Check the earned Act IV gate BEFORE touching saved Realm selection.
+    # Locked players return to Classic without rewriting their existing Realm save.
+    if not Mode.unlocked(data):
+        get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
+        return
     match_realm = int(data.ascend.realm_state.selected)
     # Older versions unlocked later Realms early. Restore a legal selection
     # without deleting statistics, achievements, bought hints or Zen Leaves.
@@ -124,9 +129,6 @@ func _ready() -> void:
         SaveManager.save_data(data)
     # Restore the correct fixed bot after the legacy selection is validated.
     bot_level = Realms.fixed_bot_level(match_realm)
-    if not Mode.unlocked(data) and not (Abyss.qa_mode() or Shadow.qa_mode() or Realm2.qa_mode()):
-        get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
-        return
     lines = Mode.generate_lines()
     if lines.size() != 204:
         push_error("Zen Ascend: expected 204 win lines, got " + str(lines.size()))
@@ -687,30 +689,84 @@ func draw() -> void:
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
+    if is_instance_valid(new_match_button):
+        new_match_button.text = _campaign_phrase("Neustart","Restart","Reiniciar") if (ember_active or shadow_active or abyss_active or realm_story_active) and result==0 else Z("Neue Partie")
     if campaign_practice_active:
         rank_label.text = Realm2.REALM_NAMES[practice_chapter] + " · Zen-Bot"
-        quote_label.text = "Zen Realm Chronicles · 4×4"
+        quote_label.text = _campaign_realm_quote(practice_chapter)
         details_label.text = Realm2.REALM_NAMES[practice_chapter] + " · %d/96 · Challenges %d/3" % [move_count(),Realm2.completed_count(Realm2.load_progress(),practice_chapter)]
     if ember_active:
         rank_label.text = ember_model.BOSS_NAMES[clampi(ember_index,0,2)]
-        quote_label.text = Realm2.REALM_NAMES[guardian_chapter] + " · 4×4"
-        details_label.text = _guardian_series_score(ember_progress)
+        quote_label.text = _campaign_realm_quote(guardian_chapter)
+        status_label.text = _boss_turn_status(rank_label.text)
+        details_label.text = _guardian_series_score(ember_progress) + " · %d/96" % move_count()
     if shadow_active:
         rank_label.text = Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]
-        quote_label.text = "Shadow Realm · 4×4"
-        status_label.text = ("⚔ " + Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
+        quote_label.text = _campaign_realm_quote(0)
+        status_label.text = _boss_turn_status(rank_label.text)
         details_label.text = _guardian_series_score(shadow_progress) if shadow_index==2 else "Shadow · " + str(move_count()) + "/96"
     if abyss_active:
         rank_label.text = Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]
-        quote_label.text = "Abyss of Memories · 4×4"
-        status_label.text = ("⚔ " + Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]) if busy else (str(move_count()) + "/96 · " + ("X" if turn == 1 else "O"))
+        quote_label.text = _campaign_realm_quote(1)
+        status_label.text = _boss_turn_status(rank_label.text)
         details_label.text = _guardian_series_score(abyss_progress) if abyss_index==2 else "Abyss · " + str(move_count()) + "/96"
     if realm_story_active:
         rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
-        if result == 0:
-            status_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage) if busy else RealmStory.text_for(lang(),"story")+" · "+str(move_count())+"/96"
+        status_label.text = _boss_turn_status(rank_label.text)
         quote_label.text = RealmStory.text_for(lang(),"react_%d" % realm_story_stage)
         details_label.text = RealmStory.text_for(lang(),"skin")+" · "+str(move_count())+"/96"
+
+func _boss_turn_status(boss_name: String) -> String:
+    if result==1: return _campaign_phrase("Du hast gewonnen · X","You won · X","Venceste · X")
+    if result==2: return boss_name + " · " + _campaign_phrase("Sieg · O","Victory · O","Vitória · O")
+    if result==3: return _campaign_phrase("Unentschieden","Draw","Empate")
+    if turn==1: return _campaign_phrase("Du bist am Zug · X","Your turn · X","A tua vez · X")
+    return boss_name + " · " + _campaign_phrase("überlegt … · O","thinking … · O","a pensar … · O")
+
+func _campaign_realm_quote(chapter: int) -> String:
+    var de: Array[String] = ["Auch der tiefste Schatten kann einen Weg zeigen.","Was du erinnerst, muss dich nicht gefangen halten.","Ein ruhiger Geist überdauert jede Flamme.","Über den Wolken beginnt die Klarheit.","In der Stille findet jeder Zug seine Bedeutung."]
+    var en: Array[String] = ["Even the deepest shadow can reveal a path.","What you remember need not hold you captive.","A steady mind outlasts the brightest flame.","Above the clouds, clarity begins.","In stillness, every move finds its meaning."]
+    var pt: Array[String] = ["Até a sombra mais profunda pode revelar um caminho.","O que recordas não tem de te aprisionar.","Uma mente serena resiste à chama mais forte.","Acima das nuvens começa a clareza.","Na quietude, cada jogada ganha sentido."]
+    var pool: Array[String] = de if lang()=="de" else (pt if lang()=="pt" else en)
+    return "“" + pool[clampi(chapter,0,4)] + "”"
+
+func _confirm_boss_restart() -> void:
+    if result!=0: 
+        _reopen_finished_result()
+        return
+    var parts: Dictionary = _realm_dialog(_campaign_phrase("Runde neu starten?","Restart round?","Reiniciar ronda?"),430)
+    var body: VBoxContainer = parts.box
+    var series: bool = ember_active or (shadow_active and shadow_index==2) or (abyss_active and abyss_index==2)
+    if series:
+        text(body,_campaign_phrase("Die laufende Runde zählt als Niederlage. Bisherige Punkte bleiben gespeichert.","The current round counts as a loss. Existing series points remain saved.","A ronda atual conta como derrota. Os pontos anteriores ficam guardados."),16)
+    else:
+        text(body,_campaign_phrase("Das aktuelle Spielfeld wird zurückgesetzt.","The current board will be reset.","O tabuleiro atual será reiniciado."),16)
+    action(body,_campaign_phrase("Neustart bestätigen","Confirm restart","Confirmar reinício"),_restart_boss_round,true)
+    _open_realm_dialog(parts)
+
+func _restart_boss_round() -> void:
+    if result!=0: return
+    if not (ember_active or shadow_active or abyss_active or realm_story_active): return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    match_generation += 1
+    busy = false
+    if realm_story_active:
+        _realm_story_retry()
+        return
+    # Explicit forfeit for series; never erase already earned round points.
+    result = 2
+    recorded = true
+    if ember_active:
+        if _ember_save(): _ember_result()
+    elif shadow_active:
+        if _shadow_save():
+            if shadow_index==2: _shadow_result()
+            else: _shadow_retry()
+    elif abyss_active:
+        if _abyss_save():
+            if abyss_index==2: _abyss_result()
+            else: _abyss_retry()
+    draw()
 
 func _guardian_series_score(progress: Dictionary) -> String:
     var tally: Dictionary = FinalSeries.score(progress)
@@ -908,7 +964,13 @@ func finish() -> void:
                     break
         var outcome: int = 1 if result==1 else (0 if result==3 else -1)
         campaign_awards = Realm2.record_celestial_match(outcome,crossed,match_blocked_threat) if practice_chapter==3 else (Realm2.record_ember_match(outcome,crossed) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed))
-        call_deferred("_campaign_practice_result")
+        campaign_award_index = 0
+        # A newly earned 4x4 Realm challenge gets the same full-screen
+        # ceremony as a secret achievement before the normal result screen.
+        if campaign_awards.is_empty():
+            call_deferred("_campaign_practice_result")
+        else:
+            call_deferred("_campaign_practice_show_next_award")
         return
     if ember_active:
         if recorded: return
@@ -1068,8 +1130,11 @@ func _start_picker_after_rules(dialog: Control) -> void:
     show_mode_picker()
 
 func show_mode_picker() -> void:
-    if realm_story_active:
-        _realm_story_menu()
+    if ember_active or shadow_active or abyss_active or realm_story_active:
+        _confirm_boss_restart()
+        return
+    if campaign_practice_active:
+        _campaign_practice_menu()
         return
     var parts: Dictionary = _realm_dialog(Z("Zen Ascend 4×4"),510)
     var dialog: Control = parts.dialog
@@ -1582,6 +1647,38 @@ func _realm_story_compact(parts: Dictionary) -> void:
     footer_parent.add_theme_constant_override("separation",8)
     (parts.box as VBoxContainer).add_theme_constant_override("separation",9)
 
+# Act I-IV style cinematic boss portraits; actual battle rules and existing artwork stay intact.
+func _realm_boss_intro_layout(parts: Dictionary) -> void:
+    _realm_story_compact(parts)
+    var frame: PanelContainer = parts.frame
+    frame.anchor_left = 0.03
+    frame.anchor_right = 0.97
+    frame.anchor_top = 0.035
+    frame.anchor_bottom = 0.965
+
+func _realm_boss_portrait_height() -> float:
+    return clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,820.0)
+
+func _realm_boss_primary_action(parts: Dictionary, caption: String, callback: Callable) -> void:
+    # Play remains visible beneath the scrollable, full-height boss artwork.
+    var frame: PanelContainer = parts.frame
+    var stack: VBoxContainer = frame.get_child(0) as VBoxContainer
+    var launch: Button = action(stack,caption,callback,true)
+    launch.name = "RealmBossStartAction"
+    launch.custom_minimum_size.y = 62
+
+# Cinematic Realm results: full-height illustration, actions pinned below scroll.
+func _realm_boss_result_layout(parts: Dictionary) -> void:
+    _realm_boss_intro_layout(parts)
+    (parts.box as VBoxContainer).add_theme_constant_override("separation",8)
+
+func _realm_boss_result_action(parts: Dictionary, caption: String, callback: Callable, primary: bool = false) -> void:
+    var frame: PanelContainer = parts.frame
+    var stack: VBoxContainer = frame.get_child(0) as VBoxContainer
+    var button_node: Button = action(stack,caption,callback,primary)
+    button_node.name = "RealmBossResultAction_%d" % stack.get_child_count()
+    button_node.custom_minimum_size.y = 50
+
 # -------- Realm Chronicles: isolated 4x4 playable story --------
 func start_realm_story() -> void:
     if not Mode.unlocked(data):
@@ -1642,7 +1739,7 @@ func _realm_story_set_stage(stage: int) -> void:
     # No new music and no modification to the Classic soundtrack.
     sync_realm_music()
 
-func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0) -> void:
+func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0, zoom: bool = false) -> void:
     # Use approved cinematic boss portraits shipped in JSON + base64 WebP.
     # Optional direct WebP file takes priority if present, then the validated
     # inline texture decoder; only a broken asset falls back to an SVG.
@@ -1661,7 +1758,7 @@ func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0) 
     picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     # Keep the full vertical portrait and its title legible; COVERED would
     # crop the boss face and name on narrow Android screens.
-    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if zoom else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     picture.custom_minimum_size.y = height
     picture.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1675,19 +1772,19 @@ func _realm_story_present_intro() -> void:
     var stage: int = realm_story_stage
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"boss_%d" % stage),680)
     var body: VBoxContainer = parts.box
-    _realm_story_compact(parts)
+    _realm_boss_intro_layout(parts)
     var chapter_key: String = ["shadow","ember","celestial","satori"][RealmStory.chapter(stage)]
     text(body,RealmStory.text_for(lang(),chapter_key),17,Color("#e7cd9b"))
     if stage in [6,9]:
         text(body,RealmStory.text_for(lang(),"chapter%d_open" % (RealmStory.chapter(stage)+1)),14,Color("#b6d8ed"))
-    _realm_story_art(body,stage,224)
+    _realm_story_art(body,stage,_realm_boss_portrait_height())
     text(body,RealmStory.text_for(lang(),"intro_%d" % stage),15)
     text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
     var starter_info: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
     if lang() == "en": starter_info = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter_info = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter_info,14,Color("#f0dfb3"))
-    action(body,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin,true)
+    _realm_boss_primary_action(parts,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin)
     action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _open_realm_dialog(parts)
 
@@ -1730,23 +1827,26 @@ func _realm_story_result() -> void:
     var title: String = RealmStory.text_for(lang(),"win" if won else ("draw" if result == 3 else "loss"))
     var parts: Dictionary = _realm_dialog(title,590)
     var body: VBoxContainer = parts.box
-    _realm_story_compact(parts)
+    _realm_boss_result_layout(parts)
     if won:
         # A complete Kuze-with-defeated-boss illustration after EACH of 12
         # actual victories; never triggered on a loss or draw.
         var scene_art: PanelContainer = VictoryArtwork.new()
         body.add_child(scene_art)
         scene_art.call("present",realm_story_stage,lang())
+        scene_art.custom_minimum_size.y = _realm_boss_portrait_height()
+        var frame_art: Control = scene_art.find_child("CinematicVictoryFrame",true,false) as Control
+        if frame_art != null: frame_art.custom_minimum_size.y = _realm_boss_portrait_height()
         text(body,RealmStory.text_for(lang(),"victory_story_%d" % realm_story_stage),15,Color("#e7d3ab"))
     else:
-        _realm_story_art(body,realm_story_stage,170)
+        _realm_story_art(body,realm_story_stage,_realm_boss_portrait_height(),true)
     text(body,RealmStory.text_for(lang(),key),16)
-    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if won:
-        action(body,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
+        _realm_boss_result_action(parts,RealmStory.text_for(lang(),"next"),_realm_story_advance,true)
     else:
-        action(body,RealmStory.text_for(lang(),"retry"),_realm_story_retry,true)
-    action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
+        _realm_boss_result_action(parts,RealmStory.text_for(lang(),"retry"),_realm_story_retry,true)
+    _realm_boss_result_action(parts,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _open_realm_dialog(parts)
 
 func _realm_story_retry() -> void:
@@ -1987,13 +2087,13 @@ func _abyss_save() -> bool:
     if not ok: push_warning("Abyss of Memories: could not save battle")
     return ok
 
-func _abyss_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
+func _abyss_add_art(parent: VBoxContainer, height: float = 245.0, zoom: bool = false) -> void:
     var image_path: String = Abyss.boss_art(abyss_index)
     if not ResourceLoader.exists(image_path): return
     var art := TextureRect.new()
     art.texture = load(image_path) as Texture2D
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if zoom else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     art.custom_minimum_size.y = height
     art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2002,9 +2102,9 @@ func _abyss_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
 func _abyss_intro() -> void:
     if not abyss_active: return
     var parts: Dictionary = _realm_dialog(Abyss.BOSS_NAMES[abyss_index],670)
-    _realm_story_compact(parts)
+    _realm_boss_intro_layout(parts)
     var body: VBoxContainer = parts.box
-    _abyss_add_art(body)
+    _abyss_add_art(body,_realm_boss_portrait_height())
     var opening: Array = [
         "Every stolen memory has a price.",
         "Some wounds remain even when the blade is silent.",
@@ -2016,7 +2116,7 @@ func _abyss_intro() -> void:
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter,14,Color("#e1c99d"))
-    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_abyss_begin,true)
+    _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_abyss_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
 
@@ -2036,20 +2136,20 @@ func _abyss_result() -> void:
     elif lang() == "pt":
         label = "Memória recuperada" if result == 1 else ("Empate" if result == 3 else "Derrota")
     var parts: Dictionary = _realm_dialog(label,520)
-    _campaign_result_compact(parts)
+    _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _abyss_add_art(body,190)
+    _abyss_add_art(body,_realm_boss_portrait_height(),true)
     text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
     if abyss_index==2: _guardian_series_panel(body,abyss_progress)
-    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if abyss_index==2 and not FinalSeries.player_won(abyss_progress):
         var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if FinalSeries.guardian_won(abyss_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
-        action(body,"⚔ " + next_label,_abyss_retry,true)
+        _realm_boss_result_action(parts,"⚔ " + next_label,_abyss_retry,true)
     elif result == 1:
-        action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_abyss_victory,true)
+        _realm_boss_result_action(parts,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_abyss_victory,true)
     else:
-        action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_abyss_retry,true)
-    action(body,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_abyss_back_to_reader)
+        _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_abyss_retry,true)
+    _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
 
 func _abyss_retry() -> void:
@@ -2183,13 +2283,13 @@ func _shadow_save() -> bool:
     if not ok: push_warning("Shadow Realm: could not save battle")
     return ok
 
-func _shadow_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
+func _shadow_add_art(parent: VBoxContainer, height: float = 245.0, zoom: bool = false) -> void:
     var portrait: Texture2D = Shadow.boss_art(shadow_index)
     if portrait == null: return
     var art := TextureRect.new()
     art.texture = portrait
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if zoom else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     art.custom_minimum_size.y = height
     art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2198,9 +2298,9 @@ func _shadow_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
 func _shadow_intro() -> void:
     if not shadow_active: return
     var parts: Dictionary = _realm_dialog(Shadow.BOSS_NAMES[shadow_index],670)
-    _realm_story_compact(parts)
+    _realm_boss_intro_layout(parts)
     var body: VBoxContainer = parts.box
-    _shadow_add_art(body)
+    _shadow_add_art(body,_realm_boss_portrait_height())
     var opening: Array = [
         "The mist conceals the path, but never the next move.",
         "The mirror remembers every repeated mistake.",
@@ -2212,7 +2312,7 @@ func _shadow_intro() -> void:
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter,14,Color("#e1c99d"))
-    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_shadow_begin,true)
+    _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_shadow_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
 
@@ -2232,20 +2332,20 @@ func _shadow_result() -> void:
     elif lang() == "pt":
         label = "O véu desvanece" if result == 1 else ("Empate" if result == 3 else "Derrota")
     var parts: Dictionary = _realm_dialog(label,520)
-    _campaign_result_compact(parts)
+    _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _shadow_add_art(body,190)
+    _shadow_add_art(body,_realm_boss_portrait_height(),true)
     text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
     if shadow_index==2: _guardian_series_panel(body,shadow_progress)
-    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if shadow_index==2 and not FinalSeries.player_won(shadow_progress):
         var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if FinalSeries.guardian_won(shadow_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
-        action(body,"⚔ " + next_label,_shadow_retry,true)
+        _realm_boss_result_action(parts,"⚔ " + next_label,_shadow_retry,true)
     elif result == 1:
-        action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_shadow_victory,true)
+        _realm_boss_result_action(parts,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_shadow_victory,true)
     else:
-        action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_shadow_retry,true)
-    action(body,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_shadow_back_to_reader)
+        _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_shadow_retry,true)
+    _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
 
 func _shadow_retry() -> void:
@@ -2395,13 +2495,13 @@ func _ember_save() -> bool:
     if not ok: push_warning("Ember Temple: could not save battle")
     return ok
 
-func _ember_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
+func _ember_add_art(parent: VBoxContainer, height: float = 245.0, zoom: bool = false) -> void:
     var portrait: Texture2D = ember_model.boss_art(ember_index)
     if portrait == null: return
     var art := TextureRect.new()
     art.texture = portrait
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if zoom else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     art.custom_minimum_size.y = height
     art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2410,9 +2510,9 @@ func _ember_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
 func _ember_intro() -> void:
     if not ember_active: return
     var parts: Dictionary = _realm_dialog(ember_model.BOSS_NAMES[ember_index],670)
-    _realm_story_compact(parts)
+    _realm_boss_intro_layout(parts)
     var body: VBoxContainer = parts.box
-    _ember_add_art(body)
+    _ember_add_art(body,_realm_boss_portrait_height())
     var opening: Array = [
         "See beyond the first move.",
         "A strategy without discipline is only a spark.",
@@ -2425,7 +2525,7 @@ func _ember_intro() -> void:
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter,14,Color("#e1c99d"))
-    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_ember_begin,true)
+    _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_ember_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
     _open_realm_dialog(parts)
 
@@ -2446,20 +2546,20 @@ func _ember_result() -> void:
         label = "A chama acalma" if result == 1 else ("Empate" if result == 3 else "Derrota")
     if guardian_chapter==3 and result==1: label = _campaign_phrase("Klarheit","Clarity","Clareza")
     var parts: Dictionary = _realm_dialog(label,520)
-    _campaign_result_compact(parts)
+    _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _ember_add_art(body,190)
+    _ember_add_art(body,_realm_boss_portrait_height(),true)
     text(body,ember_model.BOSS_NAMES[ember_index],18,Color("#e8d4b5"))
     _guardian_series_panel(body,ember_progress)
-    action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
+    _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if not ember_model.player_won(ember_progress):
         var next_label: String = _campaign_phrase("Neue Serie","Retry Series","Repetir série") if ember_model.guardian_won(ember_progress) else (_campaign_phrase("Runde wiederholen","Replay Round","Repetir ronda") if result==3 else _campaign_phrase("Nächste Runde","Next Round","Próxima ronda"))
-        action(body,"⚔ " + next_label,_ember_retry,true)
+        _realm_boss_result_action(parts,"⚔ " + next_label,_ember_retry,true)
     elif result == 1:
-        action(body,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_ember_victory,true)
+        _realm_boss_result_action(parts,"✦ " + _campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_ember_victory,true)
     else:
-        action(body,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_ember_retry,true)
-    action(body,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_ember_back_to_reader)
+        _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_ember_retry,true)
+    _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_ember_back_to_reader)
     _open_realm_dialog(parts)
 
 func _ember_retry() -> void:
@@ -2585,7 +2685,7 @@ func _campaign_practice_restart() -> void:
     recorded = false
     busy = false
     campaign_awards = []
-    practice_choir_played = false
+    campaign_award_index = 0
     match_blocked_threat = false
     var total: int = int(Realm2.load_progress().celestial_stats.played if practice_chapter==3 else (Realm2.load_progress().ember_stats.played if practice_chapter==2 else Realm2.load_progress().abyss_stats.played))
     turn = 1 if total % 2 == 0 else 2
@@ -2594,6 +2694,34 @@ func _campaign_practice_restart() -> void:
     if turn == 2:
         busy = true
         call_deferred("bot_turn")
+
+# Only first-time achievements returned by record_abyss/ember/celestial_match
+# are celebrated. Reopening a match result never repeats the ceremony or sound.
+func _campaign_practice_show_next_award() -> void:
+    if not is_inside_tree() or not campaign_practice_active or result == 0: return
+    if campaign_award_index >= campaign_awards.size():
+        call_deferred("_campaign_practice_result")
+        return
+    var title_name: String = campaign_awards[campaign_award_index]
+    campaign_award_index += 1
+    var description: String = ""
+    for task_index in range(3):
+        if Realm2.task_title(practice_chapter,task_index) == title_name:
+            description = Realm2.task_description(practice_chapter,task_index,lang())
+            break
+    if description.is_empty():
+        description = _campaign_phrase("Ein neuer Schritt auf deinem Zen-Pfad.",
+            "A new step on your Zen path.","Mais um passo no teu caminho Zen.")
+    var saved_match_generation: int = match_generation
+    var celebration: ZenUnlockCeremony = UnlockCeremony.new()
+    celebration.name = "RealmChallengeEarnedCeremony"
+    add_child(celebration)
+    celebration.finished.connect(func():
+        if is_inside_tree() and campaign_practice_active and result != 0 and match_generation == saved_match_generation:
+            call_deferred("_campaign_practice_show_next_award")
+    )
+    celebration.present("challenge",Realm2.SOURCE_ART[practice_chapter],
+        title_name,description,bool(data.settings.get("sound",true)),[world_music],lang())
 
 func _campaign_practice_result() -> void:
     if not campaign_practice_active: return
@@ -2608,13 +2736,6 @@ func _campaign_practice_result() -> void:
         text(body,_campaign_phrase("🏆 Realm-Challenge abgeschlossen!","🏆 Realm challenge earned!","🏆 Desafio de reino concluído!"),18,Color("#c8e8b4"))
         for title_name in campaign_awards:
             text(body,"✓ " + title_name,17,Color("#e5d2ac"))
-        if not practice_choir_played and bool(data.get("settings",{}).get("sound",true)):
-            practice_choir_played = true
-            var choir: AudioStreamPlayer = AudioStreamPlayer.new()
-            choir.stream = load("res://assets/audio/zen_achievement_choir.wav") as AudioStream
-            add_child(choir)
-            choir.finished.connect(choir.queue_free)
-            choir.play()
     text(body,_campaign_phrase("Realm-Challenges: %d/3","Realm challenges: %d/3","Desafios do reino: %d/3") %
         Realm2.completed_count(Realm2.load_progress(),practice_chapter),16,Color("#e8ddc5"))
     action(body,_review_board_label(),_review_finished_board.bind(parts.dialog),true)

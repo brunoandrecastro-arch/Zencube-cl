@@ -77,6 +77,19 @@ const ZMode = preload("res://core/ZenAscend.gd")
 const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const ZenCampaign = preload("res://story/ZenCampaign.gd")
+const ActOne = preload("res://story/ZenActOne.gd")
+const ActTwo = preload("res://story/ZenActTwo.gd")
+const ActThree = preload("res://story/ZenActThree.gd")
+const ActFour = preload("res://story/ZenActFour.gd")
+var prequel_act: int = 1
+var prequel_model: Script = ActOne
+var act_one_active := false
+var act_one_progress: Dictionary = {}
+var act_one_classic_board: BoardModel
+var act_one_view: Dictionary = {}
+var act_one_controls: HBoxContainer
+var act_one_result_button: Button
+var act_one_back_previous := true
 var zen_campaign_active: bool = false
 var zen_campaign_stage: int = 0
 var zen_campaign_progress: Dictionary = {}
@@ -377,6 +390,10 @@ func build_ui() -> void:
     zen_campaign_undo_button.add_theme_color_override("font_disabled_color", Color("d3c2a7"))
     button(_campaign_text("leave"), zen_campaign_controls, _zen_campaign_leave, true)
     zen_campaign_controls.hide()
+    act_one_controls = row(column)
+    act_one_result_button = button("Ergebnis anzeigen", act_one_controls, _act_one_result, true)
+    button("‹", act_one_controls, _act_one_leave, true)
+    act_one_controls.hide()
     var legend_panel = PanelContainer.new()
     var legend_style = theme_style(Color("30271f",0.89),9)
     legend_style.content_margin_top = 5
@@ -445,6 +462,10 @@ func apply_world() -> void:
     sync_music() # Auto-World theme follows the selected World.
 
 func refresh(animate: int = -1, save_classic: bool = true) -> void:
+    if act_one_active:
+        _act_one_refresh(animate)
+        return
+    if is_instance_valid(act_one_controls): act_one_controls.hide()
     if zen_campaign_active:
         _zen_campaign_refresh(animate)
         return
@@ -523,6 +544,9 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
     if save_classic and tutorial == null and not challenge_active: persist()
     if net_active: update_net()
 func persist() -> void:
+    if act_one_active:
+        _act_one_save()
+        return
     if zen_campaign_active:
         _zen_campaign_save_game()
         return
@@ -543,6 +567,10 @@ func notify_user(message: String) -> void:
     if help_text != null: help_text.text = toast
 func on_cell(cell: int) -> void:
     if cell < 0 or ceremony_active or (popup != null and not net_active): return
+    if act_one_active:
+        if board.winner == 0 and board.turn == 1 and not ai_running and not chronicles.is_open():
+            place(cell)
+        return
     if board.winner != 0 and not challenge_active: return
     if zen_campaign_active:
         if not _zen_campaign_bot_turn() and not ai_running and not chronicles.is_open():
@@ -560,7 +588,7 @@ func on_cell(cell: int) -> void:
     place(cell)
 func place(cell: int) -> void:
     if ceremony_active: return
-    if challenge_active and not zen_campaign_active:
+    if challenge_active and not zen_campaign_active and not act_one_active:
         challenge_try_cell(cell)
         return
     var placed_by_owner: int = board.current_owner()
@@ -570,6 +598,13 @@ func place(cell: int) -> void:
     renderer.selected = cell
     generation += 1
     play_sound(board.winner != 0)
+    if act_one_active:
+        if placed_by_owner == 0: vibrate_on_move()
+        if board.winner != 0 and not board.win_lines.is_empty(): focus_line(board.win_lines[0])
+        _act_one_save()
+        refresh(cell)
+        if board.winner != 0: _act_one_result()
+        return
     if zen_campaign_active:
         _zen_campaign_after_move(cell, placed_by_owner)
         return
@@ -618,6 +653,7 @@ func resolve_swap(accept: bool) -> void:
         generation += 1
         refresh()
 func new_game() -> void:
+    if act_one_active: return
     if zen_campaign_active: return
     ceremony_done_for_match = false
     completed_bot_level = -1
@@ -633,6 +669,7 @@ func new_game() -> void:
     renderer.reset_view()
     refresh()
 func confirm_new() -> void:
+    if act_one_active: return
     if zen_campaign_active: return
     if tutorial != null:
         load_tutorial()
@@ -647,6 +684,7 @@ func confirm_new() -> void:
         new_game()
     )
 func undo() -> void:
+    if act_one_active: return
     if zen_campaign_active:
         _zen_campaign_undo()
         return
@@ -675,10 +713,14 @@ func _process(delta: float) -> void:
         ai_running = false
         var turn_open: bool = not reading and popup == null and board.winner == 0 and not board.swap_pending
         var can_play := not zen_campaign_paused if zen_campaign_active else (not challenge_active and tutorial == null)
+        if act_one_active: can_play = not zen_campaign_paused and board.turn == 2
         if worker_generation == generation and turn_open and can_play:
             place(int(move))
         else:
             refresh(-1, false)
+    if act_one_active:
+        _act_one_tick()
+        return
     if zen_campaign_active:
         _zen_campaign_tick(delta)
         return
@@ -758,6 +800,14 @@ func close_modal() -> void:
         popup.queue_free()
         popup = null
 func open_menu() -> void:
+    if act_one_active:
+        if board.winner != 0:
+            _act_one_result()
+        else:
+            var trial_menu := _zen_campaign_story_box(_act_one_title())
+            premium_button(_act_one_ui("Fortsetzen", "Resume", "Retomar"), trial_menu, close_modal, true)
+            button(_act_one_ui("Zur Geschichte", "Back to story", "Voltar à história"), trial_menu, _act_one_leave, true)
+        return
     if zen_campaign_active:
         if board.winner != 0:
             _zen_campaign_present()
@@ -775,11 +825,12 @@ func open_menu() -> void:
     var subtitle: Label = label("Denke über die Kanten hinaus.", box, 17, Color("e7d0a7"))
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     premium_button("Spielen", box, open_play_menu, true)
+    var story_entry: Button = premium_button(_act_one_ui("Zen Chronicles · Geschichte 📖", "Zen Chronicles · Story 📖", "Zen Chronicles · História 📖"), box, func(): get_node("/root/ZenChronicles").open_library())
+    story_entry.name = "MainMenuZenChronicles"
     premium_button("Zen Challenges · 100 Aufgaben", box, begin_challenges)
     premium_button("Zen-Aufstieg", box, open_ascension)
-    premium_button(ZMode.t("Zen Ascend 4×4", language_code()) + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
+    premium_button("Zen Ascend" + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
     premium_button("Welten", box, open_worlds)
-    premium_button("Zen Realm Chronicles 📖", box, func(): get_node("/root/ZenChronicles").open_library())
     premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
     premium_button("Einstellungen", box, open_settings)
@@ -823,13 +874,14 @@ func open_store() -> void:
         rewards += T(Asc.LEVELS[i]) + ": +" + str(Collection.BOT_REWARDS[i])
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
-    label(ZMode.t("Zen Ascend 4×4",language_code()),box,20,Color("526943"))
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
+    label("Zen Ascend",box,20,Color("526943"))
+    label(_act_one_ui("Wird nach dem Sieg über Dark Kuze in Akt IV freigeschaltet.",
+        "Unlocks after defeating Dark Kuze in Act IV.",
+        "Desbloqueia após derrotares Dark Kuze no Ato IV."),box,13)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
     else:
-        var unlock_button: Button = button(ZMode.t("Zen Ascend kaufen · 🍃 850",language_code()),box,buy_ascend,true)
-        unlock_button.disabled = int(data.economy.leaves) < ZMode.PRICE
+        button(_act_one_ui("Zen Chronicles öffnen","Open Zen Chronicles","Abrir Zen Chronicles"),box,func(): chronicles.open_library(),true)
     shop_page = clampi(shop_page, 0, 3)
     store_page_buttons(box)
     for i in range(shop_page * 5, mini((shop_page + 1) * 5, Collection.SKINS.size())):
@@ -1081,7 +1133,7 @@ func open_play_menu() -> void:
             b.text += "  🔒"
         else:
             label(T("Sieg-Belohnung: 🍃 %d") % int(Collection.BOT_REWARDS[i]), box, 12)
-    premium_button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro)
+    premium_button("Zen Ascend",box,open_ascend_intro)
     premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
     button("Training", box, func(): start_mode(2, 0), true)
     button("Viererlinien lernen", box, start_tutorial, true)
@@ -1120,7 +1172,7 @@ func open_ascension() -> void:
         box.add_child(progress_bar)
     label("Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.",box,13)
     label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
-    button(ZMode.t("Zen Ascend 4×4",language_code()),box,open_ascend_intro,true)
+    button("Zen Ascend",box,open_ascend_intro,true)
     button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
 
@@ -1142,6 +1194,7 @@ func open_worlds() -> void:
     var box = modal("Welten")
     label("Welten ändern nur das Aussehen. Dein Rang steigt durch Siege gegen den Zen-Bot.", box, 14)
     label("Neue Welten schaltest du über Zen Ascension frei.", box, 13)
+    label(_act_one_ui("Bot-Schwierigkeit und Welt sind unabhängig. Schwierigkeit unter Spielen oder Einstellungen ändern.", "Worlds change the scenery only. Change bot difficulty under Play or Settings.", "Os mundos mudam apenas o cenário. Altera a dificuldade do bot em Jogar ou Definições."),box,13)
     for i in range(5):
         var number: int = i
         var card: PanelContainer = PanelContainer.new()
@@ -1205,7 +1258,26 @@ func restore_rank_music() -> void:
         if not music_player.playing:
             sync_music()
 
+func _continue_newly_unlocked_story() -> void:
+    var act: int = _newly_unlocked_story_act()
+    if act==0: return
+    close_modal()
+    if act==2: chronicles.open_act_two()
+    elif act==3: chronicles.open_act_three()
+    elif act==4: chronicles.open_act_four()
+
+func _newly_unlocked_story_act() -> int:
+    if not bool(last_rank_up.get("rank_up",false)): return 0
+    var rank_after: int = int(data.ascension.rank)
+    if rank_after==1 and ActTwo.unlocked(data) and ActTwo.media_ready(): return 2
+    if rank_after==2 and ActThree.unlocked(data) and ActThree.media_ready(): return 3
+    if rank_after==3 and ActFour.unlocked(data) and ActFour.media_ready(): return 4
+    return 0
+
 func show_result_screen() -> void:
+    if act_one_active:
+        _act_one_result()
+        return
     if zen_campaign_active: return
     # Called deferred after a real Classic match finishes. A new match cancels it.
     if challenge_active or tutorial != null or board.winner == 0 or popup != null:
@@ -1265,8 +1337,8 @@ func show_result_screen() -> void:
                 label(T("Neue Welt freigeschaltet: %s") % T(Asc.WORLDS[rank_after]),box,15,Color("e7d3aa"))
             else:
                 label("Zen-Wächter erreicht – höchste Rangstufe!",box,15,Color("e7d3aa"))
-            if rank_after == 3:
-                label(ZMode.t("Zen Ascend freigeschaltet!",language_code()),box,15,Color("d3e5b6"))
+            # The next dimension is revealed only after the Moon Garden finale.
+            # Unlock ownership remains unchanged.
     elif board.winner in [1, 2]:
         var winning_symbol: String = "X" if board.winner == 1 else "O"
         var summary: String = ""
@@ -1280,6 +1352,10 @@ func show_result_screen() -> void:
     if versus_bot and last_leaf_reward > 0:
         var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var story_act: int = _newly_unlocked_story_act()
+    if story_act>0:
+        var story_button: Button = premium_button(_act_one_ui("📖 Geschichte fortsetzen · Akt %d","📖 Continue Story · Act %d","📖 Continuar história · Ato %d") % story_act,box,_continue_newly_unlocked_story,true)
+        story_button.name = "NewlyUnlockedActStory"
     var inspect: Button = premium_button("Spielfeld ansehen",box,_inspect_classic_finished_board,true)
     inspect.text = _inspect_label()
     inspect.name = "InspectClassicFinishedBoard"
@@ -1355,10 +1431,10 @@ func open_stats() -> void:
         box.add_child(rank_bar)
     ZMode.ensure(data)
     var zs: Dictionary = data.ascend
-    label(ZMode.t("4×4 Partien",language_code()) + ": %d" % int(zs.played),box,18,Color("526943"))
+    label((ZMode.t("4×4 Partien",language_code()) if _ascend_revealed() else "Zen Ascend") + ": %d" % int(zs.played),box,18,Color("526943"))
     stat_detail = "%s: %d  ·  %s: %d  ·  %s: %d" % [ZMode.t("Siege",language_code()),int(zs.p1),ZMode.t("Niederlagen",language_code()),int(zs.bot_losses),ZMode.t("Unentschieden",language_code()),int(zs.draw)]
     label(stat_detail,box,14)
-    stat_detail = "%s: %d  ·  %s: %d" % [ZMode.t("4×4 gegen Bot",language_code()),int(zs.bot_played),ZMode.t("4×4 zu zweit",language_code()),int(zs.local_played)]
+    stat_detail = "%s: %d  ·  %s: %d" % [("Zen Ascend Bot" if not _ascend_revealed() else ZMode.t("4×4 gegen Bot",language_code())),int(zs.bot_played),("Zen Ascend Local" if not _ascend_revealed() else ZMode.t("4×4 zu zweit",language_code())),int(zs.local_played)]
     label(stat_detail,box,14)
     stat_detail = "%s: %d  ·  %s: %d" % [ZMode.t("Beste Siegesserie",language_code()),int(zs.best_streak),ZMode.t("Aktuelle Siegesserie",language_code()),int(zs.current_streak)]
     label(stat_detail,box,14)
@@ -1382,15 +1458,21 @@ func save_player_name(index: int, value: String) -> void:
     data.settings.names[index] = cleaned
     persist()
 
+const FractureState = preload("res://story/ZenFractureState.gd")
+
+func _ascend_revealed() -> bool:
+    # Existing players keep their entitlement and can still enter Zen Ascend.
+    return ZMode.unlocked(data) and (FractureState.awakening_seen() or int(data.get("ascend",{}).get("played",0))>0)
+
 func open_ascend_intro() -> void:
     ZMode.ensure(data)
     var language: String = language_code()
-    var box: VBoxContainer = modal(ZMode.t("Zen Ascend 4×4",language))
-    var heading: Label = label("A New Dimension of Strategy",box,20,Color("#284735"))
+    var box: VBoxContainer = modal("Zen Ascend")
+    var heading: Label = label(("A New Dimension of Strategy" if _ascend_revealed() else _act_one_ui("Ein verborgener Pfad", "A Hidden Path", "Um Caminho Oculto")),box,20,Color("#284735"))
     heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var preview: TextureRect = TextureRect.new()
     preview.name = "ZenAscendSneakPreview"
-    var art_path: String = "res://assets/zen_realm2/ascend_preview.webp"
+    var art_path: String = "res://assets/zen_realm2/ascend_preview.webp" if _ascend_revealed() else "res://assets/zen_world_moon.webp"
     if not ResourceLoader.exists(art_path):
         art_path = "res://assets/realms/shadow_realm.webp"
     preview.texture = load(art_path) as Texture2D
@@ -1400,28 +1482,24 @@ func open_ascend_intro() -> void:
     preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
     box.add_child(preview)
-    var tagline: String = "96 Felder · 6 Seiten · 204 Gewinnlinien"
-    if language=="en": tagline = "96 Cells · 6 Faces · 204 Winning Lines"
-    elif language=="pt": tagline = "96 casas · 6 faces · 204 linhas de vitória"
+    var tagline: String = "Ein verborgener Pfad wartet." if not _ascend_revealed() else "96 Felder · 6 Seiten · 204 Gewinnlinien"
+    if language=="en": tagline = "A hidden path awaits." if not _ascend_revealed() else "96 Cells · 6 Faces · 204 Winning Lines"
+    elif language=="pt": tagline = "Um caminho oculto aguarda-te." if not _ascend_revealed() else "96 casas · 6 faces · 204 linhas de vitória"
     var summary: Label = label(tagline,box,17,Color("#315846"))
     summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     if ZMode.unlocked(data):
         premium_button("Zen Ascend betreten" if language=="de" else ("Enter Zen Ascend" if language=="en" else "Entrar no Zen Ascend"),box,start_ascend,true)
     else:
-        label("🔒 Ab Zen-Meister oder im Shop für 850 Zen-Blätter." if language=="de" else (
-            "🔒 Unlock at Zen Master or for 850 Zen Leaves." if language=="en" else
-            "🔒 Desbloqueia ao atingir Mestre Zen ou por 850 Folhas Zen."),box,15)
-        var buy_button: Button = premium_button(
-            "Freischalten · 🍃 850" if language=="de" else ("Unlock · 🍃 850" if language=="en" else "Desbloquear · 🍃 850"),
-            box,buy_ascend,true)
-        buy_button.disabled = int(data.economy.leaves) < ZMode.PRICE
-        button("Zen-Shop",box,open_store,true)
+        label(_act_one_ui("🔒 Schließe Zen Chronicles Akt IV ab und besiege Dark Kuze.",
+            "🔒 Finish Zen Chronicles Act IV and defeat Dark Kuze.",
+            "🔒 Conclui o Ato IV de Zen Chronicles e derrota Dark Kuze."),box,15)
+        premium_button(_act_one_ui("Zur Geschichte","Go to Story","Ir à História"),box,func(): chronicles.open_library(),true)
 
 func buy_ascend() -> void:
-    if not ZMode.buy(data):
-        notify_user("Nicht genug Zen-Blätter.")
-        return
-    persist()
+    # Keep legacy signals safe: direct calls cannot buy an early 4x4 unlock.
+    notify_user(_act_one_ui("Besiege zuerst Dark Kuze in Akt IV.",
+        "Defeat Dark Kuze in Act IV first.",
+        "Derrota primeiro Dark Kuze no Ato IV."))
     open_ascend_intro()
 
 func start_ascend() -> void:
@@ -2154,6 +2232,7 @@ func play_sound(win: bool) -> void:
 
 # The campaign borrows the view and the rules, and holds its own BoardModel.
 func start_zen_campaign() -> void:
+    if act_one_active: return
     if zen_campaign_active or ceremony_active:
         return
     chronicles.close_chronicles()
@@ -2389,7 +2468,11 @@ func _zen_campaign_save_game() -> bool:
     return true
 
 func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST and act_one_active:
+        _act_one_back()
+        return
     if what == NOTIFICATION_APPLICATION_PAUSED:
+        if act_one_active: _act_one_save()
         zen_campaign_paused = true
         if zen_campaign_active and zen_campaign_stage == ZenCampaign.NIGHT and not zen_campaign_progress.game.is_empty():
             _zen_campaign_save_game()
@@ -2740,3 +2823,182 @@ func _zen_campaign_leave() -> void:
     zen_campaign_progress = {}
     refresh(-1, false)
     chronicles.open_campaign_overview()
+
+# Act I reuses the live Classic 3x3 board and renderer, but not Classic stats,
+# ranks, economy, results, settings, or the original campaign's progress.
+func _act_one_ui(de: String, en: String, pt: String) -> String:
+    return de if language_code() == "de" else (pt if language_code() == "pt" else en)
+
+func _act_one_title() -> String:
+    return str(prequel_model.config().get("title", {}).get(language_code(), "The Zen Master"))
+
+func start_act_one_trial(act: int = 1) -> void:
+    if act_one_active or zen_campaign_active or ceremony_active:
+        return
+    if act not in [1,2,3,4]: return
+    if act==2 and (not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready()): return
+    if act==3 and (not ActThree.unlocked(SaveManager.load_data()) or not ActThree.media_ready()): return
+    if act==4 and (not ActFour.unlocked(SaveManager.load_data()) or not ActFour.media_ready()): return
+    prequel_act = act
+    prequel_model = ActFour if act==4 else (ActThree if act==3 else (ActTwo if act==2 else ActOne))
+    var progress: Dictionary = prequel_model.load_progress()
+    if not bool(progress.reached) or bool(progress.acknowledged):
+        return
+    chronicles.close_chronicles()
+    close_modal()
+    generation += 1
+    act_one_classic_board = board
+    act_one_view = {"background": world_background.texture, "tint": world_background.modulate,
+        "basis": renderer.pivot.basis, "zoom": renderer.camera.position.z, "preview": preview}
+    preview = []
+    act_one_active = true
+    chronicles.set_campaign_board_active(true)
+    act_one_back_previous = get_tree().quit_on_go_back
+    get_tree().quit_on_go_back = false
+    act_one_progress = progress
+    board = prequel_model.restore_board(progress.game)
+    renderer.reset_view()
+    world_background.texture = Asc.WORLD_TEXTURES[prequel_act-1]
+    world_background.modulate = Color.WHITE
+    _act_one_save()
+    refresh()
+    if board.winner != 0: _act_one_result()
+
+func _act_one_save() -> bool:
+    if not act_one_active:
+        return false
+    prequel_model.capture(act_one_progress, board)
+    if not prequel_model.save_progress(act_one_progress):
+        notify_user(_act_one_ui("Speichern fehlgeschlagen.", "Could not save progress.", "Não foi possível guardar."))
+        return false
+    return true
+
+func _act_one_refresh(animate: int) -> void:
+    world_title_label.text = _act_one_title()
+    world_quote_label.text = T(WORLD_QUOTES[prequel_act-1]) if prequel_act>=2 else "The First Trial · The Roots of Peace"
+    rank_label.visible = true
+    rank_label.text = "Kuze · X    /    O · " + _act_one_title()
+    if board.winner == 1:
+        status.text = _act_one_ui("Prüfung bestanden!", "Trial passed!", "Prova concluída!")
+    elif board.winner == 2:
+        status.text = _act_one_title() + " · " + _act_one_ui("Sieg · O", "Victory · O", "Vitória · O")
+    elif board.winner == 3:
+        status.text = _act_one_ui("Unentschieden", "Draw", "Empate")
+    elif board.turn == 1:
+        status.text = _act_one_ui("Du bist am Zug · X", "Your turn · X", "A tua vez · X")
+    else:
+        status.text = _act_one_title() + " · " + _act_one_ui("ist am Zug · O", "turn · O", "a jogar · O")
+    status.add_theme_color_override("font_color", Color("453329"))
+    detail.text = _act_one_ui("Zug ", "Move ", "Jogada ") + str(board.move_count()) + " · 3×3"
+    help_text.text = _act_one_ui("Drehen · Tippen · Zoomen", "Rotate · Tap · Zoom", "Rodar · Tocar · Ampliar")
+    swap_row.hide()
+    tutorial_row.hide()
+    challenge_role_panel.hide()
+    challenge_row.hide()
+    challenge_leave_row.hide()
+    classic_views.show()
+    classic_views.get_child(2).hide()
+    classic_actions.hide()
+    zen_campaign_controls.hide()
+    act_one_controls.show()
+    act_one_result_button.visible = board.winner != 0
+    act_one_result_button.text = _classic_result_label()
+    var leave_button := act_one_controls.get_child(1) as Button
+    leave_button.text = _act_one_ui("Zur Geschichte", "Back to story", "Voltar à história")
+    renderer.selected = board.last_cell
+    renderer.paint(board, bool(data.settings.hints) and board.winner == 0, [], animate)
+    if net_active: update_net()
+
+func _act_one_tick() -> void:
+    if zen_campaign_paused or board.winner != 0 or board.turn != 2 or popup != null or worker != null:
+        return
+    var cells: Array = board.cells.duplicate()
+    var seed_value := int(Time.get_ticks_usec())
+    worker_generation = generation
+    ai_running = true
+    worker = Thread.new()
+    var trial_level: int = prequel_act-1
+    worker.start(func(): return AIEngine.new(seed_value).choose(cells, 2, trial_level, 45))
+
+func _act_one_result() -> void:
+    if not act_one_active or board.winner == 0: return
+    var saved := _act_one_save()
+    var config: Dictionary = prequel_model.config()
+    var dialogue: Dictionary = config.get("dialogue_"+language_code(),config.get("dialogue", {}))
+    var outcome := "victory" if board.winner == 1 else ("defeat" if board.winner == 2 else "draw")
+    var box := _zen_campaign_story_box(_act_one_title())
+    popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.985), 22))
+    # Result art matches the large full-height Act I-IV introduction portrait.
+    var art := ZenCampaign.artwork(prequel_model.portrait_path(),
+        clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,880.0))
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    box.add_child(art)
+    _zen_campaign_paragraph(box, str(dialogue.get(outcome, "")))
+    if not saved:
+        _zen_campaign_paragraph(box, _act_one_ui("Speichern fehlgeschlagen. Bitte erneut versuchen.", "Save failed. Please try again.", "Erro ao guardar. Tenta novamente."))
+    if board.winner == 1 and bool(act_one_progress.won):
+        premium_button(_act_one_ui("Fortsetzen", "Continue", "Continuar"), box, _act_one_continue, true)
+    else:
+        premium_button(_act_one_ui("Erneut versuchen", "Try again", "Tentar novamente"), box, _act_one_retry, true)
+    button(_inspect_label(), box, _inspect_classic_finished_board, true)
+    button(_act_one_ui("Zur Geschichte", "Back to story", "Voltar à história"), box, _act_one_leave, true)
+
+func _act_one_retry() -> void:
+    if not act_one_active or board.winner not in [2, 3]: return
+    if not _act_one_save(): return
+    var old_board: BoardModel = board
+    var old_progress: Dictionary = act_one_progress.duplicate(true)
+    generation += 1
+    board = prequel_model.new_board()
+    if not _act_one_save():
+        board = old_board
+        act_one_progress = old_progress
+        _act_one_result()
+        return
+    close_modal()
+    renderer.reset_view()
+    refresh()
+
+func _act_one_continue() -> void:
+    if not act_one_active or board.winner != 1 or not bool(act_one_progress.won): return
+    act_one_progress.acknowledged = true
+    act_one_progress.page = 12
+    if not _act_one_save():
+        act_one_progress.acknowledged = false
+        act_one_progress.page = 11
+        _act_one_result()
+        return
+    _act_one_leave()
+
+func _act_one_leave() -> void:
+    if not act_one_active or not _act_one_save(): return
+    close_modal()
+    generation += 1
+    act_one_active = false
+    chronicles.set_campaign_board_active(false)
+    get_tree().quit_on_go_back = act_one_back_previous
+    board = act_one_classic_board
+    world_background.texture = act_one_view.background
+    world_background.modulate = act_one_view.tint
+    renderer.pivot.basis = act_one_view.basis
+    renderer.camera.position.z = act_one_view.zoom
+    preview = act_one_view.preview
+    act_one_view = {}
+    act_one_classic_board = null
+    act_one_progress = {}
+    refresh(-1, false)
+    if prequel_act==4: chronicles.open_act_four()
+    elif prequel_act==3: chronicles.open_act_three()
+    elif prequel_act==2: chronicles.open_act_two()
+    else: chronicles.open_act_one()
+
+func _act_one_back() -> void:
+    if popup != null:
+        close_modal()
+    else:
+        open_menu()
+
+func _unhandled_key_input(event: InputEvent) -> void:
+    if act_one_active and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+        _act_one_back()
+        get_viewport().set_input_as_handled()

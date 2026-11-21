@@ -37,7 +37,7 @@ func _run() -> void:
     check(overlay != null, "overlay present")
     if overlay != null:
         check(contains_label(overlay, "Zen-Meister"), "correct rank title")
-        check(contains_label(overlay, "ZEN ASCEND 4×4"), "rank three bonus unlocked")
+        check(not contains_label(overlay, "4×4"), "rank-up ceremony does not spoil the fourth dimension")
         check(contains_label(overlay, "Mondgarten"), "world three unlocked")
         check(overlay.find_child("SkipCeremony", true, false) != null, "skip button accessible")
     first.skip()

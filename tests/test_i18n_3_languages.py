@@ -42,7 +42,7 @@ keys.update(['Anfänger','Fortgeschritten','Experte','Zen-Meister','Großmeister
     'Du spielst X  ·  Zen-Bot spielt O',
     'Zen erreicht!','Zen-Schüler','Gewonnen!','Verloren','X gewinnt','O gewinnt','Noch eine Runde?'])
 # Proper names, symbols, explicit language endonyms and formatting-only strings.
-exempt={'','ZenCube 3D','☰','◀','▶','🌐','Deutsch','English','Português',
+exempt={'','ZenCube 3D','Zen Ascend','☰','◀','▶','🌐','Deutsch','English','Português',
         'Deutsch  ·  English  ·  Português','%s: %d / %d'}
 keys-=exempt
 keys.discard("Zen-Bot · ")  # Eigenname, kein zu übersetzender Text

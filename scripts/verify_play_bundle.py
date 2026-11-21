@@ -103,6 +103,20 @@ def check_game_assets(archive, entries):
     }
     for relative in sorted(pages | imported_sources):
         check_remap(archive, assets, relative, ".import")
+    for act in range(1, 5):
+        act_root = Path(f"story/act{act:02d}")
+        chapter_pages = sorted((ROOT / act_root / "pages").glob("*.png"))
+        required = [f"zen_chronicles_ch01_act{act:02d}_{i:02d}.png" for i in range(1, 13)]
+        require([p.name for p in chapter_pages] == required, f"Act {act}: incomplete 12-page Manhwa source")
+        for image in chapter_pages:
+            check_remap(archive, assets, image.relative_to(ROOT).as_posix(), ".import")
+    for boss in ("mist_guardian", "mirror_novice", "veil_monk"):
+        check_remap(archive, assets, f"assets/shadow_campaign/portraits/{boss}.webp", ".import")
+    for realm in ("shadow_campaign", "abyss_of_memories", "ember_campaign", "celestial_campaign"):
+        for page in range(1, 31):
+            check_remap(archive, assets, f"assets/{realm}/pages/page_{page:02d}.webp", ".import")
+    print("Extended Manhwa check: 48 Act I-IV PNG pages, 120 Realm WebP pages, 3 Shadow portraits included.")
+
     print(f"Assets verified: {len(pages)} comic pages, {len(imported_sources)} other images/audio files, {len(raw_files)} data files.")
 
 

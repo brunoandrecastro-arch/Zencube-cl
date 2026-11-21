@@ -1,6 +1,8 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Campaign 2.0 Shadow Realm headless native integration checks.
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
+const Fracture = preload("res://story/ZenFractureState.gd")
 const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const Reader = preload("res://story/ZenShadowReader.gd")
 const Original = preload("res://story/ZenRealmChronicles.gd")
@@ -19,7 +21,7 @@ func _backup(path: String) -> void:
     if FileAccess.file_exists(path): backups[path] = FileAccess.get_file_as_bytes(path)
 
 func _restore() -> void:
-    for path in [Shadow.SAVE,Original.SAVE,SaveManager.PATH]:
+    for path in [Shadow.SAVE,Original.SAVE,Fracture.PATH,SaveManager.PATH]:
         if backups.has(path):
             var f := FileAccess.open(path,FileAccess.WRITE)
             if f != null:
@@ -31,6 +33,7 @@ func _restore() -> void:
 func run() -> void:
     _backup(Shadow.SAVE)
     _backup(Original.SAVE)
+    _backup(Fracture.PATH)
     _backup(SaveManager.PATH)
     check(Series.REALM_LEVELS==[1,2,3,2,4],"agreed fixed final guardian difficulty policy")
     var fixture: Dictionary = Shadow.defaults()
@@ -59,8 +62,8 @@ func run() -> void:
     Series.settle(fixture)
     check(int(Series.score(fixture).player)==1,"count monotonic after restarting series")
     check(Shadow.BOSS_IDS==["mist_guardian","mirror_novice","veil_monk"],"preserve existing Shadow boss identities")
-    check(Shadow.GATES==[4,8,15],"story breaks before revealed outcomes on pages 5,9,16")
-    check(Shadow.CONTINUE_PAGES==[5,9,16],"resume Manhwa in correct order after wins")
+    check(Shadow.GATES==[10,20,27],"remake gates before victories on pages 11,21,28")
+    check(Shadow.CONTINUE_PAGES==[11,21,28],"remake resumes after each boss without skipping its victory page")
     check(Shadow.BOT_LEVELS==[1,1,1],"all Shadow bosses retain Medium AI")
     check(Shadow.page_path(1).ends_with("page_01.webp"),"first page")
     check(Shadow.page_path(30).ends_with("page_30.webp"),"last page")
@@ -84,7 +87,7 @@ func run() -> void:
     check(page_files==0 or page_files==30,"all 30 pages must be supplied together")
     var state: Dictionary = Shadow.defaults()
     check(Shadow.save_progress(state),"independent Shadow save writes")
-    check(Shadow.page_limit(state)==4,"first gate cannot be skipped")
+    check(Shadow.page_limit(state)==10,"first gate cannot be skipped before the first depicted win")
     for index in range(3):
         state.page = Shadow.GATES[index]
         check(Shadow.next_action(state).get("type")=="battle","boss gate "+str(index))
@@ -124,6 +127,9 @@ func run() -> void:
     check(Shadow.load_progress().completed,"Chapter 1 completion saved")
     var original_before: String = FileAccess.get_file_as_string(Original.SAVE) if FileAccess.file_exists(Original.SAVE) else ""
     var base_before: String = FileAccess.get_file_as_string(SaveManager.PATH) if FileAccess.file_exists(SaveManager.PATH) else ""
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine completed Dark Kuze story unlock")
+    check(Fracture.mark_awakening(),"simulate completed one-time Moon Garden cinematic before Shadow reader return")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true,true,true,false,false]
@@ -133,7 +139,7 @@ func run() -> void:
     data.settings.music = false
     check(SaveManager.save_data(data),"create legitimate 4x4 test entitlement")
     var seeded: Dictionary = Shadow.defaults()
-    seeded.page = 4
+    seeded.page = Shadow.GATES[0]
     check(Shadow.save_progress(seeded),"seed first boss")
     var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     check(scene!=null,"existing native 3D scene imports")
@@ -153,7 +159,7 @@ func run() -> void:
         await process_frame
         var book: Node = root.get_node("ZenChronicles")
         check(bool(book.call("is_open")),"Shadow reader returns after boss")
-        check(int(Shadow.load_progress().page)==4,"unfinished fight does not skip gate")
+        check(int(Shadow.load_progress().page)==10,"unfinished fight does not skip the new gate")
         book.call("close_shadow_reader")
         await process_frame
         controller.queue_free()
@@ -161,6 +167,7 @@ func run() -> void:
         await process_frame
     check(FileAccess.get_file_as_string(Original.SAVE)==original_before if original_before!="" else not FileAccess.file_exists(Original.SAVE),
         "original Realm Chronicles progress remains untouched")
+    dark_kuze_gate.restore()
     _restore()
     print("SHADOW CAMPAIGN FAILURES=",failures," / 30 user pages in repo=",page_files)
     quit(0 if failures==0 else 1)

@@ -9,6 +9,16 @@ const GOLD = Color(0.86, 0.72, 0.47)
 const CREAM = Color(0.98, 0.94, 0.84)
 const MUTED = Color(0.75, 0.78, 0.77)
 const Campaign = preload("res://story/ZenCampaign.gd")
+const ActOne = preload("res://story/ZenActOne.gd")
+const ActTwo = preload("res://story/ZenActTwo.gd")
+const ActThree = preload("res://story/ZenActThree.gd")
+const ActFour = preload("res://story/ZenActFour.gd")
+const FractureState = preload("res://story/ZenFractureState.gd")
+const Awakening = preload("res://ui/ZenCubeAwakening.gd")
+var _library_tab: int = 0
+var _fracture_replaying: bool = false
+var _prequel_act: int = 1
+var _prequel_model: Script = ActOne
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const AbyssReader = preload("res://story/ZenAbyssReader.gd")
 const ShadowReader = preload("res://story/ZenShadowReader.gd")
@@ -71,6 +81,9 @@ var _campaign_challenge_requested: Dictionary = {}
 var _campaign_practice_requested: int = -1
 var _story_audio_owner: Node
 var _breakthrough_active: bool = false
+var _act_one_progress: Dictionary = {}
+var _act_one_back_owned := false
+var _act_one_previous_back := true
 
 func _ready() -> void:
     layer = 90
@@ -262,35 +275,122 @@ func _chapter_accessible(i: int) -> bool:
 func campaign_ui(de: String,en: String,pt: String) -> String:
     return de if _active_language=="de" else (pt if _active_language=="pt" else en)
 
+func _realms_revealed() -> bool:
+    # Do not reveal the Realm cards before Act IV's transformation.
+    # Save migration: keep access for veteran Realm players and QA builds.
+    return FractureState.awakening_seen() or Realm2.already_entered(0) or Realm2.bosses_won(0)>0
+
+func _select_library_tab(index: int) -> void:
+    _library_tab = clampi(index,0,1) if _realms_revealed() else 0
+    open_library()
+
+func _library_card(parent: Node, title: String, image_path: String, hint: String, allowed: bool, complete: bool, entry: Callable, tag: String, show_lock_info: bool = false) -> void:
+    var panel: PanelContainer = PanelContainer.new()
+    panel.name = tag
+    var background: StyleBoxFlat = _style(Color("#182d33"),16)
+    background.border_color = Color("#a58b5e") if allowed else Color("#555661")
+    background.set_border_width_all(2)
+    panel.add_theme_stylebox_override("panel",background)
+    parent.add_child(panel)
+    var row: HBoxContainer = HBoxContainer.new()
+    row.add_theme_constant_override("separation",12)
+    panel.add_child(row)
+    var preview: TextureRect = TextureRect.new()
+    preview.custom_minimum_size = Vector2(90,128)
+    preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    if ResourceLoader.exists(image_path): preview.texture = load(image_path) as Texture2D
+    row.add_child(preview)
+    var stack: VBoxContainer = VBoxContainer.new()
+    stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    stack.add_theme_constant_override("separation",5)
+    row.add_child(stack)
+    var headline: Label = _make_label(title,stack,17,CREAM)
+    headline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _make_label(hint,stack,13,Color("#d5c19b") if allowed else MUTED)
+    var label_text: String = campaign_ui("Geschichte lesen ›","Continue Story ›","Continuar história ›") if allowed else (campaign_ui("Freischaltbedingungen","Unlock requirements","Como desbloquear") if show_lock_info else campaign_ui("Gesperrt","Locked","Bloqueado"))
+    if complete: label_text = campaign_ui("Erneut lesen ›","Read again ›","Ler novamente ›")
+    var button: Button = _make_button(label_text,stack,entry)
+    button.disabled = not allowed and not show_lock_info
+    button.custom_minimum_size.y = 40
+    button.name = tag+"Button"
+
+func _library_story_cards(parent: VBoxContainer) -> void:
+    _make_label(campaign_ui("Kuzes Weg · 3×3","Kuze's Path · 3×3","O Caminho de Kuze · 3×3"),parent,18,GOLD)
+    var active_game: Node = get_tree().current_scene
+    var playable: bool = active_game != null and active_game.has_method("start_act_one_trial")
+    if not playable:
+        _make_label(campaign_ui("Wechsle zum klassischen 3×3, um diese Geschichte zu spielen.","Return to Classic 3×3 to play this story.","Regressa ao Clássico 3×3 para jogar esta história."),parent,14,MUTED)
+    var classic: Dictionary = SaveManager.load_data()
+    _library_card(parent,"ACT I · The Roots of Peace","res://story/act01/pages/zen_chronicles_ch01_act01_01.png","Zen Garden",playable,bool(ActOne.load_progress().complete),open_act_one,"ActOneCard")
+    var second_allowed: bool = ActTwo.unlocked(classic) and ActTwo.media_ready() and playable
+    var second_hint: String = "Bamboo Path · "+campaign_ui("Leicht %d/3","Easy %d/3","Fácil %d/3") % ActTwo.easy_wins(classic)
+    if not bool(ActOne.load_progress().complete): second_hint += " · "+campaign_ui("Akt I abschließen","Finish Act I","Concluir Ato I")
+    _library_card(parent,"ACT II · The Art of Balance",ActTwo.page_path(1),second_hint,second_allowed,bool(ActTwo.load_progress().complete),open_act_two,"ActTwoCard")
+    var third_allowed: bool = ActThree.unlocked(classic) and ActThree.media_ready() and playable
+    var third_hint: String = "Mountain Temple · "+campaign_ui("Mittel %d/5","Medium %d/5","Médio %d/5") % ActThree.medium_wins(classic)
+    if not bool(ActTwo.load_progress().complete): third_hint += " · "+campaign_ui("Akt II abschließen","Finish Act II","Concluir Ato II")
+    _library_card(parent,"ACT III · The Beautiful Imperfection",ActThree.page_path(1),third_hint,third_allowed,bool(ActThree.load_progress().complete),open_act_three,"ActThreeCard")
+    var fourth_allowed: bool = ActFour.unlocked(classic) and ActFour.media_ready() and playable
+    var fourth_hint: String = "Moon Garden · "+campaign_ui("Schwer %d/7","Hard %d/7","Difícil %d/7") % ActFour.hard_wins(classic)
+    if not bool(ActThree.load_progress().complete): fourth_hint += " · "+campaign_ui("Akt III abschließen","Finish Act III","Concluir Ato III")
+    _library_card(parent,"ACT IV · The Day Everything Broke",ActFour.page_path(1),fourth_hint,fourth_allowed,bool(ActFour.load_progress().complete),open_act_four,"ActFourCard")
+    if bool(ActFour.load_progress().complete):
+        var replay_button: Button = _make_button(campaign_ui("✦ Übergang erneut ansehen","✦ Replay the Awakening","✦ Rever o Despertar"),parent,replay_moon_shadow_transition)
+        replay_button.name = "ReplayMoonShadowTransition"
+    _make_label(campaign_ui("Sky Garden · Epilog nach Abschluss aller Realms","Sky Garden · Epilogue after all Realms","Sky Garden · Epílogo após todos os Reinos"),parent,14,MUTED)
+
+func _library_realm_cards(parent: VBoxContainer) -> void:
+    _make_label("Zen Ascend",parent,18,GOLD)
+    var openers: Array[Callable] = [open_shadow_reader,open_abyss_reader,open_ember_campaign_preview,open_celestial_campaign_preview,open_satori_campaign_preview]
+    var titles: Array[String] = ["🌘 Shadow Realm","🌊 Abyss of Memories","🔥 Ember Temple","☁️ Celestial Realm","☀️ Satori Realm"]
+    var unlock_hints: Array[String] = ["Zen Ascend","Shadow 3/3 + 3/3","Abyss 3/3 + 3/3","Ember 3/3 + 3/3","Celestial 3/3 + 3/3"]
+    for i in range(5):
+        var permitted: bool = Realm2.unlocked(i)
+        var finished: bool = Realm2.story_finished(i)
+        var hint: String = campaign_ui("Bosse %d/3 · Herausforderungen %d/3","Bosses %d/3 · Challenges %d/3","Chefes %d/3 · Desafios %d/3") % [Realm2.bosses_won(i),Realm2.completed_count(Realm2.load_progress(),i)] if permitted else campaign_ui("Freischalten: ","Unlock: ","Desbloquear: ")+unlock_hints[i]
+        _library_card(parent,titles[i],Realm2.SOURCE_ART[i],hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
+
 func open_library() -> void:
+    _act_one_release_back()
     _realm_story_from_realms = false
     _sync_language()
     _active_chapter = -1
     _screen_name = "library"
-    var outer := _make_screen()
-    var head := HBoxContainer.new()
+    var outer: VBoxContainer = _make_screen()
+    var head: HBoxContainer = HBoxContainer.new()
     outer.add_child(head)
-    var heading := _make_label("ZEN REALM CHRONICLES", head, 24, GOLD)
+    var heading: Label = _make_label("ZEN CHRONICLES",head,24,GOLD)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    _make_button("✕", head, close_chronicles)
-    _make_label("Zen Realm Chronicles · The Living Manhwa",outer,19,GOLD)
-    _make_label(campaign_ui("4×4 · 3 Bosse + 3 Realm-Challenges pro Kapitel",
-        "4×4 · 3 bosses + 3 Realm challenges per chapter",
-        "4×4 · 3 chefes + 3 desafios de reino por capítulo"),outer,15,CREAM)
-    var access: bool = Realm2.unlocked(0)
-    _make_button("🌘 Shadow Realm" if access else campaign_ui("🔒 Shadow Realm · Zen Ascend 4×4 freischalten",
-        "🔒 Shadow Realm · Unlock Zen Ascend 4×4","🔒 Shadow Realm · Desbloqueia Zen Ascend 4×4"),outer,open_shadow_reader)
-    _make_button("🌑 Abyss of Memories" if Realm2.unlocked(1) else "🔒 Abyss of Memories · Shadow 3+3",outer,open_abyss_reader)
-    _make_button("🔥 Ember Temple" if Realm2.unlocked(2) else "🔒 Ember Temple · Abyss 3+3",outer,open_ember_campaign_preview)
-    _make_button(("Celestial Realm" + (" · The Enlightened Mind" if Realm2.story_finished(3) else "")) if Realm2.unlocked(3) else "🔒 Celestial Realm · Ember 3+3",outer,open_celestial_campaign_preview)
-    if Realm2.unlocked(4): _make_button("Satori Realm",outer,open_satori_campaign_preview)
-    _make_label(campaign_ui("Originalarchive","Original Archives","Arquivos originais"),outer,18,GOLD)
-    _make_button(campaign_ui("📜 Original Realm Chronicles · 12 Bosse",
-        "📜 Original Realm Chronicles · 12 Bosses","📜 Realm Chronicles originais · 12 chefes"),outer,open_realm_story_archive)
-    _make_button(campaign_ui("📖 Originale Zen-Kampagne · 3×3",
-        "📖 Original Zen Campaign · 3×3","📖 Campanha Zen original · 3×3"),outer,open_campaign_overview)
-    _make_button(campaign_ui("📚 Originaler Zen-Webcomic",
-        "📚 Original Zen Webcomic","📚 Webcomic Zen original"),outer,open_comic_library)
+    _make_button("✕",head,close_chronicles)
+    var tabs: HBoxContainer = HBoxContainer.new()
+    tabs.add_theme_constant_override("separation",8)
+    outer.add_child(tabs)
+    var revealed: bool = _realms_revealed()
+    if not revealed: _library_tab = 0
+    var story_tab: Button = _make_button(campaign_ui("Geschichte","Story","História"),tabs,_select_library_tab.bind(0))
+    story_tab.name = "ZenChroniclesTab3"
+    story_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var realm_tab: Button = null
+    if revealed:
+        realm_tab = _make_button(campaign_ui("Reiche","Realms","Reinos"),tabs,_select_library_tab.bind(1))
+        realm_tab.name = "ZenChroniclesTab4"
+        realm_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var active_tab: Button = story_tab if _library_tab==0 or realm_tab==null else realm_tab
+    active_tab.add_theme_stylebox_override("normal",_style(Color("#5c4930"),12))
+    active_tab.add_theme_color_override("font_color",Color("#ffe2a3"))
+    var scroll: ScrollContainer = ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    outer.add_child(scroll)
+    var cards: VBoxContainer = VBoxContainer.new()
+    cards.name = "ZenChroniclesCards"
+    cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    cards.add_theme_constant_override("separation",12)
+    scroll.add_child(cards)
+    if _library_tab==0: _library_story_cards(cards)
+    else: _library_realm_cards(cards)
 
 func open_comic_library() -> void:
     _sync_language()
@@ -409,6 +509,7 @@ func _turn_page(dir: int) -> void:
     _update_page()
 
 func close_chronicles() -> void:
+    _act_one_release_back()
     _realm_story_from_realms = false
     _active_chapter = -1
     _screen_name = ""
@@ -428,6 +529,9 @@ func is_open() -> bool:
 
 func _input(event: InputEvent) -> void:
     if _screen == null:
+        return
+    if _screen_name.begins_with("act-one"):
+        _act_one_input(event)
         return
     # Godot's nested PanelContainers/TextureRects can intercept touch
     # gestures before ScrollContainer on Android. Drive this ONE chapter list
@@ -715,6 +819,7 @@ func request_final_guardian(chapter: int) -> void:
     else: request_celestial_battle()
 
 func open_abyss_reader() -> void:
+    _library_tab = 1
     if not Realm2.unlocked(1):
         _campaign_locked_screen(1)
         return
@@ -755,6 +860,12 @@ func consume_abyss_launch() -> bool:
 # Campaign 2.0 – Shadow Realm chapter, isolated from the existing 12
 # Realm Chronicles bosses and independent of the Abyss chapter save.
 func open_shadow_reader() -> void:
+    _library_tab = 1
+    # Also migrate players who saw page 1 in the earlier test build.
+    # Do not interrupt page 1→2 or replay old rewards.
+    if bool(ActFour.load_progress().complete) and not FractureState.awakening_seen():
+        _start_awakening_before_shadow()
+        return
     if not Realm2.unlocked(0):
         _campaign_locked_screen(0)
         return
@@ -793,6 +904,7 @@ func consume_shadow_launch() -> bool:
     return flag
 
 func open_ember_reader() -> void:
+    _library_tab = 1
     if not Realm2.unlocked(2):
         _campaign_locked_screen(2)
         return
@@ -986,3 +1098,264 @@ func open_realm_story_archive() -> void:
         _campaign_locked_screen(0)
         return
     open_realm_story_overview()
+
+# The prequel is independent of the original 3x3 campaign and 4x4 library.
+func _act_one_hold_back() -> void:
+    if not _act_one_back_owned:
+        _act_one_previous_back = get_tree().quit_on_go_back
+        get_tree().quit_on_go_back = false
+        _act_one_back_owned = true
+
+func _act_one_release_back() -> void:
+    if _act_one_back_owned:
+        get_tree().quit_on_go_back = _act_one_previous_back
+        _act_one_back_owned = false
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST and _act_one_back_owned:
+        _act_one_back()
+
+func _act_one_back() -> void:
+    if _screen_name == "act-one-gate":
+        _open_prequel_reader()
+    else:
+        open_library()
+
+func _act_one_input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and not event.echo:
+        if event.keycode == KEY_ESCAPE:
+            _act_one_back()
+            get_viewport().set_input_as_handled()
+        elif _screen_name == "act-one-reader" and event.keycode in [KEY_LEFT, KEY_RIGHT]:
+            _act_one_turn(1 if event.keycode == KEY_RIGHT else -1)
+            get_viewport().set_input_as_handled()
+    elif _screen_name == "act-one-reader" and event is InputEventScreenTouch:
+        if event.pressed:
+            _touch_start = event.position
+        else:
+            var distance: Vector2 = event.position - _touch_start
+            if absf(distance.x) > 70 and absf(distance.x) > absf(distance.y) * 1.3:
+                _act_one_turn(1 if distance.x < 0 else -1)
+                get_viewport().set_input_as_handled()
+
+func open_act_one() -> void:
+    _library_tab = 0
+    _prequel_act = 1
+    _prequel_model = ActOne
+    _open_prequel_reader()
+
+func open_act_two() -> void:
+    if not ActTwo.unlocked(SaveManager.load_data()) or not ActTwo.media_ready():
+        open_library()
+        return
+    _library_tab = 0
+    _prequel_act = 2
+    _prequel_model = ActTwo
+    _open_prequel_reader()
+
+func open_act_three() -> void:
+    if not ActThree.unlocked(SaveManager.load_data()) or not ActThree.media_ready():
+        open_library()
+        return
+    _library_tab = 0
+    _prequel_act = 3
+    _prequel_model = ActThree
+    _open_prequel_reader()
+
+func open_act_four() -> void:
+    if not ActFour.unlocked(SaveManager.load_data()) or not ActFour.media_ready():
+        open_library()
+        return
+    _library_tab = 0
+    _prequel_act = 4
+    _prequel_model = ActFour
+    _open_prequel_reader()
+
+func _prequel_accessible() -> bool:
+    if _prequel_act==4: return ActFour.unlocked(SaveManager.load_data()) and ActFour.media_ready()
+    if _prequel_act==3: return ActThree.unlocked(SaveManager.load_data()) and ActThree.media_ready()
+    if _prequel_act==2: return ActTwo.unlocked(SaveManager.load_data()) and ActTwo.media_ready()
+    return _prequel_act==1
+
+func _open_prequel_reader() -> void:
+    if not _prequel_accessible():
+        open_library()
+        return
+    _sync_language()
+    _act_one_progress = _prequel_model.load_progress()
+    _act_one_hold_back()
+    _active_chapter = -1
+    _screen_name = "act-one-reader"
+    var outer := _make_screen()
+    _screen.color = Color("#27251e")
+    var head := HBoxContainer.new()
+    outer.add_child(head)
+    _make_button("‹", head, open_library)
+    var titles: Array[String] = ["Act I · The Roots of Peace","Act II · The Art of Balance","Act III · The Beautiful Imperfection","Act IV · The Day Everything Broke"]
+    var title := _make_label(titles[_prequel_act-1], head, 21, GOLD)
+    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _make_button("✕", head, close_chronicles)
+    _page_image = TextureRect.new()
+    _page_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    _page_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    _page_image.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _page_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    outer.add_child(_page_image)
+    var nav := HBoxContainer.new()
+    outer.add_child(nav)
+    _prev_button = _make_button(campaign_ui("‹ Zurück", "‹ Previous", "‹ Anterior"), nav, _act_one_turn.bind(-1))
+    _prev_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _page_counter = _make_label("", nav, 16, GOLD)
+    _page_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _page_counter.custom_minimum_size.x = 68
+    _next_button = _make_button("", nav, _act_one_turn.bind(1))
+    _next_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _act_one_update()
+
+func _act_one_update() -> void:
+    var page: int = clampi(int(_act_one_progress.page), 1, _prequel_model.max_page(_act_one_progress))
+    _act_one_progress.page = page
+    _page_image.texture = load(_prequel_model.page_path(page)) as Texture2D
+    _page_counter.text = "%02d / 12" % page
+    _prev_button.disabled = page == 1
+    _next_button.text = campaign_ui("Weiter ›", "Next ›", "Seguinte ›")
+    if page == 11 and _prequel_model.max_page(_act_one_progress) == 11:
+        _next_button.text = campaign_ui("Prüfung ›", "Trial ›", "Prova ›")
+    elif page == 12:
+        _next_button.text = campaign_ui("Ins Shadow Realm", "Into the Shadow Realm", "Entrar no Shadow Realm") if _prequel_act==4 else campaign_ui("Abschließen", "Finish", "Concluir")
+
+func _act_one_turn(direction: int) -> void:
+    if _screen_name != "act-one-reader":
+        return
+    var page: int = int(_act_one_progress.page)
+    if direction > 0 and page == 11 and _prequel_model.max_page(_act_one_progress) == 11:
+        _act_one_progress.reached = true
+        if _prequel_model.save_progress(_act_one_progress):
+            open_act_one_gate()
+        else:
+            _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
+        return
+    if direction > 0 and page == 12:
+        _act_one_progress.complete = true
+        if _prequel_model.save_progress(_act_one_progress):
+            if _prequel_act==4:
+                _begin_moon_garden_breakthrough()
+            else:
+                open_library()
+        else:
+            _act_one_progress.complete = false
+            _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
+        return
+    var old_page: int = page
+    _act_one_progress.page = clampi(page + direction, 1, _prequel_model.max_page(_act_one_progress))
+    if _prequel_model.save_progress(_act_one_progress):
+        _act_one_update()
+    else:
+        _act_one_progress.page = old_page
+        _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
+
+func open_act_one_gate() -> void:
+    if not _prequel_accessible():
+        open_library()
+        return
+    _act_one_progress = _prequel_model.load_progress()
+    if not bool(_act_one_progress.reached) or bool(_act_one_progress.acknowledged):
+        _open_prequel_reader()
+        return
+    _act_one_hold_back()
+    _screen_name = "act-one-gate"
+    var outer := _make_screen()
+    _screen.color = Color("#27251e")
+    _make_button(campaign_ui("‹ Zurück zur Geschichte", "‹ Back to story", "‹ Voltar à história"), outer, _open_prequel_reader)
+    var config: Dictionary = _prequel_model.config()
+    _make_label(str(config.get("title", {}).get(_active_language, "The Zen Master")), outer, 26, GOLD)
+    _make_label(str(config.get("subtitle", {}).get(_active_language, "The First Trial")), outer, 20, CREAM)
+    var portrait := TextureRect.new()
+    portrait.texture = load(_prequel_model.portrait_path()) as Texture2D
+    portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    outer.add_child(portrait)
+    var saved_game: Dictionary = _act_one_progress.game
+    var dialogue: Dictionary = config.get("dialogue_"+_active_language,config.get("dialogue", {}))
+    var message := str(dialogue.get("intro", "Before you go, one more game. Show me what you have learned."))
+    if bool(_act_one_progress.won):
+        message = str(dialogue.get("victory", "Well played, Kuze. Take the cube home. Return tomorrow."))
+    _make_label(message, outer, 20, CREAM)
+    _make_label("Kuze · X    /    O · " + str(config.get("title", {}).get(_active_language, "The Zen Master")), outer, 15, GOLD)
+    var action := campaign_ui("Prüfung beginnen", "Start trial", "Iniciar prova")
+    if not saved_game.is_empty():
+        action = campaign_ui("Prüfung fortsetzen", "Resume trial", "Retomar prova")
+    if bool(_act_one_progress.won):
+        action = campaign_ui("Zum Ergebnis", "View result", "Ver resultado")
+    _make_button(action, outer, _act_one_launch)
+
+func _act_one_launch() -> void:
+    var game: Node = get_tree().current_scene
+    if game != null and game.has_method("start_act_one_trial"):
+        game.call("start_act_one_trial",_prequel_act)
+
+# Act IV ends the 3×3 prequel. Play the portal only once, then open Shadow page 1.
+func _begin_moon_garden_breakthrough() -> void:
+    if not bool(ActFour.load_progress().complete): return
+    if not ZenAscend.unlocked(SaveManager.load_data()):
+        open_library()
+        return
+    _act_one_release_back()
+    if FractureState.portal_seen():
+        _start_awakening_before_shadow()
+        return
+    _suspend_scene_music()
+    var ceremony: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(ceremony)
+    ceremony.finished.connect(_after_moon_portal)
+    ceremony.call("present",0,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+# The REMADE Shadow page 1 already contains 4×4. Both cinematic stages
+# therefore finish BEFORE the first illustrated page is displayed.
+func _after_moon_portal() -> void:
+    if not FractureState.mark_portal():
+        open_library()
+        return
+    _start_awakening_before_shadow()
+
+func _start_awakening_before_shadow() -> void:
+    if FractureState.awakening_seen():
+        open_shadow_reader()
+        return
+    _suspend_scene_music()
+    var ceremony: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(ceremony)
+    ceremony.finished.connect(_after_moon_awakening)
+    ceremony.call("present",1,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+func _after_moon_awakening() -> void:
+    if not FractureState.mark_awakening():
+        open_library()
+        return
+    open_shadow_reader()
+
+# Optional library replay never awards currency, rank or a second unlock.
+func replay_moon_shadow_transition() -> void:
+    if _fracture_replaying or not bool(ActFour.load_progress().complete): return
+    _fracture_replaying = true
+    close_chronicles()
+    _suspend_scene_music()
+    var first: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(first)
+    first.finished.connect(_replay_moon_shadow_part_two)
+    first.call("present",0,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+func _replay_moon_shadow_part_two() -> void:
+    var second: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(second)
+    second.finished.connect(_finish_moon_shadow_replay)
+    second.call("present",1,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+func _finish_moon_shadow_replay() -> void:
+    _fracture_replaying = false
+    _library_tab = 0
+    open_library()
+    call_deferred("_resume_scene_music_if_free")
+

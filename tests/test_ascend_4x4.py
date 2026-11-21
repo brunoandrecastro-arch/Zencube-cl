@@ -9,9 +9,9 @@ ui=(ROOT/'ui/AscendController.gd').read_text()
 renderer=(ROOT/'ui/AscendRenderer.gd').read_text()
 save=(ROOT/'core/SaveManager.gd').read_text()
 assert 'const TEST_UNLOCKED: bool = false' in new
-assert 'if test_access_enabled(): return true\n    return unlocked_for_release(data)' in new
-assert 'return OS.has_feature("zencube_celestial_qa")' in new
-assert 'return bool(data.get("economy",{}).get("ascend_owned",false)) or int(data.get("ascension",{}).get("rank",0)) >= 3' in new
+assert 'static func unlocked(data: Dictionary) -> bool:\n    return unlocked_for_release(data)' in new
+assert 'DarkKuze.load_progress().complete' in new and 'return false' in new.split('static func test_access_enabled() -> bool:',1)[1].split('static func unlocked(',1)[0]
+assert 'const DarkKuze = preload("res://story/ZenActFour.gd")' in new
 assert 'const PRICE: int = 850' in new
 assert 'func generate_lines()' in new and 'func next_move(' in new
 assert 'res://Ascend.tscn' in controller

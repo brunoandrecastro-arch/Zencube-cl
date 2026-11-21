@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Test new 4x4 realm progression on headless Godot without changing user save data.
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const Bot = preload("res://core/ZenAscendRealmBot.gd")
@@ -33,7 +34,10 @@ func run() -> void:
     check(not Realms.unlocked(data,0),"Shadow locked before Zen Ascend ownership on all builds")
     check(not ZenAscend.unlocked_for_release(data),"release keeps its unlock requirement")
     data.ascension.rank = 3
-    check(Realms.unlocked(data,0),"shadow entry after Zen Master")
+    check(not Realms.unlocked(data,0),"Zen Master rank alone does not unlock Shadow")
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine completed Dark Kuze story unlock")
+    check(Realms.unlocked(data,0),"Shadow opens after Dark Kuze Act IV ending")
     check(not Realms.unlocked(data,1),"ember initially locked")
     var geometry: Array = ZenAscend.generate_lines()
     check(geometry.size()==204,"untouched winning line geometry")
@@ -117,5 +121,6 @@ func run() -> void:
         restored.close()
     elif FileAccess.file_exists(Story.SAVE):
         DirAccess.remove_absolute(ProjectSettings.globalize_path(Story.SAVE))
+    dark_kuze_gate.restore()
     print("ZEN ASCEND REALMS FAILURES=",fail)
     quit(1 if fail>0 else 0)
