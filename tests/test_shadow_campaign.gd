@@ -133,7 +133,7 @@ func run() -> void:
     data.settings.music = false
     check(SaveManager.save_data(data),"create legitimate 4x4 test entitlement")
     var seeded: Dictionary = Shadow.defaults()
-    seeded.page = 4
+    seeded.page = Shadow.GATES[0]
     check(Shadow.save_progress(seeded),"seed first boss")
     var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     check(scene!=null,"existing native 3D scene imports")
