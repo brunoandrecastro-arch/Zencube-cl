@@ -42,8 +42,8 @@ func _verify() -> void:
 
     game.open_menu()
     _press(game.popup, game.T("Zen Realm Chronicles 📖"))
-    _check(reader._screen.find_child("ZenChroniclesTab3",true,false)!=null and reader._screen.find_child("ZenChroniclesTab4",true,false)!=null,
-        "new 3×3/4×4 library tabs are present")
+    _check(reader._screen.find_child("ZenChroniclesTab3",true,false)!=null,"main Story tab present")
+    _check((reader._screen.find_child("ZenChroniclesTab4",true,false)!=null)==reader._realms_revealed(),"realm tab appears only after the dimensional reveal")
     _check(_button(reader._screen,"📚 Originaler Zen-Webcomic")==null,
         "legacy archives no longer crowd the public Chronicles menu")
     # Archived media remains testable via the retained internal entry points.
@@ -419,9 +419,11 @@ func _verify_languages() -> void:
         # Change the selected locale as the main settings menu would do.
         game.choose_language(language)
         reader.open_library()
-        var tab_story: String = {"de":"Geschichte · 3×3","en":"Story · 3×3","pt":"História · 3×3"}[language]
-        var tab_realm: String = {"de":"Reiche · 4×4","en":"Realms · 4×4","pt":"Reinos · 4×4"}[language]
-        _check(_button(reader._screen, tab_story) != null and _button(reader._screen, tab_realm) != null, "hub follows selected language " + language)
+        var tab_story: String = {"de":"Geschichte","en":"Story","pt":"História"}[language]
+        var tab_realm: String = {"de":"Reiche","en":"Realms","pt":"Reinos"}[language]
+        _check(_button(reader._screen, tab_story) != null, "story tab translated " + language)
+        var previously_started_realms: bool = reader._realms_revealed()
+        _check((_button(reader._screen,tab_realm)!=null)==previously_started_realms, "realm tab visibility reflects story breakthrough " + language)
         _check(_button(reader._screen,"📖 Originale Zen-Kampagne · 3×3")==null,"legacy archive remains hidden for " + language)
         reader.open_campaign_overview()
         _check(_button(reader._screen, Campaign.text_for(language, "open_epilogue")) != null, "overview follows selected language " + language)

@@ -1193,6 +1193,7 @@ func open_worlds() -> void:
     var box = modal("Welten")
     label("Welten ändern nur das Aussehen. Dein Rang steigt durch Siege gegen den Zen-Bot.", box, 14)
     label("Neue Welten schaltest du über Zen Ascension frei.", box, 13)
+    label(_act_one_ui("Bot-Schwierigkeit und Welt sind unabhängig. Schwierigkeit unter Spielen oder Einstellungen ändern.", "Worlds change the scenery only. Change bot difficulty under Play or Settings.", "Os mundos mudam apenas o cenário. Altera a dificuldade do bot em Jogar ou Definições."),box,13)
     for i in range(5):
         var number: int = i
         var card: PanelContainer = PanelContainer.new()
