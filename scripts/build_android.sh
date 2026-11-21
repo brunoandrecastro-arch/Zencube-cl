@@ -86,7 +86,7 @@ if [[ "$campaign_test" == true ]]; then
     if [[ "$celestial_test" == true ]]; then
       sed -i '/^\[preset\.0\.options\]$/,/^\[/ { s|^version/code=.*|version/code=30|; s|^version/name=.*|version/name="3.0"|; }' export_presets.cfg
       if [[ "${GITHUB_HEAD_REF:-}" == "feature/zen-act1-integration-20261120" || "${GITHUB_REF_NAME:-}" == "feature/zen-act1-integration-20261120" ]]; then
-        sed -i '/^\[preset\.0\.options\]$/,/^\[/ { s|^version/code=.*|version/code=41|; s|^version/name=.*|version/name="4.0.1"|; }' export_presets.cfg
+        sed -i '/^\[preset\.0\.options\]$/,/^\[/ { s|^version/code=.*|version/code=42|; s|^version/name=.*|version/name="4.0.2"|; }' export_presets.cfg
       fi
     fi
   elif [[ "$shadow_test" == true ]]; then

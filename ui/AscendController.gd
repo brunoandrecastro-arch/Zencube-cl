@@ -1639,6 +1639,26 @@ func _realm_story_compact(parts: Dictionary) -> void:
     footer_parent.add_theme_constant_override("separation",8)
     (parts.box as VBoxContainer).add_theme_constant_override("separation",9)
 
+# Act I-IV style cinematic boss portraits; actual battle rules and existing artwork stay intact.
+func _realm_boss_intro_layout(parts: Dictionary) -> void:
+    _realm_story_compact(parts)
+    var frame: PanelContainer = parts.frame
+    frame.anchor_left = 0.03
+    frame.anchor_right = 0.97
+    frame.anchor_top = 0.035
+    frame.anchor_bottom = 0.965
+
+func _realm_boss_portrait_height() -> float:
+    return clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,820.0)
+
+func _realm_boss_primary_action(parts: Dictionary, caption: String, callback: Callable) -> void:
+    # Play remains visible beneath the scrollable, full-height boss artwork.
+    var frame: PanelContainer = parts.frame
+    var stack: VBoxContainer = frame.get_child(0) as VBoxContainer
+    var launch: Button = action(stack,caption,callback,true)
+    launch.name = "RealmBossStartAction"
+    launch.custom_minimum_size.y = 62
+
 # -------- Realm Chronicles: isolated 4x4 playable story --------
 func start_realm_story() -> void:
     if not Mode.unlocked(data):
@@ -1732,19 +1752,19 @@ func _realm_story_present_intro() -> void:
     var stage: int = realm_story_stage
     var parts: Dictionary = _realm_dialog(RealmStory.text_for(lang(),"boss_%d" % stage),680)
     var body: VBoxContainer = parts.box
-    _realm_story_compact(parts)
+    _realm_boss_intro_layout(parts)
     var chapter_key: String = ["shadow","ember","celestial","satori"][RealmStory.chapter(stage)]
     text(body,RealmStory.text_for(lang(),chapter_key),17,Color("#e7cd9b"))
     if stage in [6,9]:
         text(body,RealmStory.text_for(lang(),"chapter%d_open" % (RealmStory.chapter(stage)+1)),14,Color("#b6d8ed"))
-    _realm_story_art(body,stage,224)
+    _realm_story_art(body,stage,_realm_boss_portrait_height())
     text(body,RealmStory.text_for(lang(),"intro_%d" % stage),15)
     text(body,RealmStory.text_for(lang(),"skin")+" · "+RealmStory.text_for(lang(),"saved"),13,Color("#b8d4c2"))
     var starter_info: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
     if lang() == "en": starter_info = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter_info = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter_info,14,Color("#f0dfb3"))
-    action(body,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin,true)
+    _realm_boss_primary_action(parts,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin)
     action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _open_realm_dialog(parts)
 
@@ -2059,9 +2079,9 @@ func _abyss_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
 func _abyss_intro() -> void:
     if not abyss_active: return
     var parts: Dictionary = _realm_dialog(Abyss.BOSS_NAMES[abyss_index],670)
-    _realm_story_compact(parts)
+    _realm_boss_intro_layout(parts)
     var body: VBoxContainer = parts.box
-    _abyss_add_art(body)
+    _abyss_add_art(body,_realm_boss_portrait_height())
     var opening: Array = [
         "Every stolen memory has a price.",
         "Some wounds remain even when the blade is silent.",
@@ -2073,7 +2093,7 @@ func _abyss_intro() -> void:
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter,14,Color("#e1c99d"))
-    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_abyss_begin,true)
+    _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_abyss_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
 
@@ -2255,9 +2275,9 @@ func _shadow_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
 func _shadow_intro() -> void:
     if not shadow_active: return
     var parts: Dictionary = _realm_dialog(Shadow.BOSS_NAMES[shadow_index],670)
-    _realm_story_compact(parts)
+    _realm_boss_intro_layout(parts)
     var body: VBoxContainer = parts.box
-    _shadow_add_art(body)
+    _shadow_add_art(body,_realm_boss_portrait_height())
     var opening: Array = [
         "The mist conceals the path, but never the next move.",
         "The mirror remembers every repeated mistake.",
@@ -2269,7 +2289,7 @@ func _shadow_intro() -> void:
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter,14,Color("#e1c99d"))
-    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_shadow_begin,true)
+    _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_shadow_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
 
@@ -2467,9 +2487,9 @@ func _ember_add_art(parent: VBoxContainer, height: float = 245.0) -> void:
 func _ember_intro() -> void:
     if not ember_active: return
     var parts: Dictionary = _realm_dialog(ember_model.BOSS_NAMES[ember_index],670)
-    _realm_story_compact(parts)
+    _realm_boss_intro_layout(parts)
     var body: VBoxContainer = parts.box
-    _ember_add_art(body)
+    _ember_add_art(body,_realm_boss_portrait_height())
     var opening: Array = [
         "See beyond the first move.",
         "A strategy without discipline is only a spark.",
@@ -2482,7 +2502,7 @@ func _ember_intro() -> void:
     if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
     elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
     text(body,starter,14,Color("#e1c99d"))
-    action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_ember_begin,true)
+    _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_ember_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
     _open_realm_dialog(parts)
 

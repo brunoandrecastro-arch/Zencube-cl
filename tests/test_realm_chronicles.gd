@@ -121,13 +121,15 @@ func run() -> void:
     check(story_popup != null,"boss introduction overlay exists")
     if story_popup != null:
         var story_frame: PanelContainer = story_popup.get_child(1) as PanelContainer
-        check(is_equal_approx(story_frame.anchor_top,0.155) and is_equal_approx(story_frame.anchor_bottom,0.845),"boss dialogue is compact on tall Android screens")
+        check(is_equal_approx(story_frame.anchor_top,0.035) and is_equal_approx(story_frame.anchor_bottom,0.965),"boss portrait uses cinematic near-full-screen layout")
         var stack: VBoxContainer = story_frame.get_child(0) as VBoxContainer
-        var redundant_back_found: bool = false
+        var pinned_buttons: Array = []
         for immediate_child in stack.get_children():
             if immediate_child is Button:
-                redundant_back_found = true
-        check(not redundant_back_found,"boss dialog no longer duplicates its Back button")
+                pinned_buttons.append(immediate_child)
+        check(pinned_buttons.size()==1 and (pinned_buttons[0] as Button).name=="RealmBossStartAction","single permanently visible battle action, no duplicate Back button")
+        var hero: TextureRect = story_popup.find_child("RealmChroniclesBossArt",true,false) as TextureRect
+        check(hero!=null and hero.custom_minimum_size.y>=400.0,"full-height centered boss art on Android")
     var tiles: Array = renderer.get("tiles")
     var tile: MeshInstance3D = tiles[0] as MeshInstance3D
     check(tile.material_override is StandardMaterial3D,"3D BoxMesh receives real material")
