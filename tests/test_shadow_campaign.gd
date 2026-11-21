@@ -2,6 +2,7 @@ extends SceneTree
 const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Campaign 2.0 Shadow Realm headless native integration checks.
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
+const Fracture = preload("res://story/ZenFractureState.gd")
 const Series = preload("res://core/ZenFinalGuardianSeries.gd")
 const Reader = preload("res://story/ZenShadowReader.gd")
 const Original = preload("res://story/ZenRealmChronicles.gd")
@@ -20,7 +21,7 @@ func _backup(path: String) -> void:
     if FileAccess.file_exists(path): backups[path] = FileAccess.get_file_as_bytes(path)
 
 func _restore() -> void:
-    for path in [Shadow.SAVE,Original.SAVE,SaveManager.PATH]:
+    for path in [Shadow.SAVE,Original.SAVE,Fracture.PATH,SaveManager.PATH]:
         if backups.has(path):
             var f := FileAccess.open(path,FileAccess.WRITE)
             if f != null:
@@ -32,6 +33,7 @@ func _restore() -> void:
 func run() -> void:
     _backup(Shadow.SAVE)
     _backup(Original.SAVE)
+    _backup(Fracture.PATH)
     _backup(SaveManager.PATH)
     check(Series.REALM_LEVELS==[1,2,3,2,4],"agreed fixed final guardian difficulty policy")
     var fixture: Dictionary = Shadow.defaults()
@@ -127,6 +129,7 @@ func run() -> void:
     var base_before: String = FileAccess.get_file_as_string(SaveManager.PATH) if FileAccess.file_exists(SaveManager.PATH) else ""
     var dark_kuze_gate = DarkKuzeFixture.new()
     check(dark_kuze_gate.grant(),"genuine completed Dark Kuze story unlock")
+    check(Fracture.mark_awakening(),"simulate completed one-time Moon Garden cinematic before Shadow reader return")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true,true,true,false,false]
