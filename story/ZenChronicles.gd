@@ -1303,6 +1303,8 @@ func _begin_moon_garden_breakthrough() -> void:
         open_library()
         return
     _act_one_release_back()
+    if _play_moon_shadow_video(Callable(self, "_after_moon_video")):
+        return
     if FractureState.portal_seen():
         _start_awakening_before_shadow()
         return
@@ -1311,6 +1313,26 @@ func _begin_moon_garden_breakthrough() -> void:
     get_tree().root.add_child(ceremony)
     ceremony.finished.connect(_after_moon_portal)
     ceremony.call("present",0,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+# A pre-rendered portrait cinematic plays only after the verified Act IV win.
+# It does not grant ranks, leaves or access by itself. Missing media falls
+# back to the established two-part real-time ceremony.
+func _play_moon_shadow_video(on_done: Callable) -> bool:
+    const VIDEO = preload("res://ui/ZenMoonShadowVideo.gd")
+    if not VIDEO.media_ready():
+        return false
+    _suspend_scene_music()
+    var ceremony: CanvasLayer = VIDEO.new()
+    get_tree().root.add_child(ceremony)
+    ceremony.finished.connect(on_done, CONNECT_ONE_SHOT)
+    ceremony.call("present", str(SaveManager.load_data().get("settings", {}).get("language", "en")))
+    return true
+
+func _after_moon_video() -> void:
+    if not FractureState.portal_seen() and not FractureState.mark_portal():
+        open_library()
+        return
+    _after_moon_awakening()
 
 # The REMADE Shadow page 1 already contains 4×4. Both cinematic stages
 # therefore finish BEFORE the first illustrated page is displayed.
@@ -1323,6 +1345,8 @@ func _after_moon_portal() -> void:
 func _start_awakening_before_shadow() -> void:
     if FractureState.awakening_seen():
         open_shadow_reader()
+        return
+    if _play_moon_shadow_video(Callable(self, "_after_moon_video")):
         return
     _suspend_scene_music()
     var ceremony: CanvasLayer = Awakening.new()
@@ -1341,6 +1365,8 @@ func replay_moon_shadow_transition() -> void:
     if _fracture_replaying or not bool(ActFour.load_progress().complete): return
     _fracture_replaying = true
     close_chronicles()
+    if _play_moon_shadow_video(Callable(self, "_finish_moon_shadow_replay")):
+        return
     _suspend_scene_music()
     var first: CanvasLayer = Awakening.new()
     get_tree().root.add_child(first)
