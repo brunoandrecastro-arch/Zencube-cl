@@ -113,6 +113,11 @@ func _ready() -> void:
     Mode.ensure(data)
     Realms.ensure(data)
     Achievements.ensure(data)
+    # Check the earned Act IV gate BEFORE touching saved Realm selection.
+    # Locked players return to Classic without rewriting their existing Realm save.
+    if not Mode.unlocked(data):
+        get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
+        return
     match_realm = int(data.ascend.realm_state.selected)
     # Older versions unlocked later Realms early. Restore a legal selection
     # without deleting statistics, achievements, bought hints or Zen Leaves.
@@ -124,9 +129,6 @@ func _ready() -> void:
         SaveManager.save_data(data)
     # Restore the correct fixed bot after the legacy selection is validated.
     bot_level = Realms.fixed_bot_level(match_realm)
-    if not Mode.unlocked(data):
-        get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
-        return
     lines = Mode.generate_lines()
     if lines.size() != 204:
         push_error("Zen Ascend: expected 204 win lines, got " + str(lines.size()))
