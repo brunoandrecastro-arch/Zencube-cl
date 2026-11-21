@@ -124,7 +124,7 @@ func _ready() -> void:
         SaveManager.save_data(data)
     # Restore the correct fixed bot after the legacy selection is validated.
     bot_level = Realms.fixed_bot_level(match_realm)
-    if not Mode.unlocked(data) and not (Abyss.qa_mode() or Shadow.qa_mode() or Realm2.qa_mode()):
+    if not Mode.unlocked(data):
         get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
         return
     lines = Mode.generate_lines()
