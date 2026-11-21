@@ -1,4 +1,5 @@
 name: Android debug APK
+run-name: ${{ (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') && 'ZenCube Chronicles 4.0' || 'Android debug APK' }}
 on:
   workflow_dispatch:
   push:
@@ -408,11 +409,21 @@ jobs:
       - name: Verify Celestial assets in APK
         if: env.ZENCUBE_CELESTIAL_TEST == 'true'
         run: python3 tests/test_celestial_media.py --apk build/ZenCube-3D.apk
+      - name: Name ZenCube Chronicles 4.0 APK
+        if: github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'
+        run: mv build/ZenCube-3D.apk build/ZenCube-Chronicles-4.0.apk
+      - name: Upload ZenCube Chronicles 4.0 APK
+        if: github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-Chronicles-4.0
+          path: build/ZenCube-Chronicles-4.0.apk
+          if-no-files-found: error
       - name: Name ZenCube 3.0 test APK
-        if: env.ZENCUBE_CELESTIAL_TEST == 'true'
+        if: env.ZENCUBE_CELESTIAL_TEST == 'true' && github.head_ref != 'feature/zen-act1-integration-20261120' && github.ref_name != 'feature/zen-act1-integration-20261120'
         run: mv build/ZenCube-3D.apk build/ZenCube-3D-3.0.apk
       - name: Upload ZenCube 3.0 test APK
-        if: env.ZENCUBE_CELESTIAL_TEST == 'true'
+        if: env.ZENCUBE_CELESTIAL_TEST == 'true' && github.head_ref != 'feature/zen-act1-integration-20261120' && github.ref_name != 'feature/zen-act1-integration-20261120'
         uses: actions/upload-artifact@v4
         with:
           name: ZenCube-3D-3.0

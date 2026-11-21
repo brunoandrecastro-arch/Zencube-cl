@@ -59,6 +59,9 @@ if [[ "$realm2_test" == true ]]; then
 fi
 if [[ "$celestial_test" == true && "$realm2_test" == true ]]; then
   campaign_label="ZenCube 3D 3.0"
+  if [[ "${GITHUB_HEAD_REF:-}" == "feature/zen-act1-integration-20261120" || "${GITHUB_REF_NAME:-}" == "feature/zen-act1-integration-20261120" ]]; then
+    campaign_label="ZenCube Chronicles 4.0"
+  fi
 fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.
@@ -78,6 +81,9 @@ if [[ "$campaign_test" == true ]]; then
     if [[ "$celestial_test" == true ]]; then
       sed -i '0,/zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test/s//zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test,zencube_celestial_qa/' export_presets.cfg
       sed -i '/^\[preset\.0\.options\]$/,/^\[/ { s|^version/code=.*|version/code=30|; s|^version/name=.*|version/name="3.0"|; }' export_presets.cfg
+      if [[ "${GITHUB_HEAD_REF:-}" == "feature/zen-act1-integration-20261120" || "${GITHUB_REF_NAME:-}" == "feature/zen-act1-integration-20261120" ]]; then
+        sed -i '/^\\[preset\\.0\\.options\\]$/,/^\\[/ { s|^version/code=.*|version/code=40|; s|^version/name=.*|version/name="4.0"|; }' export_presets.cfg
+      fi
     fi
   elif [[ "$shadow_test" == true ]]; then
     # Both chapters are testable in this separate Campaign 2.0 build.
