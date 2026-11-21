@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Standalone 4x4 rule, unlock and save regression, run headlessly.
 var failures: int = 0
 func check(value: bool, details: String) -> void:
@@ -51,25 +52,24 @@ func run() -> void:
     check(not ZenAscend.unlocked(data), "rank 2 locked even in debug")
     check(not ZenAscend.unlocked_for_release(data), "production rank 2 still locked")
     data.ascension.rank = 3
-    check(ZenAscend.unlocked_for_release(data), "production: Zen Master unlocks 4x4")
-    check(ZenAscend.unlocked(data), "Zen Master unlocks even without test flag")
+    check(not ZenAscend.unlocked(data), "Zen Master still needs completed Act IV")
+    data.economy.ascend_owned = true
+    check(not ZenAscend.unlocked(data), "old shop flag cannot bypass Dark Kuze")
     data.economy.leaves = 900
-    check(not ZenAscend.buy(data) and int(data.economy.leaves)==900, "no store charge after Zen Master")
+    check(not ZenAscend.buy(data) and int(data.economy.leaves)==900, "shop cannot buy story skip")
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(), "completed legitimate Dark Kuze trial and Act IV ending")
+    check(ZenAscend.unlocked_for_release(data), "Act IV story unlocks release")
+    check(ZenAscend.unlocked(data), "Act IV story unlocks Android debug")
     data.ascension.rank = 0
-    data.economy.leaves = 0
-    check(not ZenAscend.buy(data), "insufficient currency")
-    data.economy.leaves = 900
-    check(ZenAscend.buy(data), "shop buy")
-    check(int(data.economy.leaves)==50 and bool(data.economy.ascend_owned),"shop deducts once")
-    check(ZenAscend.unlocked_for_release(data), "purchase unlocks release")
-    check(ZenAscend.unlocked(data), "purchase allows entry regardless of build variant")
-    check(not ZenAscend.buy(data), "cannot buy twice")
-    check(int(data.economy.leaves)==50,"no double charge")
+    check(ZenAscend.unlocked(data), "story unlock independent of rank once earned")
+    check(not ZenAscend.buy(data) and int(data.economy.leaves)==900, "no duplicate charge")
     # 4x4 never alters Classic's 54 cells, 108 lines or the saved match.
     check(BoardModel.new().cells.size()==54,"Classic 54 cells")
     check(RulesEngine.new().lines.size()==108,"Classic 108 lines")
     check(SaveManager.valid_game(SaveManager.defaults().game)==false,"fresh Classic game stays distinct")
     var scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     check(scene != null, "separate scene exists")
+    dark_kuze_gate.restore()
     print("ZEN ASCEND 4X4 CHECK FAILURES=",failures)
     quit(0 if failures==0 else 1)

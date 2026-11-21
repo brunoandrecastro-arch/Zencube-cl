@@ -1,4 +1,5 @@
 extends SceneTree
+const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Campaign 2.0 Shadow Realm headless native integration checks.
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Series = preload("res://core/ZenFinalGuardianSeries.gd")
@@ -124,6 +125,8 @@ func run() -> void:
     check(Shadow.load_progress().completed,"Chapter 1 completion saved")
     var original_before: String = FileAccess.get_file_as_string(Original.SAVE) if FileAccess.file_exists(Original.SAVE) else ""
     var base_before: String = FileAccess.get_file_as_string(SaveManager.PATH) if FileAccess.file_exists(SaveManager.PATH) else ""
+    var dark_kuze_gate = DarkKuzeFixture.new()
+    check(dark_kuze_gate.grant(),"genuine completed Dark Kuze story unlock")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true,true,true,false,false]
@@ -161,6 +164,7 @@ func run() -> void:
         await process_frame
     check(FileAccess.get_file_as_string(Original.SAVE)==original_before if original_before!="" else not FileAccess.file_exists(Original.SAVE),
         "original Realm Chronicles progress remains untouched")
+    dark_kuze_gate.restore()
     _restore()
     print("SHADOW CAMPAIGN FAILURES=",failures," / 30 user pages in repo=",page_files)
     quit(0 if failures==0 else 1)

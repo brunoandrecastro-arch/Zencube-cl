@@ -184,6 +184,7 @@ func run() -> void:
                 check(reader._page_counter.text=="12 / 12", "Act IV final page after victory")
                 # Do not trigger the cinematic in this isolated save regression test.
                 check(not ActFour.load_progress().complete, "Finish Chapter remains explicit")
+                check(not ZenAscend.unlocked(SaveManager.load_data()), "beating Dark Kuze without finishing the Manhwa still keeps 4×4 locked")
                 check(ActThree.load_progress().complete, "Act III survives")
     reader.close_chronicles()
     reader.open_act_one()
