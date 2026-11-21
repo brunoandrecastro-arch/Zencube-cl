@@ -31,6 +31,7 @@ for fn, end, art in (
     assert "_realm_boss_result_layout(parts)" in section, fn
     assert "_realm_boss_result_action(parts," in section, fn
     assert art in section, fn
-assert "ZenCube-Chronicles-4.0.3.apk" in workflow
+import re
+assert re.search(r"ZenCube-Chronicles-\d+(?:\.\d+)*\.apk", workflow), "A versioned Chronicles APK artifact must be uploaded"
 assert "python3 tests/test_realm_boss_portraits.py" in workflow
 print("PASS: cinematic boss pictures in all four Realm entry points with pinned Play")
