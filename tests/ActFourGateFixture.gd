@@ -13,10 +13,10 @@ func grant() -> bool:
     var rules: RulesEngine = RulesEngine.new()
     var board: BoardModel = Act.new_board()
     var line: Array = rules.lines[0]
-    if line.size() != 3: return false
-    for index in range(3):
+    if line.size() != 4: return false
+    for index in range(4):
         if not rules.play(board,int(line[index])): return false
-        if index == 2: break
+        if index == 3: break
         var placed: bool = false
         for cell in range(54):
             if line.has(cell) or board.cells[cell] != 0: continue
