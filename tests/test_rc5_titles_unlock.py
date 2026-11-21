@@ -32,8 +32,8 @@ for code in ('EN', 'PT'):
     assert dictionary['Überarbeitete Bot-Stufen: Mittel fairer, Meister anspruchsvoll und schlagbar.']
 assert 'const TEST_UNLOCKED: bool = false' in mode, 'debug must obey Zen-Meister or purchase gate'
 assert 'static func unlocked_for_release(data: Dictionary)' in mode
-assert 'get("rank",0)) >= 3' in mode, 'production unlock must start at Zen Meister rank (3)'
-assert 'if unlocked_for_release(data): return false' in mode, 'already earned mode must not charge leaves'
+assert 'DarkKuze.load_progress().complete' in mode, 'Zen Ascend only after completed Dark Kuze chapter'
+assert 'static func buy(_data: Dictionary) -> bool:' in mode and 'data.economy.leaves -= PRICE' not in mode, 'cannot pay to skip Act IV'
 assert 'if bool(last_rank_up.get("rank_up",false))' in ui, 'rank-up ceremony must still trigger'
 assert 'Zen Ascend freigeschaltet!' not in ui, 'never reveal the new dimension at Zen Master rank'
 assert 'var block_probability: float = [0.70, 0.66, 0.75, 0.91, 1.0][level]' in ai

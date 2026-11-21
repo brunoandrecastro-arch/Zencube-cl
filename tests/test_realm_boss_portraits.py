@@ -19,6 +19,18 @@ for method, next_func, image in (
     assert "_realm_boss_primary_action(parts," in block,method
     assert image in block,method
 assert "STRETCH_KEEP_ASPECT_CENTERED" in code
-assert "ZenCube-Chronicles-4.0.2.apk" in workflow
+assert "func _realm_boss_result_layout(parts: Dictionary)" in code
+assert "scene_art.custom_minimum_size.y = _realm_boss_portrait_height()" in code
+for fn, end, art in (
+    ("_realm_story_result","_realm_story_retry","_realm_story_art(body,realm_story_stage,_realm_boss_portrait_height(),true)"),
+    ("_shadow_result","_shadow_retry","_shadow_add_art(body,_realm_boss_portrait_height(),true)"),
+    ("_abyss_result","_abyss_retry","_abyss_add_art(body,_realm_boss_portrait_height(),true)"),
+    ("_ember_result","_ember_retry","_ember_add_art(body,_realm_boss_portrait_height(),true)"),
+):
+    section = code.split("func " + fn + "(",1)[1].split("func " + end + "(",1)[0]
+    assert "_realm_boss_result_layout(parts)" in section, fn
+    assert "_realm_boss_result_action(parts," in section, fn
+    assert art in section, fn
+assert "ZenCube-Chronicles-4.0.3.apk" in workflow
 assert "python3 tests/test_realm_boss_portraits.py" in workflow
 print("PASS: cinematic boss pictures in all four Realm entry points with pinned Play")
