@@ -1,5 +1,6 @@
 extends SceneTree
 const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
+const Fracture = preload("res://story/ZenFractureState.gd")
 # ZenCube 2.0 Realm regression: real auto-awarded Realm tasks vs active Zen Challenges.
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
@@ -20,7 +21,7 @@ func backup(path: String) -> void:
     if FileAccess.file_exists(path): snapshots[path]=FileAccess.get_file_as_bytes(path)
 
 func restore() -> void:
-    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,SaveManager.PATH]:
+    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,Fracture.PATH,SaveManager.PATH]:
         if snapshots.has(path):
             var f: FileAccess = FileAccess.open(path,FileAccess.WRITE)
             if f!=null:
@@ -38,7 +39,7 @@ func seed_story(chapter: int, done: bool) -> void:
     else: check(Abyss.save_progress(story),"seed Abyss boss/story")
 
 func run() -> void:
-    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,SaveManager.PATH]:
+    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,Fracture.PATH,SaveManager.PATH]:
         backup(path)
         if FileAccess.file_exists(path):
             DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
@@ -51,6 +52,7 @@ func run() -> void:
     check(Realm2.can_unlock(3,3,true),"3+3 unlock predicate")
     var dark_kuze_gate = DarkKuzeFixture.new()
     check(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
+    check(Fracture.mark_awakening(),"seed completed Moon Garden transition for direct Shadow reader test")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true,true,true,false,false]
