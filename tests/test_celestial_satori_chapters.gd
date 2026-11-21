@@ -41,7 +41,7 @@ func run() -> void:
     ProjectSettings.set_setting(qa_key,false)
     assert_ok(Story.save_progress(Story.defaults()),"seed empty Realm Chronicles to test combined gates")
     var dark_kuze_gate = DarkKuzeFixture.new()
-    check(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
+    assert_ok(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
