@@ -334,6 +334,9 @@ jobs:
       - name: Require verified final arena pack before Campaign 2.0 APK export
         if: env.ZENCUBE_REALM_2_0_TEST == 'true' && ((github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'))
         run: python3 tests/test_campaign2_arenas.py
+      - name: Require approved new Kuze / Shadow Kuze launcher icon
+        if: (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120')
+        run: python3 tests/test_zencube_new_icon.py
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK
