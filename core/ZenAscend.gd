@@ -68,7 +68,7 @@ static func t(source: String, language: String) -> String:
 
 # Strict canonical story checkpoint; Dark Kuze's real winning board is validated
 # by ZenActFour.load_progress(). Purchased flags and Classic ranks are irrelevant.
-static func unlocked_for_release(_data: Dictionary) -> bool:
+static func unlocked_for_release(data: Dictionary) -> bool:
     return bool(DarkKuze.load_progress().complete)
 
 static func test_access_enabled() -> bool:
