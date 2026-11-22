@@ -1,8 +1,6 @@
 name: ZenCube 4.0.5 unsigned AAB candidate
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [fix/campaign2-build337-feedback, feature/moon-shadow-video-transition-20261121]
 permissions:
   contents: read
 jobs:

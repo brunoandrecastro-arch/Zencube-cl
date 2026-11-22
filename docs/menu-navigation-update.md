@@ -44,11 +44,16 @@ to page 12. The video checkpoint does not grant the Shadow Realm; that follows
 the existing final-page completion and awakening sequence.
 
 The normal release build must use the existing full premium media extraction.
-The complete unsigned Alpha-update candidate uses Play version **4.0.5 (45)**
-and the existing package **com.zencube.game.play**. The candidate workflow
-extracts all premium media and verifies the original video inside the bundle.
-Signing remains local with the existing upload key; the workflow does not upload
-or publish anything to Google Play.
+First deliver the complete **ZenCube Menu Test** APK under the separate package
+**com.zencube.game.menupreview**, with its own progress and a stable test signing
+key. It includes all premium media and keeps normal story gates. It can be
+installed alongside the existing Alpha app without replacing that app or its
+progress.
+
+The future Alpha-update preset uses **4.0.5 (45)** and the existing package
+**com.zencube.game.play**. Its AAB workflow is **manual only**. Do not run it until
+the user has tested the APK and approved proceeding to an AAB. Signing remains
+local with the existing upload key; no workflow publishes anything to Google Play.
 
 ## Validation and previews
 
