@@ -1,13 +1,13 @@
-name: ZenCube 4.0.4 unsigned AAB candidate
+name: ZenCube 4.0.5 unsigned AAB candidate
 on:
   workflow_dispatch:
   pull_request:
-    branches: [fix/campaign2-build337-feedback]
+    branches: [fix/campaign2-build337-feedback, feature/moon-shadow-video-transition-20261121]
 permissions:
   contents: read
 jobs:
   export:
-    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/zen-act1-integration-20261120'
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.head_ref == 'feature/menu-clarity-video-20261122'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -45,15 +45,15 @@ jobs:
           unzip -joq templates.tpz 'templates/android_source.zip' 'templates/version.txt' -d "$templates_dir"
           printf 'GODOT=%s/Godot_v4.5.1-stable_linux.x86_64\nBUNDLETOOL_JAR=%s/bundletool.jar\n' \
             "$download_dir" "$download_dir" >> "$GITHUB_ENV"
-      - name: Check Play preset 4.0.4 and disable development/QA flags
+      - name: Check Play preset 4.0.5 and disable development/QA flags
         run: |
           python3 - <<'PY'
           import configparser, json
           c=configparser.ConfigParser(interpolation=None); c.read('export_presets.cfg')
           p=next(x for x in c.sections() if c[x].get('name')=='"Android Play"')
           opt=c[p+'.options']
-          assert opt['version/code']=='44'
-          assert json.loads(opt['version/name'])=='4.0.4'
+          assert opt['version/code']=='45'
+          assert json.loads(opt['version/name'])=='4.0.5'
           assert json.loads(opt['package/unique_name'])=='com.zencube.game.play'
           assert c[p]['custom_features']=='""'
           assert opt['package/signed']=='false'
@@ -96,17 +96,20 @@ jobs:
         run: |
           python3 tests/test_zen_chronicles_i18n.py
           bash scripts/build_play_aab.sh
-      - name: Package unsigned ZenCube 3D 4.0.4 and record SHA-256
+      - name: Verify campaign entry and the real Act IV video
+        run: timeout 65 "$GODOT" --headless --path . --script tests/test_home_navigation.gd
+      - name: Package unsigned ZenCube 3D 4.0.5 and record SHA-256
         run: |
           set -euo pipefail
-          mv build/ZenCube-3D-unsigned.aab build/ZenCube-3D-4.0.4-unsigned.aab
-          sha256sum build/ZenCube-3D-4.0.4-unsigned.aab | tee build/ZenCube-3D-4.0.4-SHA256.txt
-          stat -c 'AAB size: %s bytes' build/ZenCube-3D-4.0.4-unsigned.aab | tee -a build/ZenCube-3D-4.0.4-SHA256.txt
-          echo 'Candidate only: verify live Play package identifier, highest existing Play version code, and active upload certificate before signing.' >> build/ZenCube-3D-4.0.4-SHA256.txt
+          mv build/ZenCube-3D-unsigned.aab build/ZenCube-3D-4.0.5-unsigned.aab
+          sha256sum build/ZenCube-3D-4.0.5-unsigned.aab | tee build/ZenCube-3D-4.0.5-SHA256.txt
+          stat -c 'AAB size: %s bytes' build/ZenCube-3D-4.0.5-unsigned.aab | tee -a build/ZenCube-3D-4.0.5-SHA256.txt
+          echo 'Candidate only: verify live Play package identifier, highest existing Play version code, and active upload certificate before signing.' >> build/ZenCube-3D-4.0.5-SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ZenCube-3D-4.0.4-unsigned-candidate
+          name: ZenCube-3D-4.0.5-unsigned-candidate
           path: |
-            build/ZenCube-3D-4.0.4-unsigned.aab
-            build/ZenCube-3D-4.0.4-SHA256.txt
+            build/ZenCube-3D-4.0.5-unsigned.aab
+            build/ZenCube-3D-4.0.5-SHA256.txt
+            SIGN_ZENCUBE_4_0_5.ps1
           if-no-files-found: error

@@ -76,8 +76,12 @@ def check_native_libraries(archive, entries):
 
 def check_game_assets(archive, entries):
     assets = {name.removeprefix(ASSET_BASE) for name in entries if name.startswith(ASSET_BASE)}
-    for path in ("assets.sparsepck", "_cl_", "project.binary", "story/ZenChronicles.gdc"):
+    for path in ("assets.sparsepck", "_cl_", "project.binary", "story/ZenChronicles.gdc", "story/ZenJourney.gdc", "ui/ZenHomeMenu.gdc"):
         require(path in assets, f"Missing game resource: {path}")
+    video_path = "assets/video/moon_shadow_3x3_to_4x4.ogv"
+    require(video_path in assets, "The approved Act IV video is missing from the release bundle")
+    require(archive.read(ASSET_BASE + video_path) == (ROOT / video_path).read_bytes(), "Act IV video bytes changed in export")
+    print("Campaign home, journey navigation and original Act IV video included.")
     for scene in ("Main.tscn", "Ascend.tscn"):
         check_remap(archive, assets, scene, ".remap")
 
