@@ -41,7 +41,7 @@ func _verify() -> void:
     var on_disk := FileAccess.get_file_as_string(SaveManager.PATH)
 
     game.open_menu()
-    _press(game.popup, "Zen Chronicles · Geschichte 📖")
+    _press(game.popup, "Zen Chronicles")
     _check(reader._screen.find_child("ZenChroniclesTab3",true,false)!=null,"main Story tab present")
     _check((reader._screen.find_child("ZenChroniclesTab4",true,false)!=null)==reader._realms_revealed(),"realm tab appears only after the dimensional reveal")
     _check(_button(reader._screen,"📚 Originaler Zen-Webcomic")==null,

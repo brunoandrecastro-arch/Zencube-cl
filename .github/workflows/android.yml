@@ -11,6 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     env:
+      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' }}
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
       ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
@@ -100,7 +101,20 @@ jobs:
         if: env.ZENCUBE_CELESTIAL_TEST == 'true'
         run: python3 tests/test_celestial_media.py --extract
       - name: Import project and check GDScript
+        # Full preview media is extracted below before importing the project.
+        if: env.ZENCUBE_MENU_PREVIEW != 'true'
         run: |
+          "$GODOT" --headless --editor --import --quit
+      - name: Extract every premium chapter for the menu test APK
+        if: env.ZENCUBE_MENU_PREVIEW == 'true'
+        run: |
+          unzip -oq ZenCube_Abyss_Media_Pages.zip -d .
+          unzip -oq ZenCube_Abyss_Media_Boss_Audio.zip -d .
+          python3 tests/test_shadow_remake_media.py --extract
+          unzip -oq ZenCube_2.0_Realm_Artwork.zip -d .
+          python3 tests/test_campaign2_arenas.py --extract
+          unzip -oq ZenCube_Ember_Media.zip -d .
+          python3 tests/test_celestial_media.py --extract
           "$GODOT" --headless --editor --import --quit
       - name: Verify actual loaded boss arena paths and texture dimensions
         if: env.ZENCUBE_CELESTIAL_TEST == 'true'
@@ -277,6 +291,8 @@ jobs:
         run: timeout 100 "$GODOT" --headless --path . --script tests/test_zen_act_one.gd
       - name: Verify Moon-to-Shadow 3×3/4×4 cinematic and replay-safe checkpoint
         run: timeout 65 "$GODOT" --headless --path . --script tests/test_moon_shadow_transition.gd
+      - name: Verify campaign home, optional tutorial, unlock tasks and Act IV video
+        run: timeout 65 "$GODOT" --headless --path . --script tests/test_home_navigation.gd
       - name: Tactical simulations
         run: |
           g++ -O3 -std=c++17 tests/simulate.cpp -o /tmp/zencube-sim
@@ -284,6 +300,12 @@ jobs:
       # A stable debug key lets future Realm Chronicles test builds update
       # the SAME separately installed app, instead of creating a new signature
       # on every ephemeral runner. No Google Play/upload key is involved.
+      - name: Reuse the separate menu-preview signing key
+        if: env.ZENCUBE_MENU_PREVIEW == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/zencube-debug.keystore
+          key: zencube-menu-preview-debug-key-v1
       - name: Reuse Realm Chronicles debug signing key
         if: env.ZENCUBE_REALM_CHRONICLES_TEST == 'true'
         uses: actions/cache@v4
@@ -418,6 +440,39 @@ jobs:
                   assert base in names or base + ".import" in names, base
               assert "assets/story/act01/zen_master_trial.json" in names
           PY
+      - name: Verify the complete menu preview before delivery
+        if: env.ZENCUBE_MENU_PREVIEW == 'true'
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('build/ZenCube-3D.apk') as apk:
+              names = set(apk.namelist())
+              video = 'assets/assets/video/moon_shadow_3x3_to_4x4.ogv'
+              assert video in names, 'Approved Act IV video missing'
+              with open('assets/video/moon_shadow_3x3_to_4x4.ogv','rb') as source:
+                  assert apk.read(video) == source.read(), 'Video changed in export'
+              for script in ('ui/ZenHomeMenu.gdc','story/ZenJourney.gdc','story/ZenChronicles.gdc'):
+                  assert 'assets/'+script in names, script
+              for act in range(1,5):
+                  for page in range(1,13):
+                      source = f'assets/story/act{act:02d}/pages/zen_chronicles_ch01_act{act:02d}_{page:02d}.png'
+                      assert source in names or source+'.import' in names, source
+              for realm in ('shadow_campaign','abyss_of_memories','ember_campaign','celestial_campaign'):
+                  for page in range(1,31):
+                      source = f'assets/assets/{realm}/pages/page_{page:02d}.webp'
+                      assert source in names or source+'.import' in names, source
+          print('Preview verified: menu, journey, original video, 48 Act pages and 120 Realm pages')
+          PY
+      - name: Deliver the separate menu test APK
+        if: env.ZENCUBE_MENU_PREVIEW == 'true'
+        run: mv build/ZenCube-3D.apk build/ZenCube-Menu-Test-4.0.5.apk
+      - name: Upload menu test APK
+        if: env.ZENCUBE_MENU_PREVIEW == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenCube-Menu-Test-4.0.5
+          path: build/ZenCube-Menu-Test-4.0.5.apk
+          if-no-files-found: error
       - name: Verify Celestial assets in APK
         if: env.ZENCUBE_CELESTIAL_TEST == 'true'
         run: python3 tests/test_celestial_media.py --apk build/ZenCube-3D.apk
@@ -492,7 +547,7 @@ jobs:
           path: build/ZenCube-3D-Enduser-Preview.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
-        if: env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_ABYSS_TEST != 'true' && env.ZENCUBE_SHADOW_TEST != 'true' && env.ZENCUBE_REALM_2_0_TEST != 'true'
+        if: env.ZENCUBE_MENU_PREVIEW != 'true' && env.ZENCUBE_CAMPAIGN_TEST != 'true' && env.ZENCUBE_REALM_CHRONICLES_TEST != 'true' && env.ZENCUBE_ABYSS_TEST != 'true' && env.ZENCUBE_SHADOW_TEST != 'true' && env.ZENCUBE_REALM_2_0_TEST != 'true'
         with:
           name: ZenCube-3D-debug
           path: |

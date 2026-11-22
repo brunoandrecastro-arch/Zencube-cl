@@ -47,7 +47,7 @@ func run() -> void:
     game.open_menu()
     check(game.popup != null, "main menu opens")
     if game.popup != null:
-        check(find_button(game.popup, game.T("Spielen")) != null, "play entry")
+        check(game.popup.find_child("HomeCampaign", true, false) != null, "campaign entry")
     game.data.ascension.completed = [false, false, false, false, false]
     game.data.stats.ai_wins = [0, 0, 0, 0, 0]
     game.open_play_menu()

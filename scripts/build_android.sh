@@ -36,6 +36,7 @@ shadow_test="${ZENCUBE_SHADOW_TEST:-false}"
 realm2_test="${ZENCUBE_REALM_2_0_TEST:-false}"
 celestial_test="${ZENCUBE_CELESTIAL_TEST:-false}"
 release_gates="${ZENCUBE_RELEASE_GATES:-false}"
+menu_preview="${ZENCUBE_MENU_PREVIEW:-false}"
 campaign_package="com.zencube.game.campaign"
 campaign_label="ZenCube Campaign Test"
 if [[ "$realm_test" == true ]]; then
@@ -63,6 +64,12 @@ if [[ "$celestial_test" == true && "$realm2_test" == true ]]; then
   if [[ "${GITHUB_HEAD_REF:-}" == "feature/zen-act1-integration-20261120" || "${GITHUB_REF_NAME:-}" == "feature/zen-act1-integration-20261120" ]]; then
     campaign_label="ZenCube Chronicles 4.0"
   fi
+fi
+if [[ "$menu_preview" == true ]]; then
+  campaign_test=true
+  release_gates=true
+  campaign_package="com.zencube.game.menupreview"
+  campaign_label="ZenCube Menu Test"
 fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.
@@ -94,6 +101,9 @@ if [[ "$campaign_test" == true ]]; then
     sed -i '0,/custom_features=""/s//custom_features="zencube_shadow_test,zencube_abyss_test"/' export_presets.cfg
   elif [[ "$abyss_test" == true ]]; then
     sed -i '0,/custom_features=""/s//custom_features="zencube_abyss_test"/' export_presets.cfg
+  fi
+  if [[ "$menu_preview" == true ]]; then
+    sed -i '/^\[preset\.0\.options\]$/,/^\[/ { s|^version/code=.*|version/code=45|; s|^version/name=.*|version/name="4.0.5-test"|; }' export_presets.cfg
   fi
 fi
 

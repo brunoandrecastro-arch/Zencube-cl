@@ -29,6 +29,7 @@ const CelestialReader = preload("res://story/ZenCelestialReader.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const ChallengeMenu = preload("res://story/ZenRealmChallengeMenu.gd")
+const Journey = preload("res://story/ZenJourney.gd")
 const Portal2 = preload("res://ui/ZenRealmTravelCeremony.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 # German is the authored source language; EN and PT-PT live in a separate JSON.
@@ -325,18 +326,15 @@ func _library_story_cards(parent: VBoxContainer) -> void:
     if not playable:
         _make_label(campaign_ui("Wechsle zum klassischen 3×3, um diese Geschichte zu spielen.","Return to Classic 3×3 to play this story.","Regressa ao Clássico 3×3 para jogar esta história."),parent,14,MUTED)
     var classic: Dictionary = SaveManager.load_data()
-    _library_card(parent,"ACT I · The Roots of Peace","res://story/act01/pages/zen_chronicles_ch01_act01_01.png","Zen Garden",playable,bool(ActOne.load_progress().complete),open_act_one,"ActOneCard")
+    _library_card(parent,"ACT I · The Roots of Peace","res://story/act01/pages/zen_chronicles_ch01_act01_01.png",Journey.gate_hint(classic,1,_active_language),playable,bool(ActOne.load_progress().complete),open_act_one,"ActOneCard")
     var second_allowed: bool = ActTwo.unlocked(classic) and ActTwo.media_ready() and playable
-    var second_hint: String = "Bamboo Path · "+campaign_ui("Leicht %d/3","Easy %d/3","Fácil %d/3") % ActTwo.easy_wins(classic)
-    if not bool(ActOne.load_progress().complete): second_hint += " · "+campaign_ui("Akt I abschließen","Finish Act I","Concluir Ato I")
+    var second_hint: String = Journey.gate_hint(classic,2,_active_language)
     _library_card(parent,"ACT II · The Art of Balance",ActTwo.page_path(1),second_hint,second_allowed,bool(ActTwo.load_progress().complete),open_act_two,"ActTwoCard")
     var third_allowed: bool = ActThree.unlocked(classic) and ActThree.media_ready() and playable
-    var third_hint: String = "Mountain Temple · "+campaign_ui("Mittel %d/5","Medium %d/5","Médio %d/5") % ActThree.medium_wins(classic)
-    if not bool(ActTwo.load_progress().complete): third_hint += " · "+campaign_ui("Akt II abschließen","Finish Act II","Concluir Ato II")
+    var third_hint: String = Journey.gate_hint(classic,3,_active_language)
     _library_card(parent,"ACT III · The Beautiful Imperfection",ActThree.page_path(1),third_hint,third_allowed,bool(ActThree.load_progress().complete),open_act_three,"ActThreeCard")
     var fourth_allowed: bool = ActFour.unlocked(classic) and ActFour.media_ready() and playable
-    var fourth_hint: String = "Moon Garden · "+campaign_ui("Schwer %d/7","Hard %d/7","Difícil %d/7") % ActFour.hard_wins(classic)
-    if not bool(ActThree.load_progress().complete): fourth_hint += " · "+campaign_ui("Akt III abschließen","Finish Act III","Concluir Ato III")
+    var fourth_hint: String = Journey.gate_hint(classic,4,_active_language)
     _library_card(parent,"ACT IV · The Day Everything Broke",ActFour.page_path(1),fourth_hint,fourth_allowed,bool(ActFour.load_progress().complete),open_act_four,"ActFourCard")
     if bool(ActFour.load_progress().complete):
         var replay_button: Button = _make_button(campaign_ui("✦ Übergang erneut ansehen","✦ Replay the Awakening","✦ Rever o Despertar"),parent,replay_moon_shadow_transition)
