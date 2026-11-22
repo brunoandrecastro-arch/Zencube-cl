@@ -29,6 +29,8 @@ def strings_from_ui(source):
     return keys
 
 keys=strings_from_ui(ui)
+for file in ('ui/ZenHomeMenu.gd','story/ZenJourney.gd'):
+    keys.update(strings_from_ui((ROOT/file).read_text(encoding='utf-8')))
 for file in ('ui/TutorialController.gd','core/CubeGeometry.gd'):
     s=(ROOT/file).read_text(encoding='utf-8')
     # Both arrays are German-localization sources; they are all rendered via T().
@@ -42,7 +44,7 @@ keys.update(['Anfänger','Fortgeschritten','Experte','Zen-Meister','Großmeister
     'Du spielst X  ·  Zen-Bot spielt O',
     'Zen erreicht!','Zen-Schüler','Gewonnen!','Verloren','X gewinnt','O gewinnt','Noch eine Runde?'])
 # Proper names, symbols, explicit language endonyms and formatting-only strings.
-exempt={'','ZenCube 3D','Zen Ascend','☰','◀','▶','🌐','Deutsch','English','Português',
+exempt={'','ZenCube 3D','Zen Chronicles','Zen Ascend','☰','◀','▶','🌐','⚙','🍃 %d','Deutsch','English','Português',
         'Deutsch  ·  English  ·  Português','%s: %d / %d'}
 keys-=exempt
 keys.discard("Zen-Bot · ")  # Eigenname, kein zu übersetzender Text

@@ -54,12 +54,14 @@ func run() -> void:
         printerr("FATAL: Main scene missing UI or cube. Review runtime errors above.")
         quit(1)
         return
-    # A first-time user must see onboarding, not a forced second-player match.
+    game.choose_language("de")
+    # Help is opt-in; the campaign remains the primary way to start.
     game.open_welcome()
     check(game.popup != null,"welcome overlay opens")
     check(find_button(game.popup,"Mini-Tutorial starten") != null,"welcome has visual tutorial")
-    check(find_button(game.popup,"Direkt gegen Zen-Bot spielen") != null,"welcome can start versus bot")
-    check(press_button(game.popup,"Direkt gegen Zen-Bot spielen"),"welcome start button connected")
+    check(press_button(game.popup,"Zum Hauptmenü"),"help returns to home")
+    check(game.popup.find_child("HomeCampaign",true,false) != null,"home foregrounds campaign")
+    game.start_mode(1,0,true)
     check(game.popup == null and int(game.data.settings.mode) == 1 and int(game.data.settings.level) == 0,"first game is easy bot")
     check(game.board.move_count() == 0,"first match empty")
     await physics_frame
@@ -119,12 +121,14 @@ func run() -> void:
     check(game.board.move_count() == 0,"tutorial restores original game")
     game.open_menu()
     await shot("v3-04-menu.png")
-    check(find_button(game.popup,"Spielen") != null,"bot-first menu")
-    check(press_button(game.popup,"Einstellungen"),"settings button connected")
+    check(game.popup.find_child("HomeCampaign",true,false) != null,"campaign-first menu")
+    var settings_button: Button = game.popup.find_child("HomeSettings",true,false) as Button
+    check(settings_button != null,"settings button available")
+    if settings_button != null: settings_button.pressed.emit()
     check(game.popup != null and find_button(game.popup,"Fertig") != null,"settings show")
-    check(press_button(game.popup,"Fertig") and game.popup == null,"settings close")
+    check(press_button(game.popup,"Fertig") and game.home_visible,"settings return to home")
     game.open_menu()
-    check(press_button(game.popup,"Spielen"),"opens game mode selection")
+    check(press_button(game.popup,"Spielmodi"),"opens game mode selection")
     check(press_button(game.popup,"Zwei Spieler lokal"),"local multiplayer option")
     check(int(game.data.settings.mode)==0,"local mode starts")
     game.place(4)

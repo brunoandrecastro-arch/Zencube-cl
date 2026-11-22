@@ -8,7 +8,10 @@ assert 'welcome_scroll.scroll_deadzone = 0' in ui
 assert 'welcome_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS' in ui
 welcome = ui.split('func open_welcome() -> void:',1)[1].split('func add_rule_example(',1)[0]
 assert welcome.index('button("Mini-Tutorial starten"') < welcome.index('add_rule_example(box,"3 + 1",3)')
-assert welcome.index('button("Direkt gegen Zen-Bot spielen"') < welcome.index('add_rule_example(box,"3 + 1",3)')
+assert welcome.index('button("Zum Hauptmenü"') < welcome.index('add_rule_example(box,"3 + 1",3)')
+startup = ui.split('func _ready() -> void:',1)[1].split('func theme_style(',1)[0]
+assert 'open_welcome()' not in startup, 'Long help is available on demand, not forced at launch'
+assert 'open_menu()' in startup
 assert 'var tagline = label("Ein ruhiges Strategiespiel' not in ui
 result = ui.split('func show_result_screen() -> void:',1)[1].split('func play_again_after_result()',1)[0]
 assert 'Entdecke neue Wege.' not in result

@@ -29,6 +29,10 @@ var net_buttons: Array = []
 var net_active = false
 var tutorial_from_welcome = false
 var welcome_open = false
+var home_visible: bool = false
+var menu_context: bool = false
+var tutorial_quick: bool = false
+var tutorial_return_to_campaign: bool = false
 var toast = ""
 var toast_until = 0
 # Challenge mode uses the same BoardModel, RulesEngine and 3D CubeRenderer.
@@ -81,6 +85,10 @@ const ActOne = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
 const ActThree = preload("res://story/ZenActThree.gd")
 const ActFour = preload("res://story/ZenActFour.gd")
+const Journey = preload("res://story/ZenJourney.gd")
+const HomeMenu = preload("res://ui/ZenHomeMenu.gd")
+const ProfileAchievements = preload("res://core/ZenAscendAchievements.gd")
+const ProfileRealms = preload("res://core/ZenAscendRealms.gd")
 var prequel_act: int = 1
 var prequel_model: Script = ActOne
 var act_one_active := false
@@ -128,10 +136,7 @@ func choose_language(code: String) -> void:
     translate_ui_tree(ui)
     refresh()
     persist() # Saves settings without replacing Classic while in Challenges.
-    if not bool(data.settings.get("intro_seen", false)):
-        open_welcome()
-    else:
-        open_menu()
+    open_menu()
 func change_language(code: String) -> void:
     choose_language(code)
     if bool(data.settings.get("intro_seen", false)):
@@ -160,9 +165,6 @@ func _ready() -> void:
     refresh()
     if not str(data.settings.get("language", "")) in ["de", "en", "pt"]:
         open_language_choice()
-    elif not bool(data.settings.get("intro_seen",false)):
-        # Visual examples are shown before the very first game.
-        open_welcome()
     else:
         open_menu()
 func theme_style(bg: Color, radius: int = 18) -> StyleBoxFlat:
@@ -520,7 +522,8 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
         detail.text = mode_name()+T("  ·  Zug ")+str(board.move_count())
         if ai_running: detail.text += T("  ·  Zen-Bot überlegt …")
         if tutorial != null:
-            help_text.text = str(tutorial.step+1)+" / "+str(TutorialController.TEXTS.size())+"  ·  "+T(TutorialController.TEXTS[tutorial.step])
+            var total: int = 3 if tutorial_quick else TutorialController.TEXTS.size()
+            help_text.text = str(tutorial.step+1)+" / "+str(total)+"  ·  "+T(TutorialController.TEXTS[tutorial.step])
         else:
             help_text.text = toast if Time.get_ticks_msec()<toast_until else T("Ziehen: drehen  ·  Tippen: setzen  ·  2 Finger: zoomen")
     swap_row.visible = not challenge_active and board.swap_pending and not (int(data.settings.mode) == 1 and board.current_owner() == 1 and tutorial == null)
@@ -784,7 +787,10 @@ func modal(title: String) -> VBoxContainer:
     title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title_label.name = "ZenGoldModalHeading"
     title_label.add_theme_font_override("font",ZenType.heading())
-    button("Zurück zum Spiel",box,close_modal,true)
+    if menu_context:
+        button("Zum Hauptmenü",box,open_menu,true)
+    else:
+        button("Zurück zum Spiel",box,close_modal,true)
     var line: ColorRect = ColorRect.new()
     line.name = "ZenGoldDivider"
     line.color = UiTest.GOLD
@@ -799,6 +805,9 @@ func close_modal() -> void:
     if popup != null:
         popup.queue_free()
         popup = null
+    if home_visible:
+        home_visible = false
+        column.show()
 func open_menu() -> void:
     if act_one_active:
         if board.winner != 0:
@@ -817,27 +826,139 @@ func open_menu() -> void:
         premium_button(_campaign_text("resume"), campaign_box, _zen_campaign_begin, true)
         button(_campaign_text("leave"), campaign_box, _zen_campaign_leave, true)
         return
-    var box = modal("Hauptmenü")
-    popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.975), 26))
-    var heading: Label = box.get_child(0) as Label
-    heading.add_theme_color_override("font_color", Color("fce5b7"))
-    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    var subtitle: Label = label("Denke über die Kanten hinaus.", box, 17, Color("e7d0a7"))
-    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    premium_button("Spielen", box, open_play_menu, true)
-    var story_entry: Button = premium_button(_act_one_ui("Zen Chronicles · Geschichte 📖", "Zen Chronicles · Story 📖", "Zen Chronicles · História 📖"), box, func(): get_node("/root/ZenChronicles").open_library())
-    story_entry.name = "MainMenuZenChronicles"
+    menu_context = true
+    var box: VBoxContainer = modal("Hauptmenü")
+    for child in box.get_children():
+        box.remove_child(child)
+        child.queue_free()
+    popup.name = "HomeScreen"
+    popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var backdrop: StyleBoxFlat = theme_style(Color("10271f", 0.80), 0)
+    backdrop.set_border_width_all(0)
+    backdrop.shadow_size = 0
+    backdrop.content_margin_left = 26
+    backdrop.content_margin_right = 26
+    backdrop.content_margin_top = 18
+    backdrop.content_margin_bottom = 18
+    popup.add_theme_stylebox_override("panel", backdrop)
+    var home: VBoxContainer = HomeMenu.new()
+    box.add_child(home)
+    home.configure(self)
+    column.hide()
+    home_visible = true
+
+func resume_current_match() -> void:
+    menu_context = false
+    close_modal()
+    refresh(-1, false)
+
+func open_story_library() -> void:
+    chronicles.open_library()
+
+func resume_campaign() -> void:
+    if tutorial != null:
+        tutorial_return_to_campaign = false
+        end_tutorial()
+    var step: Dictionary = Journey.next_step(data)
+    if not bool(data.settings.get("campaign_intro_seen", false)) and not bool(step.started) and int(data.stats.played) == 0:
+        open_campaign_introduction()
+        return
+    if str(step.kind) == "story":
+        # The reader loads its own saved page and boss checkpoint.
+        chronicles.call(["open_act_one", "open_act_two", "open_act_three", "open_act_four"][int(step.act) - 1])
+        return
+    if str(step.kind) == "realms":
+        if not FractureState.awakening_seen():
+            chronicles.open_act_four()
+            return
+        const RealmPath = preload("res://core/ZenRealmCampaign2.gd")
+        var openers: Array[String] = ["open_shadow_reader", "open_abyss_reader", "open_ember_campaign_preview", "open_celestial_campaign_preview", "open_satori_campaign_preview"]
+        for realm in range(openers.size()):
+            if not RealmPath.story_finished(realm):
+                chronicles.call(openers[realm])
+                return
+        chronicles.open_library()
+        return
+    var same_match: bool = not challenge_active and tutorial == null and int(data.settings.mode) == 1 and board.winner == 0 and board.move_count() > 0 and int(data.settings.level) == int(step.level) and int(data.ascension.world) == int(step.world)
+    if same_match:
+        resume_current_match()
+        return
+    if board.winner == 0 and board.move_count() > 0 and not challenge_active:
+        var confirm: VBoxContainer = modal("Kampagne fortsetzen")
+        label("Für die nächste Aufgabe beginnt eine neue Partie. Deine aktuelle Partie ist noch offen.", confirm, 16)
+        premium_button("Partie fortsetzen", confirm, resume_current_match, true)
+        premium_button("Kampagnenpartie starten", confirm, _start_journey_match.bind(step))
+        return
+    _start_journey_match(step)
+
+func _start_journey_match(step: Dictionary) -> void:
+    if challenge_active: leave_challenges()
+    if tutorial != null: end_tutorial()
+    data.ascension.world = int(step.world)
+    data.settings.next_start = 0
+    start_mode(1, int(step.level))
+
+func open_campaign_introduction() -> void:
+    var box: VBoxContainer = modal("Dein erster Zug")
+    label("1. Drehe den Würfel.", box, 19)
+    label("2. Tippe ein freies Feld, um dein Zeichen zu setzen.", box, 19)
+    label("3. Verbinde vier gleiche Zeichen über eine Würfelkante.", box, 19)
+    premium_button("Kurz ausprobieren", box, _begin_campaign_tutorial, true)
+    button("Überspringen und Kampagne starten", box, _accept_campaign_introduction, true)
+
+func _accept_campaign_introduction() -> void:
+    data.settings.campaign_intro_seen = true
+    data.settings.intro_seen = true
+    persist()
+    resume_campaign()
+
+func _begin_campaign_tutorial() -> void:
+    data.settings.campaign_intro_seen = true
+    data.settings.intro_seen = true
+    persist()
+    start_tutorial()
+    tutorial_quick = true
+    tutorial_return_to_campaign = true
+    var finish: Button = tutorial_row.get_child(2) as Button
+    finish.text = T("Kampagne fortsetzen")
+    finish.set_meta("zen_source_text", "Kampagne fortsetzen")
+    refresh()
+
+func open_game_modes() -> void:
+    var box: VBoxContainer = modal("Spielmodi")
+    premium_button("Freies Spiel", box, open_play_menu, true)
     premium_button("Zen Challenges · 100 Aufgaben", box, begin_challenges)
-    premium_button("Zen-Aufstieg", box, open_ascension)
-    premium_button("Zen Ascend" + ("" if ZMode.unlocked(data) else "  🔒"), box, open_ascend_intro)
+    premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
+    button("Training", box, func(): start_mode(2, 0), true)
+    if _ascend_revealed():
+        premium_button("Zen Ascend", box, open_ascend_intro)
+
+func open_profile() -> void:
+    Asc.ensure(data)
+    var box: VBoxContainer = modal("Profil")
+    label(T(Asc.RANKS[int(data.ascension.rank)]), box, 24)
+    premium_button("Zen-Aufstieg", box, open_ascension, true)
     premium_button("Welten", box, open_worlds)
-    premium_button("Zen-Shop · 🍃 %d" % int(data.economy.leaves), box, open_store)
     premium_button("Statistik", box, open_stats)
-    premium_button("Einstellungen", box, open_settings)
-    button("Regeln & Balance", box, open_balance, true)
-    if challenge_active:
-        button("Zurück zu den Zen-Rätseln", box, close_modal, true)
-        button("Klassisches Spiel fortsetzen", box, leave_challenges, true)
+    if _ascend_revealed():
+        premium_button("Erfolge", box, open_achievements)
+
+func open_achievements() -> void:
+    if not _ascend_revealed():
+        open_profile()
+        return
+    var box: VBoxContainer = modal("Erfolge")
+    # Read-only view of the same earned achievements used inside Zen Ascend.
+    var account: Dictionary = data.duplicate(true)
+    label(T("Geheime Erfolge: %d/%d") % [ProfileAchievements.secret_count(account), ProfileAchievements.SECRETS.size()], box, 20)
+    for realm in range(4):
+        if not ProfileRealms.unlocked(account, realm): continue
+        label(ProfileRealms.realm_name(realm, language_code()), box, 21)
+        for secret in ProfileAchievements.SECRETS:
+            if int(secret.realm) != realm: continue
+            var earned: bool = ProfileAchievements.earned(account, str(secret.id))
+            var name_text: String = str(secret.name) if earned else T("Geheimer Erfolg")
+            label(("✓ " if earned else "◇ ") + name_text, box, 16)
 
 func open_store() -> void:
     Collection.ensure(data)
@@ -1121,9 +1242,8 @@ func store_select_skin(skin: int) -> void:
 
 func open_play_menu() -> void:
     Asc.ensure(data)
-    var box = modal("Spielmodus")
+    var box = modal("Freies Spiel")
     label("Gegen wen möchtest du spielen?", box, 16)
-    label(T("Überarbeitete Bot-Stufen: Mittel fairer, Meister anspruchsvoll und schlagbar."), box, 13)
     for i in range(5):
         var lvl: int = i
         var source: String = "Zen-Bot · " + Asc.LEVELS[i]
@@ -1133,11 +1253,7 @@ func open_play_menu() -> void:
             b.text += "  🔒"
         else:
             label(T("Sieg-Belohnung: 🍃 %d") % int(Collection.BOT_REWARDS[i]), box, 12)
-    premium_button("Zen Ascend",box,open_ascend_intro)
-    premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
-    button("Training", box, func(): start_mode(2, 0), true)
-    button("Viererlinien lernen", box, start_tutorial, true)
-    button("Zum Hauptmenü", box, open_menu, true)
+    button("Spielmodi", box, open_game_modes, true)
 
 func open_ascension() -> void:
     Asc.ensure(data)
@@ -1171,8 +1287,8 @@ func open_ascension() -> void:
         progress_bar.add_theme_stylebox_override("fill",fill)
         box.add_child(progress_bar)
     label("Der Zen-Wächter ist die letzte Rangprüfung. Es gibt fünf Welten.",box,13)
-    label(ZMode.t("Ab Zen-Meister freischaltbar oder für 850 Zen-Blätter im Shop.",language_code()),box,13)
-    button("Zen Ascend",box,open_ascend_intro,true)
+    if _ascend_revealed():
+        button("Zen Ascend",box,open_ascend_intro,true)
     button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
 
@@ -1788,6 +1904,12 @@ func update_net() -> void:
 func start_tutorial(onboarding: bool = false) -> void:
     if challenge_active: leave_challenges()
     close_modal()
+    menu_context = false
+    tutorial_quick = false
+    tutorial_return_to_campaign = false
+    var finish: Button = tutorial_row.get_child(2) as Button
+    finish.text = T("Spielen")
+    finish.set_meta("zen_source_text", "Spielen")
     tutorial_from_welcome = onboarding
     if tutorial == null: saved_training = {"board":board.snapshot(),"history":board.history.duplicate(true)}
     generation += 1
@@ -1801,16 +1923,20 @@ func load_tutorial() -> void:
     refresh()
 func tutorial_step(delta: int) -> void:
     if tutorial == null: return
-    if tutorial.step + delta >= TutorialController.TEXTS.size():
+    var total: int = 3 if tutorial_quick else TutorialController.TEXTS.size()
+    if tutorial.step + delta >= total:
         end_tutorial()
         return
-    tutorial.step = clampi(tutorial.step+delta,0,TutorialController.TEXTS.size()-1)
+    tutorial.step = clampi(tutorial.step+delta,0,total-1)
     load_tutorial()
 func end_tutorial() -> void:
     if tutorial == null: return
     tutorial = null
     generation += 1
     preview = []
+    var return_to_campaign: bool = tutorial_return_to_campaign
+    tutorial_return_to_campaign = false
+    tutorial_quick = false
     if tutorial_from_welcome:
         tutorial_from_welcome = false
         start_mode(1,0,true)
@@ -1819,10 +1945,17 @@ func end_tutorial() -> void:
     board.restore(saved_training.board)
     board.history = saved_training.history
     refresh()
+    if return_to_campaign:
+        data.settings.tutorial_seen = true
+        persist()
+        resume_campaign()
 func start_mode(mode: int, level: int = 0, from_welcome: bool = false) -> void:
     if zen_campaign_active: return
     if challenge_active: leave_challenges()
     close_modal()
+    menu_context = false
+    tutorial_quick = false
+    tutorial_return_to_campaign = false
     if tutorial != null:
         tutorial = null
         preview = []
@@ -1851,16 +1984,15 @@ func allow_welcome_scroll(node: Node) -> void:
 
 func open_welcome() -> void:
     welcome_open = true
-    var box = modal("Willkommen im Zen-Garten")
-    popup.anchor_top = 0.35
+    var box = modal("Spielanleitung")
+    popup.anchor_top = 0.06
     popup.offset_top = 0
     box.get_child(1).hide()
     label("Atme durch. Drehe den Würfel. Entdecke neue Wege zu gewinnen.",box,15,Color("6d6550"))
     # First-screen actions must be visible WITHOUT scrolling.
-    button("Mini-Tutorial starten",box,func(): start_tutorial(true),false,true)
-    button("Direkt gegen Zen-Bot spielen",box,func(): start_mode(1,0,true))
-    label("Dein erster Gegner ist Zen-Bot auf Leicht. Lokale Zwei-Spieler-Partien sind später im Menü verfügbar.",box,13,Color("78644c"))
-    # Optional explanatory diagrams remain below and are now swipeable.
+    button("Mini-Tutorial starten",box,start_tutorial,false,true)
+    button("Zum Hauptmenü",box,open_menu,true)
+    # The full explanation is available on demand from How to Play.
     label("VIER STEINE  ·  ZWEI WÜRFELSEITEN",box,13,Color("8a755b"))
     add_rule_example(box,"3 + 1",3)
     add_rule_example(box,"2 + 2",2)
@@ -2064,7 +2196,7 @@ func open_settings() -> void:
     footer.add_theme_constant_override("margin_top",6)
     footer.add_theme_constant_override("margin_bottom",10)
     layout.add_child(footer)
-    var finish: Button = button("Fertig",footer,close_modal,false,true)
+    var finish: Button = button("Fertig",footer,open_menu if menu_context else close_modal,false,true)
     finish.name = "SettingsDoneSticky"
 
 func build_sound() -> void:
@@ -2237,6 +2369,7 @@ func start_zen_campaign() -> void:
         return
     chronicles.close_chronicles()
     close_modal()
+    menu_context = false
     generation += 1
     zen_campaign_classic_board = board
     zen_campaign_classic_view = {
@@ -2846,6 +2979,7 @@ func start_act_one_trial(act: int = 1) -> void:
         return
     chronicles.close_chronicles()
     close_modal()
+    menu_context = false
     generation += 1
     act_one_classic_board = board
     act_one_view = {"background": world_background.texture, "tint": world_background.modulate,
