@@ -1248,6 +1248,11 @@ func _act_one_turn(direction: int) -> void:
         else:
             _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
         return
+    # Readers replaying a completed trial can also see the cinematic
+    # between pages 11 and 12, without awarding a second unlock.
+    if direction > 0 and page == 11 and _prequel_act==4 and _prequel_model.max_page(_act_one_progress)==12:
+        if _play_moon_shadow_video(Callable(self, "_finish_act_four_manual_page_turn")):
+            return
     if direction > 0 and page == 12:
         _act_one_progress.complete = true
         if _prequel_model.save_progress(_act_one_progress):
@@ -1308,6 +1313,21 @@ func _act_one_launch() -> void:
     var game: Node = get_tree().current_scene
     if game != null and game.has_method("start_act_one_trial"):
         game.call("start_act_one_trial",_prequel_act)
+
+# Manual page 11 -> 12 replay after the trial was already cleared.
+# The callback changes only the page number, never rank, rewards or unlocks.
+func _finish_act_four_manual_page_turn() -> void:
+    if _prequel_act!=4 or _screen_name!="act-one-reader":
+        call_deferred("_resume_scene_music_if_free")
+        return
+    var old_page: int = int(_act_one_progress.page)
+    _act_one_progress.page = 12
+    if _prequel_model.save_progress(_act_one_progress):
+        _act_one_update()
+    else:
+        _act_one_progress.page = old_page
+        _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
+    call_deferred("_resume_scene_music_if_free")
 
 # Video is intentionally positioned between pages 11 and 12, after the boss.
 # If the converted video is missing, retain the native two-stage 3D effect.
