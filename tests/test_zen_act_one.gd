@@ -4,6 +4,7 @@ const Act = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
 const ActThree = preload("res://story/ZenActThree.gd")
 const ActFour = preload("res://story/ZenActFour.gd")
+const FractureState = preload("res://story/ZenFractureState.gd")
 var failures := 0
 var backups: Dictionary = {}
 
@@ -35,7 +36,7 @@ func play_result(target: int) -> BoardModel:
     return board
 
 func run() -> void:
-    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, ActFour.SAVE_FILE, SaveManager.PATH]:
+    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, ActFour.SAVE_FILE, SaveManager.PATH, FractureState.PATH]:
         if FileAccess.file_exists(path):
             backups[path] = FileAccess.get_file_as_bytes(path)
             DirAccess.remove_absolute(path)
@@ -181,8 +182,20 @@ func run() -> void:
                 game.board = play_result(1)
                 game._act_one_result()
                 game._act_one_continue()
-                check(reader._page_counter.text=="12 / 12", "Act IV final page after victory")
-                # Do not trigger the cinematic in this isolated save regression test.
+                # The final boss now opens the 3x3 -> 4x4 film BEFORE
+                # rendering page twelve. Exercise the real skip button
+                # to receive the finished signal without waiting 8 seconds.
+                check(bool(ActFour.load_progress().won) and bool(ActFour.load_progress().acknowledged), "Act IV win and dialogue saved before interlude")
+                check(bool(reader._act_four_interlude_running), "Act IV interlude starts after verified victory")
+                check(not ActFour.load_progress().complete, "Act IV is not completed by cinematic playback")
+                var skip_interlude: Button = root.find_child("SkipMoonShadowVideo", true, false) as Button
+                check(skip_interlude != null, "interlude video and skip button available")
+                if skip_interlude != null:
+                    skip_interlude.pressed.emit()
+                    await process_frame
+                check(reader._page_counter.text=="12 / 12", "Act IV final page after cinematic")
+                check(FractureState.interlude_seen(), "interlude checkpoint saved without unlocking the realm")
+                check(not FractureState.portal_seen() and not FractureState.awakening_seen(), "film alone does not open Shadow")
                 check(not ActFour.load_progress().complete, "Finish Chapter remains explicit")
                 check(not ZenAscend.unlocked(SaveManager.load_data()), "beating Dark Kuze without finishing the Manhwa still keeps 4×4 locked")
                 check(ActThree.load_progress().complete, "Act III survives")
@@ -192,7 +205,7 @@ func run() -> void:
     reader.close_chronicles()
     game.queue_free()
     await process_frame
-    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, ActFour.SAVE_FILE, SaveManager.PATH]:
+    for path in [Act.SAVE_FILE, ActTwo.SAVE_FILE, ActThree.SAVE_FILE, ActFour.SAVE_FILE, SaveManager.PATH, FractureState.PATH]:
         if FileAccess.file_exists(path): DirAccess.remove_absolute(path)
         if backups.has(path):
             var file := FileAccess.open(path, FileAccess.WRITE)
