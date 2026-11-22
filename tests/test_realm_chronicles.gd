@@ -58,7 +58,7 @@ func run() -> void:
                 var used: Texture2D = Story.boss_texture(stage)
                 check(used is ImageTexture,"game uses cinematic ImageTexture not vector fallback "+hd_path)
         var procedural: Texture2D = BossSkins.make_surface(stage)
-        check(procedural != null and procedural.get_width()==160,"Boss tile surface %d" % stage)
+        check(procedural != null and procedural.get_width()==320 and procedural.get_height()==320,"Boss tile surface %d" % stage)
     var lines: Array = ZenAscend.generate_lines()
     check(lines.size()==204,"real 4x4 cube still uses exactly 204 win lines")
     var empty: Array = []
