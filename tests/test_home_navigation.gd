@@ -81,7 +81,7 @@ func run() -> void:
     check(play != null and play.text == "Start Campaign", "campaign is the primary first-run action")
     var story: Button = named(game.popup, "MainMenuZenChronicles") as Button
     check(story != null and story.get_parent() == play.get_parent() and story.get_index() == play.get_index() + 1, "Chronicles immediately follows the campaign button")
-    check(caption(game.popup, "Zen Ascend") == null, "home preserves the hidden dimension")
+    check(named(game.popup, "HomeZenAscend") != null and named(game.popup, "HomeWorlds") != null and named(game.popup, "HomeAchievements") != null, "home exposes Worlds, Zen Ascend and Achievements")
     check(named(game.popup, "HomeHowToPlay") != null, "How to Play is always reachable")
     var original: Dictionary = game.board.snapshot()
     for language in ["de", "en", "pt"]:

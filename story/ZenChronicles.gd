@@ -26,6 +26,8 @@ const AbyssReader = preload("res://story/ZenAbyssReader.gd")
 const ShadowReader = preload("res://story/ZenShadowReader.gd")
 const EmberReader = preload("res://story/ZenEmberReader.gd")
 const CelestialReader = preload("res://story/ZenCelestialReader.gd")
+const SatoriReader = preload("res://story/ZenSatoriReader.gd")
+const Satori = preload("res://story/ZenSatoriCampaign.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const ChallengeMenu = preload("res://story/ZenRealmChallengeMenu.gd")
@@ -79,6 +81,7 @@ var _shadow_launch_requested: bool = false
 var _ember_reader: CanvasLayer
 var _ember_launch_requested: bool = false
 var _celestial_launch_requested: bool = false
+var _satori_launch_requested: bool = false
 var _campaign_menu: CanvasLayer
 var _campaign_challenge_requested: Dictionary = {}
 var _campaign_practice_requested: int = -1
@@ -287,7 +290,7 @@ func _select_library_tab(index: int) -> void:
     _library_tab = clampi(index,0,1) if _realms_revealed() else 0
     open_library()
 
-func _library_card(parent: Node, title: String, image_path: String, hint: String, allowed: bool, complete: bool, entry: Callable, tag: String, show_lock_info: bool = false) -> void:
+func _library_card(parent: Node, title: String, image_path: String, hint: String, allowed: bool, complete: bool, entry: Callable, tag: String, show_lock_info: bool = false, world_index: int = -1) -> void:
     var panel: PanelContainer = PanelContainer.new()
     panel.name = tag
     var background: StyleBoxFlat = _style(Color("#182d33"),16)
@@ -318,6 +321,20 @@ func _library_card(parent: Node, title: String, image_path: String, hint: String
     button.disabled = not allowed and not show_lock_info
     button.custom_minimum_size.y = 40
     button.name = tag+"Button"
+    if world_index >= 0:
+        var localized_world: String = Journey.text(ZenAscension.WORLDS[world_index],_active_language)
+        var enter: Button = _make_button(campaign_ui("▶ Welt betreten: ","▶ Play ","▶ Jogar ") + localized_world,stack,_enter_act_world.bind(world_index))
+        enter.name = tag + "EnterWorld"
+        enter.disabled = not allowed
+        enter.custom_minimum_size.y = 40
+
+func _enter_act_world(world_index: int) -> void:
+    var current: Node = get_tree().current_scene
+    if current == null or not current.has_method("select_world"): return
+    if not ZenAscension.world_unlocked(SaveManager.load_data(),world_index): return
+    close_chronicles()
+    current.call("select_world",world_index)
+    current.call("open_play_menu")
 
 func _library_story_cards(parent: VBoxContainer) -> void:
     _make_label(campaign_ui("Kuzes Weg · 3×3","Kuze's Path · 3×3","O Caminho de Kuze · 3×3"),parent,18,GOLD)
@@ -326,16 +343,16 @@ func _library_story_cards(parent: VBoxContainer) -> void:
     if not playable:
         _make_label(campaign_ui("Wechsle zum klassischen 3×3, um diese Geschichte zu spielen.","Return to Classic 3×3 to play this story.","Regressa ao Clássico 3×3 para jogar esta história."),parent,14,MUTED)
     var classic: Dictionary = SaveManager.load_data()
-    _library_card(parent,"ACT I · The Roots of Peace","res://story/act01/pages/zen_chronicles_ch01_act01_01.png",Journey.gate_hint(classic,1,_active_language),playable,bool(ActOne.load_progress().complete),open_act_one,"ActOneCard")
+    _library_card(parent,"ACT I · The Roots of Peace","res://story/act01/pages/zen_chronicles_ch01_act01_01.png",Journey.gate_hint(classic,1,_active_language),playable,bool(ActOne.load_progress().complete),open_act_one,"ActOneCard",false,0)
     var second_allowed: bool = ActTwo.unlocked(classic) and ActTwo.media_ready() and playable
     var second_hint: String = Journey.gate_hint(classic,2,_active_language)
-    _library_card(parent,"ACT II · The Art of Balance",ActTwo.page_path(1),second_hint,second_allowed,bool(ActTwo.load_progress().complete),open_act_two,"ActTwoCard")
+    _library_card(parent,"ACT II · The Art of Balance",ActTwo.page_path(1),second_hint,second_allowed,bool(ActTwo.load_progress().complete),open_act_two,"ActTwoCard",false,1)
     var third_allowed: bool = ActThree.unlocked(classic) and ActThree.media_ready() and playable
     var third_hint: String = Journey.gate_hint(classic,3,_active_language)
-    _library_card(parent,"ACT III · The Beautiful Imperfection",ActThree.page_path(1),third_hint,third_allowed,bool(ActThree.load_progress().complete),open_act_three,"ActThreeCard")
+    _library_card(parent,"ACT III · The Beautiful Imperfection",ActThree.page_path(1),third_hint,third_allowed,bool(ActThree.load_progress().complete),open_act_three,"ActThreeCard",false,2)
     var fourth_allowed: bool = ActFour.unlocked(classic) and ActFour.media_ready() and playable
     var fourth_hint: String = Journey.gate_hint(classic,4,_active_language)
-    _library_card(parent,"ACT IV · The Day Everything Broke",ActFour.page_path(1),fourth_hint,fourth_allowed,bool(ActFour.load_progress().complete),open_act_four,"ActFourCard")
+    _library_card(parent,"ACT IV · The Day Everything Broke",ActFour.page_path(1),fourth_hint,fourth_allowed,bool(ActFour.load_progress().complete),open_act_four,"ActFourCard",false,3)
     if bool(ActFour.load_progress().complete):
         var replay_button: Button = _make_button(campaign_ui("✦ Übergang erneut ansehen","✦ Replay the Awakening","✦ Rever o Despertar"),parent,replay_moon_shadow_transition)
         replay_button.name = "ReplayMoonShadowTransition"
@@ -350,6 +367,8 @@ func _library_realm_cards(parent: VBoxContainer) -> void:
         var permitted: bool = Realm2.unlocked(i)
         var finished: bool = Realm2.story_finished(i)
         var hint: String = campaign_ui("Bosse %d/3 · Herausforderungen %d/3","Bosses %d/3 · Challenges %d/3","Chefes %d/3 · Desafios %d/3") % [Realm2.bosses_won(i),Realm2.completed_count(Realm2.load_progress(),i)] if permitted else campaign_ui("Freischalten: ","Unlock: ","Desbloquear: ")+unlock_hints[i]
+        if i==4 and permitted:
+            hint = campaign_ui("Bosse %d/3 · 30 Seiten · Das letzte Erwachen","Bosses %d/3 · 30 pages · The Final Awakening","Chefes %d/3 · 30 páginas · O Despertar Final") % Realm2.bosses_won(4)
         _library_card(parent,titles[i],Realm2.SOURCE_ART[i],hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
 
 func open_library() -> void:
@@ -803,7 +822,7 @@ func release_story_audio(owner: Node) -> void:
     call_deferred("_resume_scene_music_if_free")
 
 func _resume_scene_music_if_free() -> void:
-    if campaign_audio_exclusive() or _shadow_launch_requested or _abyss_launch_requested or _ember_launch_requested or _celestial_launch_requested: return
+    if campaign_audio_exclusive() or _shadow_launch_requested or _abyss_launch_requested or _ember_launch_requested or _celestial_launch_requested or _satori_launch_requested: return
     var scene: Node = get_tree().current_scene
     if is_instance_valid(scene) and scene.has_method("resume_campaign_music"):
         scene.call("resume_campaign_music")
@@ -816,7 +835,8 @@ func request_final_guardian(chapter: int) -> void:
     if chapter==0: request_shadow_battle()
     elif chapter==1: request_abyss_battle()
     elif chapter==2: request_ember_battle()
-    else: request_celestial_battle()
+    elif chapter==3: request_celestial_battle()
+    else: request_satori_battle()
 
 func open_abyss_reader() -> void:
     _library_tab = 1
@@ -969,7 +989,7 @@ func _campaign_locked_screen(chapter: int) -> void:
     _make_button(campaign_ui("‹ Zur Bibliothek","‹ Library","‹ Biblioteca"),outer,open_library)
 
 func open_campaign_challenges(chapter: int, final_trial: bool = false) -> void:
-    if chapter not in [0,1,2,3] or not Realm2.unlocked(chapter):
+    if chapter not in [0,1,2,3,4] or not Realm2.unlocked(chapter):
         _campaign_locked_screen(chapter)
         return
     if is_instance_valid(_shadow_reader): close_shadow_reader()
@@ -992,7 +1012,7 @@ func close_campaign_challenges() -> void:
         _quick_button.visible = _show_quick and not _campaign_board_active
 
 func request_campaign_practice(chapter: int) -> void:
-    if chapter not in [0,1,2,3] or not Realm2.unlocked(chapter): return
+    if chapter not in [0,1,2,3,4] or not Realm2.unlocked(chapter): return
     _campaign_practice_requested = chapter
     close_campaign_challenges()
     var scene: Node = get_tree().current_scene
@@ -1083,14 +1103,40 @@ func open_satori_campaign_preview() -> void:
     if not Realm2.unlocked(4):
         _campaign_locked_screen(4)
         return
-    _sync_language()
-    _screen_name = "realm-3-satori-preview"
-    var outer: VBoxContainer = _make_screen()
-    _make_label("The Enlightened Mind",outer,24,GOLD)
-    _make_label("Satori Realm",outer,27,GOLD)
-    outer.add_child(Campaign.artwork(Realm2.SOURCE_ART[4],360))
-    _make_label(campaign_ui("Satori Realm freigeschaltet. Die Geschichte folgt.","Satori Realm unlocked. The story is coming.","Satori Realm desbloqueado. A história será acrescentada."),outer,16,CREAM)
-    _make_button(campaign_ui("‹ Zur Bibliothek","‹ Library","‹ Biblioteca"),outer,open_library)
+    _library_tab = 1
+    close_campaign_challenges()
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
+    if _screen != null: close_chronicles()
+    _ember_reader = SatoriReader.new()
+    _root.add_child(_ember_reader)
+    if _quick_button != null: _quick_button.hide()
+
+func request_satori_battle() -> void:
+    _satori_launch_requested = true
+    close_ember_reader()
+    var current: Node = get_tree().current_scene
+    if current != null and current.scene_file_path == "res://Ascend.tscn" and current.has_method("start_satori_battle"):
+        _satori_launch_requested = false
+        current.call_deferred("start_satori_battle")
+    else:
+        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+func consume_satori_launch() -> bool:
+    var flag: bool = _satori_launch_requested
+    _satori_launch_requested = false
+    return flag
+
+func satori_story_completed() -> void:
+    # Story completion does not mint the separate 4x4 Fully Aware rank or currency.
+    var celebration = preload("res://ui/ZenUnlockCeremony.gd").new()
+    get_tree().root.add_child(celebration)
+    var settings: Dictionary = SaveManager.load_data().get("settings",{})
+    celebration.finished.connect(func(): call_deferred("open_library"))
+    celebration.present("story",Realm2.SOURCE_ART[4],"FULLY AWARE",
+        "SATORI REALM — COMPLETE · THE JOURNEY CONTINUES WITHIN.",
+        bool(settings.get("sound",true)),[],str(settings.get("language","en")))
 
 func open_realm_story_archive() -> void:
     # Preserve the original 12 boss story without another entrance in Realms.

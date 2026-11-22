@@ -12,7 +12,7 @@ const REALM_ART: Array[String] = [
     "res://assets/realms/shadow_realm.webp",
     "res://assets/realms/ember_temple.webp",
     "res://assets/realms/celestial_realm.webp",
-    "res://assets/realms/satori_realm.webp"
+    "res://assets/satori_campaign/realm.webp"
 ]
 const REALM_TITLES: Array = [
     ["Shadow Walker", "Keeper of Silence", "Moon Disciple", "Veil Breaker", "Master of Shadows"],

@@ -24,7 +24,7 @@ func _text(parent: Node, value: String, points: int, tint: Color) -> Label:
     parent.add_child(l)
     return l
 
-func present(kind: String, picture: String, title: String, quote: String, sound_on: bool, songs: Array, language: String = "en") -> void:
+func present(kind: String, picture: Variant, title: String, quote: String, sound_on: bool, songs: Array, language: String = "en") -> void:
     layer = 25
     _music_sources = songs.duplicate()
     _root = Control.new()
@@ -34,7 +34,10 @@ func present(kind: String, picture: String, title: String, quote: String, sound_
     _root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     _root.modulate.a = 0.0
     var image: TextureRect = TextureRect.new()
-    image.texture = load(picture)
+    if picture is Texture2D:
+        image.texture = picture as Texture2D
+    else:
+        image.texture = load(str(picture)) as Texture2D
     image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     image.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -73,6 +76,8 @@ func present(kind: String, picture: String, title: String, quote: String, sound_
     column.alignment = BoxContainer.ALIGNMENT_CENTER
     _root.add_child(column)
     var heading_words: String = "✦   NEW REALM UNLOCKED   ✦" if kind == "realm" else "✦   ACHIEVEMENT UNLOCKED   ✦"
+    if kind == "story":
+        heading_words = ("✦   SATORI REALM ABGESCHLOSSEN   ✦" if language == "de" else ("✦   SATORI REALM CONCLUÍDO   ✦" if language == "pt" else "✦   SATORI REALM COMPLETE   ✦"))
     if kind == "challenge":
         heading_words = ("✦   REALM-HERAUSFORDERUNG GESCHAFFT   ✦" if language == "de" else
             ("✦   DESAFIO DO REINO CONCLUÍDO   ✦" if language == "pt" else "✦   REALM CHALLENGE COMPLETE   ✦"))
