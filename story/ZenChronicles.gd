@@ -17,6 +17,8 @@ const FractureState = preload("res://story/ZenFractureState.gd")
 const Awakening = preload("res://ui/ZenCubeAwakening.gd")
 var _library_tab: int = 0
 var _fracture_replaying: bool = false
+var _act_four_interlude_running: bool = false
+var _act_four_interlude_seen_this_session: bool = false
 var _prequel_act: int = 1
 var _prequel_model: Script = ActOne
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
@@ -1183,6 +1185,17 @@ func _open_prequel_reader() -> void:
         return
     _sync_language()
     _act_one_progress = _prequel_model.load_progress()
+    # Play only after a verified Act IV boss win, before page 12 appears.
+    # This is independent of the final page's Shadow Realm unlock.
+    if _prequel_act==4 and bool(_act_one_progress.won) and bool(_act_one_progress.acknowledged) and not bool(_act_one_progress.complete) and not FractureState.interlude_seen() and not FractureState.awakening_seen() and not _act_four_interlude_seen_this_session:
+        if _act_four_interlude_running:
+            return
+        _act_four_interlude_running = true
+        _act_one_release_back()
+        if _play_moon_shadow_video(Callable(self, "_finish_act_four_interlude")):
+            return
+        _start_native_act_four_interlude()
+        return
     _act_one_hold_back()
     _active_chapter = -1
     _screen_name = "act-one-reader"
@@ -1235,6 +1248,11 @@ func _act_one_turn(direction: int) -> void:
         else:
             _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
         return
+    # Readers replaying a completed trial can also see the cinematic
+    # between pages 11 and 12, without awarding a second unlock.
+    if direction > 0 and page == 11 and _prequel_act==4 and _prequel_model.max_page(_act_one_progress)==12:
+        if _play_moon_shadow_video(Callable(self, "_finish_act_four_manual_page_turn")):
+            return
     if direction > 0 and page == 12:
         _act_one_progress.complete = true
         if _prequel_model.save_progress(_act_one_progress):
@@ -1296,13 +1314,57 @@ func _act_one_launch() -> void:
     if game != null and game.has_method("start_act_one_trial"):
         game.call("start_act_one_trial",_prequel_act)
 
-# Act IV ends the 3×3 prequel. Play the portal only once, then open Shadow page 1.
+# Manual page 11 -> 12 replay after the trial was already cleared.
+# The callback changes only the page number, never rank, rewards or unlocks.
+func _finish_act_four_manual_page_turn() -> void:
+    if _prequel_act!=4 or _screen_name!="act-one-reader":
+        call_deferred("_resume_scene_music_if_free")
+        return
+    var old_page: int = int(_act_one_progress.page)
+    _act_one_progress.page = 12
+    if _prequel_model.save_progress(_act_one_progress):
+        _act_one_update()
+    else:
+        _act_one_progress.page = old_page
+        _page_counter.text = campaign_ui("Speicherfehler", "Save error", "Erro ao guardar")
+    call_deferred("_resume_scene_music_if_free")
+
+# Video is intentionally positioned between pages 11 and 12, after the boss.
+# If the converted video is missing, retain the native two-stage 3D effect.
+func _start_native_act_four_interlude() -> void:
+    _suspend_scene_music()
+    var first: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(first)
+    first.finished.connect(_native_act_four_interlude_part_two, CONNECT_ONE_SHOT)
+    first.call("present", 0, str(SaveManager.load_data().get("settings", {}).get("language", "en")))
+
+func _native_act_four_interlude_part_two() -> void:
+    var second: CanvasLayer = Awakening.new()
+    get_tree().root.add_child(second)
+    second.finished.connect(_finish_act_four_interlude, CONNECT_ONE_SHOT)
+    second.call("present", 1, str(SaveManager.load_data().get("settings", {}).get("language", "en")))
+
+func _finish_act_four_interlude() -> void:
+    _act_four_interlude_running = false
+    _act_four_interlude_seen_this_session = true
+    if not FractureState.mark_interlude():
+        push_warning("Act IV video checkpoint could not be saved.")
+    _open_prequel_reader()
+    call_deferred("_resume_scene_music_if_free")
+
+# Act IV ends the 3×3 prequel. The already-viewed film is not replayed at page 12.
 func _begin_moon_garden_breakthrough() -> void:
     if not bool(ActFour.load_progress().complete): return
     if not ZenAscend.unlocked(SaveManager.load_data()):
         open_library()
         return
     _act_one_release_back()
+    if FractureState.interlude_seen() or _act_four_interlude_seen_this_session:
+        _after_moon_video()
+        return
+    # Existing saves that already completed the act use the legacy path.
+    if _play_moon_shadow_video(Callable(self, "_after_moon_video")):
+        return
     if FractureState.portal_seen():
         _start_awakening_before_shadow()
         return
@@ -1311,6 +1373,26 @@ func _begin_moon_garden_breakthrough() -> void:
     get_tree().root.add_child(ceremony)
     ceremony.finished.connect(_after_moon_portal)
     ceremony.call("present",0,str(SaveManager.load_data().get("settings",{}).get("language","en")))
+
+# A pre-rendered portrait cinematic plays only after the verified Act IV win.
+# It does not grant ranks, leaves or access by itself. Missing media falls
+# back to the established two-part real-time ceremony.
+func _play_moon_shadow_video(on_done: Callable) -> bool:
+    const VIDEO = preload("res://ui/ZenMoonShadowVideo.gd")
+    if not VIDEO.media_ready():
+        return false
+    _suspend_scene_music()
+    var ceremony: CanvasLayer = VIDEO.new()
+    get_tree().root.add_child(ceremony)
+    ceremony.finished.connect(on_done, CONNECT_ONE_SHOT)
+    ceremony.call("present", str(SaveManager.load_data().get("settings", {}).get("language", "en")))
+    return true
+
+func _after_moon_video() -> void:
+    if not FractureState.portal_seen() and not FractureState.mark_portal():
+        open_library()
+        return
+    _after_moon_awakening()
 
 # The REMADE Shadow page 1 already contains 4×4. Both cinematic stages
 # therefore finish BEFORE the first illustrated page is displayed.
@@ -1323,6 +1405,11 @@ func _after_moon_portal() -> void:
 func _start_awakening_before_shadow() -> void:
     if FractureState.awakening_seen():
         open_shadow_reader()
+        return
+    if FractureState.interlude_seen() or _act_four_interlude_seen_this_session:
+        _after_moon_video()
+        return
+    if _play_moon_shadow_video(Callable(self, "_after_moon_video")):
         return
     _suspend_scene_music()
     var ceremony: CanvasLayer = Awakening.new()
@@ -1341,6 +1428,8 @@ func replay_moon_shadow_transition() -> void:
     if _fracture_replaying or not bool(ActFour.load_progress().complete): return
     _fracture_replaying = true
     close_chronicles()
+    if _play_moon_shadow_video(Callable(self, "_finish_moon_shadow_replay")):
+        return
     _suspend_scene_music()
     var first: CanvasLayer = Awakening.new()
     get_tree().root.add_child(first)

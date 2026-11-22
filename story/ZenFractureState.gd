@@ -4,7 +4,7 @@ const PATH := "user://zencube_moon_shadow_transition_v1.json"
 const VERSION := 1
 
 static func defaults() -> Dictionary:
-    return {"version":VERSION,"portal":false,"awakening":false}
+    return {"version":VERSION,"portal":false,"awakening":false,"interlude":false}
 
 static func state() -> Dictionary:
     var empty: Dictionary = defaults()
@@ -13,7 +13,11 @@ static func state() -> Dictionary:
     if not raw is Dictionary or int(raw.get("version",0))!=VERSION: return empty
     empty.portal = bool(raw.get("portal",false))
     empty.awakening = bool(raw.get("awakening",false))
+    empty.interlude = bool(raw.get("interlude",false))
     return empty
+
+static func interlude_seen() -> bool:
+    return bool(state().interlude)
 
 static func portal_seen() -> bool:
     return bool(state().portal)
@@ -41,4 +45,11 @@ static func mark_awakening() -> bool:
     var saved: Dictionary = state()
     saved.portal = true
     saved.awakening = true
+    return _save(saved)
+
+# Track the Act IV interlude independently. Do not prematurely open Shadow
+# Realm or modify the existing one-shot portal/awakening checkpoints.
+static func mark_interlude() -> bool:
+    var saved: Dictionary = state()
+    saved.interlude = true
     return _save(saved)
