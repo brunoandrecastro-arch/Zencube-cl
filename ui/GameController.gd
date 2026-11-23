@@ -3117,11 +3117,13 @@ func _sky_tick() -> void:
     if board.current_owner()!=1 or worker!=null: return
     var marks: Array = board.cells.duplicate()
     var seed_value: int = int(Time.get_ticks_usec())
-    var level: int = 1 if sky_family==0 else 2 # Aiko Medium, Shin Hard
+    # Friendly family games: Aiko Easy, Shin Medium. No extra grind.
+    var level: int = 0 if sky_family==0 else 1
+    var budget: int = 45 if sky_family==0 else 95
     worker_generation = generation
     ai_running = true
     worker = Thread.new()
-    worker.start(func(): return AIEngine.new(seed_value).choose(marks,1,level,95 if sky_family==0 else 200))
+    worker.start(func(): return AIEngine.new(seed_value).choose(marks,1,level,budget))
 
 func _sky_result() -> void:
     if not sky_active or board.winner==0: return
