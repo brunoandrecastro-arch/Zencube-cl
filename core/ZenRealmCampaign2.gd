@@ -6,6 +6,7 @@ const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Ember = preload("res://story/ZenEmberCampaign.gd")
 const Celestial = preload("res://story/ZenCelestialCampaign.gd")
+const Satori = preload("res://story/ZenSatoriCampaign.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const Ascend = preload("res://core/ZenAscend.gd")
 const SAVE := "user://zencube_realm_2_0_v2.json"
@@ -16,24 +17,24 @@ const SOURCE_ART: Array[String] = [
     "res://assets/abyss_of_memories/realm.webp",
     "res://assets/ember_campaign/realm.webp",
     "res://assets/realms/celestial_realm.webp",
-    "res://assets/realms/satori_realm.webp"
+    "res://assets/satori_campaign/realm.webp"
 ]
 # Three existing, automatically awarded regular 4x4 Shadow tasks.
 const SHADOW_TASK_IDS: Array[String] = ["shadow_first","shadow_edge","shadow_block"]
-const ABYSS_TITLES: Array[String] = ["First Echo","Across the Memories","The Three Remembrances"]
+const ABYSS_TITLES: Array[String] = ["First Echo","Swift Remembrance","The Three Remembrances"]
 const ABYSS_DE: Array[String] = [
     "Gewinne eine reguläre Abyss-Partie gegen den Zen-Bot.",
-    "Gewinne mit einer Viererlinie über eine Würfelkante.",
+    "Gewinne eine Abyss-Partie in höchstens 24 Gesamtzügen.",
     "Gewinne insgesamt drei reguläre Abyss-Partien."
 ]
 const ABYSS_EN: Array[String] = [
     "Win a regular Abyss match against the Zen-Bot.",
-    "Win with four marks across a cube edge.",
+    "Win an Abyss match in at most 24 total moves.",
     "Win three regular Abyss matches in total."
 ]
 const ABYSS_PT: Array[String] = [
     "Vence uma partida normal de Abyss contra o Zen-Bot.",
-    "Vence com quatro símbolos através de uma aresta do cubo.",
+    "Vence uma partida de Abyss em, no máximo, 24 jogadas no total.",
     "Vence três partidas normais de Abyss no total."
 ]
 
@@ -46,9 +47,10 @@ static func base_unlocked() -> bool:
 
 static func defaults() -> Dictionary:
     return {"version":VERSION,"entered":[false,false,false,false],
-        "abyss_stats":{"played":0,"wins":0,"edge_wins":0,"losses":0,"draws":0},
-        "ember_stats":{"played":0,"wins":0,"edge_wins":0,"losses":0,"draws":0},
-        "celestial_stats":{"played":0,"wins":0,"edge_wins":0,"block_wins":0,"losses":0,"draws":0}}
+        "abyss_stats":{"played":0,"wins":0,"edge_wins":0,"losses":0,"draws":0,"fast_wins":0},
+        "ember_stats":{"played":0,"wins":0,"edge_wins":0,"losses":0,"draws":0,"fast_wins":0},
+        "celestial_stats":{"played":0,"wins":0,"edge_wins":0,"block_wins":0,"losses":0,"draws":0,"fast_wins":0},
+        "satori_stats":{"played":0,"wins":0,"edge_wins":0,"block_wins":0,"losses":0,"draws":0,"fast_wins":0}}
 
 static func load_progress() -> Dictionary:
     var data: Dictionary = defaults()
@@ -74,6 +76,10 @@ static func load_progress() -> Dictionary:
     if celestial_stats is Dictionary:
         for key in data.celestial_stats.keys():
             data.celestial_stats[key] = maxi(0,int(celestial_stats.get(key,0)))
+    var satori_stats: Variant = parsed.get("satori_stats",{})
+    if satori_stats is Dictionary:
+        for key in data.satori_stats.keys():
+            data.satori_stats[key] = maxi(0,int(satori_stats.get(key,0)))
     return data
 
 static func save_progress(data: Dictionary) -> bool:
@@ -92,6 +98,10 @@ static func save_progress(data: Dictionary) -> bool:
     if celestial_stats is Dictionary:
         for key in clean.celestial_stats.keys():
             clean.celestial_stats[key] = maxi(0,int(celestial_stats.get(key,0)))
+    var satori_stats: Variant = data.get("satori_stats",{})
+    if satori_stats is Dictionary:
+        for key in clean.satori_stats.keys():
+            clean.satori_stats[key] = maxi(0,int(satori_stats.get(key,0)))
     var path: String = SAVE+".tmp"
     var file: FileAccess = FileAccess.open(path,FileAccess.WRITE)
     if file==null: return false
@@ -106,7 +116,10 @@ static func shadow_task(index: int) -> Dictionary:
     return {}
 
 static func challenge_done(chapter: int, index: int) -> bool:
-    if chapter not in [0,1,2,3] or index not in [0,1,2]: return false
+    if chapter not in [0,1,2,3,4] or index not in [0,1,2]: return false
+    if chapter==4:
+        var stats: Dictionary = load_progress().satori_stats
+        return int(stats.wins)>=1 if index==0 else ((int(stats.fast_wins)>=1 or int(stats.block_wins)>=1) if index==1 else int(stats.edge_wins)>=1)
     if chapter==0:
         var task: Dictionary = shadow_task(index)
         if task.is_empty(): return false
@@ -115,22 +128,28 @@ static func challenge_done(chapter: int, index: int) -> bool:
         return bool(Realms.state(saved).completed.get(str(task.id),false))
     if chapter==3:
         var celestial: Dictionary = load_progress().celestial_stats
-        return int(celestial.wins)>=1 if index==0 else (int(celestial.block_wins)>=1 if index==1 else int(celestial.edge_wins)>=1)
+        return int(celestial.wins)>=1 if index==0 else ((int(celestial.fast_wins)>=1 or int(celestial.block_wins)>=1) if index==1 else int(celestial.edge_wins)>=1)
     var stats: Dictionary = load_progress().ember_stats if chapter==2 else load_progress().abyss_stats
     if index==0: return int(stats.wins)>=1
     if chapter==2:
-        return int(stats.wins)>=3 if index==1 else int(stats.edge_wins)>=1
-    if index==1: return int(stats.edge_wins)>=1
+        return int(stats.wins)>=3 if index==1 else (int(stats.fast_wins)>=1 or int(stats.edge_wins)>=1)
+    if index==1: return int(stats.fast_wins)>=1 or int(stats.edge_wins)>=1
     return int(stats.wins)>=3
 
 static func completed_count(_data: Dictionary, chapter: int) -> int:
-    if chapter not in [0,1,2,3]: return 0
+    if chapter not in [0,1,2,3,4]: return 0
     var count: int = 0
     for i in range(3):
         if challenge_done(chapter,i): count+=1
     return count
 
 static func bosses_won(chapter: int) -> int:
+    if chapter==4:
+        var won_satori: Array = Satori.load_progress().get("defeated",[])
+        var total: int = 0
+        for flag in won_satori:
+            if bool(flag): total += 1
+        return total
     if chapter not in [0,1,2,3]: return 0
     var saved: Dictionary = Shadow.load_progress() if chapter==0 else (Abyss.load_progress() if chapter==1 else (Ember.load_progress() if chapter==2 else Celestial.load_progress()))
     var won: Array = saved.get("defeated",[])
@@ -141,6 +160,7 @@ static func bosses_won(chapter: int) -> int:
     return count
 
 static func story_finished(chapter: int) -> bool:
+    if chapter==4: return bool(Satori.load_progress().get("completed",false))
     if chapter not in [0,1,2,3]: return false
     var saved: Dictionary = Shadow.load_progress() if chapter==0 else (Abyss.load_progress() if chapter==1 else (Ember.load_progress() if chapter==2 else Celestial.load_progress()))
     return bool(saved.get("completed",false)) and int(saved.get("page",1))==30
@@ -150,6 +170,10 @@ static func can_unlock(bosses: int, challenges: int, story_done: bool) -> bool:
     return bosses==3 and challenges==3 and story_done
 
 static func final_boss_waiting(chapter: int) -> bool:
+    if chapter==4:
+        if not can_face_boss(4,2) or bosses_won(4)!=2: return false
+        var satori_action: Dictionary = Satori.next_action(Satori.load_progress())
+        return satori_action.get("type")=="battle" and int(satori_action.get("boss",-1))==2
     if not can_face_boss(chapter,2): return false
     if bosses_won(chapter)!=2: return false
     var progress: Dictionary = Shadow.load_progress() if chapter==0 else (Abyss.load_progress() if chapter==1 else (Ember.load_progress() if chapter==2 else Celestial.load_progress()))
@@ -157,12 +181,13 @@ static func final_boss_waiting(chapter: int) -> bool:
     return action.get("type")=="battle" and int(action.get("boss",-1))==2
 
 static func can_face_boss(chapter: int, boss: int) -> bool:
+    if chapter==4: return boss in [0,1,2] and unlocked(4) and (boss<2 or completed_count(load_progress(),4)==3)
     if chapter not in [0,1,2,3] or boss not in [0,1,2]: return false
     if not unlocked(chapter): return false
     return boss < 2 or completed_count(load_progress(),chapter)==3
 
 static func ready(chapter: int) -> bool:
-    if chapter not in [0,1,2,3] or not base_unlocked(): return false
+    if chapter not in [0,1,2,3,4] or not base_unlocked(): return false
     # Preserve access already earned in Build 361, which recorded travel early.
     return can_unlock(bosses_won(chapter),completed_count(load_progress(),chapter),story_finished(chapter) or already_entered(chapter))
 
@@ -176,29 +201,35 @@ static func unlocked(chapter: int) -> bool:
     return false
 
 static func task_title(chapter: int, index: int, language: String = "en") -> String:
-    if chapter not in [0,1,2,3] or index not in [0,1,2]: return ""
+    if chapter not in [0,1,2,3,4] or index not in [0,1,2]: return ""
+    if chapter==4: return ["First Stillness","Perfect Timing","Beyond the Edge"][index]
     if chapter==0: return Realms.localized_name(str(shadow_task(index).get("title","")),language)
-    if chapter==3: return ["Foresight","Inner Stillness","Perfect Harmony"][index]
-    if chapter==2: return ["Tactics","Endurance","Clarity"][index]
+    if chapter==3: return ["Foresight","Measured Clarity","Perfect Harmony"][index]
+    if chapter==2: return ["Tactics","Endurance","Flame Tempo"][index]
     return ABYSS_TITLES[index]
 
 static func task_description(chapter: int, index: int, language: String) -> String:
-    if chapter not in [0,1,2,3] or index not in [0,1,2]: return ""
+    if chapter not in [0,1,2,3,4] or index not in [0,1,2]: return ""
+    if chapter==4:
+        var de: Array = ["Gewinne ein reguläres Satori-Match gegen den Zen-Bot.","Gewinne eine Satori-Partie in höchstens 30 Gesamtzügen.","Gewinne mit vier Markierungen über eine Würfelkante."]
+        var en: Array = ["Win a regular Satori match against the Zen-Bot.","Win a Satori match in at most 30 total moves.","Win with four marks across a cube edge."]
+        var pt: Array = ["Vence uma partida normal de Satori contra o Zen-Bot.","Vence uma partida de Satori em, no máximo, 30 jogadas no total.","Vence com quatro símbolos através de uma aresta do cubo."]
+        return str((de if language=="de" else (pt if language=="pt" else en))[index])
     if chapter==0: return Realms.task_description(shadow_task(index),language)
     if chapter==3:
-        var de: Array = ["Gewinne eine Celestial-Partie gegen den Zen-Bot.","Blockiere eine unmittelbare gegnerische Gewinnlinie und gewinne die Partie.","Gewinne mit vier Markierungen über eine Würfelkante."]
-        var en: Array = ["Win a Celestial match against the Zen-Bot.","Block an immediate winning threat and win the match.","Win with four marks across a cube edge."]
-        var pt: Array = ["Vence uma partida Celestial contra o Zen-Bot.","Bloqueia uma vitória imediata do adversário e vence a partida.","Vence com quatro símbolos através de uma aresta do cubo."]
+        var de: Array = ["Gewinne eine Celestial-Partie gegen den Zen-Bot.","Gewinne eine Celestial-Partie in höchstens 28 Gesamtzügen.","Gewinne mit vier Markierungen über eine Würfelkante."]
+        var en: Array = ["Win a Celestial match against the Zen-Bot.","Win a Celestial match in at most 28 total moves.","Win with four marks across a cube edge."]
+        var pt: Array = ["Vence uma partida Celestial contra o Zen-Bot.","Vence uma partida de Celestial em, no máximo, 28 jogadas no total.","Vence com quatro símbolos através de uma aresta do cubo."]
         return str((de if language=="de" else (pt if language=="pt" else en))[index])
     if chapter==2:
-        var de: Array = ["Gewinne eine Ember-Partie gegen den Zen-Bot.","Gewinne insgesamt drei Ember-Partien gegen den Zen-Bot.","Gewinne eine Ember-Partie mit vier Markierungen über eine Würfelkante."]
-        var en: Array = ["Win an Ember match against the Zen-Bot.","Win three Ember matches against the Zen-Bot.","Win an Ember match with four marks across a cube edge."]
-        var pt: Array = ["Vence uma partida Ember contra o Zen-Bot.","Vence três partidas Ember contra o Zen-Bot.","Vence uma partida Ember com quatro símbolos através de uma aresta."]
+        var de: Array = ["Gewinne eine Ember-Partie gegen den Zen-Bot.","Gewinne insgesamt drei Ember-Partien gegen den Zen-Bot.","Gewinne eine Ember-Partie in höchstens 26 Gesamtzügen."]
+        var en: Array = ["Win an Ember match against the Zen-Bot.","Win three Ember matches against the Zen-Bot.","Win an Ember match in at most 26 total moves."]
+        var pt: Array = ["Vence uma partida Ember contra o Zen-Bot.","Vence três partidas Ember contra o Zen-Bot.","Vence uma partida de Ember em, no máximo, 26 jogadas no total."]
         return str((de if language=="de" else (pt if language=="pt" else en))[index])
     var pool: Array = ABYSS_DE if language=="de" else (ABYSS_PT if language=="pt" else ABYSS_EN)
     return str(pool[index])
 
-static func record_abyss_match(outcome: int, over_edge: bool) -> Array[String]:
+static func record_abyss_match(outcome: int, over_edge: bool, moves: int = 9999) -> Array[String]:
     # Called ONLY after a finished, genuine Abyss free-play match vs the bot.
     # outcome: 1 human victory, 0 draw, -1 loss. No Classic 3x3 or 4x4
     # Realm ranks, leaves, or secret achievements are changed.
@@ -210,6 +241,7 @@ static func record_abyss_match(outcome: int, over_edge: bool) -> Array[String]:
     if outcome==1:
         stats.wins = int(stats.wins)+1
         if over_edge: stats.edge_wins = int(stats.edge_wins)+1
+        if moves <= 24: stats.fast_wins = int(stats.fast_wins)+1
     elif outcome==0:
         stats.draws = int(stats.draws)+1
     else:
@@ -222,7 +254,7 @@ static func record_abyss_match(outcome: int, over_edge: bool) -> Array[String]:
             newly_earned.append(task_title(1,i))
     return newly_earned
 
-static func record_ember_match(outcome: int, over_edge: bool) -> Array[String]:
+static func record_ember_match(outcome: int, over_edge: bool, moves: int = 9999) -> Array[String]:
     # Called ONLY after a finished, genuine Abyss free-play match vs the bot.
     # outcome: 1 human victory, 0 draw, -1 loss. No Classic 3x3 or 4x4
     # Realm ranks, leaves, or secret achievements are changed.
@@ -234,6 +266,7 @@ static func record_ember_match(outcome: int, over_edge: bool) -> Array[String]:
     if outcome==1:
         stats.wins = int(stats.wins)+1
         if over_edge: stats.edge_wins = int(stats.edge_wins)+1
+        if moves <= 26: stats.fast_wins = int(stats.fast_wins)+1
     elif outcome==0:
         stats.draws = int(stats.draws)+1
     else:
@@ -246,7 +279,7 @@ static func record_ember_match(outcome: int, over_edge: bool) -> Array[String]:
             newly_earned.append(task_title(2,i))
     return newly_earned
 
-static func record_celestial_match(outcome: int, over_edge: bool, blocked: bool) -> Array[String]:
+static func record_celestial_match(outcome: int, over_edge: bool, blocked: bool, moves: int = 9999) -> Array[String]:
     if not unlocked(3) or outcome not in [-1,0,1]: return []
     if int(Celestial.load_progress().page)<19: return []
     var old: Array[bool] = [challenge_done(3,0),challenge_done(3,1),challenge_done(3,2)]
@@ -257,6 +290,7 @@ static func record_celestial_match(outcome: int, over_edge: bool, blocked: bool)
         stats.wins = int(stats.wins)+1
         if over_edge: stats.edge_wins = int(stats.edge_wins)+1
         if blocked: stats.block_wins = int(stats.block_wins)+1
+        if moves <= 28: stats.fast_wins = int(stats.fast_wins)+1
     elif outcome==0:
         stats.draws = int(stats.draws)+1
     else:
@@ -266,6 +300,27 @@ static func record_celestial_match(outcome: int, over_edge: bool, blocked: bool)
     var earned: Array[String] = []
     for i in range(3):
         if not old[i] and challenge_done(3,i): earned.append(task_title(3,i))
+    return earned
+
+static func record_satori_match(outcome: int, over_edge: bool, blocked: bool, moves: int = 9999) -> Array[String]:
+    if not unlocked(4) or outcome not in [-1,0,1]: return []
+    if int(Satori.load_progress().page)<19: return []
+    var old: Array[bool] = [challenge_done(4,0),challenge_done(4,1),challenge_done(4,2)]
+    var data: Dictionary = load_progress()
+    var stats: Dictionary = data.satori_stats
+    stats.played = int(stats.played)+1
+    if outcome==1:
+        stats.wins = int(stats.wins)+1
+        if over_edge: stats.edge_wins = int(stats.edge_wins)+1
+        if blocked: stats.block_wins = int(stats.block_wins)+1
+        if moves <= 30: stats.fast_wins = int(stats.fast_wins)+1
+    elif outcome==0: stats.draws = int(stats.draws)+1
+    else: stats.losses = int(stats.losses)+1
+    data.satori_stats = stats
+    if not save_progress(data): return []
+    var earned: Array[String] = []
+    for i in range(3):
+        if not old[i] and challenge_done(4,i): earned.append(task_title(4,i))
     return earned
 
 static func enter_next_realm(chapter: int) -> bool:

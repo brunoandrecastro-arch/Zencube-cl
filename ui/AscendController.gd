@@ -20,6 +20,7 @@ const Abyss = preload("res://story/ZenAbyssCampaign.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Ember = preload("res://story/ZenEmberCampaign.gd")
 const Celestial = preload("res://story/ZenCelestialCampaign.gd")
+const Satori = preload("res://story/ZenSatoriCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const FinalSeries = preload("res://core/ZenFinalGuardianSeries.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
@@ -151,11 +152,14 @@ func _ready() -> void:
     start_world_music()
     draw()
     var practice_launch: int = ZenChronicles.consume_campaign_practice_launch()
-    if practice_launch in [0,1,2,3]:
+    if practice_launch in [0,1,2,3,4]:
         call_deferred("start_campaign_practice",practice_launch)
         return
     if ZenChronicles.consume_celestial_launch():
         call_deferred("start_celestial_battle")
+        return
+    if ZenChronicles.consume_satori_launch():
+        call_deferred("start_satori_battle")
         return
     if ZenChronicles.consume_ember_launch():
         call_deferred("start_ember_battle")
@@ -182,7 +186,7 @@ func _ready() -> void:
 # its own realm soundtrack; a manually owned track overrides it everywhere.
 func desired_realm_stream() -> AudioStream:
     if campaign_practice_active:
-        var stream: AudioStream = Celestial.story_stream() if practice_chapter==3 else (Ember.story_stream() if practice_chapter==2 else Abyss.story_stream())
+        var stream: AudioStream = Satori.story_stream() if practice_chapter==4 else (Celestial.story_stream() if practice_chapter==3 else (Ember.story_stream() if practice_chapter==2 else Abyss.story_stream()))
         if stream != null: return stream
     if ember_active:
         var ember_stream: AudioStream = ember_model.boss_stream(ember_index)
@@ -530,19 +534,40 @@ func show_ascend_menu() -> void:
     if realm_story_active:
         _realm_story_menu()
         return
-    var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",520)
+    # Realms/Challenges/Achievements are accessible from permanent bottom tabs.
+    var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",420)
+    _realm_story_compact(parts)
+    var frame: PanelContainer = parts.frame
+    frame.anchor_top = 0.265
+    frame.anchor_bottom = 0.735
     var body: VBoxContainer = parts.box
-    action(body,Z("Neue Partie"),show_mode_picker,true)
-    action(body,Z("Statistik & Rang"),show_statistics)
-    action(body,Z("Regeln ansehen"),show_rules)
-    action(body,L("realms"),show_realms)
-    action(body,L("challenges"),show_challenges)
-    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms)
+    var first: HBoxContainer = HBoxContainer.new()
+    first.add_theme_constant_override("separation",8)
+    body.add_child(first)
+    var begin: Button = action(first,Z("Neue Partie"),show_mode_picker,true)
+    var stats: Button = action(first,Z("Statistik & Rang"),show_statistics)
+    begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var second: HBoxContainer = HBoxContainer.new()
+    second.add_theme_constant_override("separation",8)
+    body.add_child(second)
+    var rules: Button = action(second,Z("Regeln ansehen"),show_rules)
+    var chronicles: Button = action(second,"Zen Chronicles",_open_campaign_library_from_realms)
+    rules.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    chronicles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var third: HBoxContainer = HBoxContainer.new()
+    third.add_theme_constant_override("separation",8)
+    body.add_child(third)
+    var settings: Button = action(third,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendSettingsEntry"
+    var home: Button = action(third,Z("Hauptmenü"),return_home)
+    settings.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    home.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    for control in [begin,stats,rules,chronicles,settings,home]:
+        control.custom_minimum_size.y = 52
+        control.add_theme_font_size_override("font_size",16)
     if Realm2.qa_mode():
         action(body,"Ember Boss · VFX Test",_show_ember_vfx_test)
-    action(body,_achievements_label(),show_realm_titles)
-    action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings).name = "AscendSettingsEntry"
-    action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
 
 func _save_ascend_setting(key: String, value: Variant) -> void:
@@ -963,7 +988,7 @@ func finish() -> void:
                     crossed = true
                     break
         var outcome: int = 1 if result==1 else (0 if result==3 else -1)
-        campaign_awards = Realm2.record_celestial_match(outcome,crossed,match_blocked_threat) if practice_chapter==3 else (Realm2.record_ember_match(outcome,crossed) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed))
+        campaign_awards = Realm2.record_satori_match(outcome,crossed,match_blocked_threat,move_count()) if practice_chapter==4 else (Realm2.record_celestial_match(outcome,crossed,match_blocked_threat,move_count()) if practice_chapter==3 else (Realm2.record_ember_match(outcome,crossed,move_count()) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed,move_count())))
         campaign_award_index = 0
         # A newly earned 4x4 Realm challenge gets the same full-screen
         # ceremony as a secret achievement before the normal result screen.
@@ -1326,11 +1351,15 @@ func show_realms() -> void:
         thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
         column.add_child(thumb)
         var amount: int = Realms.count(data,i)
-        text(column,L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
+        text(column,("Zen Ascend" if lang()!="pt" else "Ascensão Zen") + " · " + L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
+        var story_chapter: int = [0,2,3,4][i]
+        if Realm2.unlocked(story_chapter):
+            text(column,"Zen Chronicles · " + ("Bosse" if lang()=="de" else ("Chefes" if lang()=="pt" else "Bosses")) + ": %d/3 · " % Realm2.bosses_won(story_chapter) + L("challenges") + ": %d/3" % Realm2.completed_count(Realm2.load_progress(),story_chapter),13,Color("e3d5ba"))
         var rank_name: String = Realms.title_for_realm(data,i,lang())
         if rank_name != "—": text(column,rank_name,14,Color("e2ca8c"))
         if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
-        if not allowed: text(column,L("locked") + ": " + _realm_unlocked_hint(i),13)
+        if not allowed:
+            text(column,L("locked") + " · Zen Ascend 8/8: " + _realm_unlocked_hint(i),13)
         var selected: bool = i == realm_index()
         var choose: Button
         if not allowed:
@@ -1338,6 +1367,8 @@ func show_realms() -> void:
         else:
             choose = action(column,L("selected") if selected else L("select"),_choose_realm_from_dialog.bind(number,ui_parts.dialog),true)
             choose.disabled = selected or (move_count() > 0 and result == 0)
+        if not allowed and Realm2.unlocked(story_chapter):
+            action(column,_campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história"),_open_campaign_story_from_match.bind(story_chapter),true)
         if i==0:
             action(column,"Realm Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),0),_open_campaign_trials_from_realms.bind(0))
             _add_abyss_realm_card(body)
@@ -1659,6 +1690,9 @@ func _realm_boss_intro_layout(parts: Dictionary) -> void:
 func _realm_boss_portrait_height() -> float:
     return clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,820.0)
 
+func _realm_boss_result_height() -> float:
+    return clampf(get_viewport().get_visible_rect().size.y * 0.29,400.0,520.0)
+
 func _realm_boss_primary_action(parts: Dictionary, caption: String, callback: Callable) -> void:
     # Play remains visible beneath the scrollable, full-height boss artwork.
     var frame: PanelContainer = parts.frame
@@ -1758,8 +1792,10 @@ func _realm_story_art(parent: VBoxContainer, stage: int, height: float = 214.0, 
     picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     # Keep the full vertical portrait and its title legible; COVERED would
     # crop the boss face and name on narrow Android screens.
-    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if zoom else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    picture.custom_minimum_size.y = height
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    var image_ratio: float = float(art.get_height()) / maxf(1.0,float(art.get_width()))
+    var display_width: float = get_viewport().get_visible_rect().size.x * 0.84
+    picture.custom_minimum_size.y = minf(height,maxf(180.0,display_width * image_ratio))
     picture.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
     parent.add_child(picture)
@@ -1834,12 +1870,12 @@ func _realm_story_result() -> void:
         var scene_art: PanelContainer = VictoryArtwork.new()
         body.add_child(scene_art)
         scene_art.call("present",realm_story_stage,lang())
-        scene_art.custom_minimum_size.y = _realm_boss_portrait_height()
+        scene_art.custom_minimum_size.y = _realm_boss_result_height()
         var frame_art: Control = scene_art.find_child("CinematicVictoryFrame",true,false) as Control
-        if frame_art != null: frame_art.custom_minimum_size.y = _realm_boss_portrait_height()
+        if frame_art != null: frame_art.custom_minimum_size.y = _realm_boss_result_height()
         text(body,RealmStory.text_for(lang(),"victory_story_%d" % realm_story_stage),15,Color("#e7d3ab"))
     else:
-        _realm_story_art(body,realm_story_stage,_realm_boss_portrait_height(),true)
+        _realm_story_art(body,realm_story_stage,_realm_boss_result_height(),true)
     text(body,RealmStory.text_for(lang(),key),16)
     _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if won:
@@ -2093,8 +2129,10 @@ func _abyss_add_art(parent: VBoxContainer, height: float = 245.0, zoom: bool = f
     var art := TextureRect.new()
     art.texture = load(image_path) as Texture2D
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if zoom else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    art.custom_minimum_size.y = height
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    var image_ratio: float = float(art.texture.get_height()) / maxf(1.0,float(art.texture.get_width()))
+    var display_width: float = get_viewport().get_visible_rect().size.x * 0.84
+    art.custom_minimum_size.y = minf(height,maxf(180.0,display_width * image_ratio))
     art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     parent.add_child(art)
@@ -2138,7 +2176,7 @@ func _abyss_result() -> void:
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _abyss_add_art(body,_realm_boss_portrait_height(),true)
+    _abyss_add_art(body,_realm_boss_result_height(),true)
     text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
     if abyss_index==2: _guardian_series_panel(body,abyss_progress)
     _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
@@ -2289,8 +2327,10 @@ func _shadow_add_art(parent: VBoxContainer, height: float = 245.0, zoom: bool = 
     var art := TextureRect.new()
     art.texture = portrait
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if zoom else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    art.custom_minimum_size.y = height
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    var image_ratio: float = float(portrait.get_height()) / maxf(1.0,float(portrait.get_width()))
+    var display_width: float = get_viewport().get_visible_rect().size.x * 0.84
+    art.custom_minimum_size.y = minf(height,maxf(180.0,display_width * image_ratio))
     art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     parent.add_child(art)
@@ -2334,7 +2374,7 @@ func _shadow_result() -> void:
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _shadow_add_art(body,_realm_boss_portrait_height(),true)
+    _shadow_add_art(body,_realm_boss_result_height(),true)
     text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
     if shadow_index==2: _guardian_series_panel(body,shadow_progress)
     _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
@@ -2432,8 +2472,15 @@ func start_celestial_battle() -> void:
     ember_model = Celestial
     _start_guardian_battle()
 
+func start_satori_battle() -> void:
+    if not Realm2.unlocked(4): return
+    guardian_chapter = 4
+    ember_model = Satori
+    _start_guardian_battle()
+
 func _open_guardian_reader() -> void:
-    if guardian_chapter==3: ZenChronicles.open_celestial_campaign_preview()
+    if guardian_chapter==4: ZenChronicles.open_satori_campaign_preview()
+    elif guardian_chapter==3: ZenChronicles.open_celestial_campaign_preview()
     else: ZenChronicles.open_ember_reader()
 
 func _start_guardian_battle() -> void:
@@ -2444,7 +2491,7 @@ func _start_guardian_battle() -> void:
         return
     ember_index = int(next_action.get("boss",-1))
     if ember_index < 0 or ember_index >= 3: return
-    if not Realm2.can_face_boss(guardian_chapter,ember_index):
+    if guardian_chapter != 4 and not Realm2.can_face_boss(guardian_chapter,ember_index):
         ZenChronicles.open_campaign_challenges(guardian_chapter,true)
         return
     ember_active = true
@@ -2471,7 +2518,7 @@ func _start_guardian_battle() -> void:
     cube.reset_view()
     cube.clear_abyss_skin()
     cube.clear_boss_skin()
-    cube.set_boss_skin(ember_index+(6 if guardian_chapter==3 else 3))
+    cube.set_boss_skin(ember_index+(9 if guardian_chapter==4 else (6 if guardian_chapter==3 else 3)))
     if realm_backdrop != null:
         var arena: Texture2D = ember_model.battle_backdrop(ember_index)
         if arena != null: realm_backdrop.texture = arena
@@ -2501,8 +2548,10 @@ func _ember_add_art(parent: VBoxContainer, height: float = 245.0, zoom: bool = f
     var art := TextureRect.new()
     art.texture = portrait
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if zoom else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-    art.custom_minimum_size.y = height
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    var image_ratio: float = float(portrait.get_height()) / maxf(1.0,float(portrait.get_width()))
+    var display_width: float = get_viewport().get_visible_rect().size.x * 0.84
+    art.custom_minimum_size.y = minf(height,maxf(180.0,display_width * image_ratio))
     art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     parent.add_child(art)
@@ -2519,6 +2568,7 @@ func _ember_intro() -> void:
         "Show me the shape of your fire."
     ]
     if guardian_chapter==3: opening = ["Every decision creates a thousand possibilities.","Let thunder shake the heavens.","Then show me what you have become."]
+    if guardian_chapter==4: opening = ["See clearly before you move.","A victory need not define you.","What remains when the game is over?"]
     text(body,opening[ember_index],16,Color("#dfd4e5"))
     _guardian_series_panel(body,ember_progress)
     var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
@@ -2545,10 +2595,11 @@ func _ember_result() -> void:
     elif lang() == "pt":
         label = "A chama acalma" if result == 1 else ("Empate" if result == 3 else "Derrota")
     if guardian_chapter==3 and result==1: label = _campaign_phrase("Klarheit","Clarity","Clareza")
+    if guardian_chapter==4 and result==1: label = _campaign_phrase("Das letzte Erwachen","The Final Awakening","O Despertar Final")
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _ember_add_art(body,_realm_boss_portrait_height(),true)
+    _ember_add_art(body,_realm_boss_result_height(),true)
     text(body,ember_model.BOSS_NAMES[ember_index],18,Color("#e8d4b5"))
     _guardian_series_panel(body,ember_progress)
     _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
@@ -2585,7 +2636,7 @@ func _ember_retry() -> void:
 
 func _ember_victory() -> void:
     if not ember_active or result != 1: return
-    if not Realm2.can_face_boss(guardian_chapter,ember_index): return
+    if guardian_chapter != 4 and not Realm2.can_face_boss(guardian_chapter,ember_index): return
     if not ember_model.player_won(ember_progress): return
     if not ember_model.record_victory(ember_progress,ember_index): return
     ember_generation += 1
@@ -2634,7 +2685,7 @@ func _ember_back_to_reader(open_reader: bool = true) -> void:
 
 # ---- Zen Realm Chronicles: NORMAL Abyss bot matches, not puzzles ----
 func start_campaign_practice(chapter: int) -> void:
-    if chapter not in [0,1,2,3] or not Realm2.unlocked(chapter): return
+    if chapter not in [0,1,2,3,4] or not Realm2.unlocked(chapter): return
     if move_count()>0 and result==0:
         # Do not replace a live board when moving between Realms.
         if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
@@ -2655,23 +2706,25 @@ func start_campaign_practice(chapter: int) -> void:
         start_game(true,Realms.fixed_bot_level(0))
         return
     if chapter==3 and int(Celestial.load_progress().page)<19: return
+    if chapter==4 and int(Satori.load_progress().page)<19: return
     campaign_practice_active = true
     practice_chapter = chapter
+    if chapter==4: match_realm = 3
     ember_active = false
     abyss_active = false
     shadow_active = false
     realm_story_active = false
     against_bot = true
-    bot_level = 2 if practice_chapter in [2,3] else 1
+    bot_level = (4 if practice_chapter==4 else (2 if practice_chapter in [2,3] else 1))
     owners = [0,1]
     ZenChronicles.set_campaign_board_active(true)
     cube.clear_boss_skin()
-    if practice_chapter in [2,3]:
+    if practice_chapter in [2,3,4]:
         cube.clear_abyss_skin()
     else:
         cube.set_abyss_skin(0)
     if realm_backdrop != null:
-        var arena: Texture2D = Celestial.battle_backdrop() if practice_chapter==3 else (Ember.battle_backdrop() if practice_chapter==2 else Abyss.battle_backdrop())
+        var arena: Texture2D = Satori.battle_backdrop() if practice_chapter==4 else (Celestial.battle_backdrop() if practice_chapter==3 else (Ember.battle_backdrop() if practice_chapter==2 else Abyss.battle_backdrop()))
         if arena != null: realm_backdrop.texture = arena
         _refresh_arena_presentation()
     sync_realm_music()
@@ -2687,7 +2740,7 @@ func _campaign_practice_restart() -> void:
     campaign_awards = []
     campaign_award_index = 0
     match_blocked_threat = false
-    var total: int = int(Realm2.load_progress().celestial_stats.played if practice_chapter==3 else (Realm2.load_progress().ember_stats.played if practice_chapter==2 else Realm2.load_progress().abyss_stats.played))
+    var total: int = int(Realm2.load_progress().satori_stats.played if practice_chapter==4 else (Realm2.load_progress().celestial_stats.played if practice_chapter==3 else (Realm2.load_progress().ember_stats.played if practice_chapter==2 else Realm2.load_progress().abyss_stats.played)))
     turn = 1 if total % 2 == 0 else 2
     cube.reset_view()
     draw()
@@ -2720,7 +2773,7 @@ func _campaign_practice_show_next_award() -> void:
         if is_inside_tree() and campaign_practice_active and result != 0 and match_generation == saved_match_generation:
             call_deferred("_campaign_practice_show_next_award")
     )
-    celebration.present("challenge",Realm2.SOURCE_ART[practice_chapter],
+    celebration.present("challenge",Abyss.battle_backdrop() if practice_chapter==1 else Realm2.SOURCE_ART[practice_chapter],
         title_name,description,bool(data.settings.get("sound",true)),[world_music],lang())
 
 func _campaign_practice_result() -> void:
@@ -2757,7 +2810,8 @@ func _open_campaign_story_from_match(chapter: int) -> void:
     if chapter==0: ZenChronicles.open_shadow_reader()
     elif chapter==1: ZenChronicles.open_abyss_reader()
     elif chapter==2: ZenChronicles.open_ember_campaign_preview()
-    else: ZenChronicles.open_celestial_campaign_preview()
+    elif chapter==3: ZenChronicles.open_celestial_campaign_preview()
+    else: ZenChronicles.open_satori_campaign_preview()
 
 func _campaign_practice_begin_again() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)

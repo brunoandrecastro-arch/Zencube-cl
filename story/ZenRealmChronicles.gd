@@ -22,9 +22,9 @@ const BOSS_ART: Array[String] = [
     "res://assets/realms/celestial_realm.webp",
     "res://assets/realms/celestial_realm.webp",
     "res://assets/realms/celestial_realm.webp",
-    "res://assets/realms/satori_realm.webp",
-    "res://assets/realms/satori_realm.webp",
-    "res://assets/realms/satori_realm.webp"
+    "res://assets/satori_campaign/realm.webp",
+    "res://assets/satori_campaign/realm.webp",
+    "res://assets/satori_campaign/realm.webp"
 ]
 ## Approved concept art is shipped as compressed WebP inside a UTF-8 JSON
 ## resource. The GitHub connector only writes text, so this keeps the actual
@@ -68,7 +68,7 @@ const CHAPTER_ART: Array[String] = [
     "res://assets/realms/shadow_realm.webp",
     "res://assets/realms/ember_temple.webp",
     "res://assets/realms/celestial_realm.webp",
-    "res://assets/realms/satori_realm.webp"
+    "res://assets/satori_campaign/realm.webp"
 ]
 const LOCALE: Dictionary = {
     "de": {

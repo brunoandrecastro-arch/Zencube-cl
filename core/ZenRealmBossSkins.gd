@@ -20,17 +20,17 @@ static func get_profile(index: int) -> Dictionary:
     return PROFILES[clampi(index,0,PROFILES.size()-1)]
 
 static func make_surface(index: int) -> ImageTexture:
-    # 160x160 RGBA8 is cheap on Android. All highlights are original
+    # 320x320 RGBA8 is cheap on Android. All highlights are original
     # deterministic material markings: fog, facets, runes, fissures, banners.
     var id: int = clampi(index,0,PROFILES.size()-1)
-    var img: Image = Image.create(160,160,false,Image.FORMAT_RGBA8)
+    var img: Image = Image.create(320,320,false,Image.FORMAT_RGBA8)
     var ice := Color("#cedce7")
     var gold := Color("#e9bc77")
     var ember := Color("#ff8e36")
-    for y in range(160):
-        for x in range(160):
-            var u: float = float(x)/159.0
-            var v: float = float(y)/159.0
+    for y in range(320):
+        for x in range(320):
+            var u: float = float(x)/319.0
+            var v: float = float(y)/319.0
             var grain: float = float((x*113 + y*41 + id*193 + (x*y) % 97) % 101) / 101.0
             var base: Color = Color("#c6c9ca")
             if id == 0:

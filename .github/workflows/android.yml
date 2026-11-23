@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     env:
-      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' }}
+      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' || github.head_ref == 'test/satori-20261122' || github.ref_name == 'test/satori-20261122' }}
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
       ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
@@ -243,6 +243,10 @@ jobs:
       - name: Verify 12 original Realm boss music mappings and OGG import
         run: |
           timeout 55 "$GODOT" --headless --path . --script tests/test_realm_boss_music.gd
+      - name: Verify feedback challenges and round alternation
+        run: |
+          python3 tests/test_feedback_fix.py
+          timeout 40 "$GODOT" --headless --path . --script tests/test_round_starters.gd
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd

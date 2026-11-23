@@ -118,7 +118,8 @@ func _render() -> void:
         _button(content,t("Geschichte fortsetzen","Continue Story","Continuar história"),_back,true)
     _button(content,t("⚔ Gegen Zen-Bot spielen","⚔ Play Zen-Bot","⚔ Jogar contra o Zen-Bot"),_play_bot,not final_ready)
     if Campaign.ready(chapter):
-        _label(content,t("✓ Alle Bosse und Challenges geschafft. Der nächste Realm ist frei!","✓ All bosses and challenges complete. Next realm unlocked!","✓ Todos os chefes e desafios concluídos. Novo reino desbloqueado!"),16,Color("#c3f0bb"))
+        var complete_text: String = t("✓ Satori abgeschlossen — Fully Aware.","✓ Satori complete — Fully Aware.","✓ Satori concluído — Fully Aware.") if chapter==4 else t("✓ Alle Bosse und Challenges geschafft. Der nächste Realm ist frei!","✓ All bosses and challenges complete. Next realm unlocked!","✓ Todos os chefes e desafios concluídos. Novo reino desbloqueado!")
+        _label(content,complete_text,16,Color("#c3f0bb"))
     elif Campaign.story_finished(chapter):
         _label(content,t("Für den nächsten Realm brauchst du 3 Bosssiege UND 3 Challenges.","The next realm requires 3 boss victories AND 3 challenges.","O próximo reino exige 3 vitórias contra chefes E 3 desafios."),14,Ui.IVORY)
     _button(content,t("‹ Zurück zum Manhwa","‹ Back to Manhwa","‹ Voltar ao Manhwa"),_back)
@@ -136,7 +137,8 @@ func _back() -> void:
     if chapter==0: _chronicles().call_deferred("open_shadow_reader")
     elif chapter==1: _chronicles().call_deferred("open_abyss_reader")
     elif chapter==2: _chronicles().call_deferred("open_ember_reader")
-    else: _chronicles().call_deferred("open_celestial_campaign_preview")
+    elif chapter==3: _chronicles().call_deferred("open_celestial_campaign_preview")
+    else: _chronicles().call_deferred("open_satori_campaign_preview")
 
 func _library() -> void:
     _chronicles().call("close_campaign_challenges")

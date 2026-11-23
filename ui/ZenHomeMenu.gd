@@ -11,7 +11,7 @@ var _time: float = 0.0
 func configure(game: Node) -> void:
     name = "ZenHomeMenu"
     size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    add_theme_constant_override("separation", 12)
+    add_theme_constant_override("separation", 9)
     var language: String = game.language_code()
     var step: Dictionary = Journey.next_step(game.data)
 
@@ -38,7 +38,7 @@ func configure(game: Node) -> void:
 
     var hero := TextureRect.new()
     hero.name = "HomeCubePreview"
-    hero.custom_minimum_size.y = 236
+    hero.custom_minimum_size.y = 205
     hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -86,24 +86,28 @@ func configure(game: Node) -> void:
     story.tooltip_text = game.T("Geschichte und Kapitel")
     _quiet_button(story)
 
-    var options: HBoxContainer = game.row(self)
-    var modes: Button = game.premium_button("Spielmodi", options, game.open_game_modes)
-    modes.name = "HomeGameModes"
-    var shop: Button = game.premium_button("Zen-Shop", options, game.open_store)
+    # Direct navigation: the campaign and story still lead, all other routes are grouped.
+    var first_row: HBoxContainer = game.row(self)
+    var worlds: Button = game.premium_button("Welten", first_row, game.open_worlds)
+    worlds.name = "HomeWorlds"
+    var ascend: Button = game.premium_button("Zen Ascend", first_row, game.open_ascend_intro)
+    ascend.name = "HomeZenAscend"
+    var second_row: HBoxContainer = game.row(self)
+    var achievements: Button = game.premium_button("Erfolge", second_row, game.open_achievements)
+    achievements.name = "HomeAchievements"
+    var shop: Button = game.premium_button("Zen-Shop", second_row, game.open_store)
     shop.name = "HomeShop"
-    for option in [modes, shop]:
-        option.custom_minimum_size.y = 56
-        option.add_theme_font_size_override("font_size", 18)
-        option.add_theme_stylebox_override("normal", _frame(Color("#18382c"), Color("#6d8560"), 16))
-    modes.tooltip_text = game.T("Freies Spiel und Challenges")
-    shop.tooltip_text = game.T("Skins, Musik und Kulissen")
-
-    var footer: HBoxContainer = game.row(self)
-    var help: Button = game.button("Spielanleitung", footer, game.open_welcome, true)
+    var third_row: HBoxContainer = game.row(self)
+    var modes: Button = game.premium_button("Spielmodi", third_row, game.open_game_modes)
+    modes.name = "HomeGameModes"
+    var help: Button = game.button("Spielanleitung", third_row, game.open_welcome, true)
     help.name = "HomeHowToPlay"
-    _quiet_button(help)
+    for option in [worlds,ascend,achievements,shop,modes,help]:
+        option.custom_minimum_size.y = 52
+        option.add_theme_font_size_override("font_size",16)
+        option.add_theme_stylebox_override("normal",_frame(Color("#18382c"),Color("#8d9870"),16))
     if game.board.move_count() > 0 or game.challenge_active or game.tutorial != null:
-        var resume: Button = game.button("Partie fortsetzen", footer, game.resume_current_match, true)
+        var resume: Button = game.button("Partie fortsetzen", self, game.resume_current_match, true)
         resume.name = "HomeResumeMatch"
         _quiet_button(resume)
 

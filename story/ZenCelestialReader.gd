@@ -129,7 +129,7 @@ func _show_page() -> void:
         return
     if p == 19 and challenge_count < 3:
         next_button.text = "The Final Trial · %d/3" % challenge_count
-        status.text = "Foresight · Inner Stillness · Perfect Harmony"
+        status.text = "Foresight · Measured Clarity · Perfect Harmony"
         next_button.disabled = false
         return
     var action: Dictionary = Celestial.next_action(progress)

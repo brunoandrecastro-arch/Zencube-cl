@@ -12,7 +12,7 @@ assert 'func _campaign_practice_show_next_award() -> void:' in game
 award_flow = game.split("func _campaign_practice_show_next_award() -> void:",1)[1].split("func _campaign_practice_result()",1)[0]
 for needle in ['Realm2.task_description(practice_chapter,task_index,lang())','campaign_award_index += 1',
                'campaign_practice_active and result != 0 and match_generation == saved_match_generation',
-               'celebration.present("challenge",Realm2.SOURCE_ART[practice_chapter]']:
+               'celebration.present("challenge",Abyss.battle_backdrop() if practice_chapter==1 else Realm2.SOURCE_ART[practice_chapter]']:
     assert needle in award_flow,needle
 result = game.split("func _campaign_practice_result() -> void:",1)[1].split("func _enter_campaign_final_guardian()",1)[0]
 assert 'zen_achievement_choir.wav' not in result, "do not play a second choir"

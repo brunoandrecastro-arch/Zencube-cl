@@ -20,12 +20,12 @@ for method, next_func, image in (
     assert image in block,method
 assert "STRETCH_KEEP_ASPECT_CENTERED" in code
 assert "func _realm_boss_result_layout(parts: Dictionary)" in code
-assert "scene_art.custom_minimum_size.y = _realm_boss_portrait_height()" in code
+assert "scene_art.custom_minimum_size.y = _realm_boss_result_height()" in code
 for fn, end, art in (
-    ("_realm_story_result","_realm_story_retry","_realm_story_art(body,realm_story_stage,_realm_boss_portrait_height(),true)"),
-    ("_shadow_result","_shadow_retry","_shadow_add_art(body,_realm_boss_portrait_height(),true)"),
-    ("_abyss_result","_abyss_retry","_abyss_add_art(body,_realm_boss_portrait_height(),true)"),
-    ("_ember_result","_ember_retry","_ember_add_art(body,_realm_boss_portrait_height(),true)"),
+    ("_realm_story_result","_realm_story_retry","_realm_story_art(body,realm_story_stage,_realm_boss_result_height(),true)"),
+    ("_shadow_result","_shadow_retry","_shadow_add_art(body,_realm_boss_result_height(),true)"),
+    ("_abyss_result","_abyss_retry","_abyss_add_art(body,_realm_boss_result_height(),true)"),
+    ("_ember_result","_ember_retry","_ember_add_art(body,_realm_boss_result_height(),true)"),
 ):
     section = code.split("func " + fn + "(",1)[1].split("func " + end + "(",1)[0]
     assert "_realm_boss_result_layout(parts)" in section, fn

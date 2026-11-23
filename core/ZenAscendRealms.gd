@@ -12,7 +12,7 @@ const REALM_ART: Array[String] = [
     "res://assets/realms/shadow_realm.webp",
     "res://assets/realms/ember_temple.webp",
     "res://assets/realms/celestial_realm.webp",
-    "res://assets/realms/satori_realm.webp"
+    "res://assets/satori_campaign/realm.webp"
 ]
 const REALM_TITLES: Array = [
     ["Shadow Walker", "Keeper of Silence", "Moon Disciple", "Veil Breaker", "Master of Shadows"],
@@ -33,7 +33,7 @@ const TASKS: Array = [
         {"id":"shadow_fast","title":"No Hesitation","metric":"fast18","need":1,"leaves":75,"de":"Gewinne in höchstens 18 Gesamtzügen.","en":"Win in at most 18 total moves.","pt":"Vence em, no máximo, 18 jogadas no total."},
         {"id":"shadow_three","title":"Threefold Silence","metric":"wins","need":3,"leaves":75,"de":"Gewinne insgesamt 3 Partien in diesem Realm.","en":"Win 3 matches in this realm.","pt":"Ganha 3 partidas neste reino."},
         {"id":"shadow_streak","title":"Shadow Streak","metric":"best_streak","need":2,"leaves":75,"de":"Gewinne 2 Realm-Partien in Folge.","en":"Win 2 realm matches in a row.","pt":"Ganha 2 partidas seguidas neste reino."},
-        {"id":"shadow_block","title":"Veil Tactician","metric":"block_wins","need":1,"leaves":120,"de":"Blockiere eine direkte Gewinnchance des Bots und gewinne dieselbe Partie.","en":"Block an immediate bot win and win that match.","pt":"Bloqueia uma vitória imediata do bot e ganha essa partida."},
+        {"id":"shadow_block","title":"Veil Tactician","metric":"fast22","need":1,"leaves":120,"de":"Gewinne eine Shadow-Partie in höchstens 22 Gesamtzügen.","en":"Win a Shadow match in at most 22 total moves.","pt":"Vence uma partida de Shadow em, no máximo, 22 jogadas no total."},
         {"id":"shadow_hard","title":"Master of the Dark Path","metric":"face_wins","need":1,"leaves":120,"de":"Gewinne mit vier Zeichen auf einer Würfelfläche gegen Mittel.","en":"Win with four marks on one cube face against Medium.","pt":"Vence com quatro símbolos numa face do cubo contra Médio."}
     ],
     [
@@ -44,7 +44,7 @@ const TASKS: Array = [
         {"id":"ember_will","title":"Unbroken Will","metric":"wins_without_draw","need":2,"leaves":75,"de":"Gewinne zweimal, ohne dazwischen ein Unentschieden zu erzielen.","en":"Win twice without a draw between those wins.","pt":"Ganha duas vezes sem um empate pelo meio."},
         {"id":"ember_fast","title":"Temple Pressure","metric":"fast16","need":1,"leaves":120,"de":"Gewinne in höchstens 16 Gesamtzügen.","en":"Win in at most 16 total moves.","pt":"Vence em, no máximo, 16 jogadas no total."},
         {"id":"ember_edge","title":"Edge of Fire","metric":"edge_wins","need":1,"leaves":75,"de":"Gewinne mit einer Gewinnlinie über eine Würfelkante.","en":"Win with a line across a cube edge.","pt":"Vence com uma linha através de uma aresta do cubo."},
-        {"id":"ember_master","title":"Ember Mastery","metric":"block_wins","need":1,"leaves":120,"de":"Blockiere einen direkten Gewinnzug des Hard-Bots und gewinne die Partie.","en":"Block an immediate Hard bot victory and win that match.","pt":"Bloqueia uma vitória imediata do bot Difícil e ganha a partida."}
+        {"id":"ember_master","title":"Ember Mastery","metric":"fast26","need":1,"leaves":120,"de":"Gewinne eine Ember-Partie in höchstens 26 Gesamtzügen.","en":"Win an Ember match in at most 26 total moves.","pt":"Vence uma partida de Ember em, no máximo, 26 jogadas no total."}
     ],
     [
         {"id":"celestial_first","title":"Open Sky","metric":"wins","need":1,"leaves":40,"de":"Gewinne 1 Partie im Celestial Realm.","en":"Win one match in Celestial Realm.","pt":"Ganha uma partida no Celestial Realm."},
@@ -216,7 +216,7 @@ static func blank_stats() -> Dictionary:
         "hard_streak":0,"best_hard_streak":0,"master_streak":0,"best_master_streak":0,
         "wins_without_draw":0,"best_wins_without_draw":0,"balance_win":false,"balance_draw":false,"balance":0,
         "edge_wins":0,"face_wins":0,"block_wins":0,"medium_win":0,"hard_win":0,
-        "master_win":0,"grand_win":0,"hard_line_wins":0,"fast18":0,"fast16":0,"fast15":0,"fast14":0}
+        "master_win":0,"grand_win":0,"hard_line_wins":0,"fast18":0,"fast16":0,"fast15":0,"fast14":0,"fast22":0,"fast26":0}
 
 static func ensure(data: Dictionary) -> void:
     ZenAscend.ensure(data)
@@ -369,6 +369,8 @@ static func record_bot_match(data: Dictionary, realm: int, outcome: int, difficu
         if edge: stats.edge_wins += 1
         if face: stats.face_wins += 1
         if difficulty >= 2 and (edge or face): stats.hard_line_wins += 1
+        if moves <= 22: stats.fast22 += 1
+        if moves <= 26: stats.fast26 += 1
         if moves <= 18: stats.fast18 += 1
         if moves <= 16: stats.fast16 += 1
         if moves <= 15: stats.fast15 += 1
