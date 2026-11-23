@@ -1,6 +1,6 @@
 extends CanvasLayer
 ## Vertical Sky Garden reader with two gated 3x3 family games.
-const Sky = preload("res://story/ZenSkyGardenCampaign.gd")
+const SkyGarden = preload("res://story/ZenSkyGardenCampaign.gd")
 const GOLD := Color("#f0d99b")
 const WHITE := Color("#fdf5e2")
 const MUTE := Color("#d3dacb")
@@ -24,7 +24,7 @@ func _chronicles() -> Node:
 
 func _ready() -> void:
     layer = 110
-    progress = Sky.load_progress()
+    progress = SkyGarden.load_progress()
     locale = str(SaveManager.load_data().get("settings",{}).get("language","en"))
     if not COPY.has(locale): locale = "en"
     _build()
@@ -99,9 +99,9 @@ func _build() -> void:
     next_button = _button(t("next"),nav,_turn.bind(1))
 
 func _display() -> void:
-    var page: int = clampi(int(progress.get("page",1)),1,Sky.page_limit(progress))
+    var page: int = clampi(int(progress.get("page",1)),1,SkyGarden.page_limit(progress))
     progress.page = page
-    var image_path: String = Sky.page_path(page)
+    var image_path: String = SkyGarden.page_path(page)
     reader.texture = load(image_path) as Texture2D if ResourceLoader.exists(image_path) else null
     var games: int = int(bool(progress.won[0])) + int(bool(progress.won[1]))
     counter.text = t("progress") % [page,games]
@@ -111,9 +111,9 @@ func _display() -> void:
         next_button.text = t("done") if bool(progress.get("completed",false)) else t("finish")
         note.text = "ZEN CHRONICLES — A JOURNEY COMPLETE"
         return
-    var action: Dictionary = Sky.next_action(progress)
+    var action: Dictionary = SkyGarden.next_action(progress)
     if str(action.get("type",""))=="game":
-        var opponent: String = Sky.NAMES[int(action.family)]
+        var opponent: String = SkyGarden.NAMES[int(action.family)]
         next_button.text = t("play") % opponent
         note.text = t("gate") % opponent
     else:
@@ -124,25 +124,25 @@ func _turn(dir: int) -> void:
     if dir < 0:
         if page>1:
             progress.page = page-1
-            if Sky.save_progress(progress): _display()
+            if SkyGarden.save_progress(progress): _display()
         return
     if page >= 30:
         if not bool(progress.get("completed",false)):
-            if not Sky.finish(progress): return
+            if not SkyGarden.finish(progress): return
             _close()
             _chronicles().call_deferred("sky_garden_story_completed")
         else:
             _back()
         return
-    var action: Dictionary = Sky.next_action(progress)
+    var action: Dictionary = SkyGarden.next_action(progress)
     if str(action.get("type",""))=="game":
-        if not Sky.unlocked() and not Sky.qa_mode():
+        if not SkyGarden.unlocked() and not SkyGarden.qa_mode():
             note.text = t("locked")
             return
         _chronicles().call("request_sky_garden_battle")
     elif str(action.get("type",""))=="page":
         progress.page = int(action.page)
-        if Sky.save_progress(progress): _display()
+        if SkyGarden.save_progress(progress): _display()
 
 func _input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
@@ -165,7 +165,7 @@ func _audio() -> void:
     _chronicles().call("claim_story_audio",self)
     var settings: Dictionary = SaveManager.load_data().get("settings",{})
     if bool(settings.get("music",false)):
-        var music: AudioStream = Sky.story_stream()
+        var music: AudioStream = SkyGarden.story_stream()
         if music != null:
             soundtrack = AudioStreamPlayer.new()
             soundtrack.stream = music

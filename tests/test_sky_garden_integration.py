@@ -24,7 +24,7 @@ assert 'const GATES: Array[int] = [8, 18]' in model
 assert 'const CONTINUE_PAGES: Array[int] = [9, 19]' in model
 assert 'result.owners = [1,0]' in model, 'Kuze plays O, family plays X'
 assert 'RulesEngine.new().victories(board.cells,2)' in model
-assert 'if not Sky.unlocked() and not Sky.qa_mode()' in chron
+assert 'if not SkyGarden.unlocked() and not SkyGarden.qa_mode()' in chron
 assert 'func request_sky_garden_battle() -> void:' in chron
 assert 'change_scene_to_file","res://Main.tscn"' in chron
 assert 'SkyGardenClassicStoryCard' in chron and 'RealmCardSkyGarden' in chron
@@ -33,6 +33,6 @@ assert 'func start_sky_garden_battle() -> void:' in controller
 assert 'func _sky_tick() -> void:' in controller
 assert 'func _sky_leave() -> void:' in controller
 assert 'func _sky_result() -> void:' in controller
-assert 'sky_active' in controller and 'Sky.capture(sky_progress,board)' in controller
-assert 'Sky.story_stream()' in reader
+assert 'sky_active' in controller and 'SkyGarden.capture(sky_progress,board)' in controller
+assert 'SkyGarden.story_stream()' in reader
 print("PASS: Sky Garden 30-page reader, two portrait-led family games, 3 backgrounds, isolated 3x3 world and navigation")

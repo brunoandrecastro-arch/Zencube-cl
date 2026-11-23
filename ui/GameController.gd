@@ -85,7 +85,7 @@ const ActOne = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
 const ActThree = preload("res://story/ZenActThree.gd")
 const ActFour = preload("res://story/ZenActFour.gd")
-const Sky = preload("res://story/ZenSkyGardenCampaign.gd")
+const SkyGarden = preload("res://story/ZenSkyGardenCampaign.gd")
 var sky_active: bool = false
 var sky_family: int = -1
 var sky_progress: Dictionary = {}
@@ -408,8 +408,8 @@ func build_ui() -> void:
     button("‹", act_one_controls, _act_one_leave, true)
     act_one_controls.hide()
     sky_controls = row(column)
-    sky_result_button = button("View result",sky_controls,_sky_result,true)
-    button("‹ Back to story",sky_controls,_sky_leave,true)
+    sky_result_button = button("Ergebnis anzeigen",sky_controls,_sky_result,true)
+    button(_act_one_ui("‹ Zur Geschichte","‹ Back to story","‹ Voltar à história"),sky_controls,_sky_leave,true)
     sky_controls.hide()
     var legend_panel = PanelContainer.new()
     var legend_style = theme_style(Color("30271f",0.89),9)
@@ -1392,7 +1392,7 @@ func open_worlds() -> void:
     box.add_child(sky_card)
     var sky_row: HBoxContainer = row(sky_card)
     var sky_thumb := TextureRect.new()
-    if ResourceLoader.exists(Sky.REALM_ART): sky_thumb.texture = load(Sky.REALM_ART)
+    if ResourceLoader.exists(SkyGarden.REALM_ART): sky_thumb.texture = load(SkyGarden.REALM_ART)
     sky_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     sky_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     sky_thumb.custom_minimum_size = Vector2(90,104)
@@ -1401,11 +1401,11 @@ func open_worlds() -> void:
     var sky_info := VBoxContainer.new()
     sky_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     sky_row.add_child(sky_info)
-    label("Sky Garden · The Return to Peace",sky_info,17,Color("493b29"))
+    label(_act_one_ui("Sky Garden · Die Rückkehr zum Frieden","Sky Garden · The Return to Peace","Sky Garden · O Regresso à Paz"),sky_info,17,Color("493b29"))
     label(_act_one_ui("3×3-Epilog nach Shattered Moon","3×3 epilogue after Shattered Moon","Epílogo 3×3 após Shattered Moon"),sky_info,13)
     var enter_sky := button(_act_one_ui("▶ Geschichte betreten","▶ Enter Story World","▶ Entrar no mundo"),sky_info,_sky_open_from_worlds,true)
     enter_sky.name = "SkyGardenClassicWorldEntry"
-    enter_sky.disabled = not Sky.unlocked() and not Sky.qa_mode()
+    enter_sky.disabled = not SkyGarden.unlocked() and not SkyGarden.qa_mode()
     if enter_sky.disabled: label(_act_one_ui("🔒 Shattered Moon abschließen","🔒 Complete Shattered Moon","🔒 Concluir Shattered Moon"),sky_info,12)
     button("Rang & Fortschritt", box, open_ascension, true, true)
     button("Zum Hauptmenü", box, open_menu, true)
@@ -3033,10 +3033,10 @@ func _zen_campaign_leave() -> void:
 # It is a standalone epilogue, never updating Classic ranks, leaves or stats.
 func start_sky_garden_battle() -> void:
     if sky_active or act_one_active or zen_campaign_active or ceremony_active: return
-    if not Sky.unlocked() and not Sky.qa_mode(): return
+    if not SkyGarden.unlocked() and not SkyGarden.qa_mode(): return
     if challenge_active or tutorial != null: return
-    var progress: Dictionary = Sky.load_progress()
-    var action: Dictionary = Sky.next_action(progress)
+    var progress: Dictionary = SkyGarden.load_progress()
+    var action: Dictionary = SkyGarden.next_action(progress)
     if str(action.get("type",""))!="game": return
     var family: int = int(action.family)
     chronicles.close_chronicles()
@@ -3053,7 +3053,7 @@ func start_sky_garden_battle() -> void:
     sky_back_previous = get_tree().quit_on_go_back
     get_tree().quit_on_go_back = false
     chronicles.set_campaign_board_active(true)
-    if not Sky.begin_game(sky_progress,sky_family):
+    if not SkyGarden.begin_game(sky_progress,sky_family):
         sky_active = false
         get_tree().quit_on_go_back = sky_back_previous
         chronicles.set_campaign_board_active(false)
@@ -3062,10 +3062,10 @@ func start_sky_garden_battle() -> void:
         sky_view = {}
         notify_user(_act_one_ui("Speichern fehlgeschlagen.","Save failed.","Erro ao guardar."))
         return
-    board = Sky.restore_board(sky_progress.get("game",{}))
+    board = SkyGarden.restore_board(sky_progress.get("game",{}))
     renderer.sky_family_palette = true
     renderer.reset_view()
-    world_background.texture = Sky.backdrop(sky_family)
+    world_background.texture = SkyGarden.backdrop(sky_family)
     world_background.modulate = Color.WHITE
     refresh(-1,false)
     if board.winner!=0: _sky_result()
@@ -3073,11 +3073,11 @@ func start_sky_garden_battle() -> void:
 func _sky_save() -> bool:
     if not sky_active: return false
     if not bool(sky_progress.won[sky_family]):
-        Sky.capture(sky_progress,board)
-    return Sky.save_progress(sky_progress)
+        SkyGarden.capture(sky_progress,board)
+    return SkyGarden.save_progress(sky_progress)
 
 func _sky_refresh(animate: int = -1) -> void:
-    var person: String = Sky.NAMES[sky_family]
+    var person: String = SkyGarden.NAMES[sky_family]
     world_title_label.text = "Sky Garden"
     world_quote_label.text = "The Return to Peace · 3×3"
     rank_label.visible = true
@@ -3130,9 +3130,9 @@ func _sky_result() -> void:
     if not sky_active or board.winner==0: return
     var won: bool = bool(sky_progress.won[sky_family])
     if board.winner==2 and not won:
-        won = Sky.record_victory(sky_progress,sky_family,board)
-    var box := _zen_campaign_story_box(Sky.NAMES[sky_family] + " · " + Sky.TITLES[sky_family])
-    var portrait: Texture2D = Sky.portrait(sky_family)
+        won = SkyGarden.record_victory(sky_progress,sky_family,board)
+    var box := _zen_campaign_story_box(SkyGarden.NAMES[sky_family] + " · " + SkyGarden.TITLES[sky_family])
+    var portrait: Texture2D = SkyGarden.portrait(sky_family)
     if portrait!=null:
         var art := TextureRect.new()
         art.texture = portrait
@@ -3153,9 +3153,9 @@ func _sky_result() -> void:
 
 func _sky_retry() -> void:
     if not sky_active or board.winner==0 or bool(sky_progress.won[sky_family]): return
-    if not Sky.retry_game(sky_progress,sky_family): return
+    if not SkyGarden.retry_game(sky_progress,sky_family): return
     generation += 1
-    board = Sky.new_board()
+    board = SkyGarden.new_board()
     close_modal()
     renderer.reset_view()
     refresh(-1,false)

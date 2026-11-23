@@ -29,7 +29,7 @@ const CelestialReader = preload("res://story/ZenCelestialReader.gd")
 const SatoriReader = preload("res://story/ZenSatoriReader.gd")
 const ShatteredReader = preload("res://story/ZenShatteredMoonReader.gd")
 const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
-const Sky = preload("res://story/ZenSkyGardenCampaign.gd")
+const SkyGarden = preload("res://story/ZenSkyGardenCampaign.gd")
 const SkyReader = preload("res://story/ZenSkyGardenReader.gd")
 const Satori = preload("res://story/ZenSatoriCampaign.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
@@ -368,11 +368,11 @@ func _library_story_cards(parent: VBoxContainer) -> void:
         var replay_button: Button = _make_button(campaign_ui("✦ Übergang erneut ansehen","✦ Replay the Awakening","✦ Rever o Despertar"),parent,replay_moon_shadow_transition)
         replay_button.name = "ReplayMoonShadowTransition"
     # Sky Garden is the 3x3 epilogue. It never replaces the five Classic worlds.
-    var sky_progress: Dictionary = Sky.load_progress()
-    var sky_allowed: bool = Sky.unlocked() or Sky.qa_mode()
+    var sky_progress: Dictionary = SkyGarden.load_progress()
+    var sky_allowed: bool = SkyGarden.unlocked() or SkyGarden.qa_mode()
     var sky_wins: int = int(bool(sky_progress.won[0])) + int(bool(sky_progress.won[1]))
     var sky_hint: String = (campaign_ui("3×3-Epilog · Familienpartien %d/2","3×3 epilogue · Family games %d/2","Epílogo 3×3 · Jogos em família %d/2") % sky_wins) if sky_allowed else campaign_ui("Freischalten: Shattered Moon abschließen","Unlock: Complete Shattered Moon","Desbloquear: Concluir Shattered Moon")
-    _library_card(parent,"🌸 Sky Garden · The Return to Peace",Sky.REALM_ART,sky_hint,sky_allowed,bool(sky_progress.completed),open_sky_garden_preview,"SkyGardenClassicStoryCard",true)
+    _library_card(parent,"🌸 Sky Garden · The Return to Peace",SkyGarden.REALM_ART,sky_hint,sky_allowed,bool(sky_progress.completed),open_sky_garden_preview,"SkyGardenClassicStoryCard",true)
 
 func _library_realm_cards(parent: VBoxContainer) -> void:
     _make_label("Zen Ascend",parent,18,GOLD)
@@ -394,11 +394,11 @@ func _library_realm_cards(parent: VBoxContainer) -> void:
         if bool(flag): moon_wins += 1
     var moon_hint: String = (campaign_ui("Bosse %d/3 · 30 Seiten","Bosses %d/3 · 30 pages","Chefes %d/3 · 30 páginas") % moon_wins) if moon_access else campaign_ui("Freischalten: Satori abschließen","Unlock: Complete Satori","Desbloquear: Concluir Satori")
     _library_card(parent,"🌙 Shattered Moon · The Last Crossing",Moon.REALM_ART,moon_hint,moon_access,bool(moon_data.get("completed",false)),open_shattered_moon_preview,"RealmCardShatteredMoon",true)
-    var sky_progress: Dictionary = Sky.load_progress()
-    var sky_access: bool = Sky.unlocked() or Sky.qa_mode()
+    var sky_progress: Dictionary = SkyGarden.load_progress()
+    var sky_access: bool = SkyGarden.unlocked() or SkyGarden.qa_mode()
     var sky_wins: int = int(bool(sky_progress.won[0])) + int(bool(sky_progress.won[1]))
     var sky_hint: String = (campaign_ui("3×3-Epilog · Familienpartien %d/2","3×3 epilogue · Family games %d/2","Epílogo 3×3 · Jogos em família %d/2") % sky_wins) if sky_access else campaign_ui("Freischalten: Shattered Moon abschließen","Unlock: Complete Shattered Moon","Desbloquear: Concluir Shattered Moon")
-    _library_card(parent,"🌸 Sky Garden · The Return to Peace",Sky.REALM_ART,sky_hint,sky_access,bool(sky_progress.completed),open_sky_garden_preview,"RealmCardSkyGarden",true)
+    _library_card(parent,"🌸 Sky Garden · The Return to Peace",SkyGarden.REALM_ART,sky_hint,sky_access,bool(sky_progress.completed),open_sky_garden_preview,"RealmCardSkyGarden",true)
 
 func open_library() -> void:
     _act_one_release_back()
@@ -1222,7 +1222,7 @@ func shattered_moon_story_completed() -> void:
 # Sky Garden follows Shattered Moon, then shifts into real Classic 3x3 gameplay.
 # Both family matches and their progress are independent from rank/economy.
 func open_sky_garden_preview() -> void:
-    if not Sky.unlocked() and not Sky.qa_mode():
+    if not SkyGarden.unlocked() and not SkyGarden.qa_mode():
         _sync_language()
         _screen_name = "sky-locked"
         var outer: VBoxContainer = _make_screen()
@@ -1250,8 +1250,8 @@ func close_sky_garden_reader() -> void:
         _quick_button.visible = _show_quick and not _campaign_board_active and _screen == null
 
 func request_sky_garden_battle() -> void:
-    if not Sky.unlocked() and not Sky.qa_mode(): return
-    if Sky.next_action(Sky.load_progress()).get("type")!="game": return
+    if not SkyGarden.unlocked() and not SkyGarden.qa_mode(): return
+    if SkyGarden.next_action(SkyGarden.load_progress()).get("type")!="game": return
     _sky_launch_requested = true
     close_sky_garden_reader()
     var current: Node = get_tree().current_scene
