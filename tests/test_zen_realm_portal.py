@@ -19,7 +19,8 @@ for realm, forbidden in [('shadow_hard','hard_win'),('ember_master','master_win'
     entry = next(s for s in model.splitlines() if '"id":"'+realm+'"' in s)
     assert '"metric":"'+forbidden+'"' not in entry, (realm, forbidden)
 assert '"metric":"face_wins"' in next(s for s in model.splitlines() if '"id":"shadow_hard"' in s)
-assert '"metric":"block_wins"' in next(s for s in model.splitlines() if '"id":"ember_master"' in s)
+assert '"metric":"fast22"' in next(s for s in model.splitlines() if '"id":"shadow_block"' in s)
+assert '"metric":"fast26"' in next(s for s in model.splitlines() if '"id":"ember_master"' in s)
 assert '"metric":"edge_wins","need":2' in next(s for s in model.splitlines() if '"id":"celestial_grand"' in s)
 assert 'while match_realm > 0 and not Realms.unlocked(data,match_realm)' in ui
 assert 'Realms.ready_for_breakthrough(data,match_realm)' not in ui
