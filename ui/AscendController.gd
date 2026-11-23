@@ -1065,6 +1065,27 @@ func finish() -> void:
         if result != 3: outcome = 1 if int(owners[result-1]) == 0 else -1
         var lines_won: Array = Mode.winning_lines(cells,lines,result) if outcome == 1 else []
         last_realm_awards = Realms.record_bot_match(data,match_realm,outcome,bot_level,move_count(),lines_won,match_blocked_threat)
+        # Normal Zen Ascend matches earn eight Realm challenges too.
+        # Celebrate newly earned tasks once, using one full-screen choir ceremony
+        # even when a single victory completes several tasks at once.
+        var new_challenge_names: Array[String] = []
+        var first_challenge_description: String = ""
+        for earned_task_id in last_realm_awards.get("new_tasks",[]):
+            for task in Realms.TASKS[match_realm]:
+                if str(task.id) == str(earned_task_id):
+                    new_challenge_names.append(str(task.title))
+                    if first_challenge_description.is_empty():
+                        first_challenge_description = str(task.get(lang(),task.get("en","")))
+                    break
+        if not new_challenge_names.is_empty():
+            var challenge_heading: String = new_challenge_names[0]
+            var challenge_detail: String = first_challenge_description
+            if new_challenge_names.size() > 1:
+                challenge_heading = _campaign_phrase("%d Realm-Herausforderungen","%d Realm Challenges","%d Desafios de Reino") % new_challenge_names.size()
+                challenge_detail = ""
+                for task_title in new_challenge_names:
+                    challenge_detail += ("\n" if not challenge_detail.is_empty() else "") + "✓ " + task_title
+            queued_unlocks.append({"kind":"challenge","realm":match_realm,"name":challenge_heading,"quote":challenge_detail})
         for secret in Achievements.claim_after_match(data,match_realm):
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":str(secret.name),"quote":str(secret.quote)})
         if bool(last_realm_awards.get("realm_completed",false)):
@@ -1107,11 +1128,13 @@ func _show_next_unlock() -> void:
             true, bool(data.settings.get("sound",true)), [world_music], lang())
         return
     var unlock: ZenUnlockCeremony = UnlockCeremony.new()
+    if str(item.kind) == "challenge":
+        unlock.name = "ZenAscendChallengeEarnedCeremony"
     add_child(unlock)
     unlock.finished.connect(func():
         if is_inside_tree(): call_deferred("_show_next_unlock")
     )
-    unlock.present(str(item.kind),str(Realms.REALM_ART[int(item.realm)]),str(item.name),str(item.quote),bool(data.settings.get("sound",true)),[world_music])
+    unlock.present(str(item.kind),str(Realms.REALM_ART[int(item.realm)]),str(item.name),str(item.quote),bool(data.settings.get("sound",true)),[world_music],lang())
 
 func show_fully_aware(awards: Dictionary) -> void:
     if not is_inside_tree(): return

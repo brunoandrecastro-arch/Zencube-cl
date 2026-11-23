@@ -21,6 +21,16 @@ assert "RealmChallengeCeremonyHeading" in fx and "ZenUnlockContinue" in fx
 assert "const PORTRAIT_ROOT" in shadow and "ResourceLoader.exists(approved_portrait)" in shadow
 for character in ("mist_guardian","mirror_novice","veil_monk"):
     assert character in shadow
+# Regular 4x4 Zen Ascend challenges need the same full-screen celebration
+# that Campaign 2.0 challenge rewards already receive.
+normal = game.split("last_realm_awards = Realms.record_bot_match(",1)[1].split("for secret in Achievements.claim_after_match(",1)[0]
+assert 'for earned_task_id in last_realm_awards.get("new_tasks",[])' in normal
+assert 'queued_unlocks.append({"kind":"challenge","realm":match_realm' in normal
+assert 'new_challenge_names.size() > 1' in normal, "Batch one choir ceremony for simultaneous rewards"
+queue = game.split("func _show_next_unlock() -> void:",1)[1].split("func show_fully_aware(",1)[0]
+assert 'unlock.name = "ZenAscendChallengeEarnedCeremony"' in queue
+assert 'str(item.quote),bool(data.settings.get("sound",true)),[world_music],lang())' in queue
+assert 'func show_match_result() -> void:' in game, "Existing match result must remain intact"
 assert "test_realm_challenge_ceremony.gd" in flow
 assert "ZenCube-Chronicles-4.0.4.apk" in flow
 print("PASS: automatic Realm Challenge full-screen celebration, one-shot choir, Shadow portrait slots")
