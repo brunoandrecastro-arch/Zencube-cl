@@ -21,6 +21,7 @@ const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Ember = preload("res://story/ZenEmberCampaign.gd")
 const Celestial = preload("res://story/ZenCelestialCampaign.gd")
 const Satori = preload("res://story/ZenSatoriCampaign.gd")
+const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const FinalSeries = preload("res://core/ZenFinalGuardianSeries.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
@@ -157,6 +158,9 @@ func _ready() -> void:
         return
     if ZenChronicles.consume_celestial_launch():
         call_deferred("start_celestial_battle")
+        return
+    if ZenChronicles.consume_shattered_moon_launch():
+        call_deferred("start_shattered_moon_battle")
         return
     if ZenChronicles.consume_satori_launch():
         call_deferred("start_satori_battle")
@@ -2478,8 +2482,15 @@ func start_satori_battle() -> void:
     ember_model = Satori
     _start_guardian_battle()
 
+func start_shattered_moon_battle() -> void:
+    if not Moon.unlocked() and not Moon.qa_mode(): return
+    guardian_chapter = 5 # separate post-Satori story chapter
+    ember_model = Moon
+    _start_guardian_battle()
+
 func _open_guardian_reader() -> void:
-    if guardian_chapter==4: ZenChronicles.open_satori_campaign_preview()
+    if guardian_chapter==5: ZenChronicles.open_shattered_moon_preview()
+    elif guardian_chapter==4: ZenChronicles.open_satori_campaign_preview()
     elif guardian_chapter==3: ZenChronicles.open_celestial_campaign_preview()
     else: ZenChronicles.open_ember_reader()
 
@@ -2491,7 +2502,7 @@ func _start_guardian_battle() -> void:
         return
     ember_index = int(next_action.get("boss",-1))
     if ember_index < 0 or ember_index >= 3: return
-    if guardian_chapter != 4 and not Realm2.can_face_boss(guardian_chapter,ember_index):
+    if guardian_chapter not in [4,5] and not Realm2.can_face_boss(guardian_chapter,ember_index):
         ZenChronicles.open_campaign_challenges(guardian_chapter,true)
         return
     ember_active = true
@@ -2518,7 +2529,7 @@ func _start_guardian_battle() -> void:
     cube.reset_view()
     cube.clear_abyss_skin()
     cube.clear_boss_skin()
-    cube.set_boss_skin(ember_index+(9 if guardian_chapter==4 else (6 if guardian_chapter==3 else 3)))
+    cube.set_boss_skin(ember_index+(9 if guardian_chapter>=4 else (6 if guardian_chapter==3 else 3)))
     if realm_backdrop != null:
         var arena: Texture2D = ember_model.battle_backdrop(ember_index)
         if arena != null: realm_backdrop.texture = arena
@@ -2569,6 +2580,7 @@ func _ember_intro() -> void:
     ]
     if guardian_chapter==3: opening = ["Every decision creates a thousand possibilities.","Let thunder shake the heavens.","Then show me what you have become."]
     if guardian_chapter==4: opening = ["See clearly before you move.","A victory need not define you.","What remains when the game is over?"]
+    if guardian_chapter==5: opening = ["The echoes have not faded.","Cross the silence with an open heart.","What can you release beneath the broken moon?"]
     text(body,opening[ember_index],16,Color("#dfd4e5"))
     _guardian_series_panel(body,ember_progress)
     var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
@@ -2596,6 +2608,7 @@ func _ember_result() -> void:
         label = "A chama acalma" if result == 1 else ("Empate" if result == 3 else "Derrota")
     if guardian_chapter==3 and result==1: label = _campaign_phrase("Klarheit","Clarity","Clareza")
     if guardian_chapter==4 and result==1: label = _campaign_phrase("Das letzte Erwachen","The Final Awakening","O Despertar Final")
+    if guardian_chapter==5 and result==1: label = _campaign_phrase("Die letzte Überfahrt","The Last Crossing","A Última Travessia")
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
@@ -2636,7 +2649,7 @@ func _ember_retry() -> void:
 
 func _ember_victory() -> void:
     if not ember_active or result != 1: return
-    if guardian_chapter != 4 and not Realm2.can_face_boss(guardian_chapter,ember_index): return
+    if guardian_chapter not in [4,5] and not Realm2.can_face_boss(guardian_chapter,ember_index): return
     if not ember_model.player_won(ember_progress): return
     if not ember_model.record_victory(ember_progress,ember_index): return
     ember_generation += 1
@@ -2649,7 +2662,7 @@ func _ember_victory() -> void:
 
 func _ember_menu() -> void:
     if not ember_active: return
-    var parts: Dictionary = _realm_dialog(Realm2.REALM_NAMES[guardian_chapter],410)
+    var parts: Dictionary = _realm_dialog("Shattered Moon" if guardian_chapter==5 else Realm2.REALM_NAMES[guardian_chapter],410)
     _realm_story_compact(parts)
     var body: VBoxContainer = parts.box
     text(body,ember_model.BOSS_NAMES[clampi(ember_index,0,2)],20,Color("#dfd4e5"))
