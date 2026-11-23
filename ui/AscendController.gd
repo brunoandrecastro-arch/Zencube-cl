@@ -1399,6 +1399,37 @@ func show_realms() -> void:
         if i==0:
             action(column,"Realm Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),0),_open_campaign_trials_from_realms.bind(0))
             _add_abyss_realm_card(body)
+    # Shattered Moon is a post-Satori story chapter, not a fifth ordinary 8-task
+    # Zen Ascend realm. Show a discoverable route without changing the old gates.
+    var moon_allowed: bool = Moon.unlocked() or Moon.qa_mode()
+    var moon_progress: Dictionary = Moon.load_progress()
+    var moon_bosses: int = 0
+    for flag in moon_progress.get("defeated",[]):
+        if bool(flag): moon_bosses += 1
+    var moon_card := PanelContainer.new()
+    moon_card.name = "ShatteredMoonStoryRealmCard"
+    moon_card.add_theme_stylebox_override("panel",style(Color("#222b39"),18))
+    body.add_child(moon_card)
+    var moon_column := VBoxContainer.new()
+    moon_column.add_theme_constant_override("separation",6)
+    moon_card.add_child(moon_column)
+    text(moon_column,"🌙 Shattered Moon · The Last Crossing" + ("" if moon_allowed else "  🔒"),19,Color("f7dfaa"))
+    text(moon_column,_campaign_phrase("Zen Chronicles · Story-Realm","Zen Chronicles · Story realm","Zen Chronicles · Reino da história"),14,Color("d5ba85"))
+    var moon_thumb := TextureRect.new()
+    if ResourceLoader.exists(Moon.REALM_ART):
+        moon_thumb.texture = load(Moon.REALM_ART)
+    moon_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    moon_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    moon_thumb.custom_minimum_size.y = 112
+    moon_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    moon_column.add_child(moon_thumb)
+    text(moon_column,_campaign_phrase("Bosse: %d/3 · 30 Seiten","Bosses: %d/3 · 30 pages","Chefes: %d/3 · 30 páginas") % moon_bosses,14)
+    if not moon_allowed:
+        text(moon_column,_campaign_phrase("Freischaltung: Satori-Geschichte abschließen","Unlock: Finish the Satori story","Desbloquear: Concluir a história de Satori"),13,Color("d5ba85"))
+    var moon_entry: Button = action(moon_column,
+        _campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história") if moon_allowed else _campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),
+        _open_shattered_from_realms,true)
+    moon_entry.name = "ShatteredMoonStoryRealmButton"
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
 
@@ -1441,6 +1472,10 @@ func _open_campaign_trials_from_realms(chapter: int) -> void:
 func _open_campaign_library_from_realms() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     ZenChronicles.open_library()
+
+func _open_shattered_from_realms() -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_shattered_moon_preview()
 
 func _open_realm_chronicles_from_realms() -> void:
     # The button is inside a modal; close it before opening the book. Returning

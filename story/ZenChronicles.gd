@@ -76,6 +76,8 @@ var _realm_story_requested: bool = false
 var _realm_story_from_realms: bool = false
 var _realm_chapter_scroll: ScrollContainer
 var _realm_chapter_dragging: bool = false
+var _library_scroll: ScrollContainer
+var _library_dragging: bool = false
 var _abyss_reader: CanvasLayer
 var _abyss_launch_requested: bool = false
 var _shadow_reader: CanvasLayer
@@ -239,6 +241,8 @@ func _make_button(value: String, parent: Node, callback: Callable) -> Button:
 func _make_screen() -> VBoxContainer:
     _realm_chapter_scroll = null
     _realm_chapter_dragging = false
+    _library_scroll = null
+    _library_dragging = false
     if _screen != null:
         _screen.hide()
         _screen.queue_free()
@@ -410,9 +414,17 @@ func open_library() -> void:
     var active_tab: Button = story_tab if _library_tab==0 or realm_tab==null else realm_tab
     active_tab.add_theme_stylebox_override("normal",_style(Color("#5c4930"),12))
     active_tab.add_theme_color_override("font_color",Color("#ffe2a3"))
+    if _library_tab == 1:
+        var moon_shortcut: Button = _make_button("🌙 Shattered Moon · The Last Crossing",outer,open_shattered_moon_preview)
+        moon_shortcut.name = "ShatteredMoonLibraryShortcut"
     var scroll: ScrollContainer = ScrollContainer.new()
+    scroll.name = "ZenChroniclesLibraryScroll"
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    scroll.scroll_deadzone = 8
+    scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+    _library_scroll = scroll
     outer.add_child(scroll)
     var cards: VBoxContainer = VBoxContainer.new()
     cards.name = "ZenChroniclesCards"
@@ -563,6 +575,18 @@ func _input(event: InputEvent) -> void:
     if _screen_name.begins_with("act-one"):
         _act_one_input(event)
         return
+    # Some Android touch configurations swallow drag gestures inside chapter cards.
+    # Keep the library scroll usable from the entire card surface, not just its scrollbar.
+    if _screen_name == "library" and is_instance_valid(_library_scroll):
+        if event is InputEventScreenTouch:
+            if event.pressed:
+                _library_dragging = _library_scroll.get_global_rect().has_point(event.position)
+            else:
+                _library_dragging = false
+        elif event is InputEventScreenDrag and _library_dragging:
+            _library_scroll.scroll_vertical = maxi(0, _library_scroll.scroll_vertical - roundi(event.relative.y))
+            get_viewport().set_input_as_handled()
+            return
     # Godot's nested PanelContainers/TextureRects can intercept touch
     # gestures before ScrollContainer on Android. Drive this ONE chapter list
     # from native drag deltas; never change the campaign reader or 3D cube.

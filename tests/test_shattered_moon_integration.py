@@ -17,3 +17,14 @@ assert all((r/'assets/shattered_moon/pages'/f'page_{i:02d}.webp').is_file() for 
 assert len(list((r/'assets/shattered_moon').rglob('*.webp'))) == 37
 assert 'test_shattered_moon.gd' in (r/'.github/workflows/android.yml').read_text()
 print('PASS: isolated Shattered Moon save, 30 pages, three bosses, Satori gate, navigation, Godot workflow')
+
+# Moon remains story-only; both menus must be navigable on Android.
+assert 'ShatteredMoonStoryRealmCard' in controller
+assert 'ShatteredMoonStoryRealmButton' in controller
+assert 'func _open_shattered_from_realms() -> void:' in controller
+assert 'ZenChronicles.open_shattered_moon_preview()' in controller
+assert '"ZenChroniclesLibraryScroll"' in chron
+assert '"ShatteredMoonLibraryShortcut"' in chron
+assert 'if _screen_name == "library" and is_instance_valid(_library_scroll):' in chron
+assert '_library_scroll.scroll_vertical = maxi(0, _library_scroll.scroll_vertical - roundi(event.relative.y))' in chron
+print("PASS: Shattered Moon shortcut in both Realm menus and native Android library drag")
