@@ -246,6 +246,7 @@ jobs:
       - name: Verify feedback challenges and round alternation
         run: |
           python3 tests/test_feedback_fix.py
+          python3 tests/test_shattered_moon_integration.py
           timeout 40 "$GODOT" --headless --path . --script tests/test_round_starters.gd
           timeout 100 "$GODOT" --headless --path . --script tests/test_shattered_moon.gd
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
