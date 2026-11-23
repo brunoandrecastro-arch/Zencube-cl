@@ -243,6 +243,10 @@ jobs:
       - name: Verify 12 original Realm boss music mappings and OGG import
         run: |
           timeout 55 "$GODOT" --headless --path . --script tests/test_realm_boss_music.gd
+      - name: Verify feedback challenges and round alternation
+        run: |
+          python3 tests/test_feedback_fix.py
+          timeout 40 "$GODOT" --headless --path . --script tests/test_round_starters.gd
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd

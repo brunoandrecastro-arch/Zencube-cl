@@ -368,8 +368,9 @@ func _library_realm_cards(parent: VBoxContainer) -> void:
         var finished: bool = Realm2.story_finished(i)
         var hint: String = campaign_ui("Bosse %d/3 · Herausforderungen %d/3","Bosses %d/3 · Challenges %d/3","Chefes %d/3 · Desafios %d/3") % [Realm2.bosses_won(i),Realm2.completed_count(Realm2.load_progress(),i)] if permitted else campaign_ui("Freischalten: ","Unlock: ","Desbloquear: ")+unlock_hints[i]
         if i==4 and permitted:
-            hint = campaign_ui("Bosse %d/3 · 30 Seiten · Das letzte Erwachen","Bosses %d/3 · 30 pages · The Final Awakening","Chefes %d/3 · 30 páginas · O Despertar Final") % Realm2.bosses_won(4)
-        _library_card(parent,titles[i],Realm2.SOURCE_ART[i],hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
+            hint = campaign_ui("Bosse %d/3 · Challenges %d/3 · 30 Seiten","Bosses %d/3 · Challenges %d/3 · 30 pages","Chefes %d/3 · Desafios %d/3 · 30 páginas") % [Realm2.bosses_won(4),Realm2.completed_count(Realm2.load_progress(),4)]
+        var preview_art: String = "res://assets/abyss_of_memories/gameplay.webp" if i==1 and ResourceLoader.exists("res://assets/abyss_of_memories/gameplay.webp") else Realm2.SOURCE_ART[i]
+        _library_card(parent,titles[i],preview_art,hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
 
 func open_library() -> void:
     _act_one_release_back()

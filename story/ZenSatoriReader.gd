@@ -118,7 +118,7 @@ func _display() -> void:
     status.text = t("tip") if reader.texture != null else t("missing")
     if page==19 and cleared<3:
         next_button.text = "The Final Trial · %d/3" % cleared
-        status.text = "First Stillness · Clear Reflection · Beyond the Edge"
+        status.text = "First Stillness · Perfect Timing · Beyond the Edge"
         return
     if page == 30:
         next_button.text = t("done") if bool(progress.get("completed",false)) else t("finish")

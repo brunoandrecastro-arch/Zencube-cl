@@ -534,21 +534,40 @@ func show_ascend_menu() -> void:
     if realm_story_active:
         _realm_story_menu()
         return
-    # Realms, Challenges and Achievements already live in the bottom tabs.
-    var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",520)
+    # Realms/Challenges/Achievements are accessible from permanent bottom tabs.
+    var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",420)
     _realm_story_compact(parts)
     var frame: PanelContainer = parts.frame
-    frame.anchor_top = 0.19
-    frame.anchor_bottom = 0.81
+    frame.anchor_top = 0.265
+    frame.anchor_bottom = 0.735
     var body: VBoxContainer = parts.box
-    action(body,Z("Neue Partie"),show_mode_picker,true)
-    action(body,Z("Statistik & Rang"),show_statistics)
-    action(body,Z("Regeln ansehen"),show_rules)
-    action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms)
+    var first: HBoxContainer = HBoxContainer.new()
+    first.add_theme_constant_override("separation",8)
+    body.add_child(first)
+    var begin: Button = action(first,Z("Neue Partie"),show_mode_picker,true)
+    var stats: Button = action(first,Z("Statistik & Rang"),show_statistics)
+    begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var second: HBoxContainer = HBoxContainer.new()
+    second.add_theme_constant_override("separation",8)
+    body.add_child(second)
+    var rules: Button = action(second,Z("Regeln ansehen"),show_rules)
+    var chronicles: Button = action(second,"Zen Chronicles",_open_campaign_library_from_realms)
+    rules.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    chronicles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var third: HBoxContainer = HBoxContainer.new()
+    third.add_theme_constant_override("separation",8)
+    body.add_child(third)
+    var settings: Button = action(third,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendSettingsEntry"
+    var home: Button = action(third,Z("Hauptmenü"),return_home)
+    settings.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    home.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    for control in [begin,stats,rules,chronicles,settings,home]:
+        control.custom_minimum_size.y = 52
+        control.add_theme_font_size_override("font_size",16)
     if Realm2.qa_mode():
         action(body,"Ember Boss · VFX Test",_show_ember_vfx_test)
-    action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings).name = "AscendSettingsEntry"
-    action(body,Z("Hauptmenü"),return_home)
     _open_realm_dialog(parts)
 
 func _save_ascend_setting(key: String, value: Variant) -> void:
@@ -969,7 +988,7 @@ func finish() -> void:
                     crossed = true
                     break
         var outcome: int = 1 if result==1 else (0 if result==3 else -1)
-        campaign_awards = Realm2.record_satori_match(outcome,crossed,match_blocked_threat) if practice_chapter==4 else (Realm2.record_celestial_match(outcome,crossed,match_blocked_threat) if practice_chapter==3 else (Realm2.record_ember_match(outcome,crossed) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed)))
+        campaign_awards = Realm2.record_satori_match(outcome,crossed,match_blocked_threat,move_count()) if practice_chapter==4 else (Realm2.record_celestial_match(outcome,crossed,match_blocked_threat,move_count()) if practice_chapter==3 else (Realm2.record_ember_match(outcome,crossed,move_count()) if practice_chapter==2 else Realm2.record_abyss_match(outcome,crossed,move_count())))
         campaign_award_index = 0
         # A newly earned 4x4 Realm challenge gets the same full-screen
         # ceremony as a secret achievement before the normal result screen.
@@ -1332,11 +1351,15 @@ func show_realms() -> void:
         thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
         column.add_child(thumb)
         var amount: int = Realms.count(data,i)
-        text(column,L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
+        text(column,("Zen Ascend" if lang()!="pt" else "Ascensão Zen") + " · " + L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
+        var story_chapter: int = [0,2,3,4][i]
+        if Realm2.unlocked(story_chapter):
+            text(column,"Zen Chronicles · " + ("Bosse" if lang()=="de" else ("Chefes" if lang()=="pt" else "Bosses")) + ": %d/3 · " % Realm2.bosses_won(story_chapter) + L("challenges") + ": %d/3" % Realm2.completed_count(Realm2.load_progress(),story_chapter),13,Color("e3d5ba"))
         var rank_name: String = Realms.title_for_realm(data,i,lang())
         if rank_name != "—": text(column,rank_name,14,Color("e2ca8c"))
         if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
-        if not allowed: text(column,L("locked") + ": " + _realm_unlocked_hint(i),13)
+        if not allowed:
+            text(column,L("locked") + " · Zen Ascend 8/8: " + _realm_unlocked_hint(i),13)
         var selected: bool = i == realm_index()
         var choose: Button
         if not allowed:
@@ -1344,6 +1367,8 @@ func show_realms() -> void:
         else:
             choose = action(column,L("selected") if selected else L("select"),_choose_realm_from_dialog.bind(number,ui_parts.dialog),true)
             choose.disabled = selected or (move_count() > 0 and result == 0)
+        if not allowed and Realm2.unlocked(story_chapter):
+            action(column,_campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história"),_open_campaign_story_from_match.bind(story_chapter),true)
         if i==0:
             action(column,"Realm Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),0),_open_campaign_trials_from_realms.bind(0))
             _add_abyss_realm_card(body)
@@ -1665,6 +1690,9 @@ func _realm_boss_intro_layout(parts: Dictionary) -> void:
 func _realm_boss_portrait_height() -> float:
     return clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,820.0)
 
+func _realm_boss_result_height() -> float:
+    return clampf(get_viewport().get_visible_rect().size.y * 0.29,400.0,520.0)
+
 func _realm_boss_primary_action(parts: Dictionary, caption: String, callback: Callable) -> void:
     # Play remains visible beneath the scrollable, full-height boss artwork.
     var frame: PanelContainer = parts.frame
@@ -1842,12 +1870,12 @@ func _realm_story_result() -> void:
         var scene_art: PanelContainer = VictoryArtwork.new()
         body.add_child(scene_art)
         scene_art.call("present",realm_story_stage,lang())
-        scene_art.custom_minimum_size.y = _realm_boss_portrait_height()
+        scene_art.custom_minimum_size.y = _realm_boss_result_height()
         var frame_art: Control = scene_art.find_child("CinematicVictoryFrame",true,false) as Control
-        if frame_art != null: frame_art.custom_minimum_size.y = _realm_boss_portrait_height()
+        if frame_art != null: frame_art.custom_minimum_size.y = _realm_boss_result_height()
         text(body,RealmStory.text_for(lang(),"victory_story_%d" % realm_story_stage),15,Color("#e7d3ab"))
     else:
-        _realm_story_art(body,realm_story_stage,_realm_boss_portrait_height(),true)
+        _realm_story_art(body,realm_story_stage,_realm_boss_result_height(),true)
     text(body,RealmStory.text_for(lang(),key),16)
     _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
     if won:
@@ -2148,7 +2176,7 @@ func _abyss_result() -> void:
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _abyss_add_art(body,_realm_boss_portrait_height(),true)
+    _abyss_add_art(body,_realm_boss_result_height(),true)
     text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
     if abyss_index==2: _guardian_series_panel(body,abyss_progress)
     _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
@@ -2346,7 +2374,7 @@ func _shadow_result() -> void:
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _shadow_add_art(body,_realm_boss_portrait_height(),true)
+    _shadow_add_art(body,_realm_boss_result_height(),true)
     text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
     if shadow_index==2: _guardian_series_panel(body,shadow_progress)
     _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
@@ -2571,7 +2599,7 @@ func _ember_result() -> void:
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
-    _ember_add_art(body,_realm_boss_portrait_height(),true)
+    _ember_add_art(body,_realm_boss_result_height(),true)
     text(body,ember_model.BOSS_NAMES[ember_index],18,Color("#e8d4b5"))
     _guardian_series_panel(body,ember_progress)
     _realm_boss_result_action(parts,_review_board_label(),_review_finished_board.bind(parts.dialog),true)
