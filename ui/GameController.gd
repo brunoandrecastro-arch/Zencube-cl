@@ -85,6 +85,15 @@ const ActOne = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
 const ActThree = preload("res://story/ZenActThree.gd")
 const ActFour = preload("res://story/ZenActFour.gd")
+const Sky = preload("res://story/ZenSkyGardenCampaign.gd")
+var sky_active: bool = false
+var sky_family: int = -1
+var sky_progress: Dictionary = {}
+var sky_classic_board: BoardModel
+var sky_view: Dictionary = {}
+var sky_controls: HBoxContainer
+var sky_result_button: Button
+var sky_back_previous: bool = true
 const Journey = preload("res://story/ZenJourney.gd")
 const HomeMenu = preload("res://ui/ZenHomeMenu.gd")
 const ProfileAchievements = preload("res://core/ZenAscendAchievements.gd")
@@ -167,6 +176,8 @@ func _ready() -> void:
         open_language_choice()
     else:
         open_menu()
+    if chronicles.call("consume_sky_garden_launch"):
+        call_deferred("start_sky_garden_battle")
 func theme_style(bg: Color, radius: int = 18) -> StyleBoxFlat:
     var st = StyleBoxFlat.new()
     st.bg_color = bg
@@ -396,6 +407,10 @@ func build_ui() -> void:
     act_one_result_button = button("Ergebnis anzeigen", act_one_controls, _act_one_result, true)
     button("‹", act_one_controls, _act_one_leave, true)
     act_one_controls.hide()
+    sky_controls = row(column)
+    sky_result_button = button("View result",sky_controls,_sky_result,true)
+    button("‹ Back to story",sky_controls,_sky_leave,true)
+    sky_controls.hide()
     var legend_panel = PanelContainer.new()
     var legend_style = theme_style(Color("30271f",0.89),9)
     legend_style.content_margin_top = 5
@@ -464,6 +479,9 @@ func apply_world() -> void:
     sync_music() # Auto-World theme follows the selected World.
 
 func refresh(animate: int = -1, save_classic: bool = true) -> void:
+    if sky_active:
+        _sky_refresh(animate)
+        return
     if act_one_active:
         _act_one_refresh(animate)
         return
@@ -547,6 +565,9 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
     if save_classic and tutorial == null and not challenge_active: persist()
     if net_active: update_net()
 func persist() -> void:
+    if sky_active:
+        _sky_save()
+        return
     if act_one_active:
         _act_one_save()
         return
@@ -570,6 +591,10 @@ func notify_user(message: String) -> void:
     if help_text != null: help_text.text = toast
 func on_cell(cell: int) -> void:
     if cell < 0 or ceremony_active or (popup != null and not net_active): return
+    if sky_active:
+        if board.winner==0 and board.current_owner()==0 and not ai_running and not chronicles.is_open():
+            place(cell)
+        return
     if act_one_active:
         if board.winner == 0 and board.turn == 1 and not ai_running and not chronicles.is_open():
             place(cell)
@@ -601,6 +626,9 @@ func place(cell: int) -> void:
     renderer.selected = cell
     generation += 1
     play_sound(board.winner != 0)
+    if sky_active:
+        _sky_after_move(cell,placed_by_owner)
+        return
     if act_one_active:
         if placed_by_owner == 0: vibrate_on_move()
         if board.winner != 0 and not board.win_lines.is_empty(): focus_line(board.win_lines[0])
@@ -656,6 +684,7 @@ func resolve_swap(accept: bool) -> void:
         generation += 1
         refresh()
 func new_game() -> void:
+    if sky_active: return
     if act_one_active: return
     if zen_campaign_active: return
     ceremony_done_for_match = false
@@ -717,10 +746,14 @@ func _process(delta: float) -> void:
         var turn_open: bool = not reading and popup == null and board.winner == 0 and not board.swap_pending
         var can_play := not zen_campaign_paused if zen_campaign_active else (not challenge_active and tutorial == null)
         if act_one_active: can_play = not zen_campaign_paused and board.turn == 2
+        if sky_active: can_play = not zen_campaign_paused and board.current_owner()==1
         if worker_generation == generation and turn_open and can_play:
             place(int(move))
         else:
             refresh(-1, false)
+    if sky_active:
+        _sky_tick()
+        return
     if act_one_active:
         _act_one_tick()
         return
@@ -809,6 +842,13 @@ func close_modal() -> void:
         home_visible = false
         column.show()
 func open_menu() -> void:
+    if sky_active:
+        if board.winner!=0: _sky_result()
+        else:
+            var sky_box := _zen_campaign_story_box("Sky Garden · The Return to Peace")
+            premium_button(_act_one_ui("Fortsetzen","Resume","Retomar"),sky_box,close_modal,true)
+            button(_act_one_ui("Zur Geschichte","Back to story","Voltar à história"),sky_box,_sky_leave,true)
+        return
     if act_one_active:
         if board.winner != 0:
             _act_one_result()
@@ -2601,10 +2641,15 @@ func _zen_campaign_save_game() -> bool:
     return true
 
 func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST and sky_active:
+        if popup != null: close_modal()
+        else: open_menu()
+        return
     if what == NOTIFICATION_WM_GO_BACK_REQUEST and act_one_active:
         _act_one_back()
         return
     if what == NOTIFICATION_APPLICATION_PAUSED:
+        if sky_active: _sky_save()
         if act_one_active: _act_one_save()
         zen_campaign_paused = true
         if zen_campaign_active and zen_campaign_stage == ZenCampaign.NIGHT and not zen_campaign_progress.game.is_empty():
@@ -2957,6 +3002,155 @@ func _zen_campaign_leave() -> void:
     refresh(-1, false)
     chronicles.open_campaign_overview()
 
+# Sky Garden uses the same live 54-cell cube and original 3x3 rules.
+# It is a standalone epilogue, never updating Classic ranks, leaves or stats.
+func start_sky_garden_battle() -> void:
+    if sky_active or act_one_active or zen_campaign_active or ceremony_active: return
+    if not Sky.unlocked() and not Sky.qa_mode(): return
+    if challenge_active or tutorial != null: return
+    var progress: Dictionary = Sky.load_progress()
+    var action: Dictionary = Sky.next_action(progress)
+    if str(action.get("type",""))!="game": return
+    var family: int = int(action.family)
+    chronicles.close_chronicles()
+    close_modal()
+    menu_context = false
+    generation += 1
+    sky_classic_board = board
+    sky_view = {"background":world_background.texture,"tint":world_background.modulate,
+        "basis":renderer.pivot.basis,"zoom":renderer.camera.position.z,"preview":preview}
+    preview = []
+    sky_active = true
+    sky_family = family
+    sky_progress = progress
+    sky_back_previous = get_tree().quit_on_go_back
+    get_tree().quit_on_go_back = false
+    chronicles.set_campaign_board_active(true)
+    if not Sky.begin_game(sky_progress,sky_family):
+        sky_active = false
+        get_tree().quit_on_go_back = sky_back_previous
+        chronicles.set_campaign_board_active(false)
+        board = sky_classic_board
+        preview = sky_view.preview
+        sky_view = {}
+        notify_user(_act_one_ui("Speichern fehlgeschlagen.","Save failed.","Erro ao guardar."))
+        return
+    board = Sky.restore_board(sky_progress.get("game",{}))
+    renderer.reset_view()
+    world_background.texture = Sky.backdrop(sky_family)
+    world_background.modulate = Color.WHITE
+    refresh(-1,false)
+    if board.winner!=0: _sky_result()
+
+func _sky_save() -> bool:
+    if not sky_active: return false
+    if not bool(sky_progress.won[sky_family]):
+        Sky.capture(sky_progress,board)
+    return Sky.save_progress(sky_progress)
+
+func _sky_refresh(animate: int = -1) -> void:
+    var person: String = Sky.NAMES[sky_family]
+    world_title_label.text = "Sky Garden"
+    world_quote_label.text = "The Return to Peace · 3×3"
+    rank_label.visible = true
+    rank_label.text = "Kuze · O    /    X · " + person
+    if board.winner!=0:
+        status.text = _act_one_ui("Du hast gewonnen!","You won!","Ganhaste!") if board.winner==2 else (_act_one_ui("Unentschieden","Draw","Empate") if board.winner==3 else person + _act_one_ui(" gewinnt"," wins"," venceu"))
+    elif board.current_owner()==0:
+        status.text = _act_one_ui("Du bist am Zug · O","Your turn · O","A tua vez · O")
+    else:
+        status.text = person + _act_one_ui(" ist am Zug · X"," is thinking · X"," está a jogar · X")
+    status.add_theme_color_override("font_color",Color("453329"))
+    detail.text = _act_one_ui("Familienpartie","Family game","Jogo em família") + " · 3×3 · " + str(board.move_count()) + "/54"
+    help_text.text = _act_one_ui("Drehen · Tippen · Zoomen","Rotate · Tap · Zoom","Rodar · Tocar · Ampliar")
+    swap_row.hide()
+    tutorial_row.hide()
+    challenge_role_panel.hide()
+    challenge_row.hide()
+    challenge_leave_row.hide()
+    classic_views.show()
+    classic_views.get_child(2).hide()
+    classic_actions.hide()
+    zen_campaign_controls.hide()
+    act_one_controls.hide()
+    sky_controls.show()
+    sky_result_button.visible = board.winner!=0
+    renderer.selected = board.last_cell
+    renderer.paint(board,bool(data.settings.hints) and board.winner==0,[],animate)
+
+func _sky_after_move(cell: int, owner: int) -> void:
+    if owner==0: vibrate_on_move()
+    if board.winner!=0 and not board.win_lines.is_empty(): focus_line(board.win_lines[0])
+    if not _sky_save(): push_warning("Sky Garden save failed")
+    refresh(cell)
+    if board.winner!=0: call_deferred("_sky_result")
+
+func _sky_tick() -> void:
+    if zen_campaign_paused or board.winner!=0 or popup!=null or chronicles.is_open(): return
+    if board.current_owner()!=1 or worker!=null: return
+    var marks: Array = board.cells.duplicate()
+    var seed_value: int = int(Time.get_ticks_usec())
+    var level: int = 1 if sky_family==0 else 2 # Aiko Medium, Shin Hard
+    worker_generation = generation
+    ai_running = true
+    worker = Thread.new()
+    worker.start(func(): return AIEngine.new(seed_value).choose(marks,1,level,95 if sky_family==0 else 200))
+
+func _sky_result() -> void:
+    if not sky_active or board.winner==0: return
+    var won: bool = bool(sky_progress.won[sky_family])
+    if board.winner==2 and not won:
+        won = Sky.record_victory(sky_progress,sky_family,board)
+    var box := _zen_campaign_story_box(Sky.NAMES[sky_family] + " · " + Sky.TITLES[sky_family])
+    var portrait: Texture2D = Sky.portrait(sky_family)
+    if portrait!=null:
+        var art := TextureRect.new()
+        art.texture = portrait
+        art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        art.custom_minimum_size.y = minf(340.0,get_viewport().get_visible_rect().size.y*0.30)
+        box.add_child(art)
+    var caption: String = _act_one_ui("Zeit zusammen ist ein Geschenk.","Time together is a gift.","O tempo juntos é um presente.")
+    if not won:
+        caption = _act_one_ui("Wir spielen einfach noch einmal.","We can play again.","Podemos jogar outra vez.")
+    _zen_campaign_paragraph(box,caption)
+    if won:
+        premium_button(_act_one_ui("Geschichte fortsetzen","Continue story","Continuar a história"),box,_sky_leave,true)
+    else:
+        premium_button(_act_one_ui("Erneut spielen","Play again","Jogar de novo"),box,_sky_retry,true)
+    button(_inspect_label(),box,_inspect_classic_finished_board,true)
+    button(_act_one_ui("Zur Geschichte","Back to story","Voltar à história"),box,_sky_leave,true)
+
+func _sky_retry() -> void:
+    if not sky_active or board.winner==0 or bool(sky_progress.won[sky_family]): return
+    if not Sky.retry_game(sky_progress,sky_family): return
+    generation += 1
+    board = Sky.new_board()
+    close_modal()
+    renderer.reset_view()
+    refresh(-1,false)
+
+func _sky_leave() -> void:
+    if not sky_active: return
+    if not _sky_save(): return
+    close_modal()
+    generation += 1
+    sky_active = false
+    chronicles.set_campaign_board_active(false)
+    get_tree().quit_on_go_back = sky_back_previous
+    board = sky_classic_board
+    world_background.texture = sky_view.background
+    world_background.modulate = sky_view.tint
+    renderer.pivot.basis = sky_view.basis
+    renderer.camera.position.z = sky_view.zoom
+    preview = sky_view.preview
+    sky_view = {}
+    sky_classic_board = null
+    sky_progress = {}
+    sky_family = -1
+    refresh(-1,false)
+    chronicles.open_sky_garden_preview()
+
 # Act I reuses the live Classic 3x3 board and renderer, but not Classic stats,
 # ranks, economy, results, settings, or the original campaign's progress.
 func _act_one_ui(de: String, en: String, pt: String) -> String:
@@ -3133,6 +3327,11 @@ func _act_one_back() -> void:
         open_menu()
 
 func _unhandled_key_input(event: InputEvent) -> void:
+    if sky_active and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+        if popup!=null: close_modal()
+        else: open_menu()
+        get_viewport().set_input_as_handled()
+        return
     if act_one_active and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
         _act_one_back()
         get_viewport().set_input_as_handled()
