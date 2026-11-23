@@ -1384,8 +1384,35 @@ func open_worlds() -> void:
             label("Ausgewählt", info, 12, Color("526943"))
         else:
             label("Freigeschaltet", info, 12, Color("526943"))
+    # Sky Garden is the sixth, story-only 3x3 World, reached after Moon.
+    # It does not change the existing five rank/cosmetic World slots.
+    var sky_card := PanelContainer.new()
+    sky_card.name = "SkyGardenClassicWorldCard"
+    sky_card.add_theme_stylebox_override("panel",theme_style(Color("f1ead8",0.98),14))
+    box.add_child(sky_card)
+    var sky_row: HBoxContainer = row(sky_card)
+    var sky_thumb := TextureRect.new()
+    if ResourceLoader.exists(Sky.REALM_ART): sky_thumb.texture = load(Sky.REALM_ART)
+    sky_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    sky_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    sky_thumb.custom_minimum_size = Vector2(90,104)
+    sky_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    sky_row.add_child(sky_thumb)
+    var sky_info := VBoxContainer.new()
+    sky_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    sky_row.add_child(sky_info)
+    label("Sky Garden · The Return to Peace",sky_info,17,Color("493b29"))
+    label(_act_one_ui("3×3-Epilog nach Shattered Moon","3×3 epilogue after Shattered Moon","Epílogo 3×3 após Shattered Moon"),sky_info,13)
+    var enter_sky := button(_act_one_ui("▶ Geschichte betreten","▶ Enter Story World","▶ Entrar no mundo"),sky_info,_sky_open_from_worlds,true)
+    enter_sky.name = "SkyGardenClassicWorldEntry"
+    enter_sky.disabled = not Sky.unlocked() and not Sky.qa_mode()
+    if enter_sky.disabled: label(_act_one_ui("🔒 Shattered Moon abschließen","🔒 Complete Shattered Moon","🔒 Concluir Shattered Moon"),sky_info,12)
     button("Rang & Fortschritt", box, open_ascension, true, true)
     button("Zum Hauptmenü", box, open_menu, true)
+
+func _sky_open_from_worlds() -> void:
+    close_modal()
+    chronicles.open_sky_garden_preview()
 
 func select_world(number: int) -> void:
     if not Asc.world_unlocked(data,number): return
