@@ -27,6 +27,8 @@ const ShadowReader = preload("res://story/ZenShadowReader.gd")
 const EmberReader = preload("res://story/ZenEmberReader.gd")
 const CelestialReader = preload("res://story/ZenCelestialReader.gd")
 const SatoriReader = preload("res://story/ZenSatoriReader.gd")
+const ShatteredReader = preload("res://story/ZenShatteredMoonReader.gd")
+const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
 const Satori = preload("res://story/ZenSatoriCampaign.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
@@ -74,6 +76,8 @@ var _realm_story_requested: bool = false
 var _realm_story_from_realms: bool = false
 var _realm_chapter_scroll: ScrollContainer
 var _realm_chapter_dragging: bool = false
+var _library_scroll: ScrollContainer
+var _library_dragging: bool = false
 var _abyss_reader: CanvasLayer
 var _abyss_launch_requested: bool = false
 var _shadow_reader: CanvasLayer
@@ -82,6 +86,7 @@ var _ember_reader: CanvasLayer
 var _ember_launch_requested: bool = false
 var _celestial_launch_requested: bool = false
 var _satori_launch_requested: bool = false
+var _shattered_launch_requested: bool = false
 var _campaign_menu: CanvasLayer
 var _campaign_challenge_requested: Dictionary = {}
 var _campaign_practice_requested: int = -1
@@ -236,6 +241,8 @@ func _make_button(value: String, parent: Node, callback: Callable) -> Button:
 func _make_screen() -> VBoxContainer:
     _realm_chapter_scroll = null
     _realm_chapter_dragging = false
+    _library_scroll = null
+    _library_dragging = false
     if _screen != null:
         _screen.hide()
         _screen.queue_free()
@@ -371,6 +378,13 @@ func _library_realm_cards(parent: VBoxContainer) -> void:
             hint = campaign_ui("Bosse %d/3 · Challenges %d/3 · 30 Seiten","Bosses %d/3 · Challenges %d/3 · 30 pages","Chefes %d/3 · Desafios %d/3 · 30 páginas") % [Realm2.bosses_won(4),Realm2.completed_count(Realm2.load_progress(),4)]
         var preview_art: String = "res://assets/abyss_of_memories/gameplay.webp" if i==1 and ResourceLoader.exists("res://assets/abyss_of_memories/gameplay.webp") else Realm2.SOURCE_ART[i]
         _library_card(parent,titles[i],preview_art,hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
+    var moon_access: bool = Moon.unlocked() or Moon.qa_mode()
+    var moon_data: Dictionary = Moon.load_progress()
+    var moon_wins: int = 0
+    for flag in moon_data.get("defeated",[]):
+        if bool(flag): moon_wins += 1
+    var moon_hint: String = (campaign_ui("Bosse %d/3 · 30 Seiten","Bosses %d/3 · 30 pages","Chefes %d/3 · 30 páginas") % moon_wins) if moon_access else campaign_ui("Freischalten: Satori abschließen","Unlock: Complete Satori","Desbloquear: Concluir Satori")
+    _library_card(parent,"🌙 Shattered Moon · The Last Crossing",Moon.REALM_ART,moon_hint,moon_access,bool(moon_data.get("completed",false)),open_shattered_moon_preview,"RealmCardShatteredMoon",true)
 
 func open_library() -> void:
     _act_one_release_back()
@@ -400,9 +414,17 @@ func open_library() -> void:
     var active_tab: Button = story_tab if _library_tab==0 or realm_tab==null else realm_tab
     active_tab.add_theme_stylebox_override("normal",_style(Color("#5c4930"),12))
     active_tab.add_theme_color_override("font_color",Color("#ffe2a3"))
+    if _library_tab == 1:
+        var moon_shortcut: Button = _make_button("🌙 Shattered Moon · The Last Crossing",outer,open_shattered_moon_preview)
+        moon_shortcut.name = "ShatteredMoonLibraryShortcut"
     var scroll: ScrollContainer = ScrollContainer.new()
+    scroll.name = "ZenChroniclesLibraryScroll"
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    scroll.scroll_deadzone = 8
+    scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+    _library_scroll = scroll
     outer.add_child(scroll)
     var cards: VBoxContainer = VBoxContainer.new()
     cards.name = "ZenChroniclesCards"
@@ -553,6 +575,18 @@ func _input(event: InputEvent) -> void:
     if _screen_name.begins_with("act-one"):
         _act_one_input(event)
         return
+    # Some Android touch configurations swallow drag gestures inside chapter cards.
+    # Keep the library scroll usable from the entire card surface, not just its scrollbar.
+    if _screen_name == "library" and is_instance_valid(_library_scroll):
+        if event is InputEventScreenTouch:
+            if event.pressed:
+                _library_dragging = _library_scroll.get_global_rect().has_point(event.position)
+            else:
+                _library_dragging = false
+        elif event is InputEventScreenDrag and _library_dragging:
+            _library_scroll.scroll_vertical = maxi(0, _library_scroll.scroll_vertical - roundi(event.relative.y))
+            get_viewport().set_input_as_handled()
+            return
     # Godot's nested PanelContainers/TextureRects can intercept touch
     # gestures before ScrollContainer on Android. Drive this ONE chapter list
     # from native drag deltas; never change the campaign reader or 3D cube.
@@ -1129,12 +1163,52 @@ func consume_satori_launch() -> bool:
     _satori_launch_requested = false
     return flag
 
+# Shattered Moon is an independent story chapter after Satori, not a fifth ordinary
+# Zen Ascend free-play Realm. It never writes an existing campaign save.
+func open_shattered_moon_preview() -> void:
+    if not Moon.unlocked() and not Moon.qa_mode():
+        _sync_language()
+        _screen_name = "shattered-locked"
+        var outer: VBoxContainer = _make_screen()
+        _make_label(campaign_ui("Shattered Moon: Beende zuerst Satori Realm.", "Shattered Moon: Complete Satori Realm first.", "Shattered Moon: Conclui primeiro Satori Realm."),outer,20,GOLD)
+        _make_button(campaign_ui("‹ Zur Bibliothek","‹ Back to library","‹ Voltar à biblioteca"),outer,open_library)
+        return
+    _library_tab = 1
+    close_campaign_challenges()
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
+    if _screen != null: close_chronicles()
+    _ember_reader = ShatteredReader.new()
+    _root.add_child(_ember_reader)
+    if _quick_button != null: _quick_button.hide()
+
+func request_shattered_moon_battle() -> void:
+    if not Moon.unlocked() and not Moon.qa_mode(): return
+    _shattered_launch_requested = true
+    close_ember_reader()
+    var current: Node = get_tree().current_scene
+    if current != null and current.scene_file_path == "res://Ascend.tscn" and current.has_method("start_shattered_moon_battle"):
+        _shattered_launch_requested = false
+        current.call_deferred("start_shattered_moon_battle")
+    else:
+        get_tree().call_deferred("change_scene_to_file","res://Ascend.tscn")
+
+func consume_shattered_moon_launch() -> bool:
+    var flag: bool = _shattered_launch_requested
+    _shattered_launch_requested = false
+    return flag
+
+func shattered_moon_story_completed() -> void:
+    # Sky Garden is future content; do not unlock or invent it here.
+    call_deferred("open_library")
+
 func satori_story_completed() -> void:
     # Story completion does not mint the separate 4x4 Fully Aware rank or currency.
     var celebration = preload("res://ui/ZenUnlockCeremony.gd").new()
     get_tree().root.add_child(celebration)
     var settings: Dictionary = SaveManager.load_data().get("settings",{})
-    celebration.finished.connect(func(): call_deferred("open_library"))
+    celebration.finished.connect(func(): call_deferred("open_shattered_moon_preview"))
     celebration.present("story",Realm2.SOURCE_ART[4],"FULLY AWARE",
         "SATORI REALM — COMPLETE · THE JOURNEY CONTINUES WITHIN.",
         bool(settings.get("sound",true)),[],str(settings.get("language","en")))

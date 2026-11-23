@@ -57,7 +57,7 @@ func run() -> void:
                 test(ResourceLoader.exists(Story.CHAPTER_ART[chapter]),"chapter hero art included "+str(chapter))
         chronicles.call("close_chronicles")
     # New single entrance: Legacy/Manhwa belongs in Zen Realm Chronicles,
-    # while the normal 4x4 Realm screen contains five ordered Realm cards.
+    # while the 4x4 Realm screen contains the five existing cards plus one story-only Moon card.
     var ascend_scene: PackedScene = load("res://Ascend.tscn") as PackedScene
     test(ascend_scene != null,"4x4 Ascend scene is still loadable")
     if ascend_scene != null and chronicles != null:
@@ -81,7 +81,7 @@ func run() -> void:
                 for item in content.get_children():
                     for card in item.get_children():
                         if card is PanelContainer: count += 1
-                test(count==5,"five Realm cards including Abyss")
+                test(count==6,"six Realm cards including Abyss and Shattered Moon")
                 var ordered: Array[String] = []
                 for item in content.get_children():
                     for card in item.get_children():
@@ -91,7 +91,10 @@ func run() -> void:
                             ordered.append(str(card.name))
                 test(modal.find_child("Campaign2AbyssRealmCard",true,false)!=null,"Abyss card exists")
                 test(modal.find_child("Campaign2ChroniclesEntry",true,false)!=null,"dedicated Chronicles entry exists")
-                test(ordered.size()==5 and ordered[1]=="Campaign2AbyssRealmCard","Abyss is immediately after Shadow")
+                test(ordered.size()==6 and ordered[1]=="Campaign2AbyssRealmCard","Abyss is immediately after Shadow")
+                test(ordered.size()==6 and ordered[5]=="ShatteredMoonStoryRealmCard","Shattered Moon is the final story-only Realm card")
+                test(modal.find_child("ShatteredMoonStoryRealmButton",true,false)!=null,
+                    "Shattered Moon has a direct Story Realm entry")
         chronicles.call("open_library")
         test(chronicles.get("_screen_name")=="library","Zen Realm Chronicles is the sole story entry")
         var screen: Node = chronicles.get("_screen")

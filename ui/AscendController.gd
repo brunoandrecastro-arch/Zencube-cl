@@ -21,6 +21,7 @@ const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Ember = preload("res://story/ZenEmberCampaign.gd")
 const Celestial = preload("res://story/ZenCelestialCampaign.gd")
 const Satori = preload("res://story/ZenSatoriCampaign.gd")
+const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const FinalSeries = preload("res://core/ZenFinalGuardianSeries.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
@@ -157,6 +158,9 @@ func _ready() -> void:
         return
     if ZenChronicles.consume_celestial_launch():
         call_deferred("start_celestial_battle")
+        return
+    if ZenChronicles.consume_shattered_moon_launch():
+        call_deferred("start_shattered_moon_battle")
         return
     if ZenChronicles.consume_satori_launch():
         call_deferred("start_satori_battle")
@@ -1061,6 +1065,27 @@ func finish() -> void:
         if result != 3: outcome = 1 if int(owners[result-1]) == 0 else -1
         var lines_won: Array = Mode.winning_lines(cells,lines,result) if outcome == 1 else []
         last_realm_awards = Realms.record_bot_match(data,match_realm,outcome,bot_level,move_count(),lines_won,match_blocked_threat)
+        # Normal Zen Ascend matches earn eight Realm challenges too.
+        # Celebrate newly earned tasks once, using one full-screen choir ceremony
+        # even when a single victory completes several tasks at once.
+        var new_challenge_names: Array[String] = []
+        var first_challenge_description: String = ""
+        for earned_task_id in last_realm_awards.get("new_tasks",[]):
+            for task in Realms.TASKS[match_realm]:
+                if str(task.id) == str(earned_task_id):
+                    new_challenge_names.append(str(task.title))
+                    if first_challenge_description.is_empty():
+                        first_challenge_description = str(task.get(lang(),task.get("en","")))
+                    break
+        if not new_challenge_names.is_empty():
+            var challenge_heading: String = new_challenge_names[0]
+            var challenge_detail: String = first_challenge_description
+            if new_challenge_names.size() > 1:
+                challenge_heading = _campaign_phrase("%d Realm-Herausforderungen","%d Realm Challenges","%d Desafios de Reino") % new_challenge_names.size()
+                challenge_detail = ""
+                for task_title in new_challenge_names:
+                    challenge_detail += ("\n" if not challenge_detail.is_empty() else "") + "✓ " + task_title
+            queued_unlocks.append({"kind":"challenge","realm":match_realm,"name":challenge_heading,"quote":challenge_detail})
         for secret in Achievements.claim_after_match(data,match_realm):
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":str(secret.name),"quote":str(secret.quote)})
         if bool(last_realm_awards.get("realm_completed",false)):
@@ -1103,11 +1128,13 @@ func _show_next_unlock() -> void:
             true, bool(data.settings.get("sound",true)), [world_music], lang())
         return
     var unlock: ZenUnlockCeremony = UnlockCeremony.new()
+    if str(item.kind) == "challenge":
+        unlock.name = "ZenAscendChallengeEarnedCeremony"
     add_child(unlock)
     unlock.finished.connect(func():
         if is_inside_tree(): call_deferred("_show_next_unlock")
     )
-    unlock.present(str(item.kind),str(Realms.REALM_ART[int(item.realm)]),str(item.name),str(item.quote),bool(data.settings.get("sound",true)),[world_music])
+    unlock.present(str(item.kind),str(Realms.REALM_ART[int(item.realm)]),str(item.name),str(item.quote),bool(data.settings.get("sound",true)),[world_music],lang())
 
 func show_fully_aware(awards: Dictionary) -> void:
     if not is_inside_tree(): return
@@ -1372,6 +1399,37 @@ func show_realms() -> void:
         if i==0:
             action(column,"Realm Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),0),_open_campaign_trials_from_realms.bind(0))
             _add_abyss_realm_card(body)
+    # Shattered Moon is a post-Satori story chapter, not a fifth ordinary 8-task
+    # Zen Ascend realm. Show a discoverable route without changing the old gates.
+    var moon_allowed: bool = Moon.unlocked() or Moon.qa_mode()
+    var moon_progress: Dictionary = Moon.load_progress()
+    var moon_bosses: int = 0
+    for flag in moon_progress.get("defeated",[]):
+        if bool(flag): moon_bosses += 1
+    var moon_card := PanelContainer.new()
+    moon_card.name = "ShatteredMoonStoryRealmCard"
+    moon_card.add_theme_stylebox_override("panel",style(Color("#222b39"),18))
+    body.add_child(moon_card)
+    var moon_column := VBoxContainer.new()
+    moon_column.add_theme_constant_override("separation",6)
+    moon_card.add_child(moon_column)
+    text(moon_column,"🌙 Shattered Moon · The Last Crossing" + ("" if moon_allowed else "  🔒"),19,Color("f7dfaa"))
+    text(moon_column,_campaign_phrase("Zen Chronicles · Story-Realm","Zen Chronicles · Story realm","Zen Chronicles · Reino da história"),14,Color("d5ba85"))
+    var moon_thumb := TextureRect.new()
+    if ResourceLoader.exists(Moon.REALM_ART):
+        moon_thumb.texture = load(Moon.REALM_ART)
+    moon_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    moon_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    moon_thumb.custom_minimum_size.y = 112
+    moon_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    moon_column.add_child(moon_thumb)
+    text(moon_column,_campaign_phrase("Bosse: %d/3 · 30 Seiten","Bosses: %d/3 · 30 pages","Chefes: %d/3 · 30 páginas") % moon_bosses,14)
+    if not moon_allowed:
+        text(moon_column,_campaign_phrase("Freischaltung: Satori-Geschichte abschließen","Unlock: Finish the Satori story","Desbloquear: Concluir a história de Satori"),13,Color("d5ba85"))
+    var moon_entry: Button = action(moon_column,
+        _campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história") if moon_allowed else _campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),
+        _open_shattered_from_realms,true)
+    moon_entry.name = "ShatteredMoonStoryRealmButton"
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
 
@@ -1414,6 +1472,10 @@ func _open_campaign_trials_from_realms(chapter: int) -> void:
 func _open_campaign_library_from_realms() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     ZenChronicles.open_library()
+
+func _open_shattered_from_realms() -> void:
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_shattered_moon_preview()
 
 func _open_realm_chronicles_from_realms() -> void:
     # The button is inside a modal; close it before opening the book. Returning
@@ -2478,8 +2540,15 @@ func start_satori_battle() -> void:
     ember_model = Satori
     _start_guardian_battle()
 
+func start_shattered_moon_battle() -> void:
+    if not Moon.unlocked() and not Moon.qa_mode(): return
+    guardian_chapter = 5 # separate post-Satori story chapter
+    ember_model = Moon
+    _start_guardian_battle()
+
 func _open_guardian_reader() -> void:
-    if guardian_chapter==4: ZenChronicles.open_satori_campaign_preview()
+    if guardian_chapter==5: ZenChronicles.open_shattered_moon_preview()
+    elif guardian_chapter==4: ZenChronicles.open_satori_campaign_preview()
     elif guardian_chapter==3: ZenChronicles.open_celestial_campaign_preview()
     else: ZenChronicles.open_ember_reader()
 
@@ -2491,7 +2560,7 @@ func _start_guardian_battle() -> void:
         return
     ember_index = int(next_action.get("boss",-1))
     if ember_index < 0 or ember_index >= 3: return
-    if guardian_chapter != 4 and not Realm2.can_face_boss(guardian_chapter,ember_index):
+    if guardian_chapter not in [4,5] and not Realm2.can_face_boss(guardian_chapter,ember_index):
         ZenChronicles.open_campaign_challenges(guardian_chapter,true)
         return
     ember_active = true
@@ -2518,7 +2587,7 @@ func _start_guardian_battle() -> void:
     cube.reset_view()
     cube.clear_abyss_skin()
     cube.clear_boss_skin()
-    cube.set_boss_skin(ember_index+(9 if guardian_chapter==4 else (6 if guardian_chapter==3 else 3)))
+    cube.set_boss_skin(ember_index+(9 if guardian_chapter>=4 else (6 if guardian_chapter==3 else 3)))
     if realm_backdrop != null:
         var arena: Texture2D = ember_model.battle_backdrop(ember_index)
         if arena != null: realm_backdrop.texture = arena
@@ -2569,6 +2638,7 @@ func _ember_intro() -> void:
     ]
     if guardian_chapter==3: opening = ["Every decision creates a thousand possibilities.","Let thunder shake the heavens.","Then show me what you have become."]
     if guardian_chapter==4: opening = ["See clearly before you move.","A victory need not define you.","What remains when the game is over?"]
+    if guardian_chapter==5: opening = ["The echoes have not faded.","Cross the silence with an open heart.","What can you release beneath the broken moon?"]
     text(body,opening[ember_index],16,Color("#dfd4e5"))
     _guardian_series_panel(body,ember_progress)
     var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
@@ -2596,6 +2666,7 @@ func _ember_result() -> void:
         label = "A chama acalma" if result == 1 else ("Empate" if result == 3 else "Derrota")
     if guardian_chapter==3 and result==1: label = _campaign_phrase("Klarheit","Clarity","Clareza")
     if guardian_chapter==4 and result==1: label = _campaign_phrase("Das letzte Erwachen","The Final Awakening","O Despertar Final")
+    if guardian_chapter==5 and result==1: label = _campaign_phrase("Die letzte Überfahrt","The Last Crossing","A Última Travessia")
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
     var body: VBoxContainer = parts.box
@@ -2636,7 +2707,7 @@ func _ember_retry() -> void:
 
 func _ember_victory() -> void:
     if not ember_active or result != 1: return
-    if guardian_chapter != 4 and not Realm2.can_face_boss(guardian_chapter,ember_index): return
+    if guardian_chapter not in [4,5] and not Realm2.can_face_boss(guardian_chapter,ember_index): return
     if not ember_model.player_won(ember_progress): return
     if not ember_model.record_victory(ember_progress,ember_index): return
     ember_generation += 1
@@ -2649,7 +2720,7 @@ func _ember_victory() -> void:
 
 func _ember_menu() -> void:
     if not ember_active: return
-    var parts: Dictionary = _realm_dialog(Realm2.REALM_NAMES[guardian_chapter],410)
+    var parts: Dictionary = _realm_dialog("Shattered Moon" if guardian_chapter==5 else Realm2.REALM_NAMES[guardian_chapter],410)
     _realm_story_compact(parts)
     var body: VBoxContainer = parts.box
     text(body,ember_model.BOSS_NAMES[clampi(ember_index,0,2)],20,Color("#dfd4e5"))

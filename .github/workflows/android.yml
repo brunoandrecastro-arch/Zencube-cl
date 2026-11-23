@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     env:
-      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' || github.head_ref == 'test/satori-20261122' || github.ref_name == 'test/satori-20261122' }}
+      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' || github.head_ref == 'test/satori-20261122' || github.ref_name == 'test/satori-20261122' || github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123' }}
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
       ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
@@ -246,7 +246,9 @@ jobs:
       - name: Verify feedback challenges and round alternation
         run: |
           python3 tests/test_feedback_fix.py
+          python3 tests/test_shattered_moon_integration.py
           timeout 40 "$GODOT" --headless --path . --script tests/test_round_starters.gd
+          timeout 100 "$GODOT" --headless --path . --script tests/test_shattered_moon.gd
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
@@ -466,6 +468,44 @@ jobs:
                       source = f'assets/assets/{realm}/pages/page_{page:02d}.webp'
                       assert source in names or source+'.import' in names, source
           print('Preview verified: menu, journey, original video, 48 Act pages and 120 Realm pages')
+          PY
+      - name: Verify complete Satori and Shattered Moon media inside Android APK
+        if: github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          apk_path = Path('build/ZenCube-3D.apk')
+          assert apk_path.is_file(), 'Debug APK missing'
+          with zipfile.ZipFile(apk_path) as apk:
+              assets = set(apk.namelist())
+
+          expected = []
+          for realm in ('satori_campaign', 'shattered_moon'):
+              expected.extend(
+                  f'assets/assets/{realm}/pages/page_{page:02d}.webp'
+                  for page in range(1, 31)
+              )
+              expected.append(f'assets/assets/{realm}/realm.webp')
+
+          for boss in ('lotus_witness', 'halo_keeper', 'fully_aware'):
+              expected.append(f'assets/assets/satori_campaign/bosses/{boss}.webp')
+
+          for boss in ('echo_keeper', 'silent_ferryman', 'moon_warden'):
+              expected.append(f'assets/assets/shattered_moon/bosses/{boss}.webp')
+              expected.append(f'assets/assets/shattered_moon/arenas/{boss}.webp')
+
+          expected.extend((
+              'assets/story/ZenShatteredMoonCampaign.gdc',
+              'assets/story/ZenShatteredMoonReader.gdc'
+          ))
+          missing = [
+              path for path in expected
+              if path not in assets and path + '.import' not in assets
+          ]
+          assert not missing, 'Missing Satori/Shattered Moon APK assets: ' + ', '.join(missing)
+          print('APK verified: 30 Satori pages, 30 Moon pages, both realm backdrops, 6 portraits, 3 Moon boss arenas and playable scripts')
           PY
       - name: Deliver the separate menu test APK
         if: env.ZENCUBE_MENU_PREVIEW == 'true'
