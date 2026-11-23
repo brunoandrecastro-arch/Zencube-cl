@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     env:
-      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' || github.head_ref == 'test/satori-20261122' || github.ref_name == 'test/satori-20261122' || github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123' }}
+      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' || github.head_ref == 'test/satori-20261122' || github.ref_name == 'test/satori-20261122' || github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123' || github.head_ref == 'feature/sky-garden-20261123' || github.ref_name == 'feature/sky-garden-20261123' }}
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
       ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
@@ -473,8 +473,8 @@ jobs:
                       assert source in names or source+'.import' in names, source
           print('Preview verified: menu, journey, original video, 48 Act pages and 120 Realm pages')
           PY
-      - name: Verify complete Satori and Shattered Moon media inside Android APK
-        if: github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123'
+      - name: Verify complete Satori, Shattered Moon and Sky Garden media inside Android APK
+        if: github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123' || github.head_ref == 'feature/sky-garden-20261123' || github.ref_name == 'feature/sky-garden-20261123'
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -504,12 +504,19 @@ jobs:
               'assets/story/ZenShatteredMoonCampaign.gdc',
               'assets/story/ZenShatteredMoonReader.gdc'
           ))
+          if "${{ github.head_ref }}" == 'feature/sky-garden-20261123' or "${{ github.ref_name }}" == 'feature/sky-garden-20261123':
+              expected.extend(f'assets/assets/sky_garden/pages/page_{page:02d}.webp' for page in range(1,31))
+              expected.append('assets/assets/sky_garden/realm.webp')
+              for person in ('aiko_tadanobu','shin_tadanobu'):
+                  expected.append(f'assets/assets/sky_garden/family/{person}.webp')
+                  expected.append(f'assets/assets/sky_garden/arenas/{person}.webp')
+              expected.extend(('assets/story/ZenSkyGardenCampaign.gdc', 'assets/story/ZenSkyGardenReader.gdc'))
           missing = [
               path for path in expected
               if path not in assets and path + '.import' not in assets
           ]
           assert not missing, 'Missing Satori/Shattered Moon APK assets: ' + ', '.join(missing)
-          print('APK verified: 30 Satori pages, 30 Moon pages, both realm backdrops, 6 portraits, 3 Moon boss arenas and playable scripts')
+          print('APK verified: all inherited Realm media, Shattered Moon, optional Sky Garden pages, family arenas, reader and scripts')
           PY
       - name: Deliver the separate menu test APK
         if: env.ZENCUBE_MENU_PREVIEW == 'true'
