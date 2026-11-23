@@ -10,6 +10,7 @@ var peach = Color("16515a") # High-contrast deep jade O across all face colors
 var selected: int = -1
 var surface_textures: Array[Texture2D] = []
 var skin_id: int = 0
+var sky_family_palette: bool = false # Only for the post-Moon 3x3 epilogue
 var core_mesh_instance: MeshInstance3D
 func _ready() -> void:
 	pivot = Node3D.new()
@@ -204,10 +205,10 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 		# X remains angular and warm; O remains round and blue-green.
 		var brightness: float = color.get_luminance()
 		var dark_tile: bool = brightness < 0.41
-		var x_main: Color = Color("ffe1a0") if dark_tile else Color("282b30")
-		var x_border: Color = Color("33251e") if dark_tile else Color("fff4db")
-		var o_main: Color = Color("94ffda") if dark_tile else Color("04748a")
-		var o_border: Color = Color("273530") if dark_tile else Color("fff4df")
+		var x_main: Color = (Color("dbb5fa") if dark_tile else Color("71429e")) if sky_family_palette else (Color("ffe1a0") if dark_tile else Color("282b30"))
+		var x_border: Color = (Color("342342") if dark_tile else Color("f7ebff")) if sky_family_palette else (Color("33251e") if dark_tile else Color("fff4db"))
+		var o_main: Color = (Color("fce199") if dark_tile else Color("a57516")) if sky_family_palette else (Color("94ffda") if dark_tile else Color("04748a"))
+		var o_border: Color = (Color("483718") if dark_tile else Color("fff4d6")) if sky_family_palette else (Color("273530") if dark_tile else Color("fff4df"))
 		if board.cells[c] == 1:
 			# Draw a thinner bright/dark outline, then a raised high-contrast X.
 			bar(marks[c], Vector3(-0.24,-0.24,-0.018), Vector3(0.24,0.24,-0.018), x_border, 0.090)
