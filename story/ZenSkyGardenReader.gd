@@ -31,7 +31,7 @@ func _ready() -> void:
     _display()
     _audio()
 
-func tr(key: String) -> String:
+func t(key: String) -> String:
     return str(COPY[locale].get(key,key))
 
 func _button(caption: String, parent: Node, callback: Callable) -> Button:
@@ -95,8 +95,8 @@ func _build() -> void:
     var nav := HBoxContainer.new()
     nav.add_theme_constant_override("separation",8)
     stack.add_child(nav)
-    previous = _button(tr("back"),nav,_turn.bind(-1))
-    next_button = _button(tr("next"),nav,_turn.bind(1))
+    previous = _button(t("back"),nav,_turn.bind(-1))
+    next_button = _button(t("next"),nav,_turn.bind(1))
 
 func _display() -> void:
     var page: int = clampi(int(progress.get("page",1)),1,Sky.page_limit(progress))
@@ -104,20 +104,20 @@ func _display() -> void:
     var image_path: String = Sky.page_path(page)
     reader.texture = load(image_path) as Texture2D if ResourceLoader.exists(image_path) else null
     var games: int = int(bool(progress.won[0])) + int(bool(progress.won[1]))
-    counter.text = tr("progress") % [page,games]
+    counter.text = t("progress") % [page,games]
     previous.disabled = page <= 1
-    note.text = tr("hint") if reader.texture != null else tr("missing")
+    note.text = t("hint") if reader.texture != null else t("missing")
     if page==30:
-        next_button.text = tr("done") if bool(progress.get("completed",false)) else tr("finish")
+        next_button.text = t("done") if bool(progress.get("completed",false)) else t("finish")
         note.text = "ZEN CHRONICLES — A JOURNEY COMPLETE"
         return
     var action: Dictionary = Sky.next_action(progress)
     if str(action.get("type",""))=="game":
         var opponent: String = Sky.NAMES[int(action.family)]
-        next_button.text = tr("play") % opponent
-        note.text = tr("gate") % opponent
+        next_button.text = t("play") % opponent
+        note.text = t("gate") % opponent
     else:
-        next_button.text = tr("next")
+        next_button.text = t("next")
 
 func _turn(dir: int) -> void:
     var page: int = int(progress.get("page",1))
@@ -137,7 +137,7 @@ func _turn(dir: int) -> void:
     var action: Dictionary = Sky.next_action(progress)
     if str(action.get("type",""))=="game":
         if not Sky.unlocked() and not Sky.qa_mode():
-            note.text = tr("locked")
+            note.text = t("locked")
             return
         _chronicles().call("request_sky_garden_battle")
     elif str(action.get("type",""))=="page":
