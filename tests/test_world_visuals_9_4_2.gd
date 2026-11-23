@@ -10,6 +10,12 @@ func count_thumbnails(node: Node) -> int:
     for child in node.get_children():
         total += count_thumbnails(child)
     return total
+func _find_story_thumbnail(node: Node) -> TextureRect:
+    if node is TextureRect: return node as TextureRect
+    for child in node.get_children():
+        var found: TextureRect = _find_story_thumbnail(child)
+        if found != null: return found
+    return null
 func _initialize() -> void:
     call_deferred("run")
 func run() -> void:
@@ -39,7 +45,20 @@ func run() -> void:
     game.open_worlds()
     check(game.popup != null,"premium worlds menu")
     if game.popup != null:
-        check(count_thumbnails(game.popup) == 5,"five independent thumbnails")
+        # The five original cosmetics remain intact; Sky Garden adds one
+        # independent story-only 3x3 card and its own visual thumbnail.
+        check(count_thumbnails(game.popup) == 6,"five premium cosmetics plus Sky Garden story thumbnail")
+        var sky_card: Node = game.popup.find_child("SkyGardenClassicWorldCard",true,false)
+        check(sky_card != null,"Sky Garden story card exists separately from Classic cosmetics")
+        if sky_card != null:
+            var sky_entry: Node = sky_card.find_child("SkyGardenClassicWorldEntry",true,false)
+            check(sky_entry != null,"Sky Garden has its own story entry")
+            var sky_thumb: TextureRect = null
+            for child in sky_card.get_children():
+                sky_thumb = _find_story_thumbnail(child)
+                if sky_thumb != null: break
+            check(sky_thumb != null and sky_thumb.texture != null,"Sky Garden thumbnail is loaded")
+        check(ZenAscension.WORLD_TEXTURES.size() == 5,"five original cosmetic worlds remain unchanged")
     game.select_world(2)
     check(int(game.data.ascension.world) == 2,"player chose mountain temple")
     check(game.world_background.texture == ZenAscension.WORLD_TEXTURES[2],"mountain temple background active")
