@@ -16,26 +16,26 @@ var tower_trim: Node3D
 var tower_textures: Dictionary = {}
 
 const TOWER_PALETTES = [
-    {
-        "faces":["36513a","526b42","293f30","716044","496044","39523e"],
-        "core":"a98b4d","trim":"d5bc75",
-        "metal":0.12,"rough":0.66
-    },
-    {
-        "faces":["397489","62a3b1","28586f","83bdc5","4f859e","367181"],
-        "core":"d0dce5","trim":"d4f3ff",
-        "metal":0.42,"rough":0.24
-    },
-    {
-        "faces":["245b55","397d70","23464c","548c82","366a67","1e5554"],
-        "core":"c4cfc5","trim":"e6b5d0",
-        "metal":0.28,"rough":0.32
-    },
-    {
-        "faces":["865022","b47b35","68391c","c18b42","955a27","a96c31"],
-        "core":"e0ad49","trim":"ffe099",
-        "metal":0.48,"rough":0.30
-    }
+	{
+		"faces":["36513a","526b42","293f30","716044","496044","39523e"],
+		"core":"a98b4d","trim":"d5bc75",
+		"metal":0.12,"rough":0.66
+	},
+	{
+		"faces":["397489","62a3b1","28586f","83bdc5","4f859e","367181"],
+		"core":"d0dce5","trim":"d4f3ff",
+		"metal":0.42,"rough":0.24
+	},
+	{
+		"faces":["245b55","397d70","23464c","548c82","366a67","1e5554"],
+		"core":"c4cfc5","trim":"e6b5d0",
+		"metal":0.28,"rough":0.32
+	},
+	{
+		"faces":["865022","b47b35","68391c","c18b42","955a27","a96c31"],
+		"core":"e0ad49","trim":"ffe099",
+		"metal":0.48,"rough":0.30
+	}
 ]
 var sky_family_palette: bool = false # Only for the post-Moon 3x3 epilogue
 var core_mesh_instance: MeshInstance3D
