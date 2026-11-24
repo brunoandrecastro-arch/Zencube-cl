@@ -3101,7 +3101,7 @@ func start_sky_garden_battle() -> void:
         notify_user(_act_one_ui("Speichern fehlgeschlagen.","Save failed.","Erro ao guardar."))
         return
     board = SkyGarden.restore_board(sky_progress.get("game",{}))
-    renderer.sky_family_palette = true
+    renderer.set_sky_family_skin(true)
     renderer.reset_view()
     world_background.texture = SkyGarden.backdrop(sky_family)
     world_background.modulate = Color.WHITE
@@ -3207,7 +3207,7 @@ func _sky_leave() -> void:
     chronicles.set_campaign_board_active(false)
     get_tree().quit_on_go_back = sky_back_previous
     board = sky_classic_board
-    renderer.sky_family_palette = false
+    renderer.set_sky_family_skin(false)
     world_background.texture = sky_view.background
     world_background.modulate = sky_view.tint
     renderer.pivot.basis = sky_view.basis

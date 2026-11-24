@@ -898,6 +898,14 @@ func _guardian_series_score(progress: Dictionary) -> String:
     var tally: Dictionary = FinalSeries.score(progress)
     return _campaign_phrase("Best of 3 · Kuze %d : %d Wächter","Best of 3 · Kuze %d : %d Guardian","Melhor de 3 · Kuze %d : %d Guardião") % [int(tally.player),int(tally.guardian)]
 
+func _boss_starter_caption(game: Dictionary) -> String:
+    var starter: int = FinalSeries.round_starter(game)
+    var caption: String = _campaign_phrase("Du beginnst (X)","You start (X)","Começas (X)") if starter==1 else _campaign_phrase("Boss beginnt (O)","Boss starts (O)","O chefe começa (O)")
+    if move_count()>0:
+        var next: String = _campaign_phrase("Du bist am Zug (X)","Your turn (X)","A tua vez (X)") if turn==1 else _campaign_phrase("Boss am Zug (O)","Boss turn (O)","Vez do chefe (O)")
+        caption = (_campaign_phrase("Start: Du (X)","Started: You (X)","Início: Tu (X)") if starter==1 else _campaign_phrase("Start: Boss (O)","Started: Boss (O)","Início: Chefe (O)")) + " · " + next
+    return caption
+
 func _guardian_series_panel(body: VBoxContainer, progress: Dictionary) -> void:
     var tally: Dictionary = FinalSeries.score(progress)
     var current: Dictionary = progress.get("game",{})
@@ -1875,7 +1883,7 @@ func _realm_boss_portrait_height() -> float:
     return clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,820.0)
 
 func _realm_boss_result_height() -> float:
-    return clampf(get_viewport().get_visible_rect().size.y * 0.29,400.0,520.0)
+    return _realm_boss_portrait_height()
 
 func _realm_boss_primary_action(parts: Dictionary, caption: String, callback: Callable) -> void:
     # Play remains visible beneath the scrollable, full-height boss artwork.
@@ -2301,10 +2309,12 @@ func start_abyss_battle() -> void:
 
 func _abyss_save() -> bool:
     if not abyss_active: return false
+    var starter: int = FinalSeries.round_starter(abyss_progress.get("game",{}))
     abyss_progress.game = {
         "boss":abyss_index,
         "cells":cells.duplicate(),
         "turn":turn,
+        "starter":starter,
         "result":result,
         "last_human":abyss_last_human
     }
@@ -2339,10 +2349,7 @@ func _abyss_intro() -> void:
     ]
     text(body,opening[abyss_index],16,Color("#dfd4e5"))
     if abyss_index==2: _guardian_series_panel(body,abyss_progress)
-    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
-    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
-    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
-    text(body,starter,14,Color("#e1c99d"))
+    text(body,_boss_starter_caption(abyss_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_abyss_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
@@ -2504,10 +2511,12 @@ func start_shadow_battle() -> void:
 
 func _shadow_save() -> bool:
     if not shadow_active: return false
+    var starter: int = FinalSeries.round_starter(shadow_progress.get("game",{}))
     shadow_progress.game = {
         "boss":shadow_index,
         "cells":cells.duplicate(),
         "turn":turn,
+        "starter":starter,
         "result":result,
         "last_human":shadow_last_human
     }
@@ -2542,10 +2551,7 @@ func _shadow_intro() -> void:
     ]
     text(body,opening[shadow_index],16,Color("#dfd4e5"))
     if shadow_index==2: _guardian_series_panel(body,shadow_progress)
-    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
-    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
-    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
-    text(body,starter,14,Color("#e1c99d"))
+    text(body,_boss_starter_caption(shadow_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_shadow_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
@@ -2737,10 +2743,12 @@ func _start_guardian_battle() -> void:
 
 func _ember_save() -> bool:
     if not ember_active: return false
+    var starter: int = FinalSeries.round_starter(ember_progress.get("game",{}))
     ember_progress.game = {
         "boss":ember_index,
         "cells":cells.duplicate(),
         "turn":turn,
+        "starter":starter,
         "result":result,
         "last_human":ember_last_human
     }
@@ -2778,10 +2786,7 @@ func _ember_intro() -> void:
     if guardian_chapter==5: opening = ["The echoes have not faded.","Cross the silence with an open heart.","What can you release beneath the broken moon?"]
     text(body,opening[ember_index],16,Color("#dfd4e5"))
     _guardian_series_panel(body,ember_progress)
-    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
-    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
-    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
-    text(body,starter,14,Color("#e1c99d"))
+    text(body,_boss_starter_caption(ember_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_ember_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
     _open_realm_dialog(parts)

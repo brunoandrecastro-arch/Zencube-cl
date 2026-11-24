@@ -53,5 +53,22 @@ func run() -> void:
         stream.close()
     elif FileAccess.file_exists(SkyGarden.SAVE):
         DirAccess.remove_absolute(ProjectSettings.globalize_path(SkyGarden.SAVE))
+    var renderer := CubeRenderer.new()
+    root.add_child(renderer)
+    await process_frame
+    renderer.apply_skin(3)
+    var original_skin: int = renderer.skin_id
+    var original_color: Color = renderer.face_color(0)
+    renderer.set_sky_family_skin(true)
+    renderer.paint(SkyGarden.new_board(),false)
+    check(renderer.skin_id==original_skin and renderer.tiles.size()==54,"story skin preserves equipped shop skin and gameplay geometry")
+    check(renderer.face_color(0)==Color("301036"),"Manhwa violet lacquer")
+    check(renderer.sky_gold_trim!=null and renderer.sky_gold_trim.visible,"gold ornamental trim visible")
+    check((renderer.core_mesh_instance.material_override as StandardMaterial3D).albedo_color==Color("e2ae40"),"gold seams")
+    renderer.set_sky_family_skin(false)
+    renderer.paint(SkyGarden.new_board(),false)
+    check(renderer.skin_id==original_skin and renderer.face_color(0)==original_color and not renderer.sky_gold_trim.visible,"original skin fully restored")
+    renderer.queue_free()
+    await process_frame
     print("Sky Garden 3x3 model tests: ",errors," failure(s)")
     quit(1 if errors>0 else 0)

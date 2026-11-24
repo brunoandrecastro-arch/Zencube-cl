@@ -12,6 +12,7 @@ var surface_textures: Array[Texture2D] = []
 var skin_id: int = 0
 var sky_family_palette: bool = false # Only for the post-Moon 3x3 epilogue
 var core_mesh_instance: MeshInstance3D
+var sky_gold_trim: Node3D
 func _ready() -> void:
 	pivot = Node3D.new()
 	add_child(pivot)
@@ -115,7 +116,37 @@ func load_surface_textures() -> void:
 func palette() -> Dictionary:
 	return ZenCollection.SKINS[clampi(skin_id, 0, ZenCollection.SKINS.size()-1)]
 func face_color(face: int) -> Color:
+	if sky_family_palette: return Color("301036")
 	return Color(str(palette().faces[clampi(face,0,5)]))
+
+# An isolated, story-only lacquer-and-gold material. Never changes shop skin_id.
+func set_sky_family_skin(enabled: bool) -> void:
+	sky_family_palette = enabled
+	if enabled and not is_instance_valid(sky_gold_trim):
+		sky_gold_trim = Node3D.new()
+		sky_gold_trim.name = "SkyGardenGoldFiligree"
+		pivot.add_child(sky_gold_trim)
+		for face in range(6):
+			var n: Vector3 = CubeGeometry.N[face] * 1.552
+			var u: Vector3 = CubeGeometry.U[face]
+			var v: Vector3 = CubeGeometry.V[face]
+			var gold := Color("e6b64d")
+			for sign_value in [-1.0,1.0]:
+				var sign_f: float = float(sign_value)
+				bar(sky_gold_trim,n+u*1.44*sign_f-v*1.44,n+u*1.44*sign_f+v*1.44,gold,0.025)
+				bar(sky_gold_trim,n+v*1.44*sign_f-u*1.44,n+v*1.44*sign_f+u*1.44,gold,0.025)
+			for sx in [-1.0,1.0]:
+				for sy in [-1.0,1.0]:
+					var corner: Vector3 = n+u*float(sx)*1.25+v*float(sy)*1.25
+					var points: Array[Vector3] = [corner+u*0.13,corner+v*0.13,corner-u*0.13,corner-v*0.13]
+					for k in range(4):
+						bar(sky_gold_trim,points[k],points[(k+1)%4],gold,0.022)
+	if is_instance_valid(sky_gold_trim): sky_gold_trim.visible = enabled
+	apply_skin(skin_id)
+	if core_mesh_instance != null and enabled:
+		var gold_core := material(Color("e2ae40"),true)
+		core_mesh_instance.material_override = gold_core
+
 func apply_skin(next_skin: int) -> void:
 	skin_id = clampi(next_skin, 0, ZenCollection.SKINS.size()-1)
 	var style: Dictionary = palette()
@@ -127,6 +158,13 @@ func apply_skin(next_skin: int) -> void:
 	# Draw currently visible marks in the new palette without touching cells.
 func face_material(color: Color) -> StandardMaterial3D:
 	var mat: StandardMaterial3D = material(color)
+	if sky_family_palette:
+		mat.metallic = 0.26
+		mat.roughness = 0.30
+		mat.emission_enabled = true
+		mat.emission = color
+		mat.emission_energy_multiplier = 0.20
+		return mat
 	mat.metallic = float(palette().metal)
 	mat.roughness = float(palette().rough)
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
@@ -191,7 +229,7 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 		if tx.has(c): color = Color("b3c2a0")
 		if to.has(c): color = Color("d5a58d")
 		if preview.has(c): color = Color("c2b094")
-		if winning.has(c): color = Color("a5b38e")
+		if winning.has(c): color = Color("895427") if sky_family_palette else Color("a5b38e")
 		if c == selected: color = color.lightened(0.18)
 		tiles[c].material_override = face_material(color)
 		if winning.has(c):
@@ -205,10 +243,10 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 		# X remains angular and warm; O remains round and blue-green.
 		var brightness: float = color.get_luminance()
 		var dark_tile: bool = brightness < 0.41
-		var x_main: Color = (Color("dbb5fa") if dark_tile else Color("71429e")) if sky_family_palette else (Color("ffe1a0") if dark_tile else Color("282b30"))
-		var x_border: Color = (Color("342342") if dark_tile else Color("f7ebff")) if sky_family_palette else (Color("33251e") if dark_tile else Color("fff4db"))
-		var o_main: Color = (Color("fce199") if dark_tile else Color("a57516")) if sky_family_palette else (Color("94ffda") if dark_tile else Color("04748a"))
-		var o_border: Color = (Color("483718") if dark_tile else Color("fff4d6")) if sky_family_palette else (Color("273530") if dark_tile else Color("fff4df"))
+		var x_main: Color = Color("e078ff") if sky_family_palette else (Color("ffe1a0") if dark_tile else Color("282b30"))
+		var x_border: Color = Color("6c238f") if sky_family_palette else (Color("33251e") if dark_tile else Color("fff4db"))
+		var o_main: Color = Color("ffd05a") if sky_family_palette else (Color("94ffda") if dark_tile else Color("04748a"))
+		var o_border: Color = Color("a86619") if sky_family_palette else (Color("273530") if dark_tile else Color("fff4df"))
 		if board.cells[c] == 1:
 			# Draw a thinner bright/dark outline, then a raised high-contrast X.
 			bar(marks[c], Vector3(-0.24,-0.24,-0.018), Vector3(0.24,0.24,-0.018), x_border, 0.090)

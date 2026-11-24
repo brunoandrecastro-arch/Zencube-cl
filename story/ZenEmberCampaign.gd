@@ -115,7 +115,9 @@ static func begin_battle(data: Dictionary, index: int) -> Dictionary:
     var next: Dictionary = next_action(data)
     if next.get("type") != "battle" or int(next.get("boss",-1)) != index: return {}
     var existing: Dictionary = data.get("game",{})
-    if not existing.is_empty() and int(existing.get("boss",-1)) == index: return existing
+    if not existing.is_empty() and int(existing.get("boss",-1)) == index:
+        existing.starter = Series.round_starter(existing)
+        return existing
     var attempts: Array = data.get("attempts",[0,0,0])
     var attempt: int = int(attempts[index])
     attempts[index] = attempt + 1
@@ -123,7 +125,7 @@ static func begin_battle(data: Dictionary, index: int) -> Dictionary:
     var cells: Array = []
     cells.resize(96)
     cells.fill(0)
-    var game: Dictionary = {"boss":index,"cells":cells,"turn":(1 if (index+attempt)%2==0 else 2),"result":0,"last_human":-1}
+    var game: Dictionary = {"boss":index,"cells":cells,"turn":(1 if (index+attempt)%2==0 else 2),"starter":(1 if (index+attempt)%2==0 else 2),"result":0,"last_human":-1}
     data.game = game
     return game
 
