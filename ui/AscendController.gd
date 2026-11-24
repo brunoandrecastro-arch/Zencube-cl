@@ -1401,35 +1401,36 @@ func show_realms() -> void:
             _add_abyss_realm_card(body)
     # Shattered Moon is a post-Satori story chapter, not a fifth ordinary 8-task
     # Zen Ascend realm. Show a discoverable route without changing the old gates.
-    var moon_allowed: bool = Moon.unlocked() or Moon.qa_mode()
-    var moon_progress: Dictionary = Moon.load_progress()
-    var moon_bosses: int = 0
-    for flag in moon_progress.get("defeated",[]):
-        if bool(flag): moon_bosses += 1
-    var moon_card := PanelContainer.new()
-    moon_card.name = "ShatteredMoonStoryRealmCard"
-    moon_card.add_theme_stylebox_override("panel",style(Color("#222b39"),18))
-    body.add_child(moon_card)
-    var moon_column := VBoxContainer.new()
-    moon_column.add_theme_constant_override("separation",6)
-    moon_card.add_child(moon_column)
-    text(moon_column,"🌙 Shattered Moon · The Last Crossing" + ("" if moon_allowed else "  🔒"),19,Color("f7dfaa"))
-    text(moon_column,_campaign_phrase("Zen Chronicles · Story-Realm","Zen Chronicles · Story realm","Zen Chronicles · Reino da história"),14,Color("d5ba85"))
-    var moon_thumb := TextureRect.new()
-    if ResourceLoader.exists(Moon.REALM_ART):
-        moon_thumb.texture = load(Moon.REALM_ART)
-    moon_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    moon_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-    moon_thumb.custom_minimum_size.y = 112
-    moon_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    moon_column.add_child(moon_thumb)
-    text(moon_column,_campaign_phrase("Bosse: %d/3 · 30 Seiten","Bosses: %d/3 · 30 pages","Chefes: %d/3 · 30 páginas") % moon_bosses,14)
-    if not moon_allowed:
-        text(moon_column,_campaign_phrase("Freischaltung: Satori-Geschichte abschließen","Unlock: Finish the Satori story","Desbloquear: Concluir a história de Satori"),13,Color("d5ba85"))
-    var moon_entry: Button = action(moon_column,
-        _campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história") if moon_allowed else _campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),
-        _open_shattered_from_realms,true)
-    moon_entry.name = "ShatteredMoonStoryRealmButton"
+    if Moon.unlocked():
+        var moon_allowed: bool = Moon.unlocked() or Moon.qa_mode()
+        var moon_progress: Dictionary = Moon.load_progress()
+        var moon_bosses: int = 0
+        for flag in moon_progress.get("defeated",[]):
+            if bool(flag): moon_bosses += 1
+        var moon_card := PanelContainer.new()
+        moon_card.name = "ShatteredMoonStoryRealmCard"
+        moon_card.add_theme_stylebox_override("panel",style(Color("#222b39"),18))
+        body.add_child(moon_card)
+        var moon_column := VBoxContainer.new()
+        moon_column.add_theme_constant_override("separation",6)
+        moon_card.add_child(moon_column)
+        text(moon_column,"🌙 Shattered Moon · The Last Crossing" + ("" if moon_allowed else "  🔒"),19,Color("f7dfaa"))
+        text(moon_column,_campaign_phrase("Zen Chronicles · Story-Realm","Zen Chronicles · Story realm","Zen Chronicles · Reino da história"),14,Color("d5ba85"))
+        var moon_thumb := TextureRect.new()
+        if ResourceLoader.exists(Moon.REALM_ART):
+            moon_thumb.texture = load(Moon.REALM_ART)
+        moon_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        moon_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        moon_thumb.custom_minimum_size.y = 112
+        moon_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        moon_column.add_child(moon_thumb)
+        text(moon_column,_campaign_phrase("Bosse: %d/3 · 30 Seiten","Bosses: %d/3 · 30 pages","Chefes: %d/3 · 30 páginas") % moon_bosses,14)
+        if not moon_allowed:
+            text(moon_column,_campaign_phrase("Freischaltung: Satori-Geschichte abschließen","Unlock: Finish the Satori story","Desbloquear: Concluir a história de Satori"),13,Color("d5ba85"))
+        var moon_entry: Button = action(moon_column,
+            _campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história") if moon_allowed else _campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),
+            _open_shattered_from_realms,true)
+        moon_entry.name = "ShatteredMoonStoryRealmButton"
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
 
@@ -2076,6 +2077,11 @@ func _realm_story_menu() -> void:
     text(body,current_boss,20,Color("#eddaae"))
     action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
     action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 # Exit the story without returning to Main. The ordinary Ascend 4x4
@@ -2296,6 +2302,11 @@ func _abyss_menu() -> void:
     text(body,Abyss.BOSS_NAMES[clampi(abyss_index,0,2)],20,Color("#dfd4e5"))
     action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_abyss_begin,true)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 func _abyss_back_to_reader(open_reader: bool = true) -> void:
@@ -2494,6 +2505,11 @@ func _shadow_menu() -> void:
     text(body,Shadow.BOSS_NAMES[clampi(shadow_index,0,2)],20,Color("#dfd4e5"))
     action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_shadow_begin,true)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 func _shadow_back_to_reader(open_reader: bool = true) -> void:
@@ -2726,6 +2742,11 @@ func _ember_menu() -> void:
     text(body,ember_model.BOSS_NAMES[clampi(ember_index,0,2)],20,Color("#dfd4e5"))
     action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_ember_begin,true)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 func _ember_back_to_reader(open_reader: bool = true) -> void:
@@ -2895,6 +2916,11 @@ func _campaign_practice_menu() -> void:
     var body: VBoxContainer = parts.box
     action(body,_campaign_phrase("⚔ Partie fortsetzen","⚔ Continue Match","⚔ Continuar partida"),_campaign_practice_begin,true)
     action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 func _campaign_practice_begin() -> void:

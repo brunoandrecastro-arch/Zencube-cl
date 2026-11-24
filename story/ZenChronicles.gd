@@ -368,11 +368,12 @@ func _library_story_cards(parent: VBoxContainer) -> void:
         var replay_button: Button = _make_button(campaign_ui("✦ Übergang erneut ansehen","✦ Replay the Awakening","✦ Rever o Despertar"),parent,replay_moon_shadow_transition)
         replay_button.name = "ReplayMoonShadowTransition"
     # Sky Garden is the 3x3 epilogue. It never replaces the five Classic worlds.
-    var sky_progress: Dictionary = SkyGarden.load_progress()
-    var sky_allowed: bool = SkyGarden.unlocked() or SkyGarden.qa_mode()
-    var sky_wins: int = int(bool(sky_progress.won[0])) + int(bool(sky_progress.won[1]))
-    var sky_hint: String = (campaign_ui("3×3-Epilog · Familienpartien %d/2","3×3 epilogue · Family games %d/2","Epílogo 3×3 · Jogos em família %d/2") % sky_wins) if sky_allowed else campaign_ui("Freischalten: Shattered Moon abschließen","Unlock: Complete Shattered Moon","Desbloquear: Concluir Shattered Moon")
-    _library_card(parent,"🌸 Sky Garden · The Return to Peace",SkyGarden.REALM_ART,sky_hint,sky_allowed,bool(sky_progress.completed),open_sky_garden_preview,"SkyGardenClassicStoryCard",true)
+    if SkyGarden.unlocked():
+        var sky_progress: Dictionary = SkyGarden.load_progress()
+        var sky_allowed: bool = SkyGarden.unlocked() or SkyGarden.qa_mode()
+        var sky_wins: int = int(bool(sky_progress.won[0])) + int(bool(sky_progress.won[1]))
+        var sky_hint: String = (campaign_ui("3×3-Epilog · Familienpartien %d/2","3×3 epilogue · Family games %d/2","Epílogo 3×3 · Jogos em família %d/2") % sky_wins) if sky_allowed else campaign_ui("Freischalten: Shattered Moon abschließen","Unlock: Complete Shattered Moon","Desbloquear: Concluir Shattered Moon")
+        _library_card(parent,"🌸 Sky Garden · The Return to Peace",SkyGarden.REALM_ART,sky_hint,sky_allowed,bool(sky_progress.completed),open_sky_garden_preview,"SkyGardenClassicStoryCard",true)
 
 func _library_realm_cards(parent: VBoxContainer) -> void:
     _make_label("Zen Ascend",parent,18,GOLD)
@@ -387,18 +388,20 @@ func _library_realm_cards(parent: VBoxContainer) -> void:
             hint = campaign_ui("Bosse %d/3 · Challenges %d/3 · 30 Seiten","Bosses %d/3 · Challenges %d/3 · 30 pages","Chefes %d/3 · Desafios %d/3 · 30 páginas") % [Realm2.bosses_won(4),Realm2.completed_count(Realm2.load_progress(),4)]
         var preview_art: String = "res://assets/abyss_of_memories/gameplay.webp" if i==1 and ResourceLoader.exists("res://assets/abyss_of_memories/gameplay.webp") else Realm2.SOURCE_ART[i]
         _library_card(parent,titles[i],preview_art,hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
-    var moon_access: bool = Moon.unlocked() or Moon.qa_mode()
-    var moon_data: Dictionary = Moon.load_progress()
-    var moon_wins: int = 0
-    for flag in moon_data.get("defeated",[]):
-        if bool(flag): moon_wins += 1
-    var moon_hint: String = (campaign_ui("Bosse %d/3 · 30 Seiten","Bosses %d/3 · 30 pages","Chefes %d/3 · 30 páginas") % moon_wins) if moon_access else campaign_ui("Freischalten: Satori abschließen","Unlock: Complete Satori","Desbloquear: Concluir Satori")
-    _library_card(parent,"🌙 Shattered Moon · The Last Crossing",Moon.REALM_ART,moon_hint,moon_access,bool(moon_data.get("completed",false)),open_shattered_moon_preview,"RealmCardShatteredMoon",true)
-    var sky_progress: Dictionary = SkyGarden.load_progress()
-    var sky_access: bool = SkyGarden.unlocked() or SkyGarden.qa_mode()
-    var sky_wins: int = int(bool(sky_progress.won[0])) + int(bool(sky_progress.won[1]))
-    var sky_hint: String = (campaign_ui("3×3-Epilog · Familienpartien %d/2","3×3 epilogue · Family games %d/2","Epílogo 3×3 · Jogos em família %d/2") % sky_wins) if sky_access else campaign_ui("Freischalten: Shattered Moon abschließen","Unlock: Complete Shattered Moon","Desbloquear: Concluir Shattered Moon")
-    _library_card(parent,"🌸 Sky Garden · The Return to Peace",SkyGarden.REALM_ART,sky_hint,sky_access,bool(sky_progress.completed),open_sky_garden_preview,"RealmCardSkyGarden",true)
+    if Moon.unlocked():
+        var moon_access: bool = Moon.unlocked() or Moon.qa_mode()
+        var moon_data: Dictionary = Moon.load_progress()
+        var moon_wins: int = 0
+        for flag in moon_data.get("defeated",[]):
+            if bool(flag): moon_wins += 1
+        var moon_hint: String = (campaign_ui("Bosse %d/3 · 30 Seiten","Bosses %d/3 · 30 pages","Chefes %d/3 · 30 páginas") % moon_wins) if moon_access else campaign_ui("Freischalten: Satori abschließen","Unlock: Complete Satori","Desbloquear: Concluir Satori")
+        _library_card(parent,"🌙 Shattered Moon · The Last Crossing",Moon.REALM_ART,moon_hint,moon_access,bool(moon_data.get("completed",false)),open_shattered_moon_preview,"RealmCardShatteredMoon",true)
+    if SkyGarden.unlocked():
+        var sky_progress: Dictionary = SkyGarden.load_progress()
+        var sky_access: bool = SkyGarden.unlocked() or SkyGarden.qa_mode()
+        var sky_wins: int = int(bool(sky_progress.won[0])) + int(bool(sky_progress.won[1]))
+        var sky_hint: String = (campaign_ui("3×3-Epilog · Familienpartien %d/2","3×3 epilogue · Family games %d/2","Epílogo 3×3 · Jogos em família %d/2") % sky_wins) if sky_access else campaign_ui("Freischalten: Shattered Moon abschließen","Unlock: Complete Shattered Moon","Desbloquear: Concluir Shattered Moon")
+        _library_card(parent,"🌸 Sky Garden · The Return to Peace",SkyGarden.REALM_ART,sky_hint,sky_access,bool(sky_progress.completed),open_sky_garden_preview,"RealmCardSkyGarden",true)
 
 func open_library() -> void:
     _act_one_release_back()
@@ -428,11 +431,6 @@ func open_library() -> void:
     var active_tab: Button = story_tab if _library_tab==0 or realm_tab==null else realm_tab
     active_tab.add_theme_stylebox_override("normal",_style(Color("#5c4930"),12))
     active_tab.add_theme_color_override("font_color",Color("#ffe2a3"))
-    if _library_tab == 1:
-        var moon_shortcut: Button = _make_button("🌙 Shattered Moon · The Last Crossing",outer,open_shattered_moon_preview)
-        moon_shortcut.name = "ShatteredMoonLibraryShortcut"
-        var sky_shortcut: Button = _make_button("🌸 Sky Garden · The Return to Peace",outer,open_sky_garden_preview)
-        sky_shortcut.name = "SkyGardenLibraryShortcut"
     var scroll: ScrollContainer = ScrollContainer.new()
     scroll.name = "ZenChroniclesLibraryScroll"
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

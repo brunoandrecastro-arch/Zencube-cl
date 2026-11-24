@@ -1352,6 +1352,7 @@ func open_worlds() -> void:
     label("Neue Welten schaltest du über Zen Ascension frei.", box, 13)
     label(_act_one_ui("Bot-Schwierigkeit und Welt sind unabhängig. Schwierigkeit unter Spielen oder Einstellungen ändern.", "Worlds change the scenery only. Change bot difficulty under Play or Settings.", "Os mundos mudam apenas o cenário. Altera a dificuldade do bot em Jogar ou Definições."),box,13)
     for i in range(5):
+        if i == 4 and not SkyGarden.unlocked(): continue
         var number: int = i
         var card: PanelContainer = PanelContainer.new()
         var card_style: StyleBoxFlat = theme_style(Color("fff2dc", 0.97), 14)
@@ -1386,29 +1387,31 @@ func open_worlds() -> void:
             label("Freigeschaltet", info, 12, Color("526943"))
     # Sky Garden is the sixth, story-only 3x3 World, reached after Moon.
     # It does not change the existing five rank/cosmetic World slots.
-    var sky_card := PanelContainer.new()
-    sky_card.name = "SkyGardenClassicWorldCard"
-    sky_card.add_theme_stylebox_override("panel",theme_style(Color("f1ead8",0.98),14))
-    box.add_child(sky_card)
-    var sky_row: HBoxContainer = row(sky_card)
-    var sky_thumb := TextureRect.new()
-    if ResourceLoader.exists(SkyGarden.REALM_ART): sky_thumb.texture = load(SkyGarden.REALM_ART)
-    sky_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    sky_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-    sky_thumb.custom_minimum_size = Vector2(90,104)
-    sky_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    sky_row.add_child(sky_thumb)
-    var sky_info := VBoxContainer.new()
-    sky_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    sky_row.add_child(sky_info)
-    label(_act_one_ui("Sky Garden · Die Rückkehr zum Frieden","Sky Garden · The Return to Peace","Sky Garden · O Regresso à Paz"),sky_info,17,Color("493b29"))
-    label(_act_one_ui("3×3-Epilog nach Shattered Moon","3×3 epilogue after Shattered Moon","Epílogo 3×3 após Shattered Moon"),sky_info,13)
-    var enter_sky := button(_act_one_ui("▶ Geschichte betreten","▶ Enter Story World","▶ Entrar no mundo"),sky_info,_sky_open_from_worlds,true)
-    enter_sky.name = "SkyGardenClassicWorldEntry"
-    enter_sky.disabled = not SkyGarden.unlocked() and not SkyGarden.qa_mode()
-    if enter_sky.disabled: label(_act_one_ui("🔒 Shattered Moon abschließen","🔒 Complete Shattered Moon","🔒 Concluir Shattered Moon"),sky_info,12)
+    if SkyGarden.unlocked():
+        var sky_card := PanelContainer.new()
+        sky_card.name = "SkyGardenClassicWorldCard"
+        sky_card.add_theme_stylebox_override("panel",theme_style(Color("f1ead8",0.98),14))
+        box.add_child(sky_card)
+        var sky_row: HBoxContainer = row(sky_card)
+        var sky_thumb := TextureRect.new()
+        if ResourceLoader.exists(SkyGarden.REALM_ART): sky_thumb.texture = load(SkyGarden.REALM_ART)
+        sky_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        sky_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        sky_thumb.custom_minimum_size = Vector2(90,104)
+        sky_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        sky_row.add_child(sky_thumb)
+        var sky_info := VBoxContainer.new()
+        sky_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        sky_row.add_child(sky_info)
+        label(_act_one_ui("Sky Garden · Die Rückkehr zum Frieden","Sky Garden · The Return to Peace","Sky Garden · O Regresso à Paz"),sky_info,17,Color("493b29"))
+        label(_act_one_ui("3×3-Epilog nach Shattered Moon","3×3 epilogue after Shattered Moon","Epílogo 3×3 após Shattered Moon"),sky_info,13)
+        var enter_sky := button(_act_one_ui("▶ Geschichte betreten","▶ Enter Story World","▶ Entrar no mundo"),sky_info,_sky_open_from_worlds,true)
+        enter_sky.name = "SkyGardenClassicWorldEntry"
+        enter_sky.disabled = not SkyGarden.unlocked() and not SkyGarden.qa_mode()
+        if enter_sky.disabled: label(_act_one_ui("🔒 Shattered Moon abschließen","🔒 Complete Shattered Moon","🔒 Concluir Shattered Moon"),sky_info,12)
     button("Rang & Fortschritt", box, open_ascension, true, true)
     button("Zum Hauptmenü", box, open_menu, true)
+    _enable_feedback_modal_scroll(box)
 
 func _sky_open_from_worlds() -> void:
     close_modal()
@@ -2049,6 +2052,38 @@ func allow_welcome_scroll(node: Node) -> void:
     for child in node.get_children():
         allow_welcome_scroll(child)
 
+# Native Android drag fallback, scoped to Settings and Worlds only.
+var _feedback_scroll_touch: int = -1
+var _feedback_scroll_remainder: float = 0.0
+
+func _enable_feedback_modal_scroll(box: VBoxContainer) -> void:
+    var scroll := box.get_parent() as ScrollContainer
+    if scroll == null: return
+    scroll.name = "FeedbackTouchScroll"
+    scroll.scroll_deadzone = 8
+    allow_welcome_scroll(box)
+    _feedback_scroll_touch = -1
+    _feedback_scroll_remainder = 0.0
+
+func _input(event: InputEvent) -> void:
+    if not is_instance_valid(popup) or not popup.is_visible_in_tree():
+        _feedback_scroll_touch = -1
+        return
+    var scroll := popup.find_child("FeedbackTouchScroll",true,false) as ScrollContainer
+    if scroll == null or not scroll.is_visible_in_tree(): return
+    if event is InputEventScreenTouch:
+        if event.pressed and _feedback_scroll_touch == -1 and scroll.get_global_rect().has_point(event.position):
+            _feedback_scroll_touch = event.index
+            _feedback_scroll_remainder = 0.0
+        elif not event.pressed and event.index == _feedback_scroll_touch:
+            _feedback_scroll_touch = -1
+    elif event is InputEventScreenDrag and event.index == _feedback_scroll_touch:
+        _feedback_scroll_remainder += event.relative.y
+        var delta: int = roundi(_feedback_scroll_remainder)
+        _feedback_scroll_remainder -= float(delta)
+        scroll.scroll_vertical = maxi(0,scroll.scroll_vertical - delta)
+        get_viewport().set_input_as_handled()
+
 func open_welcome() -> void:
     welcome_open = true
     var box = modal("Spielanleitung")
@@ -2265,6 +2300,7 @@ func open_settings() -> void:
     layout.add_child(footer)
     var finish: Button = button("Fertig",footer,open_menu if menu_context else close_modal,false,true)
     finish.name = "SettingsDoneSticky"
+    _enable_feedback_modal_scroll(box)
 
 func build_sound() -> void:
     sound_player = AudioStreamPlayer.new()
