@@ -191,117 +191,197 @@ jobs:
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_world_visuals_9_4_2.gd
       - name: World unlock explanation and high-density cube render (headless)
+        id: regression_01
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 50 "$GODOT" --headless --path . --script tests/test_design_clarity_9_4_3.gd
       - name: Zen Ascension progression and five bot levels (headless)
+        id: regression_02
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 75 "$GODOT" --headless --path . --script tests/test_zen_ascension.gd
       - name: Zen rank-up audiovisual ceremony assets and gating (static)
+        id: regression_03
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_zen_ceremony.py
       - name: Zen rank-up audiovisual ceremony (Godot headless)
+        id: regression_04
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_zen_ceremony.gd
       - name: Check HD Realm backgrounds and bot rank defaults (static)
+        id: regression_05
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_zen_bot_auto.py
       - name: Test Zen bot rank defaults (headless)
+        id: regression_06
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 40 "$GODOT" --headless --path . --script tests/test_zen_bot_auto.gd
       - name: Check Zen Ascend Realms assets, progression and interface (static)
+        id: regression_07
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_zen_ascend_realms.py
       - name: Verify fixed Realm bots, 8/8 transition and secret hint shop (static)
+        id: regression_08
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_ascend_fixed_realms_and_hints.py
       - name: Verify Ember bot syncing and Shadow Medium tuning (static)
+        id: regression_09
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_shadow_ember_bot_levels.py
       - name: Check strict Realm progression, possible challenges and portal scene
+        id: regression_10
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_zen_realm_portal.py
       - name: Test Realm Portal animation scene (headless)
+        id: regression_11
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 40 "$GODOT" --headless --path . --script tests/test_zen_realm_portal.gd
       - name: Verify 32 Zen Ascend Realm challenges in Godot (headless)
+        id: regression_12
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_zen_ascend_realms.gd
       - name: Zen Ascend independent achievements and choir (Godot headless)
+        id: regression_13
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 55 "$GODOT" --headless --path . --script tests/test_zen_achievements_choir.gd
       - name: Check four Realm songs, Satori ceremony and post-Gong audio recovery
+        id: regression_14
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_realm_audio_ceremony.py
       - name: Four looping Realm songs and one-time Satori ceremony (Godot headless)
+        id: regression_15
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 70 "$GODOT" --headless --path . --script tests/test_realm_audio_ceremony.gd
       - name: Test 96-cell Zen Ascend cube, 204 win lines and unlock logic (headless)
+        id: regression_16
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 40 "$GODOT" --headless --path . --script tests/test_ascend_4x4.gd
       - name: Godot engine tests
+        id: regression_17
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           "$GODOT" --headless --path . --script tests/test_engine.gd
       - name: Verify main scene and GameController script
+        id: regression_18
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 35 "$GODOT" --headless --path . --script tests/test_scene_load.gd
       - name: Verify playable Zen Campaign and demon AI
+        id: regression_19
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_zen_campaign.gd
       - name: Verify 12 original Realm boss music mappings and OGG import
+        id: regression_20
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 55 "$GODOT" --headless --path . --script tests/test_realm_boss_music.gd
       - name: Verify feedback challenges and round alternation
+        id: regression_21
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           python3 tests/test_feedback_fix.py
           python3 tests/test_shattered_moon_integration.py
           timeout 40 "$GODOT" --headless --path . --script tests/test_round_starters.gd
           timeout 100 "$GODOT" --headless --path . --script tests/test_shattered_moon.gd
       - name: Verify Sky Garden 30-page 3x3 epilogue, family portraits and independent saves
+        id: regression_22
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           python3 tests/test_sky_garden_integration.py
           timeout 70 "$GODOT" --headless --path . --script tests/test_sky_garden.gd
       - name: Verify playable 4x4 Realm Chronicles, bosses, skins, saves and gates
+        id: regression_23
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_chronicles.gd
       - name: Ember Temple – three real boss battles, chapter finale and QA-only gate
+        id: regression_24
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 110 "$GODOT" --headless --path . --script tests/test_ember_chapter.gd
       - name: Celestial and Satori – six Master/Grandmaster battles and complete four-Realm finale
+        id: regression_25
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 120 "$GODOT" --headless --path . --script tests/test_celestial_satori_chapters.gd
       - name: Four Realm chapter cards and Celestial/Satori QA navigation
+        id: regression_26
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 50 "$GODOT" --headless --path . --script tests/test_realm_chapter_menu.gd
       - name: Verify approved Realm feedback - swipe, 4x4 return, 12 victories and shatter unlocks
+        id: regression_27
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_realm_feedback_and_gates.gd
       - name: 'Test complete Abyss Campaign 2.0: pages, 3 boss gates, saves, 4 cube skins'
+        id: regression_28
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_abyss_campaign.gd
       - name: Shadow Realm Campaign 2.0 – 30 pages, 3 original 4x4 bosses and story save
+        id: regression_29
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 90 "$GODOT" --headless --path . --script tests/test_shadow_campaign.gd
       - name: 'ZenCube 2.0 Realm: real Zen-Bot Realm milestones, 4x4 gate and 3+3 chapter unlocks'
+        id: regression_30
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 95 "$GODOT" --headless --path . --script tests/test_zen_realm_2_0.gd
       - name: Validate twelve original Boss track mappings and audio checksums
+        id: regression_31
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_realm_boss_audio.py
       - name: Verify 100 tactical challenges on the 3D cube
+        id: regression_32
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_challenges.gd
       - name: Verify PCM music stream and playback controls
+        id: regression_33
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 35 "$GODOT" --headless --path . --script tests/test_music_stream.gd
       - name: Godot UI and menu tests (headless)
+        id: regression_34
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 65 "$GODOT" --headless --path . --script tests/test_ui.gd
       - name: Language switch and music playback smoke test
+        id: regression_35
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 45 "$GODOT" --headless --path . --script tests/test_localized_ui.gd
       - name: Verify live world header, quote and language switching (headless)
+        id: regression_36
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 50 "$GODOT" --headless --path . --script tests/test_zen_world_quotes.gd
       - name: Premium result screen and simplified main menu (headless)
+        id: regression_37
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           timeout 60 "$GODOT" --headless --path . --script tests/test_result_screen.gd
       - name: Verify prequel Acts I–IV trials and independent progress
+        id: regression_38
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: timeout 100 "$GODOT" --headless --path . --script tests/test_zen_act_one.gd
       - name: Verify Moon-to-Shadow 3×3/4×4 cinematic and replay-safe checkpoint
+        id: regression_39
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: timeout 65 "$GODOT" --headless --path . --script tests/test_moon_shadow_transition.gd
       - name: Verify campaign home, optional tutorial, unlock tasks and Act IV video
+        id: regression_40
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: timeout 65 "$GODOT" --headless --path . --script tests/test_home_navigation.gd
       - name: Tactical simulations
         run: |
@@ -366,22 +446,37 @@ jobs:
           path: ~/.android/zencube-debug.keystore
           key: zencube-realm-2-0-debug-key-v1
       - name: Require verified final arena pack before Campaign 2.0 APK export
+        id: regression_41
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         if: env.ZENCUBE_REALM_2_0_TEST == 'true' && ((github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120'))
         run: python3 tests/test_campaign2_arenas.py
       - name: Require approved new Kuze / Shadow Kuze launcher icon
+        id: regression_42
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         if: (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120')
         run: python3 tests/test_zencube_new_icon.py
       - name: Verify Zen Ascend only after real Dark Kuze Act IV victory
+        id: regression_43
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         if: env.ZENCUBE_RELEASE_GATES == 'true'
         run: |
           python3 tests/test_zen_ascend_locked_update.py
           timeout 45 "$GODOT" --headless --path . --script tests/test_zen_ascend_locked_update.gd
       - name: Verify cinematic Realm boss portraits
+        id: regression_44
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: python3 tests/test_realm_boss_portraits.py
       - name: Verify Realm Challenge full-screen reward and Shadow portrait mapping
+        id: regression_45
+        continue-on-error: ${{ env.ZENCUBE_MENU_PREVIEW == 'true' }}
         run: |
           python3 tests/test_realm_challenge_ceremony.py
           timeout 45 "$GODOT" --headless --path . --script tests/test_realm_challenge_ceremony.gd
+      - name: Require every regression to pass before APK export
+        if: ${{ contains(steps.*.outcome, 'failure') }}
+        run: |
+          echo "::error::One or more regression tests failed. APK export is blocked."
+          exit 1
       - name: Build debug APK
         run: bash scripts/build_android.sh
       - name: Verify music and Chronicles data included in APK

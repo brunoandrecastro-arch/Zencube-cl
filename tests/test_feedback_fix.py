@@ -24,8 +24,13 @@ assert 'Realm2.SOURCE_ART[i]' in chronicles and 'assets/abyss_of_memories/gamepl
 assert 'Zen Chronicles · ' in controller
 assert 'recent_saves: Array[String]' in gate and 'return maxi(old_count,recent_count)' in gate
 assert 'func _realm_boss_result_height()' in controller
-assert 'frame.anchor_top = 0.265' in controller and 'frame.anchor_bottom = 0.735' in controller
-assert '_open_campaign_story_from_match.bind(story_chapter)' in controller
+assert 'pause_frame.anchor_top = 0.31' in controller and 'pause_frame.anchor_bottom = 0.69' in controller
+assert 'func show_ascend_home() -> void:' in controller
+cards = controller.split('func _add_story_realm_card(',1)[1].split('func _show_story_realm_requirements(',1)[0]
+assert 'Realm2.unlocked(chapter)' in cards
+assert '_open_campaign_story_from_match.bind(chapter)' in cards
+assert '_open_campaign_trials_from_realms.bind(chapter)' in cards
+assert 'Realms.unlocked(data' not in cards, 'Legacy bonus gates must never determine story card access'
 assert '"shadow_block","title":"Veil Tactician"' in realms
 assert '"ember_master","title":"Ember Mastery"' in realms
 print('PASS: five win-within-X tasks, legacy saves, campaign navigation and compact result UI')
