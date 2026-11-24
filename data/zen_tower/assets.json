@@ -1,0 +1,435 @@
+{
+  "schema_version": 1,
+  "package_id": "zencube_zen_tower_art_01_60_v1",
+  "created_date": "2026-11-24",
+  "integration_status": "assets_ready_gameplay_integration_pending",
+  "image_count": 20,
+  "sections": [
+    {
+      "id": "01",
+      "title": {
+        "de": "Moosiges Turmheiligtum",
+        "en": "Root Sanctuary",
+        "pt": "Santuário das Raízes"
+      },
+      "first_cycle_normal_floors": {
+        "from": 1,
+        "through": 14
+      },
+      "first_cycle_boss_floor": 15,
+      "background": "res://assets/zen_tower/backgrounds/floors_001_014.png",
+      "boss_arena": "res://assets/zen_tower/arenas/floor_015_rootbound_warden.png",
+      "guardian_id": "zen_tower_001_rootbound_warden",
+      "music_slot": "zen_tower_section_01"
+    },
+    {
+      "id": "02",
+      "title": {
+        "de": "Windgalerie",
+        "en": "Wind Gallery",
+        "pt": "Galeria do Vento"
+      },
+      "first_cycle_normal_floors": {
+        "from": 16,
+        "through": 29
+      },
+      "first_cycle_boss_floor": 30,
+      "background": "res://assets/zen_tower/backgrounds/floors_016_029.png",
+      "boss_arena": "res://assets/zen_tower/arenas/floor_030_windweave_keeper.png",
+      "guardian_id": "zen_tower_002_windweave_keeper",
+      "music_slot": "zen_tower_section_02"
+    },
+    {
+      "id": "03",
+      "title": {
+        "de": "Halle der stillen Wasser",
+        "en": "Hall of Still Waters",
+        "pt": "Salão das Águas Serenas"
+      },
+      "first_cycle_normal_floors": {
+        "from": 31,
+        "through": 44
+      },
+      "first_cycle_boss_floor": 45,
+      "background": "res://assets/zen_tower/backgrounds/floors_031_044.png",
+      "boss_arena": "res://assets/zen_tower/arenas/floor_045_stillwater_dragon.png",
+      "guardian_id": "zen_tower_003_stillwater_dragon",
+      "music_slot": "zen_tower_section_03"
+    },
+    {
+      "id": "04",
+      "title": {
+        "de": "Galerie der goldenen Blätter",
+        "en": "Gallery of Golden Leaves",
+        "pt": "Galeria das Folhas Douradas"
+      },
+      "first_cycle_normal_floors": {
+        "from": 46,
+        "through": 59
+      },
+      "first_cycle_boss_floor": 60,
+      "background": "res://assets/zen_tower/backgrounds/floors_046_059.png",
+      "boss_arena": "res://assets/zen_tower/arenas/floor_060_amber_fox.png",
+      "guardian_id": "zen_tower_004_amber_fox",
+      "music_slot": "zen_tower_section_04"
+    }
+  ],
+  "guardians": [
+    {
+      "id": "zen_tower_001_rootbound_warden",
+      "card_number": "001",
+      "name": {
+        "de": "Der Wurzelhüter",
+        "en": "The Rootbound Warden",
+        "pt": "O Guardião das Raízes"
+      },
+      "first_cycle_floor": 15,
+      "portrait": "res://assets/zen_tower/bosses/001_rootbound_warden.png",
+      "card_front": "res://assets/zen_tower/cards/001_rootbound_warden_front.png",
+      "card_back": "res://assets/zen_tower/cards/001_rootbound_warden_back.png",
+      "card_language": "en",
+      "unlock_condition": "first_victory_over_this_guardian",
+      "music_slot": "zen_tower_guardian_001"
+    },
+    {
+      "id": "zen_tower_002_windweave_keeper",
+      "card_number": "002",
+      "name": {
+        "de": "Die Windhüterin",
+        "en": "The Windweave Keeper",
+        "pt": "A Guardiã do Vento"
+      },
+      "first_cycle_floor": 30,
+      "portrait": "res://assets/zen_tower/bosses/002_windweave_keeper.png",
+      "card_front": "res://assets/zen_tower/cards/002_windweave_keeper_front.png",
+      "card_back": "res://assets/zen_tower/cards/002_windweave_keeper_back.png",
+      "card_language": "en",
+      "unlock_condition": "first_victory_over_this_guardian",
+      "music_slot": "zen_tower_guardian_002"
+    },
+    {
+      "id": "zen_tower_003_stillwater_dragon",
+      "card_number": "003",
+      "name": {
+        "de": "Der Lotusdrache",
+        "en": "The Stillwater Dragon",
+        "pt": "O Dragão das Águas Serenas"
+      },
+      "first_cycle_floor": 45,
+      "portrait": "res://assets/zen_tower/bosses/003_stillwater_dragon.png",
+      "card_front": "res://assets/zen_tower/cards/003_stillwater_dragon_front.png",
+      "card_back": "res://assets/zen_tower/cards/003_stillwater_dragon_back.png",
+      "card_language": "en",
+      "unlock_condition": "first_victory_over_this_guardian",
+      "music_slot": "zen_tower_guardian_003"
+    },
+    {
+      "id": "zen_tower_004_amber_fox",
+      "card_number": "004",
+      "name": {
+        "de": "Der Bernsteinfuchs",
+        "en": "The Amber Fox",
+        "pt": "A Raposa de Âmbar"
+      },
+      "first_cycle_floor": 60,
+      "portrait": "res://assets/zen_tower/bosses/004_amber_fox.png",
+      "card_front": "res://assets/zen_tower/cards/004_amber_fox_front.png",
+      "card_back": "res://assets/zen_tower/cards/004_amber_fox_back.png",
+      "card_language": "en",
+      "unlock_condition": "first_victory_over_this_guardian",
+      "music_slot": "zen_tower_guardian_004"
+    }
+  ],
+  "images": [
+    {
+      "path": "assets/zen_tower/backgrounds/floors_001_014.png",
+      "resource_path": "res://assets/zen_tower/backgrounds/floors_001_014.png",
+      "kind": "section_background",
+      "section": "01",
+      "guardian_id": "zen_tower_001_rootbound_warden",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3164811,
+      "sha256": "a028e999782e11459139d6cb516372ae4e3414e76dd9bd6a27ec71ab9d24b7b7"
+    },
+    {
+      "path": "assets/zen_tower/bosses/001_rootbound_warden.png",
+      "resource_path": "res://assets/zen_tower/bosses/001_rootbound_warden.png",
+      "kind": "boss_portrait",
+      "section": "01",
+      "guardian_id": "zen_tower_001_rootbound_warden",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3051403,
+      "sha256": "229dc903d4f791dc01160a39ed217b93c3df59bb75793e3f809da471cadcd4ce"
+    },
+    {
+      "path": "assets/zen_tower/arenas/floor_015_rootbound_warden.png",
+      "resource_path": "res://assets/zen_tower/arenas/floor_015_rootbound_warden.png",
+      "kind": "boss_arena",
+      "section": "01",
+      "guardian_id": "zen_tower_001_rootbound_warden",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2866035,
+      "sha256": "daf6765beb0eba72d093b02c981167ecbf9a4eca44a8192a2a55ffb93eba0ef8"
+    },
+    {
+      "path": "assets/zen_tower/cards/001_rootbound_warden_front.png",
+      "resource_path": "res://assets/zen_tower/cards/001_rootbound_warden_front.png",
+      "kind": "card_front",
+      "section": "01",
+      "guardian_id": "zen_tower_001_rootbound_warden",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3402007,
+      "sha256": "ad5d7b6b107da5eff1cf751c744d56998a21f3bd67097d14c65ec6207cb22378"
+    },
+    {
+      "path": "assets/zen_tower/cards/001_rootbound_warden_back.png",
+      "resource_path": "res://assets/zen_tower/cards/001_rootbound_warden_back.png",
+      "kind": "card_back",
+      "section": "01",
+      "guardian_id": "zen_tower_001_rootbound_warden",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3047941,
+      "sha256": "de2a897dda0551a337bcb2265dd8208ca661d8d85a0e224c3ad667fa4765c4cd"
+    },
+    {
+      "path": "assets/zen_tower/backgrounds/floors_016_029.png",
+      "resource_path": "res://assets/zen_tower/backgrounds/floors_016_029.png",
+      "kind": "section_background",
+      "section": "02",
+      "guardian_id": "zen_tower_002_windweave_keeper",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2799967,
+      "sha256": "bd73271349be3c2123e2fed78e0a3ab7238dd0a5043d3a8cf24aed787bf1d97c"
+    },
+    {
+      "path": "assets/zen_tower/bosses/002_windweave_keeper.png",
+      "resource_path": "res://assets/zen_tower/bosses/002_windweave_keeper.png",
+      "kind": "boss_portrait",
+      "section": "02",
+      "guardian_id": "zen_tower_002_windweave_keeper",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3205895,
+      "sha256": "23989e23c547895bdc79ea444ddd0bca7319b0d8db17b267b9e523fbc453858b"
+    },
+    {
+      "path": "assets/zen_tower/arenas/floor_030_windweave_keeper.png",
+      "resource_path": "res://assets/zen_tower/arenas/floor_030_windweave_keeper.png",
+      "kind": "boss_arena",
+      "section": "02",
+      "guardian_id": "zen_tower_002_windweave_keeper",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2553103,
+      "sha256": "a07bbe2390a61cb991fc0b9abed6a648bc0d84eebda0fdfe602ea19bcd0ba860"
+    },
+    {
+      "path": "assets/zen_tower/cards/002_windweave_keeper_front.png",
+      "resource_path": "res://assets/zen_tower/cards/002_windweave_keeper_front.png",
+      "kind": "card_front",
+      "section": "02",
+      "guardian_id": "zen_tower_002_windweave_keeper",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3519547,
+      "sha256": "b804af268ac566c6f7c0af5510047754b5d986e792794db3858638867975f405"
+    },
+    {
+      "path": "assets/zen_tower/cards/002_windweave_keeper_back.png",
+      "resource_path": "res://assets/zen_tower/cards/002_windweave_keeper_back.png",
+      "kind": "card_back",
+      "section": "02",
+      "guardian_id": "zen_tower_002_windweave_keeper",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3177012,
+      "sha256": "d4c37785d6debe5a78f7b34cfa8701d54fad2f7369ea54940e7d04d83de28c21"
+    },
+    {
+      "path": "assets/zen_tower/backgrounds/floors_031_044.png",
+      "resource_path": "res://assets/zen_tower/backgrounds/floors_031_044.png",
+      "kind": "section_background",
+      "section": "03",
+      "guardian_id": "zen_tower_003_stillwater_dragon",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2742067,
+      "sha256": "3bae1f708c1ed9fb1a6057b8e1fcbc6d76477eee233de8e93f7ec16d0ed9daba"
+    },
+    {
+      "path": "assets/zen_tower/bosses/003_stillwater_dragon.png",
+      "resource_path": "res://assets/zen_tower/bosses/003_stillwater_dragon.png",
+      "kind": "boss_portrait",
+      "section": "03",
+      "guardian_id": "zen_tower_003_stillwater_dragon",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3029500,
+      "sha256": "e2b9a852f886f5baecedc2da1dae973217a8a12e776913fec0e4ca3f738a607c"
+    },
+    {
+      "path": "assets/zen_tower/arenas/floor_045_stillwater_dragon.png",
+      "resource_path": "res://assets/zen_tower/arenas/floor_045_stillwater_dragon.png",
+      "kind": "boss_arena",
+      "section": "03",
+      "guardian_id": "zen_tower_003_stillwater_dragon",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2505225,
+      "sha256": "199efa5405eae01c868257d8f7c392732a816c5dfb7945c9b2f85165ca9ecb49"
+    },
+    {
+      "path": "assets/zen_tower/cards/003_stillwater_dragon_front.png",
+      "resource_path": "res://assets/zen_tower/cards/003_stillwater_dragon_front.png",
+      "kind": "card_front",
+      "section": "03",
+      "guardian_id": "zen_tower_003_stillwater_dragon",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3319930,
+      "sha256": "c1193fbc7bcb3ed4c79c30b4132c62bddcf05eb0958134ec52fc9b782c486939"
+    },
+    {
+      "path": "assets/zen_tower/cards/003_stillwater_dragon_back.png",
+      "resource_path": "res://assets/zen_tower/cards/003_stillwater_dragon_back.png",
+      "kind": "card_back",
+      "section": "03",
+      "guardian_id": "zen_tower_003_stillwater_dragon",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 2980668,
+      "sha256": "855f54da2209f0f94dbf469ce4c98475294375b3326feee65b356794e26956f5"
+    },
+    {
+      "path": "assets/zen_tower/backgrounds/floors_046_059.png",
+      "resource_path": "res://assets/zen_tower/backgrounds/floors_046_059.png",
+      "kind": "section_background",
+      "section": "04",
+      "guardian_id": "zen_tower_004_amber_fox",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2635643,
+      "sha256": "6db86dbeaf2fbb801a31038fa43d75108f26a57dd32e6f8da5da6022005d4eac"
+    },
+    {
+      "path": "assets/zen_tower/bosses/004_amber_fox.png",
+      "resource_path": "res://assets/zen_tower/bosses/004_amber_fox.png",
+      "kind": "boss_portrait",
+      "section": "04",
+      "guardian_id": "zen_tower_004_amber_fox",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3497745,
+      "sha256": "1c4fdc88664059008284eb0267763b76a91bfb84ec2127d4d0cb3fe6fda8aafe"
+    },
+    {
+      "path": "assets/zen_tower/arenas/floor_060_amber_fox.png",
+      "resource_path": "res://assets/zen_tower/arenas/floor_060_amber_fox.png",
+      "kind": "boss_arena",
+      "section": "04",
+      "guardian_id": "zen_tower_004_amber_fox",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2641285,
+      "sha256": "0371fb367860b9f4b830643e3bae82051475f6c77056370cb66304e1080d9f44"
+    },
+    {
+      "path": "assets/zen_tower/cards/004_amber_fox_front.png",
+      "resource_path": "res://assets/zen_tower/cards/004_amber_fox_front.png",
+      "kind": "card_front",
+      "section": "04",
+      "guardian_id": "zen_tower_004_amber_fox",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3439192,
+      "sha256": "1c885eb7c591eb3c0aad50253226fcfbc3dc2242bc7d53a4dba358989ca1526c"
+    },
+    {
+      "path": "assets/zen_tower/cards/004_amber_fox_back.png",
+      "resource_path": "res://assets/zen_tower/cards/004_amber_fox_back.png",
+      "kind": "card_back",
+      "section": "04",
+      "guardian_id": "zen_tower_004_amber_fox",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 2894647,
+      "sha256": "76e52988ab236e30c8307ddb9d71c0142a44e8ff25014d644b449587ebb7fe52"
+    }
+  ],
+  "music": {
+    "status": "pending_delivery",
+    "slots": [
+      {
+        "id": "zen_tower_section_01",
+        "role": "section",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_guardian_001",
+        "role": "guardian",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_section_02",
+        "role": "section",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_guardian_002",
+        "role": "guardian",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_section_03",
+        "role": "section",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_guardian_003",
+        "role": "guardian",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_section_04",
+        "role": "section",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_guardian_004",
+        "role": "guardian",
+        "resource_path": null,
+        "status": "pending_delivery"
+      }
+    ]
+  },
+  "agreed_design": {
+    "status": "planned_not_implemented_by_this_asset_package",
+    "story_required": false,
+    "lives_per_run": 3,
+    "draw_action": "repeat_floor_without_life_loss",
+    "boss_interval_floors": 15,
+    "autosave_run": true,
+    "permanent_collection_unlock": "first_guardian_victory",
+    "rewards": [
+      "best_floor",
+      "zen_leaves"
+    ],
+    "difficulty_curve": "gradual_profiles_to_be_balanced_during_integration",
+    "art_reuse_after_floor": 60,
+    "art_section_index_formula": "((floor - 1) // 15) % 4",
+    "art_reuse_note": "Reuse these four art sections for later floors; collected guardian cards stay unique."
+  }
+}

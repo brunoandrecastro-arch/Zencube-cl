@@ -10,6 +10,33 @@ var peach = Color("16515a") # High-contrast deep jade O across all face colors
 var selected: int = -1
 var surface_textures: Array[Texture2D] = []
 var skin_id: int = 0
+
+var tower_skin: int = -1
+var tower_trim: Node3D
+var tower_textures: Dictionary = {}
+
+const TOWER_PALETTES = [
+    {
+        "faces":["36513a","526b42","293f30","716044","496044","39523e"],
+        "core":"a98b4d","trim":"d5bc75",
+        "metal":0.12,"rough":0.66
+    },
+    {
+        "faces":["397489","62a3b1","28586f","83bdc5","4f859e","367181"],
+        "core":"d0dce5","trim":"d4f3ff",
+        "metal":0.42,"rough":0.24
+    },
+    {
+        "faces":["245b55","397d70","23464c","548c82","366a67","1e5554"],
+        "core":"c4cfc5","trim":"e6b5d0",
+        "metal":0.28,"rough":0.32
+    },
+    {
+        "faces":["865022","b47b35","68391c","c18b42","955a27","a96c31"],
+        "core":"e0ad49","trim":"ffe099",
+        "metal":0.48,"rough":0.30
+    }
+]
 var sky_family_palette: bool = false # Only for the post-Moon 3x3 epilogue
 var core_mesh_instance: MeshInstance3D
 var sky_gold_trim: Node3D
@@ -117,6 +144,9 @@ func palette() -> Dictionary:
 	return ZenCollection.SKINS[clampi(skin_id, 0, ZenCollection.SKINS.size()-1)]
 func face_color(face: int) -> Color:
 	if sky_family_palette: return Color("301036")
+
+	if tower_skin >= 0:
+		return Color(str(TOWER_PALETTES[tower_skin].faces[clampi(face,0,5)]))
 	return Color(str(palette().faces[clampi(face,0,5)]))
 
 # An isolated, story-only lacquer-and-gold material. Never changes shop skin_id.
@@ -155,6 +185,13 @@ func apply_skin(next_skin: int) -> void:
 	peach = Color("08788c") # O: saturated blue-teal
 	if core_mesh_instance != null:
 		core_mesh_instance.material_override = material(Color(str(style.core)))
+
+		if tower_skin >= 0 and not sky_family_palette:
+			var tower_style: Dictionary = TOWER_PALETTES[tower_skin]
+			var core_mat := material(Color(str(tower_style.core)))
+			core_mat.metallic = 0.5
+			core_mat.roughness = 0.35
+			core_mesh_instance.material_override = core_mat
 	# Draw currently visible marks in the new palette without touching cells.
 func face_material(color: Color) -> StandardMaterial3D:
 	var mat: StandardMaterial3D = material(color)
@@ -164,6 +201,16 @@ func face_material(color: Color) -> StandardMaterial3D:
 		mat.emission_enabled = true
 		mat.emission = color
 		mat.emission_energy_multiplier = 0.20
+		return mat
+
+	if tower_skin >= 0:
+		var style: Dictionary = TOWER_PALETTES[tower_skin]
+		mat.metallic = float(style.metal)
+		mat.roughness = float(style.rough)
+		mat.albedo_texture = _tower_surface_texture(tower_skin)
+		mat.emission_enabled = true
+		mat.emission = color
+		mat.emission_energy_multiplier = 0.08
 		return mat
 	mat.metallic = float(palette().metal)
 	mat.roughness = float(palette().rough)
@@ -292,3 +339,108 @@ func draw_line(line: Array, color: Color) -> void:
 			# Two surface segments, never a chord through the cube interior.
 			bar(overlay,p,edge,color,0.025)
 			bar(overlay,edge,q,color,0.025)
+
+
+# Tower materials never modify the purchased shop skin.
+
+func _tower_surface_texture(index: int) -> Texture2D:
+	if tower_textures.has(index):
+		return tower_textures[index] as Texture2D
+
+	var noise := FastNoiseLite.new()
+	noise.seed = 971 + index * 101
+	noise.frequency = [0.075,0.035,0.022,0.055][index]
+	noise.fractal_octaves = 4
+
+	match index:
+		0: noise.noise_type = FastNoiseLite.TYPE_PERLIN
+		1: noise.noise_type = FastNoiseLite.TYPE_CELLULAR
+		2: noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+		3: noise.noise_type = FastNoiseLite.TYPE_VALUE
+
+	var ramp := Gradient.new()
+	ramp.colors = PackedColorArray([
+		Color("b8b8b8"),Color.WHITE
+	])
+
+	var texture := NoiseTexture2D.new()
+	texture.width = 128
+	texture.height = 128
+	texture.seamless = true
+	texture.generate_mipmaps = true
+	texture.noise = noise
+	texture.color_ramp = ramp
+
+	tower_textures[index] = texture
+	return texture
+
+func set_tower_skin(index: int) -> void:
+	index = clampi(index,-1,3)
+
+	if tower_skin == index:
+		return
+
+	tower_skin = index
+
+	if is_instance_valid(tower_trim):
+		pivot.remove_child(tower_trim)
+		tower_trim.queue_free()
+		tower_trim = null
+
+	apply_skin(skin_id)
+
+	if index < 0:
+		return
+
+	_tower_surface_texture(index)
+
+	tower_trim = Node3D.new()
+	tower_trim.name = "ZenTowerOrnaments"
+	pivot.add_child(tower_trim)
+
+	var gold := Color(str(TOWER_PALETTES[index].trim))
+
+	for face in range(6):
+		var n: Vector3 = CubeGeometry.N[face]*1.552
+		var u: Vector3 = CubeGeometry.U[face]
+		var v: Vector3 = CubeGeometry.V[face]
+
+		for side in [-1.0,1.0]:
+			var k: float = float(side)
+
+			bar(tower_trim,
+				n+u*k*1.44-v*1.44,
+				n+u*k*1.44+v*1.44,
+				gold,0.018)
+
+			bar(tower_trim,
+				n+v*k*1.44-u*1.44,
+				n+v*k*1.44+u*1.44,
+				gold,0.018)
+
+		# Distinct corner ornaments for each tower section.
+		for sx in [-1.0,1.0]:
+			for sy in [-1.0,1.0]:
+				var corner: Vector3 = n+u*float(sx)*1.29+v*float(sy)*1.29
+				var radius: float = [0.10,0.13,0.08,0.12][index]
+
+				bar(tower_trim,
+					corner-u*radius,
+					corner+v*radius,
+					gold,0.014)
+
+				bar(tower_trim,
+					corner+v*radius,
+					corner+u*radius,
+					gold,0.014)
+
+				if index in [1,3]:
+					bar(tower_trim,
+						corner+u*radius,
+						corner-v*radius,
+						gold,0.014)
+
+					bar(tower_trim,
+						corner-v*radius,
+						corner-u*radius,
+						gold,0.014)

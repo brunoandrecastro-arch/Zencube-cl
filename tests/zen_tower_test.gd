@@ -1,0 +1,110 @@
+extends SceneTree
+
+const Tower = preload("res://core/ZenTower.gd")
+var failures: int = 0
+
+func check(ok: bool, message: String) -> void:
+    if ok:
+        print("PASS: ",message)
+    else:
+        failures += 1
+        printerr("FAIL: ",message)
+
+func _initialize() -> void:
+    call_deferred("run")
+
+func run() -> void:
+    var data := SaveManager.defaults()
+    var state := Tower.ensure(data)
+
+    check(Tower.new_run(data),"New run")
+    check(int(state.lives)==3,"Three lives")
+    check(Tower.begin_floor(data),"First board")
+    check(state.game.cells.size()==54,"54 cells")
+    check(not Tower.begin_floor(data),"No duplicate board")
+
+    var rules := RulesEngine.new()
+    var line: Array = rules.lines[0]
+
+    for stage in [15,30,45,60,75]:
+        state.floor = stage
+        state.game = {}
+        check(Tower.begin_floor(data),"Begin boss "+str(stage))
+
+        var board := BoardModel.new()
+        board.swap_enabled = false
+
+        for j in range(3):
+            board.cells[int(line[j])] = 1
+
+        state.game = board.snapshot()
+
+        check(Tower.play(data,int(line[3]),1),"Winning move")
+        var result := Tower.settle(data)
+
+        check(int(result.get("winner",0))==1,"Boss victory")
+        check(int(state.floor)==stage+1,"Next floor")
+        check(Tower.settle(data).is_empty(),"No duplicate reward")
+
+    check(state.cards.size()==4,"Four unique guardian cards")
+    check(int(state.record)==75,"Endless record")
+    check(Tower.section_index(61)==0,"Second cycle")
+    check(Tower.is_boss(75),"Endless boss cycle")
+
+    for attempt in range(3):
+        check(Tower.begin_floor(data),"Retry board")
+        var board := BoardModel.new()
+        board.swap_enabled = false
+        board.turn = 2
+
+        for j in range(3):
+            board.cells[int(line[j])] = 2
+
+        state.game = board.snapshot()
+        check(Tower.play(data,int(line[3]),2),"Losing move")
+        Tower.settle(data)
+
+        check(int(state.lives)==2-attempt,"Life consumed")
+
+    check(not bool(state.active),"Game over")
+    check(Tower.new_run(data),"Restart tower")
+    check(int(state.floor)==1,"Restart at floor one")
+    check(int(state.lives)==3,"Lives restored")
+    check(state.cards.size()==4,"Gallery survives restart")
+    check(int(state.record)==75,"Record survives restart")
+
+    Tower.begin_floor(data)
+
+    var roundtrip: Dictionary = JSON.parse_string(
+        JSON.stringify(data))
+
+    check(SaveManager.valid_game(roundtrip.tower.game),
+        "JSON board roundtrip")
+
+    var renderer := CubeRenderer.new()
+    root.add_child(renderer)
+    await process_frame
+
+    renderer.apply_skin(3)
+    var original: Color = renderer.face_color(0)
+
+    for index in range(4):
+        renderer.set_tower_skin(index)
+        renderer.paint(BoardModel.new(),false)
+        check(renderer.skin_id==3,"Shop selection preserved")
+        check(renderer.tiles.size()==54,"Geometry preserved")
+        check(is_instance_valid(renderer.tower_trim),"Tower ornament")
+        check(renderer.face_color(0)!=original,"Tower color")
+
+    renderer.set_tower_skin(-1)
+    renderer.paint(BoardModel.new(),false)
+
+    check(renderer.face_color(0)==original,"Original color restored")
+    check(renderer.skin_id==3,"Original skin restored")
+    check(renderer.tower_trim==null,"Tower ornament removed")
+
+    renderer.queue_free()
+    await process_frame
+
+    print("ZEN TOWER TEST FAILURES: ",failures)
+    quit(1 if failures>0 else 0)

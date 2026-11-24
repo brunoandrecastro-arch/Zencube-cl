@@ -1,0 +1,37 @@
+{
+  "language": "en",
+  "guardians": [
+    {
+      "guardian_id": "zen_tower_001_rootbound_warden",
+      "name": "The Rootbound Warden",
+      "card_number": "001",
+      "first_cycle_floor": 15,
+      "lore": "Before the tower had a name, a keeper tended the bamboo growing around its foundations. When ancient roots split the stone, he bound his spirit to both, holding the sanctuary together.\n\nCenturies turned his skin to granite and draped his armour in moss. Still, his lantern burns beside the first sealed gate.\n\nOn the fifteenth floor, he tests every traveller's patience. Each hurried move tightens the roots. Each thoughtful choice reveals a path.\n\nBeyond his gate, the ascent begins in earnest. Behind him, the roots keep the tower standing.",
+      "quote": "To rise, first learn to stand firm."
+    },
+    {
+      "guardian_id": "zen_tower_002_windweave_keeper",
+      "name": "The Windweave Keeper",
+      "card_number": "002",
+      "first_cycle_floor": 30,
+      "lore": "She once tended the wind chimes along the tower's outer galleries. When a violent storm shattered the crossings, she remained alone above the clouds.\n\nFor seven days, she listened to air passing through the broken bronze. Its changing rhythm taught her when to stand firm and when to yield.\n\nShe rebuilt the bridges with bamboo and woven silk. Now she guards the thirtieth floor, guiding each challenger through the art of balance.\n\nHer fan follows the turning breeze. Those who read its smallest changes find the stairway beyond her gallery.",
+      "quote": "Find your balance as the world moves."
+    },
+    {
+      "guardian_id": "zen_tower_003_stillwater_dragon",
+      "name": "The Stillwater Dragon",
+      "card_number": "003",
+      "first_cycle_floor": 45,
+      "lore": "A silver carp once lived in the tower's upper pools. During a long drought, it sheltered a single lotus seed beneath its fins, circling the last remaining water.\n\nOn the night the flower opened, moonlight touched its petals. The carp rose from the pool with pearl-white scales and the long, flowing form of a dragon.\n\nIt has guarded the forty-fifth floor ever since, preserving the stillness in which small things can grow.\n\nThose who quiet their thoughts see the next stairway reflected between the lotus leaves.",
+      "quote": "In stillness, the path becomes clear."
+    },
+    {
+      "guardian_id": "zen_tower_004_amber_fox",
+      "name": "The Amber Fox",
+      "card_number": "004",
+      "first_cycle_floor": 60,
+      "lore": "Each autumn, a young fox gathered the brightest leaves from the tower's balconies, hiding them beneath the oldest maple. He hoped that keeping every leaf would keep winter away.\n\nOne cold evening, he opened his shelter to a lost traveller. The wind scattered his treasured leaves, revealing seeds he had never noticed beneath them.\n\nWhen spring returned, three saplings rose beside the path. The fox woke with three tails, each carrying the colour of an autumn sunset.\n\nHe now guards the sixtieth floor, helping travellers make room for the journey ahead.",
+      "quote": "Let go, so new things can grow."
+    }
+  ]
+}

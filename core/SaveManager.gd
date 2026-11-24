@@ -25,6 +25,7 @@ static func load_data() -> Dictionary:
     if not str(base.settings.get("music_mode", "base")) in ["base", "manual"]:
         base.settings["music_mode"] = "base"
     if data.get("game") is Dictionary: base.game = data.game
+    if data.get("tower") is Dictionary: base["tower"] = data["tower"]
     if data.get("ascension") is Dictionary: base.ascension.merge(data.ascension, true)
     if data.get("economy") is Dictionary: base.economy.merge(data.economy, true)
     if data.get("ascend") is Dictionary: base.ascend.merge(data.ascend, true)

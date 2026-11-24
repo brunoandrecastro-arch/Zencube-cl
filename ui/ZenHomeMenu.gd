@@ -87,6 +87,11 @@ func configure(game: Node) -> void:
     _quiet_button(story)
 
     # Direct navigation: the campaign and story still lead, all other routes are grouped.
+
+    var tower_button: Button = game.premium_button("Zen Tower",self,game.open_zen_tower)
+    tower_button.name = "HomeZenTower"
+    tower_button.custom_minimum_size.y = 54
+
     var first_row: HBoxContainer = game.row(self)
     var worlds: Button = game.premium_button("Welten", first_row, game.open_worlds)
     worlds.name = "HomeWorlds"
