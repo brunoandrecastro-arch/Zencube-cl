@@ -4,6 +4,12 @@ extends RefCounted
 # Portuguese have explicit equivalents; the source-language default is German.
 # Proper names (ZenCube, Zen-Bot) and language endonyms remain unchanged.
 const EN: Dictionary = {
+    "Ergebnis": "Result",
+    "Menü": "Menu",
+    "Zen Tower": "Zen Tower",
+    "↻": "↻",
+    "Zen-Tower-Grafiken fehlen.": "Zen Tower assets unavailable.",
+    "Zen-Tower-Spielstand konnte nicht gespeichert werden.": "Could not save Zen Tower progress.",
     "Erfolge": "Achievements",
     "Geheime Erfolge: %d/%d": "Secret Achievements: %d/%d",
     "Geheimer Erfolg": "Secret Achievement",
@@ -379,6 +385,12 @@ static func english(source: String) -> String:
     return str(EN.get(source, source))
 
 const PT: Dictionary = {
+    "Ergebnis": "Resultado",
+    "Menü": "Menu",
+    "Zen Tower": "Zen Tower",
+    "↻": "↻",
+    "Zen-Tower-Grafiken fehlen.": "Faltam os recursos do Zen Tower.",
+    "Zen-Tower-Spielstand konnte nicht gespeichert werden.": "Não foi possível guardar o progresso do Zen Tower.",
     "Erfolge": "Conquistas",
     "Geheime Erfolge: %d/%d": "Conquistas secretas: %d/%d",
     "Geheimer Erfolg": "Conquista secreta",

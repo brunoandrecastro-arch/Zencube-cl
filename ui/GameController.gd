@@ -435,7 +435,7 @@ func build_ui() -> void:
     tower_controls = row(column)
     button("↻",tower_controls,func(): renderer.reset_view(),true)
     tower_result_button = button("Ergebnis",tower_controls,_tower_result,true)
-    button("Menu",tower_controls,open_menu,true)
+    button("Menü",tower_controls,open_menu,true)
     tower_controls.hide()
     var legend_panel = PanelContainer.new()
     var legend_style = theme_style(Color("30271f",0.89),9)
@@ -3537,7 +3537,7 @@ func _tower_enter() -> void:
     if ceremony_active or challenge_active or tutorial != null:
         return
     if Tower.floor_info(1).is_empty():
-        notify_user("Zen Tower assets unavailable")
+        notify_user("Zen-Tower-Grafiken fehlen.")
         return
     persist()
     var state := Tower.ensure(data)
@@ -3548,7 +3548,7 @@ func _tower_enter() -> void:
         Tower.begin_floor(data)
     if not SaveManager.save_data(data):
         data["tower"] = old_state
-        notify_user("Zen Tower save failed")
+        notify_user("Zen-Tower-Spielstand konnte nicht gespeichert werden.")
         return
 
     chronicles.close_chronicles()
@@ -3707,7 +3707,7 @@ func _tower_result() -> void:
         if not SaveManager.save_data(data):
             data["tower"] = old_state
             data["economy"] = old_wallet
-            notify_user("Zen Tower save failed")
+            notify_user("Zen-Tower-Spielstand konnte nicht gespeichert werden.")
             return
     var outcome: Dictionary = state.finished.result
     var stage: int = int(outcome.completed_floor)
@@ -3753,7 +3753,7 @@ func _tower_next() -> void:
         Tower.begin_floor(data)
     if not SaveManager.save_data(data):
         data["tower"] = old_state
-        notify_user("Zen Tower save failed")
+        notify_user("Zen-Tower-Spielstand konnte nicht gespeichert werden.")
         return
     if not bool(state.active):
         _tower_leave(false)
