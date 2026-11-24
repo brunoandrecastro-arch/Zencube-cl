@@ -3609,48 +3609,69 @@ func _tower_refresh(animate: int = -1) -> void:
     var state := Tower.ensure(data)
     var stage := _tower_stage()
     var info := Tower.floor_info(stage)
-    world_title_label.text = "Zen Tower · " + _tower_text(
-        "Etage","Floor","Piso") + " %d" % stage
     var section_names: Dictionary = info.section.title
-    world_quote_label.text = str(section_names.get(
-        language_code(),section_names.get("en","Zen Tower")))
-    if bool(info.boss):
-        world_quote_label.text = _tower_name(info.guardian)
+    var section_title := str(section_names.get(language_code(), section_names.get("en", "Zen Tower")))
+
+    world_title_label.text = section_title
+    world_quote_label.text = _tower_quote(stage)
+
     rank_label.show()
-    rank_label.text = "♥ %d/3 · %s %d" % [
-        int(state.lives),_tower_text("Rekord","Record","Recorde"),
-        int(state.record)]
+    rank_label.text = "♥ %d  ·  %s %d  ·  %s %d" % [
+        int(state.lives),
+        _tower_text("Etage", "Floor", "Piso"),
+        stage,
+        _tower_text("Rekord", "Record", "Recorde"),
+        int(state.record)
+    ]
+
     if board.winner == 1:
-        status.text = _tower_text("Sieg!","Victory!","Vitória!")
+        status.text = _tower_text("Sieg!", "Victory!", "Vitória!")
     elif board.winner == 2:
-        status.text = _tower_text("Niederlage","Defeat","Derrota")
+        status.text = _tower_text("Niederlage", "Defeat", "Derrota")
     elif board.winner == 3:
-        status.text = _tower_text("Unentschieden","Draw","Empate")
+        status.text = _tower_text("Unentschieden", "Draw", "Empate")
+    elif bool(info.boss):
+        status.text = _tower_name(info.guardian)
     elif board.turn == 1:
         status.text = _tower_text(
-            "Du bist am Zug · X","Your turn · X","A tua vez · X")
+            "Du bist am Zug · X",
+            "Your turn · X",
+            "A tua vez · X"
+        )
     else:
         status.text = _tower_text(
-            "Gegner denkt · O","Opponent thinking · O","Adversário a pensar · O")
-    status.add_theme_color_override("font_color",Color("453329"))
+            "Gegner denkt · O",
+            "Opponent thinking · O",
+            "Adversário a pensar · O"
+        )
+
+    status.add_theme_color_override("font_color", Color("453329"))
     detail.text = "3×3 · %s %d/54 · AI %d" % [
-        _tower_text("Züge","Moves","Jogadas"),
-        board.move_count(),int(state.level)+1]
+        _tower_text("Züge", "Moves", "Jogadas"),
+        board.move_count(),
+        int(state.level) + 1
+    ]
+
     help_text.text = _tower_text(
         "Drehen · Tippen · Zoomen",
         "Rotate · Tap · Zoom",
-        "Rodar · Tocar · Ampliar")
-    for control in [swap_row,tutorial_row,challenge_role_panel,
-        challenge_row,challenge_leave_row,classic_views,
-        classic_actions,zen_campaign_controls,act_one_controls,sky_controls]:
+        "Rodar · Tocar · Ampliar"
+    )
+
+    for control in [
+        swap_row, tutorial_row, challenge_role_panel,
+        challenge_row, challenge_leave_row, classic_views,
+        classic_actions, zen_campaign_controls, act_one_controls, sky_controls
+    ]:
         control.hide()
+
     tower_controls.show()
-    tower_controls.get_child(2).text = _tower_text("Menü","Menu","Menu")
     tower_result_button.text = _classic_result_label()
     tower_result_button.visible = board.winner != 0
+
     tower_portrait.visible = bool(info.boss)
     renderer.selected = board.last_cell
-    renderer.paint(board,false,[],animate)
+    renderer.paint(board, false, [], animate)
 
 func _tower_save() -> bool:
     if not tower_active: return false
@@ -3693,13 +3714,15 @@ func _tower_tick() -> void:
 func _tower_result() -> void:
     if not tower_active or board.winner == 0:
         return
+
     var state := Tower.ensure(data)
-    if state.get("finished",{}).is_empty():
+    if state.get("finished", {}).is_empty():
         var old_state := state.duplicate(true)
         var old_wallet: Dictionary = data.economy.duplicate(true)
         state.game = board.snapshot()
         var result := Tower.settle(data)
-        if result.is_empty(): return
+        if result.is_empty():
+            return
         state["finished"] = {
             "board": board.snapshot(),
             "result": result
@@ -3709,39 +3732,78 @@ func _tower_result() -> void:
             data["economy"] = old_wallet
             notify_user("Zen-Tower-Spielstand konnte nicht gespeichert werden.")
             return
+
     var outcome: Dictionary = state.finished.result
     var stage: int = int(outcome.completed_floor)
     var info := Tower.floor_info(stage)
-    refresh(-1,false)
-    var heading := _tower_text("Sieg","Victory","Vitória")
+
+    refresh(-1, false)
+
+    var heading := _tower_text("Sieg", "Victory", "Vitória")
     if int(outcome.winner) == 2:
-        heading = _tower_text("Niederlage","Defeat","Derrota")
+        heading = _tower_text("Niederlage", "Defeat", "Derrota")
     elif int(outcome.winner) == 3:
-        heading = _tower_text("Unentschieden","Draw","Empate")
-    var box := _zen_campaign_story_box(heading + " · %d" % stage)
+        heading = _tower_text("Unentschieden", "Draw", "Empate")
+
+    var box := _zen_campaign_story_box(heading + " · " + _tower_text("Etage", "Floor", "Piso") + " %d" % stage)
+
     if bool(info.boss):
-        _tower_art(box,str(info.guardian.portrait),_tower_portrait_height())
-        _zen_campaign_paragraph(box,_tower_name(info.guardian))
+        _tower_art(box, str(info.guardian.portrait), _tower_portrait_height() + 70.0)
+        _zen_campaign_paragraph(box, _tower_name(info.guardian))
+
     if int(outcome.reward) > 0:
-        _zen_campaign_paragraph(box,"+%d 🍃" % int(outcome.reward))
-    _zen_campaign_paragraph(box,"♥ %d/3" % int(state.lives))
+        _zen_campaign_paragraph(box, "+%d 🍃" % int(outcome.reward))
+
+    if int(outcome.get("life_bonus",0)) > 0:
+        _zen_campaign_paragraph(
+            box,
+            _tower_text("+%d Leben", "+%d lives", "+%d vidas") % int(outcome.get("life_bonus",0))
+        )
+
+    _zen_campaign_paragraph(box, "♥ %d" % int(state.lives))
+
     if str(outcome.unlocked_card) != "":
-        _zen_campaign_paragraph(box,_tower_text(
-            "Neue Sammelkarte freigeschaltet!",
-            "New guardian card unlocked!",
-            "Nova carta desbloqueada!"))
-        _tower_art(box,str(info.guardian.card_front),280)
+        _zen_campaign_paragraph(
+            box,
+            _tower_text(
+                "Neue Sammelkarte freigeschaltet!",
+                "New guardian card unlocked!",
+                "Nova carta desbloqueada!"
+            )
+        )
+        _tower_art(box, str(info.guardian.card_front), 280)
+
     var next_label := _tower_text(
-        "Nächste Etage","Next floor","Próximo piso")
+        "Nächste Etage",
+        "Next floor",
+        "Próximo piso"
+    )
+
     if bool(outcome.game_over):
-        next_label = _tower_text("Aufstieg beendet","Run ended","Ascensão terminada")
+        next_label = _tower_text(
+            "Aufstieg beendet",
+            "Run ended",
+            "Ascensão terminada"
+        )
     elif int(outcome.winner) != 1:
-        next_label = _tower_text("Erneut versuchen","Try again","Tentar novamente")
-    premium_button(next_label,box,_tower_next,true)
-    button(_inspect_label(),box,_inspect_classic_finished_board,true)
-    button(_tower_text(
-        "Speichern & verlassen","Save & leave","Guardar e sair"),
-        box,_tower_leave,true)
+        next_label = _tower_text(
+            "Erneut versuchen",
+            "Try again",
+            "Tentar novamente"
+        )
+
+    premium_button(next_label, box, _tower_next, true)
+    button(_inspect_label(), box, _inspect_classic_finished_board, true)
+    button(
+        _tower_text(
+            "Speichern & verlassen",
+            "Save & leave",
+            "Guardar e sair"
+        ),
+        box,
+        _tower_leave,
+        true
+    )
     _enable_feedback_modal_scroll(box)
 
 func _tower_next() -> void:
@@ -3796,25 +3858,25 @@ func _tower_leave(save_board: bool = true) -> void:
 func open_tower_gallery() -> void:
     var state := Tower.ensure(data)
     var box := _zen_campaign_story_box(_tower_text(
-        "Boss-Galerie","Guardian Gallery","Galeria de Guardiões"))
+        "Boss-Galerie",
+        "Guardian Gallery",
+        "Galeria de Guardiões"
+    ))
+
     var manifest := Tower.manifest()
-    var guardians: Array = manifest.get("guardians",[])
+    var guardians: Array = manifest.get("guardians", [])
+
     for raw in guardians:
         var guardian: Dictionary = raw
         var owned: bool = state.cards.has(str(guardian.id))
-        var caption: String = str(guardian.card_number) + " · "
-        if owned:
-            caption += _tower_name(guardian)
-        else:
-            caption += _tower_text("Gesperrt","Locked","Bloqueado")
-        var card := premium_button(caption,box,_tower_card.bind(guardian,false))
-        card.disabled = not owned
-        if not owned:
-            _zen_campaign_paragraph(box,_tower_text(
-                "Besiege den Wächter auf Etage %d.",
-                "Defeat the guardian on floor %d.",
-                "Derrota o guardião no piso %d.") % int(guardian.first_cycle_floor))
-    button(_tower_text("Zurück","Back","Voltar"),box,open_zen_tower,true)
+        _tower_gallery_entry(box, guardian, owned)
+
+    button(
+        _tower_text("Zurück", "Back", "Voltar"),
+        box,
+        open_zen_tower,
+        true
+    )
     _enable_feedback_modal_scroll(box)
 
 func _tower_card(guardian: Dictionary,back: bool) -> void:
@@ -3830,7 +3892,104 @@ func _tower_card(guardian: Dictionary,back: bool) -> void:
     _enable_feedback_modal_scroll(box)
 
 
+
+func _tower_quote(stage: int) -> String:
+    var quotes := [
+        {
+            "de": "Wer in der Stille steigt, erkennt den Weg klarer.",
+            "en": "The quieter the ascent, the clearer the path becomes.",
+            "pt": "Quanto mais silenciosa a subida, mais claro se torna o caminho."
+        },
+        {
+            "de": "Der Wind bewegt den Weg, aber nicht dein Zentrum.",
+            "en": "The wind may move the path, but never your center.",
+            "pt": "O vento pode mover o caminho, mas nunca o teu centro."
+        },
+        {
+            "de": "Stilles Wasser trägt selbst die schwersten Erinnerungen.",
+            "en": "Still waters can carry even the heaviest memories.",
+            "pt": "As águas tranquilas podem levar até as memórias mais pesadas."
+        },
+        {
+            "de": "Wer loslässt, findet Kraft im nächsten Schritt.",
+            "en": "Those who let go find strength in the next step.",
+            "pt": "Quem larga o passado encontra força no passo seguinte."
+        }
+    ]
+    var q: Dictionary = quotes[(maxi(1,stage)-1) % quotes.size()]
+    return str(q.get(language_code(), q.get("en", "Zen Tower")))
+
+func _tower_gallery_entry(box: VBoxContainer, guardian: Dictionary, owned: bool) -> void:
+    var card := PanelContainer.new()
+    card.add_theme_stylebox_override("panel", theme_style(Color("183229", 0.96), 18))
+    box.add_child(card)
+
+    var stack := VBoxContainer.new()
+    stack.add_theme_constant_override("separation", 8)
+    card.add_child(stack)
+
+    var caption := label(
+        str(guardian.card_number) + " · " +
+        (_tower_name(guardian) if owned else _tower_text("Gesperrt", "Locked", "Bloqueado")),
+        stack, 18, Color("f8eed7"))
+    caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+    if owned:
+        var preview_button := Button.new()
+        preview_button.icon = load(str(guardian.portrait)) as Texture2D
+        preview_button.expand_icon = true
+        preview_button.custom_minimum_size = Vector2(0, 190)
+        preview_button.text = ""
+        preview_button.focus_mode = Control.FOCUS_NONE
+        preview_button.pressed.connect(_tower_preview.bind(guardian))
+        stack.add_child(preview_button)
+
+        var open_button := premium_button(
+            _tower_text("Großansicht", "Open preview", "Abrir pré-visualização"),
+            stack,
+            _tower_preview.bind(guardian),
+            true)
+        open_button.custom_minimum_size.y = 44
+
+        var cards_button := button(
+            _tower_text("Sammelkarte", "Collectible card", "Carta colecionável"),
+            stack,
+            _tower_card.bind(guardian, false),
+            true)
+        cards_button.custom_minimum_size.y = 42
+    else:
+        _zen_campaign_paragraph(
+            stack,
+            _tower_text(
+                "Besiege den Wächter auf Etage %d.",
+                "Defeat the guardian on floor %d.",
+                "Derrota o guardião no piso %d."
+            ) % int(guardian.first_cycle_floor)
+        )
+
+func _tower_preview(guardian: Dictionary) -> void:
+    var box := _zen_campaign_story_box(_tower_name(guardian))
+    _tower_art(
+        box,
+        str(guardian.portrait),
+        minf(760.0, get_viewport().get_visible_rect().size.y * 0.74)
+    )
+    premium_button(
+        _tower_text("Sammelkarte ansehen", "View collectible card", "Ver carta colecionável"),
+        box,
+        _tower_card.bind(guardian, false),
+        true
+    )
+    button(
+        _tower_text("Galerie", "Gallery", "Galeria"),
+        box,
+        open_tower_gallery,
+        true
+    )
+    _enable_feedback_modal_scroll(box)
+
 func _tower_portrait_height() -> float:
     return clampf(
-        get_viewport().get_visible_rect().size.y*0.22,
-        130.0,210.0)
+        get_viewport().get_visible_rect().size.y * 0.30,
+        220.0,
+        340.0)

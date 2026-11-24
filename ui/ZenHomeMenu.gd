@@ -90,7 +90,8 @@ func configure(game: Node) -> void:
 
     var tower_button: Button = game.premium_button("Zen Tower",self,game.open_zen_tower)
     tower_button.name = "HomeZenTower"
-    tower_button.custom_minimum_size.y = 54
+    tower_button.custom_minimum_size.y = 48
+    _quiet_button(tower_button)
 
     var first_row: HBoxContainer = game.row(self)
     var worlds: Button = game.premium_button("Welten", first_row, game.open_worlds)

@@ -2,7 +2,7 @@ extends RefCounted
 
 const ASSETS = "res://data/zen_tower/assets.json"
 const LORE = "res://data/zen_tower/lore_en.json"
-const MAX_LIVES = 3
+const MAX_LIVES = 3 # Start lives for a new run
 
 static func defaults() -> Dictionary:
     return {
@@ -126,6 +126,7 @@ static func settle(data: Dictionary) -> Dictionary:
     var stage := int(state.floor)
     var reward := 0
     var unlocked := ""
+    var life_bonus := 0
 
     if winner == 1:
         state.record = maxi(int(state.record),stage)
@@ -133,6 +134,8 @@ static func settle(data: Dictionary) -> Dictionary:
 
         if is_boss(stage):
             reward += 15
+            life_bonus = 3
+            state.lives = int(state.lives) + life_bonus
             var info := floor_info(stage)
             if not info.is_empty():
                 var card_id: String = info.guardian.id
@@ -159,6 +162,7 @@ static func settle(data: Dictionary) -> Dictionary:
         "lives": state.lives,
         "record": state.record,
         "reward": reward,
+        "life_bonus": life_bonus,
         "unlocked_card": unlocked,
         "game_over": not bool(state.active)
     }

@@ -43,6 +43,7 @@ func run() -> void:
         var result := Tower.settle(data)
 
         check(int(result.get("winner",0))==1,"Boss victory")
+        check(int(result.get("life_bonus",0))==3,"Boss life bonus")
         check(int(state.floor)==stage+1,"Next floor")
         check(Tower.settle(data).is_empty(),"No duplicate reward")
 
@@ -50,6 +51,11 @@ func run() -> void:
     check(int(state.record)==75,"Endless record")
     check(Tower.section_index(61)==0,"Second cycle")
     check(Tower.is_boss(75),"Endless boss cycle")
+
+    state.lives = 3
+    state.active = true
+    state.game = {}
+    state.floor = 5
 
     for attempt in range(3):
         check(Tower.begin_floor(data),"Retry board")
