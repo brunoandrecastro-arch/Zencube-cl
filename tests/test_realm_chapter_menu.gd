@@ -6,6 +6,7 @@ const Story = preload("res://story/ZenRealmChronicles.gd")
 const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
 const SkyGarden = preload("res://story/ZenSkyGardenCampaign.gd")
 const Satori = preload("res://story/ZenSatoriCampaign.gd")
+const Fracture = preload("res://story/ZenFractureState.gd")
 var errors: int = 0
 var old_qa: bool
 var save_backup: PackedByteArray = PackedByteArray()
@@ -46,7 +47,7 @@ func check_chapter_visibility(controller: Node, chronicles: Node, moon_visible: 
 func run() -> void:
     var path: String = SaveManager.PATH
     var chapter_backups: Dictionary = {}
-    for chapter_path in [Satori.SAVE,Moon.SAVE]:
+    for chapter_path in [Satori.SAVE,Moon.SAVE,Fracture.PATH]:
         chapter_backups[chapter_path] = FileAccess.get_file_as_bytes(chapter_path) if FileAccess.file_exists(chapter_path) else null
     test(Satori.save_progress(Satori.defaults()),"reset isolated Satori fixture")
     test(Moon.save_progress(Moon.defaults()),"reset isolated Moon fixture")
@@ -54,6 +55,7 @@ func run() -> void:
     if existed: save_backup = FileAccess.get_file_as_bytes(path)
     var dark_kuze_gate = DarkKuzeFixture.new()
     test(dark_kuze_gate.grant(),"genuine finished Dark Kuze boss fight checkpoint")
+    test(Fracture.mark_awakening(),"isolated post-Act-IV cinematic checkpoint")
     var data: Dictionary = SaveManager.defaults()
     data.ascension.rank = 3
     data.ascension.completed = [true, true, true, false, false] # Real Zen Master entitlement survives ZenAscension.ensure()
