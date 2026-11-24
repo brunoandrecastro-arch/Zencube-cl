@@ -24,7 +24,10 @@ assert 'ShatteredMoonStoryRealmButton' in controller
 assert 'func _open_shattered_from_realms() -> void:' in controller
 assert 'ZenChronicles.open_shattered_moon_preview()' in controller
 assert '"ZenChroniclesLibraryScroll"' in chron
-assert '"ShatteredMoonLibraryShortcut"' in chron
+assert '"ShatteredMoonLibraryShortcut"' not in chron
+assert '"SkyGardenLibraryShortcut"' not in chron
+assert 'if Moon.unlocked():' in chron and 'if SkyGarden.unlocked():' in chron
+assert 'if Moon.unlocked():' in controller
 assert 'if _screen_name == "library" and is_instance_valid(_library_scroll):' in chron
 assert '_library_scroll.scroll_vertical = maxi(0, _library_scroll.scroll_vertical - roundi(event.relative.y))' in chron
-print("PASS: Shattered Moon shortcut in both Realm menus and native Android library drag")
+print("PASS: Shattered Moon gated Realm cards, no duplicate shortcuts and native Android library drag")

@@ -29,6 +29,8 @@ const CelestialReader = preload("res://story/ZenCelestialReader.gd")
 const SatoriReader = preload("res://story/ZenSatoriReader.gd")
 const ShatteredReader = preload("res://story/ZenShatteredMoonReader.gd")
 const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
+const SkyGarden = preload("res://story/ZenSkyGardenCampaign.gd")
+const SkyReader = preload("res://story/ZenSkyGardenReader.gd")
 const Satori = preload("res://story/ZenSatoriCampaign.gd")
 const ZenType = preload("res://ui/ZenRealm2Typography.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
@@ -87,6 +89,9 @@ var _ember_launch_requested: bool = false
 var _celestial_launch_requested: bool = false
 var _satori_launch_requested: bool = false
 var _shattered_launch_requested: bool = false
+var _sky_reader: CanvasLayer
+var _sky_launch_requested: bool = false
+var _classic_shop_requested: bool = false
 var _campaign_menu: CanvasLayer
 var _campaign_challenge_requested: Dictionary = {}
 var _campaign_practice_requested: int = -1
@@ -363,7 +368,13 @@ func _library_story_cards(parent: VBoxContainer) -> void:
     if bool(ActFour.load_progress().complete):
         var replay_button: Button = _make_button(campaign_ui("✦ Übergang erneut ansehen","✦ Replay the Awakening","✦ Rever o Despertar"),parent,replay_moon_shadow_transition)
         replay_button.name = "ReplayMoonShadowTransition"
-    _make_label(campaign_ui("Sky Garden · Epilog nach Abschluss aller Realms","Sky Garden · Epilogue after all Realms","Sky Garden · Epílogo após todos os Reinos"),parent,14,MUTED)
+    # Sky Garden is the 3x3 epilogue. It never replaces the five Classic worlds.
+    if SkyGarden.unlocked():
+        var sky_progress: Dictionary = SkyGarden.load_progress()
+        var sky_allowed: bool = SkyGarden.unlocked() or SkyGarden.qa_mode()
+        var sky_wins: int = int(bool(sky_progress.won[0])) + int(bool(sky_progress.won[1]))
+        var sky_hint: String = (campaign_ui("3×3-Epilog · Familienpartien %d/2","3×3 epilogue · Family games %d/2","Epílogo 3×3 · Jogos em família %d/2") % sky_wins) if sky_allowed else campaign_ui("Freischalten: Shattered Moon abschließen","Unlock: Complete Shattered Moon","Desbloquear: Concluir Shattered Moon")
+        _library_card(parent,"🌸 Sky Garden · The Return to Peace",SkyGarden.REALM_ART,sky_hint,sky_allowed,bool(sky_progress.completed),open_sky_garden_preview,"SkyGardenClassicStoryCard",true)
 
 func _library_realm_cards(parent: VBoxContainer) -> void:
     _make_label("Zen Ascend",parent,18,GOLD)
@@ -378,13 +389,20 @@ func _library_realm_cards(parent: VBoxContainer) -> void:
             hint = campaign_ui("Bosse %d/3 · Challenges %d/3 · 30 Seiten","Bosses %d/3 · Challenges %d/3 · 30 pages","Chefes %d/3 · Desafios %d/3 · 30 páginas") % [Realm2.bosses_won(4),Realm2.completed_count(Realm2.load_progress(),4)]
         var preview_art: String = "res://assets/abyss_of_memories/gameplay.webp" if i==1 and ResourceLoader.exists("res://assets/abyss_of_memories/gameplay.webp") else Realm2.SOURCE_ART[i]
         _library_card(parent,titles[i],preview_art,hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
-    var moon_access: bool = Moon.unlocked() or Moon.qa_mode()
-    var moon_data: Dictionary = Moon.load_progress()
-    var moon_wins: int = 0
-    for flag in moon_data.get("defeated",[]):
-        if bool(flag): moon_wins += 1
-    var moon_hint: String = (campaign_ui("Bosse %d/3 · 30 Seiten","Bosses %d/3 · 30 pages","Chefes %d/3 · 30 páginas") % moon_wins) if moon_access else campaign_ui("Freischalten: Satori abschließen","Unlock: Complete Satori","Desbloquear: Concluir Satori")
-    _library_card(parent,"🌙 Shattered Moon · The Last Crossing",Moon.REALM_ART,moon_hint,moon_access,bool(moon_data.get("completed",false)),open_shattered_moon_preview,"RealmCardShatteredMoon",true)
+    if Moon.unlocked():
+        var moon_access: bool = Moon.unlocked() or Moon.qa_mode()
+        var moon_data: Dictionary = Moon.load_progress()
+        var moon_wins: int = 0
+        for flag in moon_data.get("defeated",[]):
+            if bool(flag): moon_wins += 1
+        var moon_hint: String = (campaign_ui("Bosse %d/3 · 30 Seiten","Bosses %d/3 · 30 pages","Chefes %d/3 · 30 páginas") % moon_wins) if moon_access else campaign_ui("Freischalten: Satori abschließen","Unlock: Complete Satori","Desbloquear: Concluir Satori")
+        _library_card(parent,"🌙 Shattered Moon · The Last Crossing",Moon.REALM_ART,moon_hint,moon_access,bool(moon_data.get("completed",false)),open_shattered_moon_preview,"RealmCardShatteredMoon",true)
+    if SkyGarden.unlocked():
+        var sky_progress: Dictionary = SkyGarden.load_progress()
+        var sky_access: bool = SkyGarden.unlocked() or SkyGarden.qa_mode()
+        var sky_wins: int = int(bool(sky_progress.won[0])) + int(bool(sky_progress.won[1]))
+        var sky_hint: String = (campaign_ui("3×3-Epilog · Familienpartien %d/2","3×3 epilogue · Family games %d/2","Epílogo 3×3 · Jogos em família %d/2") % sky_wins) if sky_access else campaign_ui("Freischalten: Shattered Moon abschließen","Unlock: Complete Shattered Moon","Desbloquear: Concluir Shattered Moon")
+        _library_card(parent,"🌸 Sky Garden · The Return to Peace",SkyGarden.REALM_ART,sky_hint,sky_access,bool(sky_progress.completed),open_sky_garden_preview,"RealmCardSkyGarden",true)
 
 func open_library() -> void:
     _act_one_release_back()
@@ -414,9 +432,6 @@ func open_library() -> void:
     var active_tab: Button = story_tab if _library_tab==0 or realm_tab==null else realm_tab
     active_tab.add_theme_stylebox_override("normal",_style(Color("#5c4930"),12))
     active_tab.add_theme_color_override("font_color",Color("#ffe2a3"))
-    if _library_tab == 1:
-        var moon_shortcut: Button = _make_button("🌙 Shattered Moon · The Last Crossing",outer,open_shattered_moon_preview)
-        moon_shortcut.name = "ShatteredMoonLibraryShortcut"
     var scroll: ScrollContainer = ScrollContainer.new()
     scroll.name = "ZenChroniclesLibraryScroll"
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -567,7 +582,7 @@ func set_campaign_board_active(active: bool) -> void:
     _quick_button.visible = _show_quick and not active and _screen == null
 
 func is_open() -> bool:
-    return _screen != null or is_instance_valid(_abyss_reader) or is_instance_valid(_shadow_reader) or is_instance_valid(_ember_reader) or is_instance_valid(_campaign_menu)
+    return _screen != null or is_instance_valid(_abyss_reader) or is_instance_valid(_shadow_reader) or is_instance_valid(_ember_reader) or is_instance_valid(_sky_reader) or is_instance_valid(_campaign_menu)
 
 func _input(event: InputEvent) -> void:
     if _screen == null:
@@ -857,7 +872,7 @@ func release_story_audio(owner: Node) -> void:
     call_deferred("_resume_scene_music_if_free")
 
 func _resume_scene_music_if_free() -> void:
-    if campaign_audio_exclusive() or _shadow_launch_requested or _abyss_launch_requested or _ember_launch_requested or _celestial_launch_requested or _satori_launch_requested: return
+    if campaign_audio_exclusive() or _shadow_launch_requested or _abyss_launch_requested or _ember_launch_requested or _celestial_launch_requested or _satori_launch_requested or _shattered_launch_requested or _sky_launch_requested: return
     var scene: Node = get_tree().current_scene
     if is_instance_valid(scene) and scene.has_method("resume_campaign_music"):
         scene.call("resume_campaign_music")
@@ -1200,7 +1215,67 @@ func consume_shattered_moon_launch() -> bool:
     return flag
 
 func shattered_moon_story_completed() -> void:
-    # Sky Garden is future content; do not unlock or invent it here.
+    # Story epilogue follows the completed Moon chapter.
+    call_deferred("open_sky_garden_preview")
+
+# Sky Garden follows Shattered Moon, then shifts into real Classic 3x3 gameplay.
+# Both family matches and their progress are independent from rank/economy.
+func open_sky_garden_preview() -> void:
+    if not SkyGarden.unlocked() and not SkyGarden.qa_mode():
+        _sync_language()
+        _screen_name = "sky-locked"
+        var outer: VBoxContainer = _make_screen()
+        _make_label(campaign_ui("Sky Garden: Beende zuerst Shattered Moon.","Sky Garden: Complete Shattered Moon first.","Sky Garden: Conclui primeiro Shattered Moon."),outer,20,GOLD)
+        _make_button(campaign_ui("‹ Zur Bibliothek","‹ Back to library","‹ Voltar à biblioteca"),outer,open_library)
+        return
+    close_campaign_challenges()
+    if is_instance_valid(_abyss_reader): close_abyss_reader()
+    if is_instance_valid(_shadow_reader): close_shadow_reader()
+    if is_instance_valid(_ember_reader): close_ember_reader()
+    if is_instance_valid(_sky_reader): close_sky_garden_reader()
+    if _screen != null: close_chronicles()
+    _sky_reader = SkyReader.new()
+    _root.add_child(_sky_reader)
+    if _quick_button != null: _quick_button.hide()
+
+func close_sky_garden_reader() -> void:
+    if is_instance_valid(_sky_reader):
+        var previous: CanvasLayer = _sky_reader
+        _sky_reader = null
+        previous.call("stop_story_audio")
+        release_story_audio(previous)
+        previous.queue_free()
+    if _quick_button != null:
+        _quick_button.visible = _show_quick and not _campaign_board_active and _screen == null
+
+func request_sky_garden_battle() -> void:
+    if not SkyGarden.unlocked() and not SkyGarden.qa_mode(): return
+    if SkyGarden.next_action(SkyGarden.load_progress()).get("type")!="game": return
+    _sky_launch_requested = true
+    close_sky_garden_reader()
+    var current: Node = get_tree().current_scene
+    if current!=null and current.scene_file_path=="res://Main.tscn" and current.has_method("start_sky_garden_battle"):
+        _sky_launch_requested = false
+        current.call_deferred("start_sky_garden_battle")
+    else:
+        get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
+
+func request_classic_shop() -> void:
+    _classic_shop_requested = true
+    get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
+
+func consume_classic_shop() -> bool:
+    var requested: bool = _classic_shop_requested
+    _classic_shop_requested = false
+    return requested
+
+func consume_sky_garden_launch() -> bool:
+    var flag: bool = _sky_launch_requested
+    _sky_launch_requested = false
+    return flag
+
+func sky_garden_story_completed() -> void:
+    _library_tab = 0
     call_deferred("open_library")
 
 func satori_story_completed() -> void:

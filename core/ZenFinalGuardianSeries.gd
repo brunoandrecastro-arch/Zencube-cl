@@ -56,6 +56,19 @@ static func start_next(progress: Dictionary) -> bool:
     progress.game = {}
     return true
 
+# The first mover is not the same as the current turn on a resumed board.
+# Old saves have no starter field: reconstruct it from marks and the next turn.
+static func round_starter(game: Dictionary) -> int:
+    var stored: int = int(game.get("starter",0))
+    if stored in [1,2]: return stored
+    var marks: Array = game.get("cells",[])
+    var x: int = marks.count(1)
+    var o: int = marks.count(2)
+    if x>o: return 1
+    if o>x: return 2
+    var current: int = clampi(int(game.get("turn",1)),1,2)
+    return 3-current if int(game.get("result",0)) in [1,2,3] and x+o>0 else current
+
 static func text_score(progress: Dictionary) -> String:
     var tally: Dictionary = score(progress)
     return "Best of 3 · Kuze %d : %d Guardian" % [int(tally.player),int(tally.guardian)]

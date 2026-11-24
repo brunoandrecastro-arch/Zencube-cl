@@ -22,6 +22,7 @@ const Ember = preload("res://story/ZenEmberCampaign.gd")
 const Celestial = preload("res://story/ZenCelestialCampaign.gd")
 const Satori = preload("res://story/ZenSatoriCampaign.gd")
 const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
+const SkyGarden = preload("res://story/ZenSkyGardenCampaign.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const FinalSeries = preload("res://core/ZenFinalGuardianSeries.gd")
 const VictoryArtwork = preload("res://ui/ZenRealmVictoryArtwork.gd")
@@ -184,7 +185,7 @@ func _ready() -> void:
         SaveManager.save_data(data)
         call_deferred("show_rules")
     else:
-        call_deferred("show_mode_picker")
+        call_deferred("show_ascend_menu")
 
 # Existing shop IDs 0..13 always remain unchanged. In Base mode 4x4 uses
 # its own realm soundtrack; a manually owned track overrides it everywhere.
@@ -538,41 +539,137 @@ func show_ascend_menu() -> void:
     if realm_story_active:
         _realm_story_menu()
         return
-    # Realms/Challenges/Achievements are accessible from permanent bottom tabs.
-    var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",420)
-    _realm_story_compact(parts)
+    show_ascend_home()
+
+func _home_story_chapter() -> int:
+    for chapter in range(5):
+        if Realm2.unlocked(chapter) and not Realm2.ready(chapter): return chapter
+    if SkyGarden.unlocked(): return 6
+    if Moon.unlocked(): return 5
+    return 4
+
+func _home_button(parent: Node, caption: String, callback: Callable, featured: bool = false) -> Button:
+    var b := action(parent,caption,callback,true)
+    b.custom_minimum_size.y = 58 if featured else 48
+    b.add_theme_font_size_override("font_size",20 if featured else 15)
+    for state in ["normal","hover","pressed"]:
+        var color: Color = Color("d8bb7e") if featured else Color("193b31",0.95)
+        if state=="hover": color = Color("e5c98e") if featured else Color("315747")
+        b.add_theme_stylebox_override(state,style(color,16))
+    for key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+        b.add_theme_color_override(key,Color("102a25") if featured else Color("fff2d5"))
+    return b
+
+func show_ascend_home() -> void:
+    var parts: Dictionary = _realm_dialog("Zen Ascend",900)
+    var dialog: Control = parts.dialog
+    dialog.name = "AscendHomeScreen"
     var frame: PanelContainer = parts.frame
-    frame.anchor_top = 0.265
-    frame.anchor_bottom = 0.735
+    frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    frame.add_theme_stylebox_override("panel",style(Color("10271f",0.70),0))
+    var scroller: ScrollContainer = parts.scroller
+    var stack: VBoxContainer = scroller.get_parent() as VBoxContainer
+    for child in stack.get_children():
+        if child != scroller:
+            stack.remove_child(child)
+            child.queue_free()
     var body: VBoxContainer = parts.box
-    var first: HBoxContainer = HBoxContainer.new()
+    body.add_theme_constant_override("separation",9)
+    var chapter: int = _home_story_chapter()
+    var background := TextureRect.new()
+    var artwork: String = SkyGarden.REALM_ART if chapter==6 else (Moon.REALM_ART if chapter==5 else Realm2.SOURCE_ART[chapter])
+    if ResourceLoader.exists(artwork): background.texture = load(artwork)
+    background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    dialog.add_child(background)
+    dialog.move_child(background,0)
+    background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var top := HBoxContainer.new()
+    top.add_theme_constant_override("separation",8)
+    body.add_child(top)
+    var profile := _home_button(top,_campaign_phrase("Profil","Profile","Perfil"),show_statistics)
+    profile.name = "AscendHomeProfile"
+    var space := Control.new()
+    space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    top.add_child(space)
+    var settings := _home_button(top,"⚙",show_ascend_settings)
+    settings.name = "AscendSettingsEntry"
+    settings.tooltip_text = _campaign_phrase("Einstellungen","Settings","Definições")
+    settings.custom_minimum_size.x = 52
+    settings.size_flags_horizontal = Control.SIZE_SHRINK_END
+    var title := text(body,"Zen Ascend",33,Color("fff2d5"))
+    title.add_theme_font_override("font",ZenType.heading())
+    text(body,L("subtitle"),15,Color("d8bb7e"))
+    var hero := TextureRect.new()
+    hero.name = "AscendHomeCubePreview"
+    hero.custom_minimum_size.y = 190
+    hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(hero)
+    var preview := SubViewport.new()
+    preview.size = Vector2i(540,540)
+    preview.transparent_bg = true
+    preview.own_world_3d = true
+    preview.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+    hero.add_child(preview)
+    var preview_cube := AscendRenderer.new()
+    preview.add_child(preview_cube)
+    preview_cube.set_skin(int(data.economy.get("equipped",0)))
+    var example: Array = []
+    example.resize(Mode.CELLS)
+    example.fill(0)
+    for cell in [4,5,6]: example[cell] = 1
+    for cell in [0,9,15]: example[cell] = 2
+    preview_cube.repaint(example,[])
+    preview_cube.pivot.rotation = Vector3(0.40,-0.58,0.0)
+    hero.texture = preview.get_texture()
+    var destination: String = "Sky Garden" if chapter==6 else ("Shattered Moon" if chapter==5 else Realm2.REALM_NAMES[chapter])
+    text(body,destination,21,Color("d8bb7e"))
+    text(body,_campaign_phrase("Deine Reise geht weiter.","Your journey continues.","A tua viagem continua."),15,Color("fff2d5"))
+    _home_button(body,_campaign_phrase("Kampagne fortsetzen","Continue Campaign","Continuar campanha"),_continue_ascend_campaign,true).name = "AscendHomeCampaign"
+    _home_button(body,"Zen Chronicles",_open_campaign_library_from_realms).name = "AscendHomeChronicles"
+    var first := HBoxContainer.new()
     first.add_theme_constant_override("separation",8)
     body.add_child(first)
-    var begin: Button = action(first,Z("Neue Partie"),show_mode_picker,true)
-    var stats: Button = action(first,Z("Statistik & Rang"),show_statistics)
-    begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var second: HBoxContainer = HBoxContainer.new()
+    _home_button(first,L("realms"),show_realms).name = "AscendHomeRealms"
+    _home_button(first,L("challenges"),_open_campaign_trials_from_realms.bind(mini(chapter,4))).name = "AscendHomeChallenges"
+    var second := HBoxContainer.new()
     second.add_theme_constant_override("separation",8)
     body.add_child(second)
-    var rules: Button = action(second,Z("Regeln ansehen"),show_rules)
-    var chronicles: Button = action(second,"Zen Chronicles",_open_campaign_library_from_realms)
-    rules.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    chronicles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var third: HBoxContainer = HBoxContainer.new()
+    _home_button(second,_achievements_label(),show_realm_titles).name = "AscendHomeAchievements"
+    var shop := _home_button(second,"Zen Shop",_open_shop_from_ascend)
+    shop.name = "AscendHomeShop"
+    shop.disabled = move_count()>0 and result==0
+    var third := HBoxContainer.new()
     third.add_theme_constant_override("separation",8)
     body.add_child(third)
-    var settings: Button = action(third,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
-    settings.name = "AscendSettingsEntry"
-    var home: Button = action(third,Z("Hauptmenü"),return_home)
-    settings.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    home.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    for control in [begin,stats,rules,chronicles,settings,home]:
-        control.custom_minimum_size.y = 52
-        control.add_theme_font_size_override("font_size",16)
+    _home_button(third,_campaign_phrase("Spielmodi","Game Modes","Modos de jogo"),show_mode_picker).name = "AscendHomeGameModes"
+    _home_button(third,_campaign_phrase("Spielanleitung","How to Play","Como jogar"),show_rules).name = "AscendHomeHowToPlay"
+    _home_button(body,_campaign_phrase("Partie fortsetzen","Resume match","Retomar partida"),_close_realm_dialog.bind(dialog)).name = "AscendHomeResume"
+    _home_button(body,_campaign_phrase("Zum Hauptmenü","Back to main menu","Voltar ao menu principal"),return_home)
     if Realm2.qa_mode():
         action(body,"Ember Boss · VFX Test",_show_ember_vfx_test)
     _open_realm_dialog(parts)
+
+func _continue_ascend_campaign() -> void:
+    if move_count()>0 and result==0:
+        var parts: Dictionary = _realm_dialog(_campaign_phrase("Laufende Partie","Match in progress","Partida em curso"),420)
+        text(parts.box,_campaign_phrase("Beende zuerst deine laufende Partie.","Finish your current match first.","Termina primeiro a partida atual."),17)
+        action(parts.box,_campaign_phrase("Partie fortsetzen","Resume match","Retomar partida"),_close_realm_dialog.bind(parts.dialog),true)
+        _open_realm_dialog(parts)
+        return
+    var chapter: int = _home_story_chapter()
+    if chapter==6: _open_sky_from_realms()
+    elif chapter==5: _open_shattered_from_realms()
+    else: _open_campaign_story_from_match(chapter)
+
+func _open_shop_from_ascend() -> void:
+    if move_count()>0 and result==0: return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    SaveManager.save_data(data)
+    ZenChronicles.request_classic_shop()
 
 func _save_ascend_setting(key: String, value: Variant) -> void:
     data.settings[key] = value
@@ -800,6 +897,14 @@ func _restart_boss_round() -> void:
 func _guardian_series_score(progress: Dictionary) -> String:
     var tally: Dictionary = FinalSeries.score(progress)
     return _campaign_phrase("Best of 3 · Kuze %d : %d Wächter","Best of 3 · Kuze %d : %d Guardian","Melhor de 3 · Kuze %d : %d Guardião") % [int(tally.player),int(tally.guardian)]
+
+func _boss_starter_caption(game: Dictionary) -> String:
+    var starter: int = FinalSeries.round_starter(game)
+    var caption: String = _campaign_phrase("Du beginnst (X)","You start (X)","Começas (X)") if starter==1 else _campaign_phrase("Boss beginnt (O)","Boss starts (O)","O chefe começa (O)")
+    if move_count()>0:
+        var next: String = _campaign_phrase("Du bist am Zug (X)","Your turn (X)","A tua vez (X)") if turn==1 else _campaign_phrase("Boss am Zug (O)","Boss turn (O)","Vez do chefe (O)")
+        caption = (_campaign_phrase("Start: Du (X)","Started: You (X)","Início: Tu (X)") if starter==1 else _campaign_phrase("Start: Boss (O)","Started: Boss (O)","Início: Chefe (O)")) + " · " + next
+    return caption
 
 func _guardian_series_panel(body: VBoxContainer, progress: Dictionary) -> void:
     var tally: Dictionary = FinalSeries.score(progress)
@@ -1065,27 +1170,12 @@ func finish() -> void:
         if result != 3: outcome = 1 if int(owners[result-1]) == 0 else -1
         var lines_won: Array = Mode.winning_lines(cells,lines,result) if outcome == 1 else []
         last_realm_awards = Realms.record_bot_match(data,match_realm,outcome,bot_level,move_count(),lines_won,match_blocked_threat)
-        # Normal Zen Ascend matches earn eight Realm challenges too.
-        # Celebrate newly earned tasks once, using one full-screen choir ceremony
-        # even when a single victory completes several tasks at once.
-        var new_challenge_names: Array[String] = []
-        var first_challenge_description: String = ""
+        # Queue each newly earned task separately; Continue advances the queue.
         for earned_task_id in last_realm_awards.get("new_tasks",[]):
             for task in Realms.TASKS[match_realm]:
                 if str(task.id) == str(earned_task_id):
-                    new_challenge_names.append(str(task.title))
-                    if first_challenge_description.is_empty():
-                        first_challenge_description = str(task.get(lang(),task.get("en","")))
+                    queued_unlocks.append({"kind":"challenge","realm":match_realm,"name":str(task.title),"quote":Realms.task_description(task,lang())})
                     break
-        if not new_challenge_names.is_empty():
-            var challenge_heading: String = new_challenge_names[0]
-            var challenge_detail: String = first_challenge_description
-            if new_challenge_names.size() > 1:
-                challenge_heading = _campaign_phrase("%d Realm-Herausforderungen","%d Realm Challenges","%d Desafios de Reino") % new_challenge_names.size()
-                challenge_detail = ""
-                for task_title in new_challenge_names:
-                    challenge_detail += ("\n" if not challenge_detail.is_empty() else "") + "✓ " + task_title
-            queued_unlocks.append({"kind":"challenge","realm":match_realm,"name":challenge_heading,"quote":challenge_detail})
         for secret in Achievements.claim_after_match(data,match_realm):
             queued_unlocks.append({"kind":"achievement","realm":match_realm,"name":str(secret.name),"quote":str(secret.quote)})
         if bool(last_realm_awards.get("realm_completed",false)):
@@ -1355,83 +1445,122 @@ func show_realms() -> void:
     Realms.ensure(data)
     var ui_parts: Dictionary = _realm_dialog("Zen Ascend · " + L("realms"))
     var body: VBoxContainer = ui_parts.box
-    text(body,L("subtitle"),15,Color("567b72"))
-    text(body,L("total") + ": %d/32 · " % Realms.total_count(data) + Realms.overall_title_local(data,lang()),16,Color("bf9d65"))
-    # Story and boss progress live exclusively in Zen Realm Chronicles.
-    var chronicles_button: Button = action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true)
-    chronicles_button.name = "Campaign2ChroniclesEntry"
-    for i in range(4):
-        var number: int = i
-        var allowed: bool = Realms.unlocked(data,i)
-        var card: PanelContainer = PanelContainer.new()
-        card.add_theme_stylebox_override("panel",style(_realm_tone(i),18))
-        body.add_child(card)
-        var column: VBoxContainer = VBoxContainer.new()
-        column.add_theme_constant_override("separation",5)
-        card.add_child(column)
-        text(column,Realms.realm_name(i,lang()) + ("  🔒" if not allowed else ""),20,Color("f7dfaa"))
-        var thumb: TextureRect = TextureRect.new()
-        thumb.texture = load(Realms.REALM_ART[i])
-        thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-        thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-        thumb.custom_minimum_size = Vector2(0,112)
-        thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        column.add_child(thumb)
-        var amount: int = Realms.count(data,i)
-        text(column,("Zen Ascend" if lang()!="pt" else "Ascensão Zen") + " · " + L("progress") + ": %d/8  ·  " % amount + L("matches") + ": %d" % int(Realms.state(data).stats[i].wins),14)
-        var story_chapter: int = [0,2,3,4][i]
-        if Realm2.unlocked(story_chapter):
-            text(column,"Zen Chronicles · " + ("Bosse" if lang()=="de" else ("Chefes" if lang()=="pt" else "Bosses")) + ": %d/3 · " % Realm2.bosses_won(story_chapter) + L("challenges") + ": %d/3" % Realm2.completed_count(Realm2.load_progress(),story_chapter),13,Color("e3d5ba"))
-        var rank_name: String = Realms.title_for_realm(data,i,lang())
-        if rank_name != "—": text(column,rank_name,14,Color("e2ca8c"))
-        if amount == 8: text(column,"🏵 " + L("realm_complete") + " · 🍃 250",13,Color("c9e6b1"))
-        if not allowed:
-            text(column,L("locked") + " · Zen Ascend 8/8: " + _realm_unlocked_hint(i),13)
-        var selected: bool = i == realm_index()
-        var choose: Button
-        if not allowed:
-            choose = action(column,"🔒  " + ("Freischaltung ansehen" if lang() == "de" else "View unlock requirements"),_show_realm_requirements.bind(number),false)
-        else:
-            choose = action(column,L("selected") if selected else L("select"),_choose_realm_from_dialog.bind(number,ui_parts.dialog),true)
-            choose.disabled = selected or (move_count() > 0 and result == 0)
-        if not allowed and Realm2.unlocked(story_chapter):
-            action(column,_campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história"),_open_campaign_story_from_match.bind(story_chapter),true)
-        if i==0:
-            action(column,"Realm Challenges · %d/3" % Realm2.completed_count(Realm2.load_progress(),0),_open_campaign_trials_from_realms.bind(0))
-            _add_abyss_realm_card(body)
+    action(body,"Zen Chronicles",_open_campaign_library_from_realms,true).name = "Campaign2ChroniclesEntry"
+    # The story catalogue has five Realms. The legacy four-slot bonus
+    # challenges stay separate and never determine story access.
+    for chapter in range(5):
+        _add_story_realm_card(body,chapter)
     # Shattered Moon is a post-Satori story chapter, not a fifth ordinary 8-task
     # Zen Ascend realm. Show a discoverable route without changing the old gates.
-    var moon_allowed: bool = Moon.unlocked() or Moon.qa_mode()
-    var moon_progress: Dictionary = Moon.load_progress()
-    var moon_bosses: int = 0
-    for flag in moon_progress.get("defeated",[]):
-        if bool(flag): moon_bosses += 1
-    var moon_card := PanelContainer.new()
-    moon_card.name = "ShatteredMoonStoryRealmCard"
-    moon_card.add_theme_stylebox_override("panel",style(Color("#222b39"),18))
-    body.add_child(moon_card)
-    var moon_column := VBoxContainer.new()
-    moon_column.add_theme_constant_override("separation",6)
-    moon_card.add_child(moon_column)
-    text(moon_column,"🌙 Shattered Moon · The Last Crossing" + ("" if moon_allowed else "  🔒"),19,Color("f7dfaa"))
-    text(moon_column,_campaign_phrase("Zen Chronicles · Story-Realm","Zen Chronicles · Story realm","Zen Chronicles · Reino da história"),14,Color("d5ba85"))
-    var moon_thumb := TextureRect.new()
-    if ResourceLoader.exists(Moon.REALM_ART):
-        moon_thumb.texture = load(Moon.REALM_ART)
-    moon_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    moon_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-    moon_thumb.custom_minimum_size.y = 112
-    moon_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    moon_column.add_child(moon_thumb)
-    text(moon_column,_campaign_phrase("Bosse: %d/3 · 30 Seiten","Bosses: %d/3 · 30 pages","Chefes: %d/3 · 30 páginas") % moon_bosses,14)
-    if not moon_allowed:
-        text(moon_column,_campaign_phrase("Freischaltung: Satori-Geschichte abschließen","Unlock: Finish the Satori story","Desbloquear: Concluir a história de Satori"),13,Color("d5ba85"))
-    var moon_entry: Button = action(moon_column,
-        _campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história") if moon_allowed else _campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),
-        _open_shattered_from_realms,true)
-    moon_entry.name = "ShatteredMoonStoryRealmButton"
+    if Moon.unlocked():
+        var moon_allowed: bool = Moon.unlocked() or Moon.qa_mode()
+        var moon_progress: Dictionary = Moon.load_progress()
+        var moon_bosses: int = 0
+        for flag in moon_progress.get("defeated",[]):
+            if bool(flag): moon_bosses += 1
+        var moon_card := PanelContainer.new()
+        moon_card.name = "ShatteredMoonStoryRealmCard"
+        moon_card.add_theme_stylebox_override("panel",style(Color("#222b39"),18))
+        body.add_child(moon_card)
+        var moon_column := VBoxContainer.new()
+        moon_column.add_theme_constant_override("separation",6)
+        moon_card.add_child(moon_column)
+        text(moon_column,"🌙 Shattered Moon · The Last Crossing" + ("" if moon_allowed else "  🔒"),19,Color("f7dfaa"))
+        text(moon_column,_campaign_phrase("Zen Chronicles · Story-Realm","Zen Chronicles · Story realm","Zen Chronicles · Reino da história"),14,Color("d5ba85"))
+        var moon_thumb := TextureRect.new()
+        if ResourceLoader.exists(Moon.REALM_ART):
+            moon_thumb.texture = load(Moon.REALM_ART)
+        moon_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        moon_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        moon_thumb.custom_minimum_size.y = 112
+        moon_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        moon_column.add_child(moon_thumb)
+        text(moon_column,_campaign_phrase("Bosse: %d/3 · 30 Seiten","Bosses: %d/3 · 30 pages","Chefes: %d/3 · 30 páginas") % moon_bosses,14)
+        if not moon_allowed:
+            text(moon_column,_campaign_phrase("Freischaltung: Satori-Geschichte abschließen","Unlock: Finish the Satori story","Desbloquear: Concluir a história de Satori"),13,Color("d5ba85"))
+        var moon_entry: Button = action(moon_column,
+            _campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história") if moon_allowed else _campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),
+            _open_shattered_from_realms,true)
+        moon_entry.name = "ShatteredMoonStoryRealmButton"
+    if SkyGarden.unlocked():
+        var sky_card := PanelContainer.new()
+        sky_card.name = "SkyGardenEpilogueRealmCard"
+        sky_card.add_theme_stylebox_override("panel",style(Color("#243a31"),18))
+        body.add_child(sky_card)
+        var sky_column := VBoxContainer.new()
+        sky_card.add_child(sky_column)
+        text(sky_column,"🌸 Sky Garden · The Return to Peace",19,Color("f7dfaa"))
+        var sky_thumb := TextureRect.new()
+        if ResourceLoader.exists(SkyGarden.REALM_ART): sky_thumb.texture = load(SkyGarden.REALM_ART)
+        sky_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        sky_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        sky_thumb.custom_minimum_size.y = 112
+        sky_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        sky_column.add_child(sky_thumb)
+        text(sky_column,_campaign_phrase("3×3-Epilog","3×3 epilogue","Epílogo 3×3"),14)
+        action(sky_column,_campaign_phrase("Geschichte betreten","Enter Story World","Entrar na história"),_open_sky_from_realms,true)
     text(body,L("bot_only"),13,Color("d5ba85"))
     _open_realm_dialog(ui_parts)
+
+func _open_sky_from_realms() -> void:
+    if not SkyGarden.unlocked(): return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    ZenChronicles.open_sky_garden_preview()
+
+func _add_story_realm_card(body: VBoxContainer, chapter: int) -> void:
+    var legacy_index: int = [0,-1,1,2,3][chapter]
+    var allowed: bool = Realm2.unlocked(chapter)
+    var card := PanelContainer.new()
+    card.name = "Campaign2AbyssRealmCard" if chapter==1 else "StoryRealmCard%d" % chapter
+    card.add_theme_stylebox_override("panel",style(Color("252034") if chapter==1 else _realm_tone(legacy_index),18))
+    card.mouse_filter = Control.MOUSE_FILTER_PASS
+    body.add_child(card)
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation",5)
+    card.add_child(column)
+    text(column,Realm2.REALM_NAMES[chapter] + ("" if allowed else "  🔒"),20,Color("f7dfaa"))
+    var thumb := TextureRect.new()
+    thumb.texture = Abyss.battle_backdrop() if chapter==1 else load(Realm2.SOURCE_ART[chapter])
+    thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    thumb.custom_minimum_size = Vector2(0,112)
+    thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    column.add_child(thumb)
+    var bosses: int = Realm2.bosses_won(chapter)
+    var tasks: int = Realm2.completed_count(Realm2.load_progress(),chapter)
+    text(column,_campaign_phrase("Bosse: %d/3 · Challenges: %d/3","Bosses: %d/3 · Challenges: %d/3","Chefes: %d/3 · Desafios: %d/3") % [bosses,tasks],15)
+    if allowed:
+        action(column,_campaign_phrase("Realm betreten","Enter Realm","Entrar no reino"),_open_campaign_story_from_match.bind(chapter),true)
+        action(column,_campaign_phrase("Realm-Challenges","Realm Challenges","Desafios do reino")+" · %d/3" % tasks,_open_campaign_trials_from_realms.bind(chapter))
+        if legacy_index>=0:
+            action(column,_campaign_phrase("Bonus-Challenges","Bonus Challenges","Desafios extra")+" · %d/8" % Realms.count(data,legacy_index),_show_bonus_realm_challenges.bind(legacy_index))
+    else:
+        action(column,_campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),_show_story_realm_requirements.bind(chapter))
+
+func _show_story_realm_requirements(chapter: int) -> void:
+    var parts: Dictionary = _realm_dialog(Realm2.REALM_NAMES[chapter],620)
+    var body: VBoxContainer = parts.box
+    if chapter==0:
+        text(body,_campaign_phrase("Schließe Act IV ab.","Complete Act IV.","Conclui o Ato IV."),17)
+    else:
+        var previous: int = chapter-1
+        text(body,_campaign_phrase("Schließe %s ab.","Complete %s.","Conclui %s.") % Realm2.REALM_NAMES[previous],18,Color("f6daa0"))
+        var bosses: int = Realm2.bosses_won(previous)
+        var tasks: int = Realm2.completed_count(Realm2.load_progress(),previous)
+        text(body,_campaign_phrase("Bosse: %d/3","Bosses: %d/3","Chefes: %d/3") % bosses,16)
+        _progress_meter(body,bosses,3)
+        text(body,_campaign_phrase("Challenges: %d/3","Challenges: %d/3","Desafios: %d/3") % tasks,16)
+        _progress_meter(body,tasks,3)
+        text(body,_campaign_phrase("Kapitelende bestätigen.","Finish the chapter after the final boss.","Conclui o capítulo após o chefe final."),15)
+    action(body,L("realms"),show_realms,true)
+    _open_realm_dialog(parts)
+
+func _show_bonus_realm_challenges(realm: int) -> void:
+    var parts: Dictionary = _realm_dialog(_campaign_phrase("Optionale Bonus-Challenges","Optional Bonus Challenges","Desafios extra opcionais"))
+    _challenge_items(parts.box,realm)
+    if Realms.unlocked(data,realm):
+        action(parts.box,_campaign_phrase("Bonus-Realm betreten","Enter Bonus Realm","Entrar no reino extra"),_choose_realm_from_dialog.bind(realm,parts.dialog),true)
+    _open_realm_dialog(parts)
 
 func _preview_mirror_shatter_qa() -> void:
     if not RealmStory.qa_mode(): return
@@ -1609,26 +1738,27 @@ func show_realm_titles() -> void:
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + _achievements_label())
     var body: VBoxContainer = parts.box
     text(body,"Secret Achievements   ·   %d / %d" % [Achievements.secret_count(data),Achievements.SECRETS.size()],18,Color("f3dca4"))
-    for realm in range(4):
+    for realm in [0,Achievements.ABYSS_REALM,1,2,3]:
         var group: PanelContainer = PanelContainer.new()
-        group.add_theme_stylebox_override("panel",style(_realm_tone(realm),18))
+        group.add_theme_stylebox_override("panel",style(Color("252034") if realm==Achievements.ABYSS_REALM else _realm_tone(realm),18))
         group.mouse_filter = Control.MOUSE_FILTER_PASS
         body.add_child(group)
         var inside: VBoxContainer = VBoxContainer.new()
         inside.add_theme_constant_override("separation",9)
         group.add_child(inside)
-        text(inside,Realms.realm_name(realm,lang()),21,Color("f7dda5"))
+        text(inside,Achievements.realm_name(realm,lang()),21,Color("f7dda5"))
         var picture: TextureRect = TextureRect.new()
-        picture.texture = load(Realms.REALM_ART[realm])
+        picture.texture = load(Achievements.realm_art(realm))
         picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
         picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         picture.custom_minimum_size.y = 160
         picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
         inside.add_child(picture)
-        var master: String = Achievements.MAIN_TITLES[realm]
-        var title_earned: bool = Realms.count(data,realm) == 8
-        text(inside,("✦ " if title_earned else "🔒 ") + master + ("  ·  8/8" if title_earned else "  ·  Locked"),18,Color("d1eabd") if title_earned else Color("d9c8ac"))
-        action(inside,"View Realm Title",_show_achievement_details.bind(realm,{"id":"main","name":master,"condition":"Complete all 8 Realm Challenges.","quote":Achievements.main_quote(realm)},title_earned),false)
+        var master: String = Achievements.title_name(realm)
+        var title_earned: bool = Achievements.main_title(data,realm)!="—"
+        var title_condition: String = "Complete the Abyss chapter and its three Realm Challenges." if realm==Achievements.ABYSS_REALM else "Complete all 8 Realm Challenges."
+        text(inside,("✦ " if title_earned else "🔒 ") + master + ("  ·  Unlocked" if title_earned else "  ·  Locked"),18,Color("d1eabd") if title_earned else Color("d9c8ac"))
+        action(inside,"View Realm Title",_show_achievement_details.bind(realm,{"id":"main","name":master,"condition":title_condition,"quote":Achievements.main_quote(realm)},title_earned),false)
         for secret in Achievements.SECRETS:
             if int(secret.realm) != realm: continue
             var unlocked: bool = Achievements.earned(data,str(secret.id))
@@ -1643,7 +1773,7 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     var parts: Dictionary = _realm_dialog(title_text,610)
     var body: VBoxContainer = parts.box
     var picture: TextureRect = TextureRect.new()
-    picture.texture = load(Realms.REALM_ART[realm])
+    picture.texture = load(Achievements.realm_art(realm))
     picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     picture.custom_minimum_size.y = 250
@@ -1753,7 +1883,7 @@ func _realm_boss_portrait_height() -> float:
     return clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,820.0)
 
 func _realm_boss_result_height() -> float:
-    return clampf(get_viewport().get_visible_rect().size.y * 0.29,400.0,520.0)
+    return _realm_boss_portrait_height()
 
 func _realm_boss_primary_action(parts: Dictionary, caption: String, callback: Callable) -> void:
     # Play remains visible beneath the scrollable, full-height boss artwork.
@@ -2076,6 +2206,11 @@ func _realm_story_menu() -> void:
     text(body,current_boss,20,Color("#eddaae"))
     action(body,RealmStory.text_for(lang(),"resume"),_realm_story_begin,true)
     action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 # Exit the story without returning to Main. The ordinary Ascend 4x4
@@ -2174,10 +2309,12 @@ func start_abyss_battle() -> void:
 
 func _abyss_save() -> bool:
     if not abyss_active: return false
+    var starter: int = FinalSeries.round_starter(abyss_progress.get("game",{}))
     abyss_progress.game = {
         "boss":abyss_index,
         "cells":cells.duplicate(),
         "turn":turn,
+        "starter":starter,
         "result":result,
         "last_human":abyss_last_human
     }
@@ -2212,10 +2349,7 @@ func _abyss_intro() -> void:
     ]
     text(body,opening[abyss_index],16,Color("#dfd4e5"))
     if abyss_index==2: _guardian_series_panel(body,abyss_progress)
-    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
-    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
-    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
-    text(body,starter,14,Color("#e1c99d"))
+    text(body,_boss_starter_caption(abyss_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_abyss_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
     _open_realm_dialog(parts)
@@ -2296,6 +2430,11 @@ func _abyss_menu() -> void:
     text(body,Abyss.BOSS_NAMES[clampi(abyss_index,0,2)],20,Color("#dfd4e5"))
     action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_abyss_begin,true)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 func _abyss_back_to_reader(open_reader: bool = true) -> void:
@@ -2372,10 +2511,12 @@ func start_shadow_battle() -> void:
 
 func _shadow_save() -> bool:
     if not shadow_active: return false
+    var starter: int = FinalSeries.round_starter(shadow_progress.get("game",{}))
     shadow_progress.game = {
         "boss":shadow_index,
         "cells":cells.duplicate(),
         "turn":turn,
+        "starter":starter,
         "result":result,
         "last_human":shadow_last_human
     }
@@ -2410,10 +2551,7 @@ func _shadow_intro() -> void:
     ]
     text(body,opening[shadow_index],16,Color("#dfd4e5"))
     if shadow_index==2: _guardian_series_panel(body,shadow_progress)
-    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
-    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
-    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
-    text(body,starter,14,Color("#e1c99d"))
+    text(body,_boss_starter_caption(shadow_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_shadow_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
     _open_realm_dialog(parts)
@@ -2494,6 +2632,11 @@ func _shadow_menu() -> void:
     text(body,Shadow.BOSS_NAMES[clampi(shadow_index,0,2)],20,Color("#dfd4e5"))
     action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_shadow_begin,true)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 func _shadow_back_to_reader(open_reader: bool = true) -> void:
@@ -2600,10 +2743,12 @@ func _start_guardian_battle() -> void:
 
 func _ember_save() -> bool:
     if not ember_active: return false
+    var starter: int = FinalSeries.round_starter(ember_progress.get("game",{}))
     ember_progress.game = {
         "boss":ember_index,
         "cells":cells.duplicate(),
         "turn":turn,
+        "starter":starter,
         "result":result,
         "last_human":ember_last_human
     }
@@ -2641,10 +2786,7 @@ func _ember_intro() -> void:
     if guardian_chapter==5: opening = ["The echoes have not faded.","Cross the silence with an open heart.","What can you release beneath the broken moon?"]
     text(body,opening[ember_index],16,Color("#dfd4e5"))
     _guardian_series_panel(body,ember_progress)
-    var starter: String = "Du beginnst (X)" if turn == 1 else "Boss beginnt (O)"
-    if lang() == "en": starter = "You start (X)" if turn == 1 else "Boss starts (O)"
-    elif lang() == "pt": starter = "Começas (X)" if turn == 1 else "O chefe começa (O)"
-    text(body,starter,14,Color("#e1c99d"))
+    text(body,_boss_starter_caption(ember_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_ember_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
     _open_realm_dialog(parts)
@@ -2726,6 +2868,11 @@ func _ember_menu() -> void:
     text(body,ember_model.BOSS_NAMES[clampi(ember_index,0,2)],20,Color("#dfd4e5"))
     action(body,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha"),_ember_begin,true)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 func _ember_back_to_reader(open_reader: bool = true) -> void:
@@ -2895,6 +3042,11 @@ func _campaign_practice_menu() -> void:
     var body: VBoxContainer = parts.box
     action(body,_campaign_phrase("⚔ Partie fortsetzen","⚔ Continue Match","⚔ Continuar partida"),_campaign_practice_begin,true)
     action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
+    var settings: Button = action(body,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
+    settings.name = "AscendBattleSettingsEntry"
+    var pause_frame: PanelContainer = parts.frame
+    pause_frame.anchor_top = 0.31
+    pause_frame.anchor_bottom = 0.69
     _open_realm_dialog(parts)
 
 func _campaign_practice_begin() -> void:

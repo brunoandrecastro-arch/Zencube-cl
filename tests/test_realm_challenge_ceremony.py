@@ -26,7 +26,8 @@ for character in ("mist_guardian","mirror_novice","veil_monk"):
 normal = game.split("last_realm_awards = Realms.record_bot_match(",1)[1].split("for secret in Achievements.claim_after_match(",1)[0]
 assert 'for earned_task_id in last_realm_awards.get("new_tasks",[])' in normal
 assert 'queued_unlocks.append({"kind":"challenge","realm":match_realm' in normal
-assert 'new_challenge_names.size() > 1' in normal, "Batch one choir ceremony for simultaneous rewards"
+assert 'new_challenge_names.size() > 1' not in normal, "Never batch simultaneous rewards"
+assert 'Realms.task_description(task,lang())' in normal
 queue = game.split("func _show_next_unlock() -> void:",1)[1].split("func show_fully_aware(",1)[0]
 assert 'unlock.name = "ZenAscendChallengeEarnedCeremony"' in queue
 assert 'str(item.quote),bool(data.settings.get("sound",true)),[world_music],lang())' in queue
