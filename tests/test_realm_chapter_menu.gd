@@ -3,6 +3,8 @@ const DarkKuzeFixture = preload("res://tests/ActFourGateFixture.gd")
 # Smoke-test the real Zen Chronicles chapter overview and isolated QA buttons
 # for the two new Realms. Does not start a new release or change game stats.
 const Story = preload("res://story/ZenRealmChronicles.gd")
+const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
+const SkyGarden = preload("res://story/ZenSkyGardenCampaign.gd")
 var errors: int = 0
 var old_qa: bool
 var save_backup: PackedByteArray = PackedByteArray()
@@ -81,7 +83,8 @@ func run() -> void:
                 for item in content.get_children():
                     for card in item.get_children():
                         if card is PanelContainer: count += 1
-                test(count==6,"six Realm cards including Abyss and Shattered Moon")
+                var expected: int = 5 + int(Moon.unlocked()) + int(SkyGarden.unlocked())
+                test(count==expected,"five main Realms plus only earned secret chapters")
                 var ordered: Array[String] = []
                 for item in content.get_children():
                     for card in item.get_children():
@@ -91,10 +94,18 @@ func run() -> void:
                             ordered.append(str(card.name))
                 test(modal.find_child("Campaign2AbyssRealmCard",true,false)!=null,"Abyss card exists")
                 test(modal.find_child("Campaign2ChroniclesEntry",true,false)!=null,"dedicated Chronicles entry exists")
-                test(ordered.size()==6 and ordered[1]=="Campaign2AbyssRealmCard","Abyss is immediately after Shadow")
-                test(ordered.size()==6 and ordered[5]=="ShatteredMoonStoryRealmCard","Shattered Moon is the final story-only Realm card")
-                test(modal.find_child("ShatteredMoonStoryRealmButton",true,false)!=null,
-                    "Shattered Moon has a direct Story Realm entry")
+                test(ordered.size()>=5 and ordered[1]=="Campaign2AbyssRealmCard","Abyss is immediately after Shadow")
+                test((modal.find_child("ShatteredMoonStoryRealmCard",true,false)!=null)==Moon.unlocked(),
+                    "Shattered Moon remains hidden until Satori is finished")
+                test((modal.find_child("SkyGardenEpilogueRealmCard",true,false)!=null)==SkyGarden.unlocked(),
+                    "Sky Garden remains hidden until Shattered Moon is finished")
+                test((modal.find_child("ShatteredMoonStoryRealmButton",true,false)!=null)==Moon.unlocked(),
+                    "Shattered Moon has a direct story entry only when earned")
+        controller.call("show_ascend_home")
+        var home: Node = controller.get("active_realm_dialog")
+        test(home!=null and home.find_child("AscendHomeCubePreview",true,false)!=null,"4x4 home has an independent cube preview")
+        test(home!=null and home.find_child("AscendHomeCampaign",true,false)!=null,"4x4 home exposes Continue Campaign")
+        test(home!=null and home.find_child("AscendSettingsEntry",true,false)!=null,"4x4 home exposes Settings")
         chronicles.call("open_library")
         test(chronicles.get("_screen_name")=="library","Zen Realm Chronicles is the sole story entry")
         var screen: Node = chronicles.get("_screen")

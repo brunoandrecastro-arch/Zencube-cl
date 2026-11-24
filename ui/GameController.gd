@@ -178,6 +178,8 @@ func _ready() -> void:
         open_menu()
     if chronicles.call("consume_sky_garden_launch"):
         call_deferred("start_sky_garden_battle")
+    elif chronicles.call("consume_classic_shop"):
+        call_deferred("open_store")
 func theme_style(bg: Color, radius: int = 18) -> StyleBoxFlat:
     var st = StyleBoxFlat.new()
     st.bg_color = bg

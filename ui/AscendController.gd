@@ -185,7 +185,7 @@ func _ready() -> void:
         SaveManager.save_data(data)
         call_deferred("show_rules")
     else:
-        call_deferred("show_mode_picker")
+        call_deferred("show_ascend_menu")
 
 # Existing shop IDs 0..13 always remain unchanged. In Base mode 4x4 uses
 # its own realm soundtrack; a manually owned track overrides it everywhere.
@@ -539,41 +539,137 @@ func show_ascend_menu() -> void:
     if realm_story_active:
         _realm_story_menu()
         return
-    # Realms/Challenges/Achievements are accessible from permanent bottom tabs.
-    var parts: Dictionary = _realm_dialog("Zen Ascend · Menu",420)
-    _realm_story_compact(parts)
+    show_ascend_home()
+
+func _home_story_chapter() -> int:
+    for chapter in range(5):
+        if Realm2.unlocked(chapter) and not Realm2.ready(chapter): return chapter
+    if SkyGarden.unlocked(): return 6
+    if Moon.unlocked(): return 5
+    return 4
+
+func _home_button(parent: Node, caption: String, callback: Callable, featured: bool = false) -> Button:
+    var b := action(parent,caption,callback,true)
+    b.custom_minimum_size.y = 58 if featured else 48
+    b.add_theme_font_size_override("font_size",20 if featured else 15)
+    for state in ["normal","hover","pressed"]:
+        var color: Color = Color("d8bb7e") if featured else Color("193b31",0.95)
+        if state=="hover": color = Color("e5c98e") if featured else Color("315747")
+        b.add_theme_stylebox_override(state,style(color,16))
+    for key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+        b.add_theme_color_override(key,Color("102a25") if featured else Color("fff2d5"))
+    return b
+
+func show_ascend_home() -> void:
+    var parts: Dictionary = _realm_dialog("Zen Ascend",900)
+    var dialog: Control = parts.dialog
+    dialog.name = "AscendHomeScreen"
     var frame: PanelContainer = parts.frame
-    frame.anchor_top = 0.265
-    frame.anchor_bottom = 0.735
+    frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    frame.add_theme_stylebox_override("panel",style(Color("10271f",0.70),0))
+    var scroller: ScrollContainer = parts.scroller
+    var stack: VBoxContainer = scroller.get_parent() as VBoxContainer
+    for child in stack.get_children():
+        if child != scroller:
+            stack.remove_child(child)
+            child.queue_free()
     var body: VBoxContainer = parts.box
-    var first: HBoxContainer = HBoxContainer.new()
+    body.add_theme_constant_override("separation",9)
+    var chapter: int = _home_story_chapter()
+    var background := TextureRect.new()
+    var artwork: String = SkyGarden.REALM_ART if chapter==6 else (Moon.REALM_ART if chapter==5 else Realm2.SOURCE_ART[chapter])
+    if ResourceLoader.exists(artwork): background.texture = load(artwork)
+    background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    dialog.add_child(background)
+    dialog.move_child(background,0)
+    background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var top := HBoxContainer.new()
+    top.add_theme_constant_override("separation",8)
+    body.add_child(top)
+    var profile := _home_button(top,_campaign_phrase("Profil","Profile","Perfil"),show_statistics)
+    profile.name = "AscendHomeProfile"
+    var space := Control.new()
+    space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    top.add_child(space)
+    var settings := _home_button(top,"⚙",show_ascend_settings)
+    settings.name = "AscendSettingsEntry"
+    settings.tooltip_text = _campaign_phrase("Einstellungen","Settings","Definições")
+    settings.custom_minimum_size.x = 52
+    settings.size_flags_horizontal = Control.SIZE_SHRINK_END
+    var title := text(body,"Zen Ascend",33,Color("fff2d5"))
+    title.add_theme_font_override("font",ZenType.heading())
+    text(body,L("subtitle"),15,Color("d8bb7e"))
+    var hero := TextureRect.new()
+    hero.name = "AscendHomeCubePreview"
+    hero.custom_minimum_size.y = 190
+    hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(hero)
+    var preview := SubViewport.new()
+    preview.size = Vector2i(540,540)
+    preview.transparent_bg = true
+    preview.own_world_3d = true
+    preview.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+    hero.add_child(preview)
+    var preview_cube := AscendRenderer.new()
+    preview.add_child(preview_cube)
+    preview_cube.set_skin(int(data.economy.get("equipped",0)))
+    var example: Array = []
+    example.resize(Mode.CELLS)
+    example.fill(0)
+    for cell in [4,5,6]: example[cell] = 1
+    for cell in [0,9,15]: example[cell] = 2
+    preview_cube.repaint(example,[])
+    preview_cube.pivot.rotation = Vector3(0.40,-0.58,0.0)
+    hero.texture = preview.get_texture()
+    var destination: String = "Sky Garden" if chapter==6 else ("Shattered Moon" if chapter==5 else Realm2.REALM_NAMES[chapter])
+    text(body,destination,21,Color("d8bb7e"))
+    text(body,_campaign_phrase("Deine Reise geht weiter.","Your journey continues.","A tua viagem continua."),15,Color("fff2d5"))
+    _home_button(body,_campaign_phrase("Kampagne fortsetzen","Continue Campaign","Continuar campanha"),_continue_ascend_campaign,true).name = "AscendHomeCampaign"
+    _home_button(body,"Zen Chronicles",_open_campaign_library_from_realms).name = "AscendHomeChronicles"
+    var first := HBoxContainer.new()
     first.add_theme_constant_override("separation",8)
     body.add_child(first)
-    var begin: Button = action(first,Z("Neue Partie"),show_mode_picker,true)
-    var stats: Button = action(first,Z("Statistik & Rang"),show_statistics)
-    begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var second: HBoxContainer = HBoxContainer.new()
+    _home_button(first,L("realms"),show_realms).name = "AscendHomeRealms"
+    _home_button(first,L("challenges"),_open_campaign_trials_from_realms.bind(mini(chapter,4))).name = "AscendHomeChallenges"
+    var second := HBoxContainer.new()
     second.add_theme_constant_override("separation",8)
     body.add_child(second)
-    var rules: Button = action(second,Z("Regeln ansehen"),show_rules)
-    var chronicles: Button = action(second,"Zen Chronicles",_open_campaign_library_from_realms)
-    rules.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    chronicles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var third: HBoxContainer = HBoxContainer.new()
+    _home_button(second,_achievements_label(),show_realm_titles).name = "AscendHomeAchievements"
+    var shop := _home_button(second,"Zen Shop",_open_shop_from_ascend)
+    shop.name = "AscendHomeShop"
+    shop.disabled = move_count()>0 and result==0
+    var third := HBoxContainer.new()
     third.add_theme_constant_override("separation",8)
     body.add_child(third)
-    var settings: Button = action(third,_campaign_phrase("Einstellungen","Settings","Definições"),show_ascend_settings)
-    settings.name = "AscendSettingsEntry"
-    var home: Button = action(third,Z("Hauptmenü"),return_home)
-    settings.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    home.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    for control in [begin,stats,rules,chronicles,settings,home]:
-        control.custom_minimum_size.y = 52
-        control.add_theme_font_size_override("font_size",16)
+    _home_button(third,_campaign_phrase("Spielmodi","Game Modes","Modos de jogo"),show_mode_picker).name = "AscendHomeGameModes"
+    _home_button(third,_campaign_phrase("Spielanleitung","How to Play","Como jogar"),show_rules).name = "AscendHomeHowToPlay"
+    _home_button(body,_campaign_phrase("Partie fortsetzen","Resume match","Retomar partida"),_close_realm_dialog.bind(dialog)).name = "AscendHomeResume"
+    _home_button(body,_campaign_phrase("Zum Hauptmenü","Back to main menu","Voltar ao menu principal"),return_home)
     if Realm2.qa_mode():
         action(body,"Ember Boss · VFX Test",_show_ember_vfx_test)
     _open_realm_dialog(parts)
+
+func _continue_ascend_campaign() -> void:
+    if move_count()>0 and result==0:
+        var parts: Dictionary = _realm_dialog(_campaign_phrase("Laufende Partie","Match in progress","Partida em curso"),420)
+        text(parts.box,_campaign_phrase("Beende zuerst deine laufende Partie.","Finish your current match first.","Termina primeiro a partida atual."),17)
+        action(parts.box,_campaign_phrase("Partie fortsetzen","Resume match","Retomar partida"),_close_realm_dialog.bind(parts.dialog),true)
+        _open_realm_dialog(parts)
+        return
+    var chapter: int = _home_story_chapter()
+    if chapter==6: _open_sky_from_realms()
+    elif chapter==5: _open_shattered_from_realms()
+    else: _open_campaign_story_from_match(chapter)
+
+func _open_shop_from_ascend() -> void:
+    if move_count()>0 and result==0: return
+    if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+    SaveManager.save_data(data)
+    ZenChronicles.request_classic_shop()
 
 func _save_ascend_setting(key: String, value: Variant) -> void:
     data.settings[key] = value
@@ -1341,6 +1437,7 @@ func show_realms() -> void:
     Realms.ensure(data)
     var ui_parts: Dictionary = _realm_dialog("Zen Ascend · " + L("realms"))
     var body: VBoxContainer = ui_parts.box
+    action(body,"Zen Chronicles",_open_campaign_library_from_realms,true).name = "Campaign2ChroniclesEntry"
     # The story catalogue has five Realms. The legacy four-slot bonus
     # challenges stay separate and never determine story access.
     for chapter in range(5):

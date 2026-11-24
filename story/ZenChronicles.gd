@@ -91,6 +91,7 @@ var _satori_launch_requested: bool = false
 var _shattered_launch_requested: bool = false
 var _sky_reader: CanvasLayer
 var _sky_launch_requested: bool = false
+var _classic_shop_requested: bool = false
 var _campaign_menu: CanvasLayer
 var _campaign_challenge_requested: Dictionary = {}
 var _campaign_practice_requested: int = -1
@@ -1258,6 +1259,15 @@ func request_sky_garden_battle() -> void:
         current.call_deferred("start_sky_garden_battle")
     else:
         get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
+
+func request_classic_shop() -> void:
+    _classic_shop_requested = true
+    get_tree().call_deferred("change_scene_to_file","res://Main.tscn")
+
+func consume_classic_shop() -> bool:
+    var requested: bool = _classic_shop_requested
+    _classic_shop_requested = false
+    return requested
 
 func consume_sky_garden_launch() -> bool:
     var flag: bool = _sky_launch_requested
