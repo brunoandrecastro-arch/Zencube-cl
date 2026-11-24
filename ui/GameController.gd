@@ -991,9 +991,9 @@ func open_achievements() -> void:
     # Read-only view of the same earned achievements used inside Zen Ascend.
     var account: Dictionary = data.duplicate(true)
     label(T("Geheime Erfolge: %d/%d") % [ProfileAchievements.secret_count(account), ProfileAchievements.SECRETS.size()], box, 20)
-    for realm in range(4):
-        if not ProfileRealms.unlocked(account, realm): continue
-        label(ProfileRealms.realm_name(realm, language_code()), box, 21)
+    for realm in [0,ProfileAchievements.ABYSS_REALM,1,2,3]:
+        if not ProfileAchievements.realm_visible(realm): continue
+        label(ProfileAchievements.realm_name(realm, language_code()), box, 21)
         for secret in ProfileAchievements.SECRETS:
             if int(secret.realm) != realm: continue
             var earned: bool = ProfileAchievements.earned(account, str(secret.id))
@@ -1109,7 +1109,7 @@ func store_hint_section(parent: VBoxContainer) -> void:
         var inside: VBoxContainer = VBoxContainer.new()
         inside.add_theme_constant_override("separation",6)
         card.add_child(inside)
-        label(str(secret.name) if earned else "??? · " + str(ZenAscendRealms.REALM_NAMES[int(secret.realm)]),inside,16,Color("4b3428"))
+        label(str(secret.name) if earned else "??? · " + ZenAscendAchievements.realm_name(int(secret.realm),language_code()),inside,16,Color("4b3428"))
         if earned:
             label("✓ Achievement unlocked",inside,13,Color("4b7848"))
         elif hint_bought:

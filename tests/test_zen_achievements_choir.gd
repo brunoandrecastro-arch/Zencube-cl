@@ -11,7 +11,7 @@ func run() -> void:
     var data: Dictionary = SaveManager.defaults()
     ZenAscendRealms.ensure(data)
     ZenAscendAchievements.ensure(data)
-    check(ZenAscendAchievements.SECRETS.size() == 16,"16 independently earned badges")
+    check(ZenAscendAchievements.SECRETS.size() == 20,"20 independently earned badges, including four Abyss badges")
     check(ZenAscendAchievements.main_title(data,0) == "—","no main title on new game")
     check(ZenAscendAchievements.claim_after_match(data,0).is_empty(),"no badges earned at zero")
     var state: Dictionary = ZenAscendRealms.state(data)

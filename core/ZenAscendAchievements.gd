@@ -3,8 +3,15 @@ extends RefCounted
 # Independent secret accomplishments. Realm Challenges keep their original
 # eight-task logic; titles are now earned only at full Realm mastery.
 const HINT_PRICE: int = 50
+const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
+# Reserve a new ID; never shift old four-slot save indices.
+const ABYSS_REALM: int = 4
 # Hints are poetic nudges, never exact achievement conditions.
 const HINTS: Dictionary = {
+    "abyss_memory_walker":"The water remembers those who return.",
+    "abyss_echo_keeper":"An echo can travel across more than one face.",
+    "abyss_swift_echo":"A quiet decision need not take long.",
+    "abyss_deep_remembrance":"Return until the memories become clear.",
     "shadow_walker":"The darkness remembers those who return.",
     "keeper_silence":"Quiet strength grows from consecutive triumphs.",
     "moon_disciple":"The edge of the cube holds a hidden path.",
@@ -36,6 +43,10 @@ const MAIN_QUOTES: Array[String] = [
 # Each now has an independent statistic-based unlock condition, not a
 # duplicate of the 1/2/4/6/8 completed-Challenge title ladder.
 const SECRETS: Array = [
+    {"id":"abyss_memory_walker","realm":4,"name":"Memory Walker","metric":"wins","need":2,"condition":"Win 2 Abyss matches.","quote":"Every step leaves an echo."},
+    {"id":"abyss_echo_keeper","realm":4,"name":"Echo Keeper","metric":"edge_wins","need":2,"condition":"Win 2 Abyss matches across cube edges.","quote":"Memories reach beyond their edges."},
+    {"id":"abyss_swift_echo","realm":4,"name":"Swift Echo","metric":"fast_wins","need":2,"condition":"Win 2 Abyss matches in at most 24 moves each.","quote":"Clarity needs no haste."},
+    {"id":"abyss_deep_remembrance","realm":4,"name":"Deep Remembrance","metric":"wins","need":5,"condition":"Win 5 Abyss matches.","quote":"What remains becomes a guide."},
     {"id":"shadow_walker","realm":0,"name":"Shadow Walker","metric":"wins","need":2,"condition":"Win 2 matches in Shadow Realm.","quote":"Every long journey begins where the light ends."},
     {"id":"keeper_silence","realm":0,"name":"Keeper of Silence","metric":"best_streak","need":3,"condition":"Win 3 Shadow Realm matches in a row.","quote":"Silence is not empty. It is full of answers."},
     {"id":"moon_disciple","realm":0,"name":"Moon Disciple","metric":"edge_wins","need":2,"condition":"Win 2 Shadow matches across a cube edge.","quote":"The moon lights paths unseen by day."},
@@ -63,7 +74,13 @@ static func ensure(data: Dictionary) -> void:
 
 static func earned(data: Dictionary, key: String) -> bool:
     ensure(data)
-    return bool(ZenAscendRealms.state(data).secret_achievements.get(key, false))
+    if bool(ZenAscendRealms.state(data).secret_achievements.get(key, false)): return true
+    if key.begins_with("abyss_"):
+        var stats: Dictionary = Realm2.load_progress().abyss_stats
+        for item in SECRETS:
+            if int(item.realm)==ABYSS_REALM and str(item.id)==key:
+                return int(stats.get(str(item.metric),0))>=int(item.need)
+    return false
 
 static func hint_owned(data: Dictionary, key: String) -> bool:
     ensure(data)
@@ -93,7 +110,8 @@ static func claim_after_match(data: Dictionary, realm: int) -> Array:
     var result: Array = []
     var st: Dictionary = ZenAscendRealms.state(data)
     var completed: Dictionary = st.secret_achievements
-    var stats: Dictionary = st.stats[clampi(realm,0,3)]
+    if realm<0 or realm>3: return result
+    var stats: Dictionary = st.stats[realm]
     for item in SECRETS:
         if int(item.realm) != realm: continue
         var key: String = str(item.id)
@@ -103,13 +121,27 @@ static func claim_after_match(data: Dictionary, realm: int) -> Array:
             result.append(item)
     return result
 
+static func realm_name(realm: int, language: String) -> String:
+    return "Abyss of Memories" if realm==ABYSS_REALM else ZenAscendRealms.realm_name(realm,language)
+
+static func realm_art(realm: int) -> String:
+    return Realm2.SOURCE_ART[1] if realm==ABYSS_REALM else ZenAscendRealms.REALM_ART[clampi(realm,0,3)]
+
+static func realm_visible(realm: int) -> bool:
+    var chapter: int = 1 if realm==ABYSS_REALM else [0,2,3,4][clampi(realm,0,3)]
+    return Realm2.unlocked(chapter)
+
+static func title_name(realm: int) -> String:
+    return "Master of Memories" if realm==ABYSS_REALM else MAIN_TITLES[clampi(realm,0,3)]
+
 static func main_title(data: Dictionary, realm: int) -> String:
+    if realm==ABYSS_REALM: return title_name(realm) if Realm2.ready(1) else "—"
     if realm < 0 or realm > 3: return "—"
     if ZenAscendRealms.count(data,realm) < 8: return "—"
     return MAIN_TITLES[realm]
 
 static func main_quote(realm: int) -> String:
-    return MAIN_QUOTES[clampi(realm,0,3)]
+    return "Let what you remember guide you, not bind you." if realm==ABYSS_REALM else MAIN_QUOTES[clampi(realm,0,3)]
 
 static func secret_count(data: Dictionary) -> int:
     ensure(data)
