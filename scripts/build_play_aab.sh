@@ -48,7 +48,8 @@ export/android/java_sdk_path = "$JAVA_HOME"
 SETTINGS
 
 "$GODOT" --headless --editor --import --quit
-"$GODOT" --headless --path . --export-release 'Android Play' "$work_dir/ZenCube-3D-unsigned.aab"
-python3 scripts/verify_play_bundle.py "$work_dir/ZenCube-3D-unsigned.aab"
-mv -f -- "$work_dir/ZenCube-3D-unsigned.aab" build/ZenCube-3D-unsigned.aab
-printf '\n%s\n' 'Unsigned release bundle ready: build/ZenCube-3D-unsigned.aab'
+"$GODOT" --headless --path . --script scripts/pack_play_webp.gd
+"$GODOT" --headless --path . --export-release 'Android Play' "$work_dir/ZenCube-3D-5.0-unsigned.aab"
+python3 scripts/verify_play_bundle.py "$work_dir/ZenCube-3D-5.0-unsigned.aab"
+mv -f -- "$work_dir/ZenCube-3D-5.0-unsigned.aab" build/ZenCube-3D-5.0-unsigned.aab
+printf '\n%s\n' 'Unsigned release bundle ready: build/ZenCube-3D-5.0-unsigned.aab'

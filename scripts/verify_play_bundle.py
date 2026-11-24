@@ -46,6 +46,9 @@ def check_manifest(bundle):
     require(expected["package"] == "com.zencube.game.play", "Play export must update the existing com.zencube.game.play app")
     for key, value in expected.items():
         require(manifest.get(key) == value, f"Unexpected manifest value for {key}")
+    permissions = {node.get(ANDROID + "name") for node in manifest if node.tag.startswith("uses-permission")}
+    require(permissions == {"android.permission.VIBRATE"}, f"Unexpected Android permissions: {permissions}")
+    require(presets[play]["custom_features"] == '""', "QA feature present in Play export")
     sdk = manifest.find("uses-sdk")
     require(sdk is not None and sdk.get(ANDROID + "targetSdkVersion") == "36", "Expected target SDK 36")
     require(sdk.get(ANDROID + "minSdkVersion") == "26", "Expected minimum SDK 26")
@@ -114,12 +117,19 @@ def check_game_assets(archive, entries):
         require([p.name for p in chapter_pages] == required, f"Act {act}: incomplete 12-page Manhwa source")
         for image in chapter_pages:
             check_remap(archive, assets, image.relative_to(ROOT).as_posix(), ".import")
+    for json_file in sorted((ROOT / "story").rglob("*.json")) + sorted((ROOT / "assets/realm_chronicles").glob("*.json")):
+        relative = json_file.relative_to(ROOT).as_posix()
+        require(relative in assets and archive.read(ASSET_BASE + relative) == json_file.read_bytes(), f"Missing or changed data: {relative}")
+    for scene in ("ZenShatteredMoonCampaign","ZenShatteredMoonReader","ZenSkyGardenCampaign","ZenSkyGardenReader"):
+        require("story/" + scene + ".gdc" in assets, f"Missing gameplay script: {scene}")
+    for folder in ("tests/", "reports/", "docs/", "play_store/", "scripts/", "build/", ".zencube_backups/"):
+        require(not any(name.startswith(folder) for name in assets), f"Development content in bundle: {folder}")
     for boss in ("mist_guardian", "mirror_novice", "veil_monk"):
         check_remap(archive, assets, f"assets/shadow_campaign/portraits/{boss}.webp", ".import")
-    for realm in ("shadow_campaign", "abyss_of_memories", "ember_campaign", "celestial_campaign"):
+    for realm in ("shadow_campaign", "abyss_of_memories", "ember_campaign", "celestial_campaign", "satori_campaign", "shattered_moon", "sky_garden"):
         for page in range(1, 31):
             check_remap(archive, assets, f"assets/{realm}/pages/page_{page:02d}.webp", ".import")
-    print("Extended Manhwa check: 48 Act I-IV PNG pages, 120 Realm WebP pages, 3 Shadow portraits included.")
+    print("Extended Manhwa check: 48 Act I-IV pages, 180 Realm pages and 30 Sky Garden pages, plus the Shadow portraits.")
 
     print(f"Assets verified: {len(pages)} comic pages, {len(imported_sources)} other images/audio files, {len(raw_files)} data files.")
 
