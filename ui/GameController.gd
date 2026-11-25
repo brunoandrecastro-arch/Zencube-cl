@@ -3698,7 +3698,7 @@ func _tower_after_move(cell: int,owner: int) -> void:
         call_deferred("_tower_result")
 
 func _tower_feedback_strip() -> void:
-    var show_message := Time.get_ticks_msec() < toast_until
+    var show_message: bool = Time.get_ticks_msec() < int(toast_until)
     (help_text.get_parent() as Control).visible = show_message
     if show_message:
         help_text.text = toast
