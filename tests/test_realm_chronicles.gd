@@ -172,7 +172,7 @@ func run() -> void:
     var large_boss: TextureRect = result_dialog.find_child("RealmChroniclesBossArt",true,false) as TextureRect
     check(large_boss!=null and large_boss.custom_minimum_size.y>=400.0,"boss loss now uses large cinematic picture")
     var result_frame: PanelContainer = result_dialog.get_child(1) as PanelContainer
-    check(is_equal_approx(result_frame.anchor_top,0.035) and is_equal_approx(result_frame.anchor_bottom,0.965),"boss result takes full screen height")
+    check(is_equal_approx(result_frame.anchor_top,0.0) and is_equal_approx(result_frame.anchor_bottom,1.0) and is_equal_approx(result_frame.anchor_left,0.0) and is_equal_approx(result_frame.anchor_right,1.0),"boss result takes full screen height")
     var actions: int = 0
     for child in result_frame.get_child(0).get_children():
         if child is Button: actions+=1

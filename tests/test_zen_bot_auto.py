@@ -11,8 +11,9 @@ helper=(ROOT/'core/ZenBotAutoLevel.gd').read_text(encoding='utf-8')
 rank=(ROOT/'core/ZenAscension.gd').read_text(encoding='utf-8')
 save=(ROOT/'core/SaveManager.gd').read_text(encoding='utf-8')
 mode=(ROOT/'core/ZenAscend.gd').read_text(encoding='utf-8')
-assert 'popup.anchor_top = 0.52 if special else 0.56' in ui
-assert 'popup.anchor_bottom = 0.97' in ui
+assert '_hd_result_shell(outcome_title, subtitle)' in ui
+assert 'hero.texture = viewport.get_texture()' in ui
+assert 'popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)' in ui
 assert 'var completed_bot_level: int = -1' in ui
 assert 'completed_bot_level = clampi(int(data.settings.level),0,4)' in ui
 assert 'completed_bot_level = -1' in ui
