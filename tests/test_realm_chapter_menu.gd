@@ -37,6 +37,10 @@ func check_chapter_visibility(controller: Node, chronicles: Node, moon_visible: 
     chronicles.call("open_library")
     var screen: Node = chronicles.get("_screen")
     if is_instance_valid(screen):
+        test(screen.find_child("HDChroniclesBackdrop",true,false)!=null,"Realm library uses HD scenery")
+        test(screen.find_child("HDChroniclesLotus",true,false)!=null,"Realm library uses shared lotus")
+        test(screen.find_child("ZenChroniclesTab4",true,false)!=null,"earned Realms tab remains accessible")
+        test(screen.find_child("RealmCard0Button",true,false)!=null,"Realm story action remains accessible")
         test((screen.find_child("RealmCardShatteredMoon",true,false)!=null)==moon_visible,"Chronicles Moon visibility")
         test((screen.find_child("RealmCardSkyGarden",true,false)!=null)==sky_visible,"Chronicles Sky Garden visibility")
         test(screen.find_child("ShatteredMoonLibraryShortcut",true,false)==null and screen.find_child("SkyGardenLibraryShortcut",true,false)==null,"no duplicate secret chapter shortcuts")

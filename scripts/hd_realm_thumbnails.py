@@ -14,6 +14,10 @@ paths = [
     "assets/shattered_moon/realm.webp",
     "assets/sky_garden/realm.webp",
 ]
+# Small card previews for the four Classic Acts, and a scenery backdrop.
+paths += ["assets/zen_garden_scene.webp"]
+for act in range(1,5):
+    paths.append(f"story/act{act:02d}/pages/zen_chronicles_ch01_act{act:02d}_01.png")
 for source in paths:
     path = Path(source)
     if not path.is_file():
@@ -21,6 +25,7 @@ for source in paths:
     dest = root / (source.rsplit('.',1)[0].replace('/','_') + '.webp')
     with Image.open(path) as original:
         image = original.convert("RGB")
-        image.thumbnail((960,960), Image.Resampling.LANCZOS)
+        limit = 480 if source.startswith("story/act") else 960
+        image.thumbnail((limit,limit), Image.Resampling.LANCZOS)
         image.save(dest, "WEBP", quality=90, method=6)
     print(dest, dest.stat().st_size)

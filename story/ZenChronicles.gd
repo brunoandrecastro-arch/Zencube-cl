@@ -302,12 +302,104 @@ func _select_library_tab(index: int) -> void:
     _library_tab = clampi(index,0,1) if _realms_revealed() else 0
     open_library()
 
+func _hd_library_frame(fill: Color, border: Color, radius: int = 16) -> StyleBoxFlat:
+    var skin := StyleBoxFlat.new()
+    skin.bg_color = fill
+    skin.border_color = border
+    skin.set_border_width_all(1)
+    skin.set_corner_radius_all(radius)
+    skin.set_content_margin_all(8.0)
+    return skin
+
+func _hd_library_skin(button: Button, selected: bool = false) -> void:
+    var ink := Color("10271f")
+    var gold := Color("d8bb7e")
+    for state in ["normal", "hover", "pressed", "disabled"]:
+        var fill := Color("16382b",0.90)
+        if state == "hover": fill = Color("315b3d")
+        elif state == "pressed": fill = Color("102a25")
+        elif state == "disabled": fill = Color("35453c",0.90)
+        if selected and state != "disabled":
+            fill = Color("e5c98e") if state == "hover" else gold
+        button.add_theme_stylebox_override(state,_hd_library_frame(fill,Color("d8bb7e",0.70)))
+    var focus := _hd_library_frame(Color(0,0,0,0),gold)
+    focus.set_border_width_all(2)
+    button.add_theme_stylebox_override("focus",focus)
+    for key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+        button.add_theme_color_override(key,ink if selected else Color("fff2d5"))
+    button.add_theme_color_override("font_disabled_color",Color("b5b8a7"))
+
+# Cache only small derived previews; full reader pages are never cached here.
+var _hd_library_cache: Dictionary = {}
+var _hd_library_pending: Dictionary = {}
+
+func _hd_library_preview(target: TextureRect, source: String) -> void:
+    var path: String = "res://assets/hd_menu_previews/" + source.trim_prefix("res://").get_basename().replace("/","_") + ".webp"
+    if not ResourceLoader.exists(path): path = source
+    if not ResourceLoader.exists(path): return
+    if _hd_library_cache.has(path):
+        target.texture = _hd_library_cache[path] as Texture2D
+        return
+    call_deferred("_hd_library_load",weakref(target),path)
+
+func _hd_library_load(target_ref: WeakRef, path: String) -> void:
+    # Wait for the container to finish its first layout pass.
+    await get_tree().process_frame
+    while true:
+        var target := target_ref.get_ref() as TextureRect
+        if not is_instance_valid(target) or not target.is_visible_in_tree(): return
+        var ancestor: Node = target.get_parent()
+        while ancestor != null and not ancestor is ScrollContainer:
+            ancestor = ancestor.get_parent()
+        if ancestor == null or (ancestor as ScrollContainer).get_global_rect().grow(160.0).intersects(target.get_global_rect()): break
+        await get_tree().process_frame
+    # Only one coroutine retrieves each threaded resource. Other cards wait.
+    while _hd_library_pending.has(path):
+        var waiting := target_ref.get_ref() as TextureRect
+        if not is_instance_valid(waiting) or not waiting.is_visible_in_tree(): return
+        await get_tree().process_frame
+    if _hd_library_cache.has(path):
+        var cached := target_ref.get_ref() as TextureRect
+        if is_instance_valid(cached): cached.texture = _hd_library_cache[path] as Texture2D
+        return
+    _hd_library_pending[path] = true
+    var status := ResourceLoader.load_threaded_get_status(path)
+    if status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+        if ResourceLoader.load_threaded_request(path,"Texture2D") != OK:
+            _hd_library_pending.erase(path)
+            return
+    while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+        await get_tree().process_frame
+    var image: Texture2D = null
+    if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED:
+        image = ResourceLoader.load_threaded_get(path) as Texture2D
+    _hd_library_pending.erase(path)
+    if image == null: return
+    if path.begins_with("res://assets/hd_menu_previews/"):
+        _hd_library_cache[path] = image
+    var final_target := target_ref.get_ref() as TextureRect
+    if is_instance_valid(final_target) and final_target.is_visible_in_tree(): final_target.texture = image
+
+func _hd_library_backdrop() -> void:
+    var scenery := TextureRect.new()
+    scenery.name = "HDChroniclesBackdrop"
+    scenery.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    scenery.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    scenery.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _screen.add_child(scenery)
+    _screen.move_child(scenery,0)
+    scenery.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var shade := ColorRect.new()
+    shade.color = Color("10271f",0.80)
+    shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    scenery.add_child(shade)
+    shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _hd_library_preview(scenery,"res://assets/realms/shadow_realm.webp" if _library_tab == 1 else "res://assets/zen_garden_scene.webp")
+
 func _library_card(parent: Node, title: String, image_path: String, hint: String, allowed: bool, complete: bool, entry: Callable, tag: String, show_lock_info: bool = false, world_index: int = -1) -> void:
     var panel: PanelContainer = PanelContainer.new()
     panel.name = tag
-    var background: StyleBoxFlat = _style(Color("#182d33"),16)
-    background.border_color = Color("#a58b5e") if allowed else Color("#555661")
-    background.set_border_width_all(2)
+    var background: StyleBoxFlat = _hd_library_frame(Color("18382c",0.92),Color("d8bb7e",0.65) if allowed else Color("8d9870",0.65),18)
     panel.add_theme_stylebox_override("panel",background)
     parent.add_child(panel)
     var row: HBoxContainer = HBoxContainer.new()
@@ -318,8 +410,9 @@ func _library_card(parent: Node, title: String, image_path: String, hint: String
     preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    if ResourceLoader.exists(image_path): preview.texture = load(image_path) as Texture2D
+    preview.name = "HDChroniclesPreview"
     row.add_child(preview)
+    _hd_library_preview(preview,image_path)
     var stack: VBoxContainer = VBoxContainer.new()
     stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     stack.add_theme_constant_override("separation",5)
@@ -333,12 +426,14 @@ func _library_card(parent: Node, title: String, image_path: String, hint: String
     button.disabled = not allowed and not show_lock_info
     button.custom_minimum_size.y = 40
     button.name = tag+"Button"
+    _hd_library_skin(button)
     if world_index >= 0:
         var localized_world: String = Journey.text(ZenAscension.WORLDS[world_index],_active_language)
         var enter: Button = _make_button(campaign_ui("▶ Welt betreten: ","▶ Play ","▶ Jogar ") + localized_world,stack,_enter_act_world.bind(world_index))
         enter.name = tag + "EnterWorld"
         enter.disabled = not allowed
         enter.custom_minimum_size.y = 40
+        _hd_library_skin(enter)
 
 func _enter_act_world(world_index: int) -> void:
     var current: Node = get_tree().current_scene
@@ -368,6 +463,7 @@ func _library_story_cards(parent: VBoxContainer) -> void:
     if bool(ActFour.load_progress().complete):
         var replay_button: Button = _make_button(campaign_ui("✦ Übergang erneut ansehen","✦ Replay the Awakening","✦ Rever o Despertar"),parent,replay_moon_shadow_transition)
         replay_button.name = "ReplayMoonShadowTransition"
+        _hd_library_skin(replay_button)
     # Sky Garden is the 3x3 epilogue. It never replaces the five Classic worlds.
     if SkyGarden.unlocked():
         var sky_progress: Dictionary = SkyGarden.load_progress()
@@ -381,12 +477,13 @@ func _library_realm_cards(parent: VBoxContainer) -> void:
     var openers: Array[Callable] = [open_shadow_reader,open_abyss_reader,open_ember_campaign_preview,open_celestial_campaign_preview,open_satori_campaign_preview]
     var titles: Array[String] = ["🌘 Shadow Realm","🌊 Abyss of Memories","🔥 Ember Temple","☁️ Celestial Realm","☀️ Satori Realm"]
     var unlock_hints: Array[String] = ["Zen Ascend","Shadow 3/3 + 3/3","Abyss 3/3 + 3/3","Ember 3/3 + 3/3","Celestial 3/3 + 3/3"]
+    var progress: Dictionary = Realm2.load_progress()
     for i in range(5):
         var permitted: bool = Realm2.unlocked(i)
         var finished: bool = Realm2.story_finished(i)
-        var hint: String = campaign_ui("Bosse %d/3 · Herausforderungen %d/3","Bosses %d/3 · Challenges %d/3","Chefes %d/3 · Desafios %d/3") % [Realm2.bosses_won(i),Realm2.completed_count(Realm2.load_progress(),i)] if permitted else campaign_ui("Freischalten: ","Unlock: ","Desbloquear: ")+unlock_hints[i]
+        var hint: String = campaign_ui("Bosse %d/3 · Herausforderungen %d/3","Bosses %d/3 · Challenges %d/3","Chefes %d/3 · Desafios %d/3") % [Realm2.bosses_won(i),Realm2.completed_count(progress,i)] if permitted else campaign_ui("Freischalten: ","Unlock: ","Desbloquear: ")+unlock_hints[i]
         if i==4 and permitted:
-            hint = campaign_ui("Bosse %d/3 · Challenges %d/3 · 30 Seiten","Bosses %d/3 · Challenges %d/3 · 30 pages","Chefes %d/3 · Desafios %d/3 · 30 páginas") % [Realm2.bosses_won(4),Realm2.completed_count(Realm2.load_progress(),4)]
+            hint = campaign_ui("Bosse %d/3 · Challenges %d/3 · 30 Seiten","Bosses %d/3 · Challenges %d/3 · 30 pages","Chefes %d/3 · Desafios %d/3 · 30 páginas") % [Realm2.bosses_won(4),Realm2.completed_count(progress,4)]
         var preview_art: String = "res://assets/abyss_of_memories/gameplay.webp" if i==1 and ResourceLoader.exists("res://assets/abyss_of_memories/gameplay.webp") else Realm2.SOURCE_ART[i]
         _library_card(parent,titles[i],preview_art,hint,permitted,finished,openers[i],"RealmCard%d" % i,true)
     if Moon.unlocked():
@@ -411,11 +508,30 @@ func open_library() -> void:
     _active_chapter = -1
     _screen_name = "library"
     var outer: VBoxContainer = _make_screen()
+    var margins: MarginContainer = outer.get_parent() as MarginContainer
+    margins.add_theme_constant_override("margin_left",24)
+    margins.add_theme_constant_override("margin_right",24)
+    outer.add_theme_constant_override("separation",10)
     var head: HBoxContainer = HBoxContainer.new()
     outer.add_child(head)
-    var heading: Label = _make_label("ZEN CHRONICLES",head,24,GOLD)
+    var spacer := Control.new()
+    spacer.custom_minimum_size.x = 44
+    head.add_child(spacer)
+    var heading: Label = _make_label("Zen Chronicles",head,32,Color("fff2d5"))
+    heading.add_theme_font_override("font",ZenType.heading())
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    _make_button("✕",head,close_chronicles)
+    var close := _make_button("✕",head,close_chronicles)
+    close.custom_minimum_size = Vector2(44,44)
+    _hd_library_skin(close)
+    var lotus := TextureRect.new()
+    lotus.name = "HDChroniclesLotus"
+    lotus.texture = preload("res://ui/tower_lotus.svg")
+    lotus.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    lotus.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    lotus.custom_minimum_size.y = 30
+    lotus.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    outer.add_child(lotus)
     var tabs: HBoxContainer = HBoxContainer.new()
     tabs.add_theme_constant_override("separation",8)
     outer.add_child(tabs)
@@ -430,8 +546,9 @@ func open_library() -> void:
         realm_tab.name = "ZenChroniclesTab4"
         realm_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     var active_tab: Button = story_tab if _library_tab==0 or realm_tab==null else realm_tab
-    active_tab.add_theme_stylebox_override("normal",_style(Color("#5c4930"),12))
-    active_tab.add_theme_color_override("font_color",Color("#ffe2a3"))
+    _hd_library_skin(story_tab,active_tab == story_tab)
+    if realm_tab != null: _hd_library_skin(realm_tab,active_tab == realm_tab)
+    _hd_library_backdrop()
     var scroll: ScrollContainer = ScrollContainer.new()
     scroll.name = "ZenChroniclesLibraryScroll"
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
