@@ -433,9 +433,8 @@ func build_ui() -> void:
     sky_controls.hide()
 
     tower_controls = row(column)
-    button("↻",tower_controls,func(): renderer.reset_view(),true)
     tower_result_button = button("Ergebnis",tower_controls,_tower_result,true)
-    button("Menü",tower_controls,open_menu,true)
+    premium_button("Menü",tower_controls,_tower_pause,true)
     tower_controls.hide()
     var legend_panel = PanelContainer.new()
     var legend_style = theme_style(Color("30271f",0.89),9)
@@ -511,6 +510,7 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
         return
     tower_controls.hide()
     tower_portrait.hide()
+    (help_text.get_parent() as Control).show()
     if sky_active:
         _sky_refresh(animate)
         return
@@ -1093,9 +1093,9 @@ func open_store() -> void:
     label(rewards, box, 12)
     label("Holz, Stein, Marmor oder Glas: Jede Oberfläche sieht anders aus. Die 108 Gewinnlinien bleiben gleich.", box, 13)
     label("Zen Ascend",box,20,Color("526943"))
-    label(_act_one_ui("Wird nach dem Sieg über Dark Kuze in Akt IV freigeschaltet.",
-        "Unlocks after defeating Dark Kuze in Act IV.",
-        "Desbloqueia após derrotares Dark Kuze no Ato IV."),box,13)
+    label(_act_one_ui("Wird nach Abschluss von Akt IV freigeschaltet.",
+        "Unlocks after completing Act IV.",
+        "Desbloqueia após concluíres o Ato IV."),box,13)
     if ZMode.unlocked(data):
         button(ZMode.t("Zen Ascend ausprobieren",language_code()),box,open_ascend_intro,true,true)
     else:
@@ -1733,16 +1733,16 @@ func open_ascend_intro() -> void:
     if ZMode.unlocked(data):
         premium_button("Zen Ascend betreten" if language=="de" else ("Enter Zen Ascend" if language=="en" else "Entrar no Zen Ascend"),box,start_ascend,true)
     else:
-        label(_act_one_ui("🔒 Schließe Zen Chronicles Akt IV ab und besiege Dark Kuze.",
-            "🔒 Finish Zen Chronicles Act IV and defeat Dark Kuze.",
-            "🔒 Conclui o Ato IV de Zen Chronicles e derrota Dark Kuze."),box,15)
+        label(_act_one_ui("🔒 Schließe Zen Chronicles Akt IV ab, um diesen Pfad freizuschalten.",
+            "🔒 Complete Zen Chronicles Act IV to unlock this hidden path.",
+            "🔒 Conclui o Ato IV de Zen Chronicles para desbloquear este caminho."),box,15)
         premium_button(_act_one_ui("Zur Geschichte","Go to Story","Ir à História"),box,func(): chronicles.open_library(),true)
 
 func buy_ascend() -> void:
     # Keep legacy signals safe: direct calls cannot buy an early 4x4 unlock.
-    notify_user(_act_one_ui("Besiege zuerst Dark Kuze in Akt IV.",
-        "Defeat Dark Kuze in Act IV first.",
-        "Derrota primeiro Dark Kuze no Ato IV."))
+    notify_user(_act_one_ui("Schließe zuerst Akt IV ab.",
+        "Complete Act IV first.",
+        "Conclui primeiro o Ato IV."))
     open_ascend_intro()
 
 func start_ascend() -> void:
@@ -2202,6 +2202,8 @@ func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> vo
 
 func open_settings() -> void:
     var box = modal("Deine Einstellungen")
+    if tower_active:
+        box.get_child(1).hide()
     box.add_theme_constant_override("separation",9)
     label("Spiele in deinem Tempo.",box,15,Color("806c54"))
     for i in range(2):
@@ -2355,7 +2357,15 @@ func open_settings() -> void:
     footer.add_theme_constant_override("margin_top",6)
     footer.add_theme_constant_override("margin_bottom",10)
     layout.add_child(footer)
-    var finish: Button = button("Fertig",footer,open_menu if menu_context else close_modal,false,true)
+    var finish: Button
+    if tower_active:
+        finish = button(_tower_text(
+            "Zurück zum Tower-Menü",
+            "Back to Tower menu",
+            "Voltar ao menu da Torre"),
+            footer,_tower_pause,false,true)
+    else:
+        finish = button("Fertig",footer,open_menu if menu_context else close_modal,false,true)
     finish.name = "SettingsDoneSticky"
     _enable_feedback_modal_scroll(box)
 
@@ -3652,11 +3662,7 @@ func _tower_refresh(animate: int = -1) -> void:
         int(state.level) + 1
     ]
 
-    help_text.text = _tower_text(
-        "Drehen · Tippen · Zoomen",
-        "Rotate · Tap · Zoom",
-        "Rodar · Tocar · Ampliar"
-    )
+    _tower_feedback_strip()
 
     for control in [
         swap_row, tutorial_row, challenge_role_panel,
@@ -3691,7 +3697,14 @@ func _tower_after_move(cell: int,owner: int) -> void:
     if board.winner != 0:
         call_deferred("_tower_result")
 
+func _tower_feedback_strip() -> void:
+    var show_message := Time.get_ticks_msec() < toast_until
+    (help_text.get_parent() as Control).visible = show_message
+    if show_message:
+        help_text.text = toast
+
 func _tower_tick() -> void:
+    _tower_feedback_strip()
     if zen_campaign_paused or board.winner != 0:
         return
     if popup != null or chronicles.is_open() or worker != null:
@@ -3831,6 +3844,9 @@ func _tower_pause() -> void:
     premium_button(_tower_text(
         "Fortsetzen","Resume","Continuar"),box,close_modal,true)
     button(_tower_text(
+        "Einstellungen","Settings","Definições"),
+        box,open_settings,true)
+    button(_tower_text(
         "Speichern & verlassen","Save & leave","Guardar e sair"),
         box,_tower_leave,true)
 
@@ -3935,28 +3951,30 @@ func _tower_gallery_entry(box: VBoxContainer, guardian: Dictionary, owned: bool)
     caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
     if owned:
-        var preview_button := Button.new()
-        preview_button.icon = load(str(guardian.portrait)) as Texture2D
-        preview_button.expand_icon = true
-        preview_button.custom_minimum_size = Vector2(0, 190)
-        preview_button.text = ""
+        var preview_button := TextureButton.new()
+        preview_button.texture_normal = load(
+            str(guardian.card_front)
+        ) as Texture2D
+        preview_button.ignore_texture_size = true
+        preview_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+        preview_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        preview_button.custom_minimum_size = Vector2(
+            0, clampf(
+                get_viewport().get_visible_rect().size.y * 0.40,
+                240.0, 340.0
+            )
+        )
         preview_button.focus_mode = Control.FOCUS_NONE
-        preview_button.pressed.connect(_tower_preview.bind(guardian))
+        preview_button.tooltip_text = _tower_text(
+            "Sammelkarte öffnen",
+            "Open collectible card",
+            "Abrir carta colecionável"
+        )
+        preview_button.pressed.connect(
+            _tower_card.bind(guardian, false)
+        )
         stack.add_child(preview_button)
 
-        var open_button := premium_button(
-            _tower_text("Großansicht", "Open preview", "Abrir pré-visualização"),
-            stack,
-            _tower_preview.bind(guardian),
-            true)
-        open_button.custom_minimum_size.y = 44
-
-        var cards_button := button(
-            _tower_text("Sammelkarte", "Collectible card", "Carta colecionável"),
-            stack,
-            _tower_card.bind(guardian, false),
-            true)
-        cards_button.custom_minimum_size.y = 42
     else:
         _zen_campaign_paragraph(
             stack,

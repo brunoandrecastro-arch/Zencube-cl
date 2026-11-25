@@ -1,5 +1,5 @@
 name: Android debug APK
-run-name: ${{ (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') && 'ZenCube Chronicles 4.0.4 · Realm Challenge Celebration' || 'Android debug APK' }}
+run-name: ${{ (github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124') && 'Zen Cube 3D Tower' || (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') && 'ZenCube Chronicles 4.0.4 · Realm Challenge Celebration' || 'Android debug APK' }}
 on:
   workflow_dispatch:
   push:
@@ -653,11 +653,21 @@ jobs:
           assert not missing, 'Missing Satori/Shattered Moon APK assets: ' + ', '.join(missing)
           print('APK verified: all inherited Realm media, Shattered Moon, optional Sky Garden pages, family arenas, reader and scripts')
           PY
+      - name: Name Zen Cube 3D Tower APK
+        if: (github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
+        run: mv build/ZenCube-3D.apk build/Zen-Cube-3D-Tower.apk
+      - name: Upload Zen Cube 3D Tower APK
+        if: (github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zen Cube 3D Tower
+          path: build/Zen-Cube-3D-Tower.apk
+          if-no-files-found: error
       - name: Deliver the separate menu test APK
-        if: env.ZENCUBE_MENU_PREVIEW == 'true'
+        if: env.ZENCUBE_MENU_PREVIEW == 'true' && !(github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
         run: mv build/ZenCube-3D.apk build/ZenCube-Menu-Test-4.0.5.apk
       - name: Upload menu test APK
-        if: env.ZENCUBE_MENU_PREVIEW == 'true'
+        if: env.ZENCUBE_MENU_PREVIEW == 'true' && !(github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
         uses: actions/upload-artifact@v4
         with:
           name: ZenCube-Menu-Test-4.0.5
