@@ -6,6 +6,7 @@ var tower_classic_board: BoardModel
 var tower_view: Dictionary = {}
 var tower_controls: HBoxContainer
 var tower_result_button: Button
+var tower_header_label: Label
 var tower_lotus: TextureRect
 var tower_quote_stage: int = -1
 var tower_portrait: TextureRect
@@ -320,6 +321,7 @@ func build_ui() -> void:
     world_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var sub = label("ZenCube 3D",brand,12,Color("e6c99d"))
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    tower_header_label = sub
     var menu = button("☰",title_row,open_menu,true)
     menu.custom_minimum_size.x = 46
     menu.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -525,6 +527,9 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
     tower_controls.hide()
     tower_portrait.hide()
     tower_lotus.hide()
+    tower_header_label.text = "ZenCube 3D"
+    tower_header_label.add_theme_font_size_override("font_size",12)
+    rank_label.add_theme_font_size_override("font_size",12)
     tower_quote_stage = -1
     world_quote_label.modulate.a = 1.0
     (help_text.get_parent() as Control).show()
@@ -3644,6 +3649,11 @@ func _tower_refresh(animate: int = -1) -> void:
     var section_title := str(section_names.get(language_code(), section_names.get("en", "Zen Tower")))
 
     world_title_label.text = section_title
+    tower_header_label.text = "%s %d" % [
+        _tower_text("Etage", "Floor", "Piso"),
+        stage
+    ]
+    tower_header_label.add_theme_font_size_override("font_size",16)
     tower_lotus.show()
     world_quote_label.text = _tower_quote(stage)
 
@@ -3658,10 +3668,10 @@ func _tower_refresh(animate: int = -1) -> void:
         )
 
     rank_label.show()
-    rank_label.text = "♥ %d  ·  %s %d  ·  %s %d" % [
+    rank_label.add_theme_font_size_override("font_size",15)
+    rank_label.text = "♥ %s: %d  ·  %s %d" % [
+        _tower_text("Leben", "Lives", "Vidas"),
         int(state.lives),
-        _tower_text("Etage", "Floor", "Piso"),
-        stage,
         _tower_text("Rekord", "Record", "Recorde"),
         int(state.record)
     ]

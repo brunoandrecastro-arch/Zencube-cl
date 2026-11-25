@@ -194,7 +194,8 @@ func configure_tower(game: Node) -> void:
     )
     section.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
-    var stats_text: String = "♥ %d  ·  %s %d  ·  %s %d" % [
+    var stats_text: String = "♥ %s: %d  ·  %s %d  ·  %s %d" % [
+            game._tower_text("Leben", "Lives", "Vidas"),
             int(state.get("lives", 0)),
             game._tower_text("Etage", "Floor", "Piso"),
             int(game._tower_stage()),

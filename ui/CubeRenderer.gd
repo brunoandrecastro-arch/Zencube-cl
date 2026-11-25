@@ -294,6 +294,12 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 		var x_border: Color = Color("6c238f") if sky_family_palette else (Color("33251e") if dark_tile else Color("fff4db"))
 		var o_main: Color = Color("ffd05a") if sky_family_palette else (Color("94ffda") if dark_tile else Color("04748a"))
 		var o_border: Color = Color("a86619") if sky_family_palette else (Color("273530") if dark_tile else Color("fff4df"))
+		# Stable player colors across all Tower faces.
+		if tower_skin >= 0 and not sky_family_palette:
+			x_main = Color("ffe1a0")
+			x_border = Color("33251e")
+			o_main = Color("94ffda")
+			o_border = Color("273530")
 		if board.cells[c] == 1:
 			# Draw a thinner bright/dark outline, then a raised high-contrast X.
 			bar(marks[c], Vector3(-0.24,-0.24,-0.018), Vector3(0.24,0.24,-0.018), x_border, 0.090)

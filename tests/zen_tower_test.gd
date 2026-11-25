@@ -102,6 +102,29 @@ func run() -> void:
         check(is_instance_valid(renderer.tower_trim),"Tower ornament")
         check(renderer.face_color(0)!=original,"Tower color")
 
+        var color_board := BoardModel.new()
+
+        for face in range(6):
+            color_board.cells[face * 9] = 1
+            color_board.cells[face * 9 + 1] = 2
+
+        renderer.selected = 1
+        renderer.paint(color_board, false)
+
+        for face in range(6):
+            var x_mark: MeshInstance3D = renderer.marks[face * 9].get_child(2) as MeshInstance3D
+            var o_mark: MeshInstance3D = renderer.marks[face * 9 + 1].get_child(1) as MeshInstance3D
+
+            var x_mat: StandardMaterial3D = x_mark.material_override as StandardMaterial3D
+            var o_mat: StandardMaterial3D = o_mark.material_override as StandardMaterial3D
+
+            check(x_mat.albedo_color == Color("ffe1a0"),
+                "Stable Tower X color")
+            check(o_mat.albedo_color == Color("94ffda"),
+                "Stable Tower O color")
+
+        renderer.selected = -1
+
     renderer.set_tower_skin(-1)
     renderer.paint(BoardModel.new(),false)
 
