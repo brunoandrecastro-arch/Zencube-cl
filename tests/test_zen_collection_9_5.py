@@ -37,7 +37,8 @@ assert 'if board.result_recorded: return' in ui
 assert 'last_leaf_reward = Collection.reward_bot(data, difficulty)' in ui
 assert 'renderer.apply_skin(skin)' in ui
 assert 'renderer.apply_skin(int(data.economy.equipped))' in ui
-assert 'var color = face_color(CubeGeometry.face(c))' in r
+assert 'var color = face_color(cell_face(c))' in r
+assert 'return TowerGrid.face(cell) if board_side == 4 else CubeGeometry.face(cell)' in r
 assert not any(line.startswith(' ') for line in r.splitlines()), 'CubeRenderer.gd mixes space indentation with existing tabs'
 assert 'face_material(color)' in r
 assert 'var x_main: Color' in r and 'var o_main: Color' in r and 'border_ring.material_override = material(o_border, true)' in r
