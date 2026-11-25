@@ -103,6 +103,7 @@ var ember_last_human: int = -1
 var ember_progress: Dictionary = {}
 var practice_chapter: int = 1
 var campaign_practice_active: bool = false
+var hd_direct_realm: bool = false
 var campaign_awards: Array[String] = []
 var campaign_award_index: int = 0
 
@@ -180,6 +181,7 @@ func _ready() -> void:
         # Scene is loaded; do not toggle normal 4x4 help_seen or rankings.
         call_deferred("start_realm_story")
         return
+    _hd_restore_selected_board()
     # The explanation is guaranteed on first entry, including in the test build.
     if not bool(data.ascend.help_seen):
         data.ascend.help_seen = true
@@ -547,6 +549,9 @@ func show_ascend_menu() -> void:
     if result != 0:
         _reopen_finished_result()
         return
+    if campaign_practice_active and hd_direct_realm:
+        show_ascend_home()
+        return
     if campaign_practice_active:
         _campaign_practice_menu()
         return
@@ -563,6 +568,94 @@ func show_ascend_menu() -> void:
         _realm_story_menu()
         return
     show_ascend_home()
+
+func _hd_chapter_allowed(chapter: int) -> bool:
+    if chapter == 6: return SkyGarden.unlocked()
+    if chapter == 5: return Moon.unlocked()
+    return chapter >= 0 and chapter <= 4 and Realm2.unlocked(chapter)
+
+func _hd_selected_chapter() -> int:
+    if shadow_active: return 0
+    if abyss_active: return 1
+    if ember_active: return guardian_chapter
+    if realm_story_active: return [0,2,3,4][clampi(int(RealmStory.chapter(realm_story_stage)),0,3)]
+    if campaign_practice_active: return practice_chapter
+    var saved: int = int(data.ascend.get("hd_selected_chapter",-1))
+    if _hd_chapter_allowed(saved): return saved
+    return [0,2,3,4][clampi(int(Realms.state(data).selected),0,3)]
+
+func _hd_remember_chapter(chapter: int, direct: bool) -> void:
+    if not _hd_chapter_allowed(chapter): return
+    if int(data.ascend.get("hd_selected_chapter",-1)) == chapter and bool(data.ascend.get("hd_direct_realm",false)) == direct: return
+    data.ascend["hd_selected_chapter"] = chapter
+    data.ascend["hd_direct_realm"] = direct
+    SaveManager.save_data(data)
+
+func _hd_has_story_battle() -> bool:
+    return shadow_active or abyss_active or ember_active or realm_story_active
+
+func _hd_confirm_free_switch(next_action: Callable) -> void:
+    if _hd_has_story_battle(): return
+    if result == 0 and (move_count() > 0 or busy):
+        var parts: Dictionary = _realm_dialog(_campaign_phrase("Laufende Partie","Match in progress","Partida em curso"),520)
+        text(parts.box,_campaign_phrase("Die laufende freie Partie wird beendet. Dein Story-Fortschritt bleibt erhalten.","The current free match will be abandoned. Your story progress is kept.","A partida livre atual será abandonada. O progresso da história será mantido."),16)
+        action(parts.box,_campaign_phrase("Partie fortsetzen","Resume match","Retomar partida"),_close_realm_dialog.bind(parts.dialog),true)
+        action(parts.box,_campaign_phrase("Wechsel bestätigen","Confirm switch","Confirmar mudança"),next_action)
+        _hd_menu_dialog(parts,false)
+        _open_realm_dialog(parts)
+    else:
+        next_action.call()
+
+func _hd_enter_realm(chapter: int) -> void:
+    if chapter < 0 or chapter > 4 or not Realm2.unlocked(chapter) or _hd_has_story_battle(): return
+    # Resume the actual board rather than replacing an unfinished match in the same Realm.
+    var same_board: bool = (campaign_practice_active and practice_chapter == chapter) or (chapter == 0 and not campaign_practice_active and realm_index() == 0)
+    if same_board and result == 0 and (move_count() > 0 or busy):
+        hd_direct_realm = campaign_practice_active
+        _hd_remember_chapter(chapter,chapter != 0)
+        if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+        return
+    _hd_confirm_free_switch(_hd_enter_realm_now.bind(chapter,true))
+
+func _hd_enter_realm_now(chapter: int, begin_match: bool) -> void:
+    if chapter < 0 or chapter > 4 or not Realm2.unlocked(chapter) or _hd_has_story_battle(): return
+    # Called only after confirmation or with an idle board. Invalidate queued bot work.
+    match_generation += 1
+    busy = false
+    cells.fill(0)
+    result = 0
+    recorded = false
+    turn = 1
+    campaign_practice_active = false
+    campaign_awards = []
+    _hd_remember_chapter(chapter,chapter != 0)
+    start_campaign_practice(chapter,true,begin_match)
+
+func _hd_restore_selected_board() -> void:
+    var chapter: int = int(data.ascend.get("hd_selected_chapter",-1))
+    if chapter >= 1 and chapter <= 4 and bool(data.ascend.get("hd_direct_realm",false)) and Realm2.unlocked(chapter):
+        _hd_enter_realm_now(chapter,false)
+
+func _hd_continue_campaign_now(chapter: int) -> void:
+    if not _hd_chapter_allowed(chapter) or _hd_has_story_battle(): return
+    if chapter <= 4:
+        _hd_enter_realm_now(chapter,false)
+        _open_campaign_story_from_match(chapter)
+    else:
+        match_generation += 1
+        busy = false
+        cells.fill(0)
+        result = 0
+        recorded = false
+        turn = 1
+        campaign_practice_active = false
+        hd_direct_realm = false
+        campaign_awards = []
+        ZenChronicles.set_campaign_board_active(false)
+        _hd_remember_chapter(chapter,false)
+        draw()
+        if chapter == 6: _open_sky_from_realms()
+        else: _open_shattered_from_realms()
 
 func _home_story_chapter() -> int:
     for chapter in range(5):
@@ -640,7 +733,7 @@ func show_ascend_home() -> void:
             child.queue_free()
     var body: VBoxContainer = parts.box
     body.add_theme_constant_override("separation",9)
-    var chapter: int = _home_story_chapter()
+    var chapter: int = _hd_selected_chapter()
     var background := TextureRect.new()
     var artwork: String = _hd_realm_scenery(chapter)
     background.name = "AscendHomeScenery"
@@ -702,7 +795,7 @@ func show_ascend_home() -> void:
     preview_cube.pivot.rotation = Vector3(0.40,-0.58,0.0)
     hero.texture = preview.get_texture()
     var destination: String = "Sky Garden" if chapter==6 else ("Shattered Moon" if chapter==5 else Realm2.REALM_NAMES[chapter])
-    text(body,destination,18,Color("d8bb7e"))
+    text(body,destination,18,Color("d8bb7e")).name = "AscendHomeSelectedRealm"
     text(body,_campaign_phrase("Deine Reise geht weiter.","Your journey continues.","A tua viagem continua."),15,Color("fff2d5"))
     _home_button(body,_campaign_phrase("Kampagne fortsetzen","Continue Campaign","Continuar campanha"),_continue_ascend_campaign,true).name = "AscendHomeCampaign"
     _home_button(body,"Zen Chronicles",_open_campaign_library_from_realms).name = "AscendHomeChronicles"
@@ -730,16 +823,23 @@ func show_ascend_home() -> void:
     _open_realm_dialog(parts)
 
 func _continue_ascend_campaign() -> void:
-    if move_count()>0 and result==0:
-        var parts: Dictionary = _realm_dialog(_campaign_phrase("Laufende Partie","Match in progress","Partida em curso"),420)
-        text(parts.box,_campaign_phrase("Beende zuerst deine laufende Partie.","Finish your current match first.","Termina primeiro a partida atual."),17)
-        action(parts.box,_campaign_phrase("Partie fortsetzen","Resume match","Retomar partida"),_close_realm_dialog.bind(parts.dialog),true)
-        _open_realm_dialog(parts)
-        return
     var chapter: int = _home_story_chapter()
-    if chapter==6: _open_sky_from_realms()
-    elif chapter==5: _open_shattered_from_realms()
-    else: _open_campaign_story_from_match(chapter)
+    if _hd_has_story_battle():
+        if _hd_selected_chapter() == chapter or realm_story_active:
+            if result != 0:
+                if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
+                _reopen_finished_result()
+            elif shadow_active: _shadow_begin()
+            elif abyss_active: _abyss_begin()
+            elif ember_active: _ember_begin()
+            else: _realm_story_begin()
+            return
+        # The native story models save their own battle. A replay of another
+        # chapter must not redirect Continue away from the real campaign.
+        if shadow_active: _shadow_back_to_reader(false)
+        elif abyss_active: _abyss_back_to_reader(false)
+        elif ember_active: _ember_back_to_reader(false)
+    _hd_confirm_free_switch(_hd_continue_campaign_now.bind(chapter))
 
 func _open_shop_from_ascend() -> void:
     if move_count()>0 and result==0: return
@@ -905,7 +1005,7 @@ func draw() -> void:
         else:
             status_label.text = pname(int(owners[result-1]))+" "+Z("hat gewonnen!")
     elif busy:
-        status_label.text = zen_ascend_bot_name() + " · " + Z("überlegt …")
+        status_label.text = zen_ascend_bot_name() + " · " + _campaign_phrase("überlegt …","Thinking…","A pensar…")
     else:
         status_label.text = pname(int(owners[turn-1]))+" · "+Z("Du bist am Zug")+" · "+("X" if turn==1 else "O")
     details_label.text = "%s X  ·  %s O  ·  %d/96" % [pname(int(owners[0])),pname(int(owners[1])),move_count()]
@@ -1385,6 +1485,15 @@ func show_mode_picker() -> void:
     if ember_active or shadow_active or abyss_active or realm_story_active:
         _confirm_boss_restart()
         return
+    if campaign_practice_active and hd_direct_realm:
+        var direct_parts: Dictionary = _realm_dialog(Realm2.REALM_NAMES[practice_chapter],510)
+        text(direct_parts.box,_campaign_phrase("Feste Realm-Schwierigkeit","Fixed Realm difficulty","Dificuldade fixa do reino"),15)
+        action(direct_parts.box,zen_ascend_bot_name(),_hd_confirm_free_switch.bind(_hd_enter_realm_now.bind(practice_chapter,true)),true)
+        action(direct_parts.box,Z("Regeln ansehen"),show_rules)
+        action(direct_parts.box,"Zen Realm Chronicles",_open_campaign_library_from_realms,true).name = "AscendEntryChronicles"
+        _hd_menu_dialog(direct_parts,false)
+        _open_realm_dialog(direct_parts)
+        return
     if campaign_practice_active:
         _campaign_practice_menu()
         return
@@ -1438,7 +1547,16 @@ func show_statistics() -> void:
     _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
+func _hd_return_classic_from_direct() -> void:
+    match_generation += 1
+    busy = false
+    ZenChronicles.set_campaign_board_active(false)
+    if get_tree() != null: get_tree().change_scene_to_file("res://Main.tscn")
+
 func return_home() -> void:
+    if campaign_practice_active and hd_direct_realm:
+        _hd_confirm_free_switch(_hd_return_classic_from_direct)
+        return
     if campaign_practice_active:
         _campaign_practice_back()
         return
@@ -1694,7 +1812,7 @@ func _add_story_realm_card(body: VBoxContainer, chapter: int, campaign_progress:
     var tasks: int = Realm2.completed_count(campaign_progress,chapter)
     text(column,_campaign_phrase("Bosse: %d/3 · Challenges: %d/3","Bosses: %d/3 · Challenges: %d/3","Chefes: %d/3 · Desafios: %d/3") % [bosses,tasks],15)
     if allowed:
-        action(column,_campaign_phrase("Realm betreten","Enter Realm","Entrar no reino"),_open_campaign_story_from_match.bind(chapter),true)
+        action(column,_campaign_phrase("Realm betreten","Enter Realm","Entrar no reino"),_hd_enter_realm.bind(chapter),true).name = "EnterGameplayRealm%d" % chapter
         action(column,_campaign_phrase("Realm-Challenges","Realm Challenges","Desafios do reino")+" · %d/3" % tasks,_open_campaign_trials_from_realms.bind(chapter))
         if legacy_index>=0:
             action(column,_campaign_phrase("Bonus-Challenges","Bonus Challenges","Desafios extra")+" · %d/8" % Realms.count(data,legacy_index),_show_bonus_realm_challenges.bind(legacy_index))
@@ -1816,6 +1934,22 @@ func select_realm(number: int) -> bool:
     if move_count() > 0 and result == 0: return false
     var from_realm: int = realm_index()
     if not Realms.select(data,number): return false
+    if campaign_practice_active:
+        campaign_practice_active = false
+        hd_direct_realm = false
+        campaign_awards = []
+        match_generation += 1
+        busy = false
+        cells.fill(0)
+        turn = 1
+        result = 0
+        recorded = false
+        cube.clear_abyss_skin()
+        cube.set_skin(int(data.economy.get("equipped",0)))
+        ZenChronicles.set_campaign_board_active(false)
+    data.ascend.erase("hd_selected_chapter")
+    data.ascend["hd_direct_realm"] = false
+    _hd_remember_chapter([0,2,3,4][number],false)
     match_realm = number
     # Prevent stale Medium UI/AI after switching from Shadow to Ember.
     bot_level = Realms.fixed_bot_level(number)
@@ -2617,6 +2751,7 @@ func _realm_story_menu() -> void:
     action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
     action(body,Z("Regeln ansehen"),show_rules)
     action(body,_achievements_label(),show_realm_titles)
+    action(body,"Zen Ascend",show_ascend_home)
     _open_realm_dialog(parts)
 
 # Exit the story without returning to Main. The ordinary Ascend 4x4
@@ -2694,6 +2829,8 @@ func start_abyss_battle() -> void:
     busy = false
     var game: Dictionary = Abyss.begin_battle(abyss_progress,abyss_index)
     if game.is_empty(): return
+    _hd_remember_chapter(1,1 >= 1 and 1 <= 4)
+    hd_direct_realm = false
     cells = game.cells.duplicate()
     turn = clampi(int(game.get("turn",1)),1,2)
     result = clampi(int(game.get("result",0)),0,3)
@@ -2853,6 +2990,7 @@ func _abyss_menu() -> void:
     action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
     action(body,Z("Regeln ansehen"),show_rules)
     action(body,_achievements_label(),show_realm_titles)
+    action(body,"Zen Ascend",show_ascend_home)
     _open_realm_dialog(parts)
 
 func _abyss_back_to_reader(open_reader: bool = true) -> void:
@@ -2877,6 +3015,7 @@ func _abyss_back_to_reader(open_reader: bool = true) -> void:
         _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
     draw()
+    _hd_restore_selected_board()
     if open_reader: ZenChronicles.open_abyss_reader()
     else: sync_realm_music(true)
 
@@ -2907,6 +3046,8 @@ func start_shadow_battle() -> void:
     busy = false
     var game: Dictionary = Shadow.begin_battle(shadow_progress,shadow_index)
     if game.is_empty(): return
+    _hd_remember_chapter(0,0 >= 1 and 0 <= 4)
+    hd_direct_realm = false
     cells = game.cells.duplicate()
     turn = clampi(int(game.get("turn",1)),1,2)
     result = clampi(int(game.get("result",0)),0,3)
@@ -3067,6 +3208,7 @@ func _shadow_menu() -> void:
     action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
     action(body,Z("Regeln ansehen"),show_rules)
     action(body,_achievements_label(),show_realm_titles)
+    action(body,"Zen Ascend",show_ascend_home)
     _open_realm_dialog(parts)
 
 func _shadow_back_to_reader(open_reader: bool = true) -> void:
@@ -3091,6 +3233,7 @@ func _shadow_back_to_reader(open_reader: bool = true) -> void:
         _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
     draw()
+    _hd_restore_selected_board()
     if open_reader: ZenChronicles.open_shadow_reader()
     else: sync_realm_music(true)
 
@@ -3151,6 +3294,8 @@ func _start_guardian_battle() -> void:
     busy = false
     var game: Dictionary = ember_model.begin_battle(ember_progress,ember_index)
     if game.is_empty(): return
+    _hd_remember_chapter(guardian_chapter,guardian_chapter >= 1 and guardian_chapter <= 4)
+    hd_direct_realm = false
     cells = game.cells.duplicate()
     turn = clampi(int(game.get("turn",1)),1,2)
     result = clampi(int(game.get("result",0)),0,3)
@@ -3315,6 +3460,7 @@ func _ember_menu() -> void:
     action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
     action(body,Z("Regeln ansehen"),show_rules)
     action(body,_achievements_label(),show_realm_titles)
+    action(body,"Zen Ascend",show_ascend_home)
     _open_realm_dialog(parts)
 
 func _ember_back_to_reader(open_reader: bool = true) -> void:
@@ -3339,12 +3485,13 @@ func _ember_back_to_reader(open_reader: bool = true) -> void:
         _refresh_arena_presentation()
     ZenChronicles.set_campaign_board_active(false)
     draw()
+    _hd_restore_selected_board()
     if open_reader: _open_guardian_reader()
     else: sync_realm_music(true)
 
 
 # ---- Zen Realm Chronicles: NORMAL Abyss bot matches, not puzzles ----
-func start_campaign_practice(chapter: int) -> void:
+func start_campaign_practice(chapter: int, direct_entry: bool = false, begin_match: bool = true) -> void:
     if chapter not in [0,1,2,3,4] or not Realm2.unlocked(chapter): return
     if move_count()>0 and result==0:
         # Do not replace a live board when moving between Realms.
@@ -3362,14 +3509,28 @@ func start_campaign_practice(chapter: int) -> void:
         if realm_backdrop != null:
             realm_backdrop.texture = load(Realms.REALM_ART[0])
             _refresh_arena_presentation()
+        hd_direct_realm = false
+        _hd_remember_chapter(0,false)
+        match_realm = 0
+        bot_level = Realms.fixed_bot_level(0)
         sync_realm_music()
-        start_game(true,Realms.fixed_bot_level(0))
+        if begin_match:
+            start_game(true,Realms.fixed_bot_level(0))
+        else:
+            against_bot = true
+            owners = [0,1]
+            cube.reset_view()
+            draw()
         return
-    if chapter==3 and int(Celestial.load_progress().page)<19: return
-    if chapter==4 and int(Satori.load_progress().page)<19: return
+    # Direct free play is available in an earned Realm. The existing record_*_match
+    # functions still enforce page 19 for Celestial/Satori challenge credit.
+    if not direct_entry and chapter==3 and int(Celestial.load_progress().page)<19: return
+    if not direct_entry and chapter==4 and int(Satori.load_progress().page)<19: return
+    hd_direct_realm = direct_entry
     campaign_practice_active = true
     practice_chapter = chapter
-    if chapter==4: match_realm = 3
+    if direct_entry: match_realm = [0,0,1,2,3][chapter]
+    elif chapter==4: match_realm = 3
     ember_active = false
     abyss_active = false
     shadow_active = false
@@ -3388,7 +3549,18 @@ func start_campaign_practice(chapter: int) -> void:
         if arena != null: realm_backdrop.texture = arena
         _refresh_arena_presentation()
     sync_realm_music()
-    _campaign_practice_restart()
+    if begin_match:
+        _campaign_practice_restart()
+    else:
+        match_generation += 1
+        cells.fill(0)
+        turn = 1
+        result = 0
+        recorded = false
+        busy = false
+        match_blocked_threat = false
+        cube.reset_view()
+        draw()
 
 func _campaign_practice_restart() -> void:
     if not campaign_practice_active: return
@@ -3437,7 +3609,7 @@ func _campaign_practice_show_next_award() -> void:
         title_name,description,bool(data.settings.get("sound",true)),[world_music],lang())
 
 func _campaign_practice_result() -> void:
-    if not campaign_practice_active: return
+    if not campaign_practice_active or result == 0: return
     var heading: String = _campaign_phrase("Sieg","Victory","Vitória") if result==1 else (
         _campaign_phrase("Unentschieden","Draw","Empate") if result==3 else
         _campaign_phrase("Niederlage","Defeat","Derrota"))
@@ -3458,6 +3630,8 @@ func _campaign_practice_result() -> void:
         action(body,_campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_open_campaign_story_from_match.bind(practice_chapter),true)
     action(body,_campaign_phrase("⚔ Noch eine Partie","⚔ Play Again","⚔ Jogar novamente"),_campaign_practice_begin_again,true)
     action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
+    if hd_direct_realm:
+        action(body,_campaign_phrase("Zen Ascend","Zen Ascend","Zen Ascend"),show_ascend_home)
     _hd_realm_finish(parts, _campaign_realm_quote(practice_chapter))
     _open_realm_dialog(parts)
 
@@ -3520,7 +3694,10 @@ func _campaign_practice_back() -> void:
     ZenChronicles.set_campaign_board_active(false)
     sync_realm_music()
     draw()
-    ZenChronicles.open_campaign_challenges(practice_chapter)
+    var return_chapter: int = practice_chapter
+    hd_direct_realm = false
+    _hd_restore_selected_board()
+    ZenChronicles.open_campaign_challenges(return_chapter)
 
 func _show_ember_vfx_test() -> void:
     if not Realm2.qa_mode(): return

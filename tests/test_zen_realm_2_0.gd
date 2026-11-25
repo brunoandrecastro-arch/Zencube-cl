@@ -6,6 +6,7 @@ const Fracture = preload("res://story/ZenFractureState.gd")
 const Realm2 = preload("res://core/ZenRealmCampaign2.gd")
 const Shadow = preload("res://story/ZenShadowCampaign.gd")
 const Abyss = preload("res://story/ZenAbyssCampaign.gd")
+const Ember = preload("res://story/ZenEmberCampaign.gd")
 const Realms = preload("res://core/ZenAscendRealms.gd")
 const Reader = preload("res://story/ZenRealmChallengeMenu.gd")
 var failed: int = 0
@@ -22,7 +23,7 @@ func backup(path: String) -> void:
     if FileAccess.file_exists(path): snapshots[path]=FileAccess.get_file_as_bytes(path)
 
 func restore() -> void:
-    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,Fracture.PATH,SaveManager.PATH,DarkKuzeAct.SAVE_FILE]:
+    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,Fracture.PATH,SaveManager.PATH,DarkKuzeAct.SAVE_FILE,Ember.SAVE]:
         if snapshots.has(path):
             var f: FileAccess = FileAccess.open(path,FileAccess.WRITE)
             if f!=null:
@@ -40,7 +41,7 @@ func seed_story(chapter: int, done: bool) -> void:
     else: check(Abyss.save_progress(story),"seed Abyss boss/story")
 
 func run() -> void:
-    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,Fracture.PATH,SaveManager.PATH,DarkKuzeAct.SAVE_FILE]:
+    for path in [Realm2.SAVE,Shadow.SAVE,Abyss.SAVE,Fracture.PATH,SaveManager.PATH,DarkKuzeAct.SAVE_FILE,Ember.SAVE]:
         backup(path)
         if FileAccess.file_exists(path):
             DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
@@ -160,6 +161,31 @@ func run() -> void:
             nav.call("close_abyss_reader")
             await process_frame
             check(not nav.call("campaign_audio_exclusive"),"closing final reader releases exclusive music")
+            controller.call("_save_ascend_setting","language","en")
+            controller.call("show_realms")
+            var realm_menu: Node = controller.get("active_realm_dialog")
+            var direct_abyss: Button = realm_menu.find_child("EnterGameplayRealm1",true,false) as Button
+            check(direct_abyss!=null,"unlocked Abyss exposes direct gameplay entry")
+            check((realm_menu.find_child("EnterGameplayRealm3",true,false)!=null)==Realm2.unlocked(3),"Celestial gameplay entry follows existing gate")
+            if direct_abyss!=null:
+                direct_abyss.pressed.emit()
+                check(bool(controller.get("campaign_practice_active")) and int(controller.get("practice_chapter"))==1,"Enter Realm opens actual 96-cell Abyss board")
+                check(not nav.call("is_open"),"Enter Realm does not open Manhwa")
+                controller.call("show_ascend_home")
+                var selected_label: Label = controller.get("active_realm_dialog").find_child("AscendHomeSelectedRealm",true,false) as Label
+                check(selected_label!=null and selected_label.text=="Abyss of Memories","home follows selected Realm rather than campaign")
+                controller.set("busy",true)
+                controller.call("draw")
+                check("Thinking" in controller.get("status_label").text,"English bot status is localized")
+                controller.set("busy",false)
+                controller.call("_continue_ascend_campaign")
+                check(int(controller.call("_hd_selected_chapter"))==2,"Continue Campaign activates Ember")
+                check(nav.call("is_open"),"Continue Campaign opens correct story reader")
+                nav.call("close_ember_reader")
+                controller.call("show_ascend_home")
+                selected_label = controller.get("active_realm_dialog").find_child("AscendHomeSelectedRealm",true,false) as Label
+                check(selected_label!=null and selected_label.text=="Ember Temple","home follows Ember after campaign continuation")
+                check(int(SaveManager.load_data().ascend.get("hd_selected_chapter",-1))==2,"selected chapter persists independently")
         controller.queue_free()
         current_scene=old_scene
         await process_frame
