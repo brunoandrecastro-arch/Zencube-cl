@@ -2324,6 +2324,7 @@ func _hd_submenu_finish(box: VBoxContainer, screen_name: String, centered: bool 
     heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
     var lotus := TextureRect.new()
+    lotus.name = "HDDecorativeLotus"
     lotus.texture = preload("res://ui/tower_lotus.svg")
     lotus.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     lotus.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

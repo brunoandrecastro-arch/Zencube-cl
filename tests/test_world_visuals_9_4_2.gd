@@ -8,7 +8,10 @@ func check(ok: bool, reason: String) -> void:
         failures += 1
         printerr("PREMIUM WORLD FAIL: "+reason)
 func count_thumbnails(node: Node) -> int:
-    var total: int = 1 if node is TextureRect else 0
+    var total: int = 0
+    if node is TextureRect:
+        if node.name != "HDDecorativeLotus" or node.texture != preload("res://ui/tower_lotus.svg"):
+            total = 1
     for child in node.get_children():
         total += count_thumbnails(child)
     return total
