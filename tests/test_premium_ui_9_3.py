@@ -8,7 +8,7 @@ save=(p/'core/SaveManager.gd').read_text()
 loc=(p/'core/ZenLocalization.gd').read_text()
 exp=(p/'export_presets.cfg').read_text()
 for phrase in ('func premium_button(', 'func open_play_menu()', 'func show_result_screen()',
-    'popup.anchor_top = 0.52 if special else 0.56', 'func vibrate_on_move()', 'Input.vibrate_handheld(22)',
+    '_hd_result_shell(outcome_title, subtitle)', 'func vibrate_on_move()', 'Input.vibrate_handheld(22)',
     'call_deferred("show_result_screen")', 'func resume_campaign()', 'home.configure(self)',
     'premium_button("Noch eine Partie", box,', 'premium_button("Hauptmenü", box, open_menu)'):
     assert phrase in ui, phrase
@@ -22,3 +22,10 @@ for code in ('EN','PT'):
                 'Vibration bei Spielzügen','Vier in einer Reihe. Über die Kante.'):
         assert entries.get(key), (code,key)
 print('OK: premium menu, result flow, haptics and three-language copy in source')
+
+assert 'popup.name = "HDResultScreen"' in ui
+assert 'hero.name = "HDLiveResultCube"' in ui
+assert 'hero.texture = viewport.get_texture()' in ui
+assert 'column.hide()' in ui.split(
+    'func _hd_result_shell(', 1
+)[1].split('\nfunc ', 1)[0]

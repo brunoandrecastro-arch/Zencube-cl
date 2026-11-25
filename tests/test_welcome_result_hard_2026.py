@@ -16,10 +16,17 @@ assert 'var tagline = label("Ein ruhiges Strategiespiel' not in ui
 result = ui.split('func show_result_screen() -> void:',1)[1].split('func play_again_after_result()',1)[0]
 assert 'Entdecke neue Wege.' not in result
 assert 'var detail_label' not in result
-assert 'popup.anchor_top = 0.52 if special else 0.56' in result
+assert '_hd_result_shell(outcome_title, subtitle)' in result
 assert 'premium_button("Noch eine Partie"' in result
 assert 'premium_button("Hauptmenü"' in result
 assert '[0.70, 0.66, 0.75, 0.91, 1.0][level]' in ai
 assert 'if level == 2 and rng.randf() < 0.38' in ai
 assert 'return soft_choice(order, [], 6)' in ai
 print('OK: Touch-scroll intro, immediate start buttons, compact result, softer Classic Hard')
+
+assert 'popup.name = "HDResultScreen"' in ui
+assert 'hero.name = "HDLiveResultCube"' in ui
+assert 'hero.texture = viewport.get_texture()' in ui
+assert 'column.hide()' in ui.split(
+    'func _hd_result_shell(', 1
+)[1].split('\nfunc ', 1)[0]
