@@ -97,7 +97,7 @@ func run() -> void:
     game.persist()
     game.open_menu()
     (named(game.popup, "HomeHowToPlay") as Button).pressed.emit()
-    check(not game.home_visible and caption(game.popup, "Start mini tutorial") != null, "full illustrated help opens on demand")
+    check(game.home_visible and not game.column.visible and game.popup.name == "HDHowToPlay" and caption(game.popup, "Start mini tutorial") != null, "full illustrated help opens on demand")
     caption(game.popup, "Back to main menu").pressed.emit()
     check(game.home_visible, "help returns to home")
     (named(game.popup, "HomeGameModes") as Button).pressed.emit()

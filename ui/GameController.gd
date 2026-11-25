@@ -1155,15 +1155,18 @@ func open_store() -> void:
     if shop_tab == 3:
         store_hint_section(box)
         button("Zum Hauptmenü", box, open_menu, true)
+        _hd_submenu_finish(box, "HDZenShop")
         return
     if shop_tab == 2:
         store_background_section(box)
         button("Zum Hauptmenü", box, open_menu, true)
+        _hd_submenu_finish(box, "HDZenShop")
         return
     if shop_tab == 1:
         label("Höre neue Musik an und schalte sie dauerhaft mit Zen-Blättern frei.", box, 13)
         store_music_section(box)
         button("Zum Hauptmenü", box, open_menu, true)
+        _hd_submenu_finish(box, "HDZenShop")
         return
     label("Gewinne gegen den Zen-Bot oder löse neue Challenges. Stärkere Bots geben mehr Blätter.", box, 13)
     var rewards: String = ""
@@ -1225,6 +1228,8 @@ func open_store() -> void:
         skin_button.add_theme_stylebox_override("disabled", theme_style(Color("e7dfd0"), 12))
     store_page_buttons(box)
     button("Zum Hauptmenü", box, open_menu, true)
+    _hd_submenu_finish(box, "HDZenShop")
+
 
 func change_shop_tab(index: int) -> void:
     shop_tab = clampi(index, 0, 3)
@@ -1886,6 +1891,8 @@ func open_ascend_intro() -> void:
             "🔒 Complete Zen Chronicles Act IV to unlock this hidden path.",
             "🔒 Conclui o Ato IV de Zen Chronicles para desbloquear este caminho."),box,15)
         premium_button(_act_one_ui("Zur Geschichte","Go to Story","Ir à História"),box,func(): chronicles.open_library(),true)
+    _hd_submenu_finish(box, "HDZenAscend", true)
+
 
 func buy_ascend() -> void:
     # Keep legacy signals safe: direct calls cannot buy an early 4x4 unlock.
@@ -2290,6 +2297,85 @@ func _input(event: InputEvent) -> void:
         scroll.scroll_vertical = maxi(0,scroll.scroll_vertical - delta)
         get_viewport().set_input_as_handled()
 
+func _hd_submenu_finish(box: VBoxContainer, screen_name: String, centered: bool = false) -> void:
+    popup.name = screen_name
+    popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+    var backdrop := theme_style(Color("10271f", 0.80), 0)
+    backdrop.set_border_width_all(0)
+    backdrop.shadow_size = 0
+    backdrop.set_content_margin_all(24.0)
+    popup.add_theme_stylebox_override("panel", backdrop)
+
+    box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    box.add_theme_constant_override("separation", 12)
+
+    if centered:
+        box.alignment = BoxContainer.ALIGNMENT_CENTER
+
+    _hd_submenu_style(box)
+
+    var heading := box.get_child(0) as Label
+    heading.add_theme_font_size_override("font_size", 32)
+    heading.add_theme_font_override("font", ZenType.heading())
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+    var lotus := TextureRect.new()
+    lotus.texture = preload("res://ui/tower_lotus.svg")
+    lotus.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    lotus.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    lotus.custom_minimum_size.y = 30
+    lotus.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    box.add_child(lotus)
+    box.move_child(lotus, 1)
+
+    _enable_feedback_modal_scroll(box)
+    column.hide()
+    home_visible = true
+
+func _hd_submenu_style(node: Node) -> void:
+    if node is PanelContainer:
+        var panel: PanelContainer = node
+        if panel.custom_minimum_size.x == 28 and panel.custom_minimum_size.y == 28:
+            return
+        var card := theme_style(Color("18382c", 0.92), 18)
+        card.shadow_size = 0
+        card.set_border_width_all(1)
+        card.border_color = Color("d8bb7e", 0.65)
+        panel.add_theme_stylebox_override("panel", card)
+
+    if node is Label:
+        node.add_theme_color_override("font_color", Color("f1e4c7"))
+
+    if node is Button:
+        var b: Button = node
+        var compact: bool = b.get_parent() is HBoxContainer
+        if not compact:
+            b.custom_minimum_size.y = 54
+
+        for state in ["normal", "hover", "pressed", "disabled"]:
+            var bg: Color = Color("16382b", 0.90)
+            if state == "hover":
+                bg = Color("315b3d")
+            elif state == "pressed":
+                bg = Color("102a25")
+            elif state == "disabled":
+                bg = Color("35453c", 0.90)
+
+            var st := theme_style(bg, 16)
+            st.shadow_size = 0
+            st.set_border_width_all(1)
+            st.border_color = Color("d8bb7e", 0.70)
+            b.add_theme_stylebox_override(state, st)
+
+        for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+            b.add_theme_color_override(key, Color("fff0cf"))
+
+        b.add_theme_color_override("font_disabled_color", Color("b5b8a7"))
+
+    for child in node.get_children():
+        _hd_submenu_style(child)
+
 func open_welcome() -> void:
     welcome_open = true
     var box = modal("Spielanleitung")
@@ -2310,6 +2396,8 @@ func open_welcome() -> void:
         welcome_scroll.scroll_deadzone = 0
         welcome_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
     allow_welcome_scroll(box)
+    _hd_submenu_finish(box, "HDHowToPlay")
+
 
 func add_rule_example(parent: Node, caption_text: String, left_marks: int) -> void:
     var panel = PanelContainer.new()
