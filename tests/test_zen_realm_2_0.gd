@@ -140,6 +140,8 @@ func run() -> void:
         dialog = controller.get("active_realm_dialog")
         check(dialog!=null and dialog.find_child("AscendSettingsLanguage",true,false)!=null,"native Settings language picker")
         check(dialog!=null and dialog.find_child("AscendSettingsMusicTrack",true,false)!=null,"native Settings music picker")
+        var difficulty: Label = dialog.find_child("AscendSettingsDifficulty",true,false) as Label
+        check(difficulty!=null and difficulty.text.begins_with(str(controller.call("_bot_difficulty_name"))),"Settings shows actual fixed bot difficulty")
         controller.call("_save_ascend_setting","language","pt")
         check(controller.get("cells")==board_before,"language settings do not reset board")
         controller.call("_save_ascend_setting","music",true)

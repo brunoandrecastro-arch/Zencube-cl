@@ -121,6 +121,13 @@ func run() -> void:
                 test(modal.find_child("Campaign2AbyssRealmCard",true,false)!=null,"Abyss card exists")
                 test(modal.find_child("Campaign2ChroniclesEntry",true,false)!=null,"dedicated Chronicles entry exists")
                 test(ordered.size()>=5 and ordered[1]=="Campaign2AbyssRealmCard","Abyss is immediately after Shadow")
+                for card_name in ordered:
+                    var realm_card: Node = modal.find_child(card_name,true,false)
+                    var card_row: HBoxContainer = realm_card.find_child("HDRealmWorldRow",true,false) as HBoxContainer
+                    test(card_row!=null and card_row.get_child_count()==2 and card_row.get_child(0) is TextureRect,"World-style card has left preview and right actions: "+card_name)
+                    var realm_buttons: Array = []
+                    _buttons(realm_card,realm_buttons)
+                    test(not realm_buttons.is_empty(),"Realm card retains its navigation: "+card_name)
                 test((modal.find_child("ShatteredMoonStoryRealmCard",true,false)!=null)==Moon.unlocked(),
                     "Shattered Moon remains hidden until Satori is finished")
                 test((modal.find_child("SkyGardenEpilogueRealmCard",true,false)!=null)==SkyGarden.unlocked(),
@@ -143,6 +150,15 @@ func run() -> void:
         test(home!=null and home.find_child("AscendHomeCubePreview",true,false)!=null,"4x4 home has an independent cube preview")
         test(home!=null and home.find_child("AscendHomeCampaign",true,false)!=null,"4x4 home exposes Continue Campaign")
         test(home!=null and home.find_child("AscendSettingsEntry",true,false)!=null,"4x4 home exposes Settings")
+        if is_instance_valid(home):
+            for entry_name in ["AscendHomeProfile","AscendHomeCampaign","AscendHomeChronicles","AscendHomeRealms","AscendHomeChallenges","AscendHomeAchievements","AscendHomeShop","AscendHomeGameModes","AscendHomeHowToPlay","AscendHomeResume","AscendSettingsEntry"]:
+                test(home.find_child(entry_name,true,false) is Button,"HD home preserves "+entry_name)
+            var home_frame: PanelContainer = home.get_child(2) as PanelContainer
+            var shell: StyleBoxFlat = home_frame.get_theme_stylebox("panel") as StyleBoxFlat
+            test(shell!=null and shell.border_width_left==0,"no outer home frame")
+            var profile: Button = home.find_child("AscendHomeProfile",true,false) as Button
+            test(profile!=null and profile.size_flags_horizontal==Control.SIZE_SHRINK_BEGIN,"compact profile button")
+            test(controller.call("_hd_realm_scenery",1)=="res://assets/abyss_of_memories/gameplay.webp","Abyss uses landscape rather than concept portrait")
         chronicles.call("open_library")
         test(chronicles.get("_screen_name")=="library","Zen Realm Chronicles is the sole story entry")
         var screen: Node = chronicles.get("_screen")

@@ -318,6 +318,7 @@ func action(parent: Node, value: String, fn: Callable, primary: bool = false) ->
     var fc: Color = Color("fff9e7") if primary else Color("3d3028")
     for kind in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
         b.add_theme_color_override(kind, fc)
+    b.add_theme_stylebox_override("focus",_hd_gold_focus())
     b.mouse_filter = Control.MOUSE_FILTER_PASS
     b.pressed.connect(fn)
     parent.add_child(b)
@@ -387,6 +388,8 @@ func build_interface() -> void:
     var ui_theme: Theme = Theme.new()
     ui_theme.default_font = ZenType.body()
     ui_theme.default_font_size = 18
+    for kind in ["Button","OptionButton","CheckButton","CheckBox","LineEdit"]:
+        ui_theme.set_stylebox("focus",kind,_hd_gold_focus())
     layer.theme = ui_theme
     var backdrop: TextureRect = TextureRect.new()
     realm_backdrop = backdrop
@@ -568,16 +571,47 @@ func _home_story_chapter() -> int:
     if Moon.unlocked(): return 5
     return 4
 
+func _hd_gold_focus() -> StyleBoxFlat:
+    var outline := StyleBoxFlat.new()
+    outline.bg_color = Color(0,0,0,0)
+    outline.draw_center = false
+    outline.border_color = Color("d8bb7e")
+    outline.set_border_width_all(1)
+    outline.set_corner_radius_all(15)
+    return outline
+
+func _hd_home_frame(fill: Color, border: Color, radius: int = 16) -> StyleBoxFlat:
+    var skin := style(fill,radius)
+    skin.set_border_width_all(1)
+    skin.border_color = border
+    skin.content_margin_left = 12
+    skin.content_margin_right = 12
+    skin.content_margin_top = 8
+    skin.content_margin_bottom = 8
+    return skin
+
+func _hd_realm_scenery(chapter: int) -> String:
+    if chapter == 6: return SkyGarden.REALM_ART
+    if chapter == 5: return Moon.REALM_ART
+    if chapter == 1 and ResourceLoader.exists(Abyss.gameplay_art()): return Abyss.gameplay_art()
+    return Realm2.SOURCE_ART[clampi(chapter,0,4)]
+
 func _home_button(parent: Node, caption: String, callback: Callable, featured: bool = false) -> Button:
     var b := action(parent,caption,callback,true)
-    b.custom_minimum_size.y = 58 if featured else 48
-    b.add_theme_font_size_override("font_size",20 if featured else 15)
-    for state in ["normal","hover","pressed"]:
-        var color: Color = Color("d8bb7e") if featured else Color("193b31",0.95)
-        if state=="hover": color = Color("e5c98e") if featured else Color("315747")
-        b.add_theme_stylebox_override(state,style(color,16))
+    var in_row: bool = parent is HBoxContainer
+    b.custom_minimum_size.y = 66 if featured else (52 if in_row else 48)
+    b.add_theme_font_size_override("font_size",20 if featured else (16 if in_row else 15))
+    for state in ["normal","hover","pressed","disabled"]:
+        var color: Color = Color("d8bb7e") if featured else (Color("18382c") if in_row else Color("102a25",0.35))
+        if state == "hover": color = Color("dfc58b") if featured else Color("315747")
+        elif state == "pressed": color = Color("c8aa71") if featured else Color("102a25")
+        elif state == "disabled": color = Color("35453c",0.90)
+        var edge: Color = Color("d8bb7e") if featured else (Color("8d9870") if in_row else Color("cfb37e",0.45))
+        b.add_theme_stylebox_override(state,_hd_home_frame(color,edge,18 if featured else 15))
     for key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
         b.add_theme_color_override(key,Color("102a25") if featured else Color("fff2d5"))
+    b.add_theme_color_override("font_disabled_color",Color("b5b8a7"))
+    b.add_theme_stylebox_override("focus",_hd_gold_focus())
     return b
 
 func show_ascend_home() -> void:
@@ -586,7 +620,18 @@ func show_ascend_home() -> void:
     dialog.name = "AscendHomeScreen"
     var frame: PanelContainer = parts.frame
     frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    frame.add_theme_stylebox_override("panel",style(Color("10271f",0.70),0))
+    # Match the Classic home shell, with no enclosing gold frame.
+    var shell := style(Color("10271f",0.80),0)
+    shell.set_border_width_all(0)
+    shell.shadow_size = 0
+    shell.content_margin_left = 26
+    shell.content_margin_right = 26
+    shell.content_margin_top = 18
+    shell.content_margin_bottom = 18
+    frame.add_theme_stylebox_override("panel",shell)
+    var tint: ColorRect = dialog.get_child(0) as ColorRect
+    tint.color = Color(0,0,0,0)
+    if is_instance_valid(hd_gameplay_margin): hd_gameplay_margin.hide()
     var scroller: ScrollContainer = parts.scroller
     var stack: VBoxContainer = scroller.get_parent() as VBoxContainer
     for child in stack.get_children():
@@ -597,7 +642,8 @@ func show_ascend_home() -> void:
     body.add_theme_constant_override("separation",9)
     var chapter: int = _home_story_chapter()
     var background := TextureRect.new()
-    var artwork: String = SkyGarden.REALM_ART if chapter==6 else (Moon.REALM_ART if chapter==5 else Realm2.SOURCE_ART[chapter])
+    var artwork: String = _hd_realm_scenery(chapter)
+    background.name = "AscendHomeScenery"
     if ResourceLoader.exists(artwork): background.texture = load(artwork)
     background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -610,20 +656,30 @@ func show_ascend_home() -> void:
     body.add_child(top)
     var profile := _home_button(top,_campaign_phrase("Profil","Profile","Perfil"),show_statistics)
     profile.name = "AscendHomeProfile"
+    profile.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+    profile.custom_minimum_size = Vector2(66,44)
+    profile.add_theme_font_size_override("font_size",15)
+    for state in ["normal","hover","pressed"]:
+        var shade: Color = Color("102a25",0.35) if state == "normal" else Color("28523d")
+        profile.add_theme_stylebox_override(state,_hd_home_frame(shade,Color("cfb37e",0.45),14))
     var space := Control.new()
     space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     top.add_child(space)
     var settings := _home_button(top,"⚙",show_ascend_settings)
     settings.name = "AscendSettingsEntry"
     settings.tooltip_text = _campaign_phrase("Einstellungen","Settings","Definições")
-    settings.custom_minimum_size.x = 52
+    settings.custom_minimum_size = Vector2(44,44)
+    settings.add_theme_font_size_override("font_size",15)
+    for state in ["normal","hover","pressed"]:
+        var shade: Color = Color("102a25",0.35) if state == "normal" else Color("28523d")
+        settings.add_theme_stylebox_override(state,_hd_home_frame(shade,Color("cfb37e",0.45),14))
     settings.size_flags_horizontal = Control.SIZE_SHRINK_END
-    var title := text(body,"Zen Ascend",33,Color("fff2d5"))
+    var title := text(body,"Zen Ascend",36,Color("fff2d5"))
     title.add_theme_font_override("font",ZenType.heading())
     text(body,L("subtitle"),15,Color("d8bb7e"))
     var hero := TextureRect.new()
     hero.name = "AscendHomeCubePreview"
-    hero.custom_minimum_size.y = 190
+    hero.custom_minimum_size.y = 205
     hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -646,7 +702,7 @@ func show_ascend_home() -> void:
     preview_cube.pivot.rotation = Vector3(0.40,-0.58,0.0)
     hero.texture = preview.get_texture()
     var destination: String = "Sky Garden" if chapter==6 else ("Shattered Moon" if chapter==5 else Realm2.REALM_NAMES[chapter])
-    text(body,destination,21,Color("d8bb7e"))
+    text(body,destination,18,Color("d8bb7e"))
     text(body,_campaign_phrase("Deine Reise geht weiter.","Your journey continues.","A tua viagem continua."),15,Color("fff2d5"))
     _home_button(body,_campaign_phrase("Kampagne fortsetzen","Continue Campaign","Continuar campanha"),_continue_ascend_campaign,true).name = "AscendHomeCampaign"
     _home_button(body,"Zen Chronicles",_open_campaign_library_from_realms).name = "AscendHomeChronicles"
@@ -740,6 +796,18 @@ func show_ascend_settings() -> void:
     languages.item_selected.connect(func(index: int):
         _save_ascend_setting("language",["de","en","pt"][index])
         call_deferred("show_ascend_settings"))
+    text(body,_campaign_phrase("Bot-Schwierigkeit","Bot difficulty","Dificuldade do bot"),15)
+    var difficulty := Label.new()
+    difficulty.name = "AscendSettingsDifficulty"
+    difficulty.text = _bot_difficulty_name() + " · " + _campaign_phrase("Vorgegeben","Fixed","Fixa")
+    difficulty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    difficulty.add_theme_font_size_override("font_size",18)
+    difficulty.add_theme_color_override("font_color",Color("fff2d5"))
+    var difficulty_card := PanelContainer.new()
+    difficulty_card.add_theme_stylebox_override("panel",_hd_home_frame(Color("18382c",0.92),Color("d8bb7e",0.65)))
+    body.add_child(difficulty_card)
+    difficulty_card.add_child(difficulty)
+    text(body,_campaign_phrase("Die Schwierigkeit folgt dem Realm oder dem Boss.","Difficulty follows the Realm or boss.","A dificuldade depende do reino ou do chefe."),12,Color("d8bb7e"))
     var toggles: Array = [
         ["music",_campaign_phrase("Musik","Music","Música"),false],
         ["sound",_campaign_phrase("Soundeffekte","Sound effects","Efeitos sonoros"),true],
@@ -1528,6 +1596,7 @@ func show_realms() -> void:
             _campaign_phrase("▶ Story-Realm betreten","▶ Enter Story Realm","▶ Entrar no reino da história") if moon_allowed else _campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),
             _open_shattered_from_realms,true)
         moon_entry.name = "ShatteredMoonStoryRealmButton"
+        _hd_world_card(moon_card,moon_column,moon_thumb)
     if SkyGarden.unlocked():
         var sky_card := PanelContainer.new()
         sky_card.name = "SkyGardenEpilogueRealmCard"
@@ -1545,14 +1614,62 @@ func show_realms() -> void:
         sky_column.add_child(sky_thumb)
         text(sky_column,_campaign_phrase("3×3-Epilog","3×3 epilogue","Epílogo 3×3"),14)
         action(sky_column,_campaign_phrase("Geschichte betreten","Enter Story World","Entrar na história"),_open_sky_from_realms,true)
+        _hd_world_card(sky_card,sky_column,sky_thumb)
     text(body,L("bot_only"),13,Color("d5ba85"))
     _hd_menu_dialog(ui_parts, false)
+    var lotus := TextureRect.new()
+    lotus.name = "HDDecorativeLotus"
+    lotus.texture = preload("res://ui/tower_lotus.svg")
+    lotus.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    lotus.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    lotus.custom_minimum_size.y = 30
+    lotus.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body.add_child(lotus)
+    body.move_child(lotus,0)
     _open_realm_dialog(ui_parts)
 
 func _open_sky_from_realms() -> void:
     if not SkyGarden.unlocked(): return
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     ZenChronicles.open_sky_garden_preview()
+
+func _hd_world_card(card: PanelContainer, info: VBoxContainer, thumb: TextureRect) -> void:
+    var skin := style(Color("18382c",0.92),18)
+    skin.shadow_size = 0
+    skin.set_border_width_all(1)
+    skin.border_color = Color("d8bb7e",0.65)
+    skin.set_content_margin_all(10.0)
+    card.add_theme_stylebox_override("panel",skin)
+    var layout := HBoxContainer.new()
+    layout.name = "HDRealmWorldRow"
+    layout.add_theme_constant_override("separation",8)
+    # Keep all existing action nodes and callbacks intact.
+    info.remove_child(thumb)
+    card.remove_child(info)
+    card.add_child(layout)
+    thumb.custom_minimum_size = Vector2(90,104)
+    thumb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+    thumb.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    thumb.name = "HDRealmWorldThumbnail"
+    layout.add_child(thumb)
+    info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    info.add_theme_constant_override("separation",5)
+    layout.add_child(info)
+    for item in info.get_children():
+        if item is Label:
+            var label: Label = item
+            label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+            label.add_theme_font_size_override("font_size",16 if label == info.get_child(0) else 13)
+        elif item is Button:
+            var button: Button = item
+            # All Realm cards use the same quiet green as Classic Worlds.
+            _hd_beta_boss_button(button,false)
+            button.custom_minimum_size.y = 48
+            button.set_meta("HDRealmWorldButton",true)
+            button.add_theme_font_size_override("font_size",14)
+            button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+            button.add_theme_stylebox_override("focus",_hd_gold_focus())
 
 func _add_story_realm_card(body: VBoxContainer, chapter: int, campaign_progress: Dictionary) -> void:
     var legacy_index: int = [0,-1,1,2,3][chapter]
@@ -1567,7 +1684,7 @@ func _add_story_realm_card(body: VBoxContainer, chapter: int, campaign_progress:
     card.add_child(column)
     text(column,Realm2.REALM_NAMES[chapter] + ("" if allowed else "  🔒"),20,Color("f7dfaa"))
     var thumb := TextureRect.new()
-    _hd_queue_preview(thumb,Abyss.gameplay_art() if chapter==1 and ResourceLoader.exists(Abyss.gameplay_art()) else Realm2.SOURCE_ART[chapter])
+    _hd_queue_preview(thumb,_hd_realm_scenery(chapter))
     thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     thumb.custom_minimum_size = Vector2(0,112)
@@ -1583,6 +1700,7 @@ func _add_story_realm_card(body: VBoxContainer, chapter: int, campaign_progress:
             action(column,_campaign_phrase("Bonus-Challenges","Bonus Challenges","Desafios extra")+" · %d/8" % Realms.count(data,legacy_index),_show_bonus_realm_challenges.bind(legacy_index))
     else:
         action(column,_campaign_phrase("🔒 Freischaltung ansehen","🔒 View unlock requirements","🔒 Ver requisitos"),_show_story_realm_requirements.bind(chapter))
+    _hd_world_card(card,column,thumb)
 
 func _show_story_realm_requirements(chapter: int) -> void:
     var parts: Dictionary = _realm_dialog(Realm2.REALM_NAMES[chapter],620)
@@ -1928,7 +2046,7 @@ func _hd_menu_dialog(parts: Dictionary, compact: bool = false) -> void:
     _hd_menu_buttons(stack)
 
 func _hd_menu_buttons(node: Node) -> void:
-    if node is Button and not (node is OptionButton or node is CheckButton or node is CheckBox):
+    if node is Button and not (node is OptionButton or node is CheckButton or node is CheckBox) and not node.has_meta("HDRealmWorldButton"):
         var b: Button = node
         var old_style := b.get_theme_stylebox("normal") as StyleBoxFlat
         var featured: bool = old_style != null and old_style.bg_color.is_equal_approx(Color("4e674f"))
@@ -1944,6 +2062,8 @@ func _hd_menu_buttons(node: Node) -> void:
         for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
             b.add_theme_color_override(key, Color("10271f") if featured else Color("fff0cf"))
         b.add_theme_color_override("font_disabled_color", Color("b5b8a7"))
+    if node is BaseButton or node is LineEdit:
+        node.add_theme_stylebox_override("focus",_hd_gold_focus())
     for child in node.get_children():
         _hd_menu_buttons(child)
 
