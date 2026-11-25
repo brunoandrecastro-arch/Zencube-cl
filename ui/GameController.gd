@@ -1119,6 +1119,7 @@ func open_profile() -> void:
     premium_button("Statistik", box, open_stats)
     if _ascend_revealed():
         premium_button("Erfolge", box, open_achievements)
+    _hd_submenu_finish(box, "HDProfile", true)
 
 func open_achievements() -> void:
     if not _ascend_revealed():
@@ -1473,6 +1474,7 @@ func open_ascension() -> void:
         button("Zen Ascend",box,open_ascend_intro,true)
     button("Welten ansehen",box,open_worlds,true)
     button("Spielen",box,open_play_menu,true,true)
+    _hd_submenu_finish(box, "HDAscension")
 
 func world_unlock_info(world: int) -> String:
     # World 0 is free; worlds 1..4 are cosmetic rewards for completing
@@ -1553,7 +1555,7 @@ func open_worlds() -> void:
         if enter_sky.disabled: label(_act_one_ui("🔒 Shattered Moon abschließen","🔒 Complete Shattered Moon","🔒 Concluir Shattered Moon"),sky_info,12)
     button("Rang & Fortschritt", box, open_ascension, true, true)
     button("Zum Hauptmenü", box, open_menu, true)
-    _enable_feedback_modal_scroll(box)
+    _hd_submenu_finish(box, "HDWorlds")
 
 func _sky_open_from_worlds() -> void:
     close_modal()
@@ -1839,6 +1841,7 @@ func open_stats() -> void:
     label(stat_detail,box,14)
     button("Zen-Aufstieg",box,open_ascension,true)
     label("Ergebnisse zählen die Spieleridentität auch nach einem Farbtausch. Training und Tutorial werden nicht gezählt. Abgeschlossene Partien können nicht rückgängig gemacht werden. Abgebrochene Partien zählen nicht.",box,14)
+    _hd_submenu_finish(box, "HDStatistics")
 # ---- Separate 4x4 Zen Ascend mode and persistent player profiles ----
 func _display_player_name(index: int) -> String:
     var stored: String = str(data.settings.names[index])
@@ -2352,6 +2355,18 @@ func _hd_submenu_style(node: Node) -> void:
 
     if node is Label:
         node.add_theme_color_override("font_color", Color("f1e4c7"))
+
+    if node is ProgressBar:
+        var progress: ProgressBar = node
+        var track := StyleBoxFlat.new()
+        track.bg_color = Color("102a25")
+        track.set_corner_radius_all(6)
+        var fill := StyleBoxFlat.new()
+        fill.bg_color = Color("d8bb7e")
+        fill.set_corner_radius_all(6)
+        progress.add_theme_stylebox_override("background", track)
+        progress.add_theme_stylebox_override("fill", fill)
+        progress.custom_minimum_size.y = 12
 
     if node is Button:
         var b: Button = node
