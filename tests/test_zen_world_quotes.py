@@ -19,7 +19,9 @@ for lang in ('EN','PT'):
         assert values.get(quote) and values[quote]!=quote, (lang,quote)
 assert 'world_title_label = label("Zen-Garten",brand,27' in ui
 assert 'var sub = label("ZenCube 3D",brand,12' in ui
-assert 'world_quote_label = label(WORLD_QUOTES[0],legend_panel,12' in ui
+assert 'legend_panel.add_child(quote_stack)' in ui
+assert 'world_quote_label = label(WORLD_QUOTES[0],quote_stack,12' in ui
+assert 'quote_stack.add_child(tower_lotus)' in ui
 assert 'world_title_label.text = T(Asc.WORLDS[active_world])' in ui
 assert 'world_quote_label.text = T(WORLD_QUOTES[active_world])' in ui
 assert '"6 SEITEN · 54 FELDER · 108 VIERERLINIEN",legend_panel' not in ui
