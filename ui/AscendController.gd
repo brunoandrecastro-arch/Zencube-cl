@@ -1113,6 +1113,14 @@ func bot_turn() -> void:
     if shadow_active and result == 0: _shadow_save()
     draw()
 
+func _present_current_boss_result(generation: int, callback: Callable) -> void:
+    if not is_inside_tree():
+        return
+    if generation != match_generation or result == 0:
+        return
+    if callback.is_valid():
+        callback.call()
+
 func finish() -> void:
     if campaign_practice_active:
         if recorded: return
@@ -1139,28 +1147,28 @@ func finish() -> void:
         recorded = true
         busy = false
         _ember_save()
-        call_deferred("_ember_result")
+        call_deferred("_present_current_boss_result", match_generation, Callable(self, "_ember_result"))
         return
     if shadow_active:
         if recorded: return
         recorded = true
         busy = false
         _shadow_save()
-        call_deferred("_shadow_result")
+        call_deferred("_present_current_boss_result", match_generation, Callable(self, "_shadow_result"))
         return
     if abyss_active:
         if recorded: return
         recorded = true
         busy = false
         _abyss_save()
-        call_deferred("_abyss_result")
+        call_deferred("_present_current_boss_result", match_generation, Callable(self, "_abyss_result"))
         return
     if realm_story_active:
         if recorded: return
         recorded = true
         busy = false
         _realm_story_save()
-        call_deferred("_realm_story_result")
+        call_deferred("_present_current_boss_result", match_generation, Callable(self, "_realm_story_result"))
         return
     if recorded: return
     recorded = true

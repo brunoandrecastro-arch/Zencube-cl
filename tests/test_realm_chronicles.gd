@@ -183,6 +183,13 @@ func run() -> void:
     check(result_scroll!=null and (root.get_visible_rect().size.y<620.0 or result_scroll.vertical_scroll_mode==ScrollContainer.SCROLL_MODE_DISABLED),"no scrolling on normal phone boss result")
     await process_frame
     await process_frame
+    if not is_instance_valid(result_dialog) or controller.get("active_realm_dialog") != result_dialog:
+        check(false,"boss result must survive deferred callbacks")
+        controller.queue_free()
+        dark_kuze_gate.restore()
+        _restore()
+        quit(1)
+        return
     if result_scroll!=null and root.get_visible_rect().size.y>=620.0:
         var result_body: VBoxContainer = result_scroll.get_child(0) as VBoxContainer
         check(result_body.get_combined_minimum_size().y<=result_scroll.size.y+2.0,"boss result information fits above fixed actions")
