@@ -132,6 +132,12 @@ jobs:
             exit 1
           fi
           timeout 45 "$GODOT" --headless --path . --script tests/test_scene_load.gd
+          timeout 90 "$GODOT" --headless --path . --script tests/test_zen_tower_gameplay_v2.gd 2>&1 | tee /tmp/zen-tower-v2-tests.log
+          grep -E '^PASS: [0-9]+ Tower component checks' /tmp/zen-tower-v2-tests.log
+          if grep -Eq 'SCRIPT ERROR|Parse Error|^FAIL:' /tmp/zen-tower-v2-tests.log; then
+            echo "::error::Zen Tower expansion test failed"
+            exit 1
+          fi
 
       - name: Verify 108 lines and simulated games
         run: python3 tests/test_108_rules.py
@@ -504,6 +510,9 @@ jobs:
           from pathlib import Path
 
           manifest = json.loads(Path("data/zen_tower/assets.json").read_text())
+          expansion = json.loads(Path("data/zen_tower/expansions/stages_061_100.json").read_text())
+          manifest["images"].extend(expansion["images"])
+          assert len(manifest["images"]) == 35
 
           with zipfile.ZipFile("build/ZenCube-3D.apk") as apk:
               files = set(apk.namelist())
@@ -512,11 +521,11 @@ jobs:
                   path = "assets/" + image["path"]
                   assert path in files or path + ".import" in files, path
 
-              for name in ["assets.json","lore_en.json"]:
+              for name in ["assets.json","lore_en.json","expansions/stages_061_100.json","expansions/lore_061_100_en.json","expansions/rules_061_101.json"]:
                   path = "assets/data/zen_tower/" + name
                   assert path in files, path
 
-          print("PASS: All 20 Tower images and both JSON files included")
+          print("PASS: All 35 Tower images and all five JSON files included")
           PYAPK
 
       - name: Verify music and Chronicles data included in APK

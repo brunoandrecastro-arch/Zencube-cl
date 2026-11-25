@@ -11,6 +11,10 @@ var selected: int = -1
 var surface_textures: Array[Texture2D] = []
 var skin_id: int = 0
 
+var board_side: int = 3
+const TowerGrid = preload("res://core/ZenTowerGrid.gd")
+const TowerRuleSet = preload("res://core/ZenTowerRules.gd")
+
 var tower_skin: int = -1
 var tower_trim: Node3D
 var tower_textures: Dictionary = {}
@@ -35,7 +39,10 @@ const TOWER_PALETTES = [
 		"faces":["865022","b47b35","68391c","c18b42","955a27","a96c31"],
 		"core":"e0ad49","trim":"ffe099",
 		"metal":0.48,"rough":0.30
-	}
+	},
+	{"faces":["355c6b","486f7f","294657","73979f","48687d","2c4f61"],"core":"cedde4","trim":"e3f8ff","metal":0.45,"rough":0.23},
+	{"faces":["5d445c","825c70","4c3c58","ab7d87","6f526b","5a4254"],"core":"e0bf75","trim":"ffe2ab","metal":0.32,"rough":0.30},
+	{"faces":["231c3e","3b2c56","1a1b30","69513b","30254d","25233e"],"core":"d7ad55","trim":"f2d088","metal":0.55,"rough":0.25}
 ]
 var sky_family_palette: bool = false # Only for the post-Moon 3x3 epilogue
 var core_mesh_instance: MeshInstance3D
@@ -94,31 +101,7 @@ func _ready() -> void:
 		pebble.material_override = material(Color("aaa28d"))
 		pebble.position = Vector3(px,-2.23,-0.7)
 		add_child(pebble)
-	for c in range(54):
-		var f = CubeGeometry.face(c)
-		var tile = MeshInstance3D.new()
-		var mesh = BoxMesh.new()
-		mesh.size = Vector3(0.94,0.94,0.08)
-		tile.mesh = mesh
-		tile.basis = Basis(CubeGeometry.U[f],-CubeGeometry.V[f],CubeGeometry.N[f])
-		tile.position = CubeGeometry.center(c)
-		var face_base = face_color(f)
-		tile.material_override = face_material(face_base)
-		pivot.add_child(tile)
-		tiles.append(tile)
-		var body = StaticBody3D.new()
-		body.set_meta("cell",c)
-		tile.add_child(body)
-		var shape = CollisionShape3D.new()
-		var box = BoxShape3D.new()
-		box.size = mesh.size
-		shape.shape = box
-		body.add_child(shape)
-		var mark = Node3D.new()
-		mark.transform = tile.transform
-		mark.position += CubeGeometry.N[f]*0.075
-		pivot.add_child(mark)
-		marks.append(mark)
+	set_board_size(3)
 	overlay = Node3D.new()
 	pivot.add_child(overlay)
 	load_surface_textures()
@@ -263,16 +246,18 @@ func bar(parent: Node3D, a: Vector3, b: Vector3, color: Color, width: float = 0.
 	node.quaternion = Quaternion(Vector3.UP,direction)
 	parent.add_child(node)
 func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: int = -1) -> void:
+	set_board_size(4 if board.cells.size() == 96 else 3)
+	if board.cells.size() != tiles.size(): return
 	for child in overlay.get_children():
 		overlay.remove_child(child)
 		child.queue_free()
-	var rule = RulesEngine.new()
+	var rule: RulesEngine = TowerRuleSet.new(board_side)
 	var tx = rule.threats(board.cells,1) if hints else []
 	var to = rule.threats(board.cells,2) if hints else []
 	var winning = []
 	for line in board.win_lines: winning.append_array(line)
-	for c in range(54):
-		var color = face_color(CubeGeometry.face(c))
+	for c in range(board.cells.size()):
+		var color = face_color(cell_face(c))
 		if tx.has(c): color = Color("b3c2a0")
 		if to.has(c): color = Color("d5a58d")
 		if preview.has(c): color = Color("c2b094")
@@ -283,6 +268,8 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 			var pulse = create_tween().set_loops(2)
 			pulse.tween_property(tiles[c].material_override,"albedo_color",color.lightened(0.2),0.25)
 			pulse.tween_property(tiles[c].material_override,"albedo_color",color,0.35)
+		var mark_scale: Vector3 = Vector3.ONE * (0.75 if board_side == 4 else 1.0)
+		marks[c].scale = mark_scale
 		for child in marks[c].get_children():
 			marks[c].remove_child(child)
 			child.queue_free()
@@ -329,19 +316,19 @@ func paint(board: BoardModel, hints: bool, preview: Array = [], animate_cell: in
 			ring.material_override = material(o_main, true)
 			marks[c].add_child(ring)
 		if c == animate_cell:
-			marks[c].scale = Vector3.ONE*0.3
-			create_tween().tween_property(marks[c],"scale",Vector3.ONE,0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			marks[c].scale = mark_scale*0.3
+			create_tween().tween_property(marks[c],"scale",mark_scale,0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	for line in board.win_lines: draw_line(line,Color("a37e4d"))
 	if not preview.is_empty(): draw_line(preview,Color("8f785f"))
 func draw_line(line: Array, color: Color) -> void:
 	for k in range(line.size()-1):
 		var a = line[k]
 		var b = line[k+1]
-		var p = CubeGeometry.center(a,1.62)
-		var q = CubeGeometry.center(b,1.62)
-		if CubeGeometry.face(a) == CubeGeometry.face(b): bar(overlay,p,q,color,0.025)
+		var p = cell_center(a,1.62)
+		var q = cell_center(b,1.62)
+		if cell_face(a) == cell_face(b): bar(overlay,p,q,color,0.025)
 		else:
-			var edge = CubeGeometry.edge_point(a,b)
+			var edge = TowerGrid.edge_point(a,b) if board_side == 4 else CubeGeometry.edge_point(a,b)
 			# Two surface segments, never a chord through the cube interior.
 			bar(overlay,p,edge,color,0.025)
 			bar(overlay,edge,q,color,0.025)
@@ -355,7 +342,7 @@ func _tower_surface_texture(index: int) -> Texture2D:
 
 	var noise := FastNoiseLite.new()
 	noise.seed = 971 + index * 101
-	noise.frequency = [0.075,0.035,0.022,0.055][index]
+	noise.frequency = [0.075,0.035,0.022,0.055,0.045,0.030,0.060][index]
 	noise.fractal_octaves = 4
 
 	match index:
@@ -363,6 +350,9 @@ func _tower_surface_texture(index: int) -> Texture2D:
 		1: noise.noise_type = FastNoiseLite.TYPE_CELLULAR
 		2: noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 		3: noise.noise_type = FastNoiseLite.TYPE_VALUE
+		4: noise.noise_type = FastNoiseLite.TYPE_PERLIN
+		5: noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+		6: noise.noise_type = FastNoiseLite.TYPE_CELLULAR
 
 	var ramp := Gradient.new()
 	ramp.colors = PackedColorArray([
@@ -381,7 +371,7 @@ func _tower_surface_texture(index: int) -> Texture2D:
 	return texture
 
 func set_tower_skin(index: int) -> void:
-	index = clampi(index,-1,3)
+	index = clampi(index,-1,TOWER_PALETTES.size()-1)
 
 	if tower_skin == index:
 		return
@@ -428,7 +418,7 @@ func set_tower_skin(index: int) -> void:
 		for sx in [-1.0,1.0]:
 			for sy in [-1.0,1.0]:
 				var corner: Vector3 = n+u*float(sx)*1.29+v*float(sy)*1.29
-				var radius: float = [0.10,0.13,0.08,0.12][index]
+				var radius: float = [0.10,0.13,0.08,0.12,0.10,0.09,0.14][index]
 
 				bar(tower_trim,
 					corner-u*radius,
@@ -450,3 +440,51 @@ func set_tower_skin(index: int) -> void:
 						corner-v*radius,
 						corner-u*radius,
 						gold,0.014)
+
+
+func cell_face(cell: int) -> int:
+	return TowerGrid.face(cell) if board_side == 4 else CubeGeometry.face(cell)
+
+func cell_center(cell: int, height: float = 1.5) -> Vector3:
+	return TowerGrid.center(cell, height) if board_side == 4 else CubeGeometry.center(cell, height)
+
+func set_board_size(side: int) -> void:
+	side = 4 if side == 4 else 3
+	if board_side == side and tiles.size() == 6 * side * side:
+		return
+	board_side = side
+	for item in tiles + marks:
+		if is_instance_valid(item):
+			pivot.remove_child(item)
+			item.queue_free()
+	tiles.clear()
+	marks.clear()
+	if is_instance_valid(overlay):
+		for child in overlay.get_children():
+			overlay.remove_child(child)
+			child.queue_free()
+	for cell in range(6 * side * side):
+		var face_index: int = cell_face(cell)
+		var tile := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		var width: float = 0.70 if side == 4 else 0.94
+		mesh.size = Vector3(width, width, 0.08)
+		tile.mesh = mesh
+		tile.basis = Basis(CubeGeometry.U[face_index], -CubeGeometry.V[face_index], CubeGeometry.N[face_index])
+		tile.position = cell_center(cell)
+		tile.material_override = face_material(face_color(face_index))
+		pivot.add_child(tile)
+		tiles.append(tile)
+		var body := StaticBody3D.new()
+		body.set_meta("cell", cell)
+		tile.add_child(body)
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = mesh.size
+		shape.shape = box
+		body.add_child(shape)
+		var mark := Node3D.new()
+		mark.transform = tile.transform
+		mark.position += CubeGeometry.N[face_index] * 0.075
+		pivot.add_child(mark)
+		marks.append(mark)

@@ -26,7 +26,7 @@ func run() -> void:
     var rules := RulesEngine.new()
     var line: Array = rules.lines[0]
 
-    for stage in [15,30,45,60,75]:
+    for stage in [15,30,45,60,75,90,100]:
         state.floor = stage
         state.game = {}
         check(Tower.begin_floor(data),"Begin boss "+str(stage))
@@ -42,15 +42,27 @@ func run() -> void:
         check(Tower.play(data,int(line[3]),1),"Winning move")
         var result := Tower.settle(data)
 
-        check(int(result.get("winner",0))==1,"Boss victory")
+        check(int(result.get("winner",0))==1,"First round victory")
+        check(int(result.get("life_bonus",0))==0,"No bonus before series win")
+        check(int(state.floor)==stage,"Stay for second round")
+        check(Tower.settle(data).is_empty(),"No duplicate round result")
+        check(Tower.begin_floor(data),"Second boss round")
+        board = BoardModel.new()
+        board.swap_enabled = false
+        for j in range(3):
+            board.cells[int(line[j])] = 1
+        state.game = board.snapshot()
+        check(Tower.play(data,int(line[3]),1),"Second winning move")
+        result = Tower.settle(data)
+        check(bool(result.get("series_complete",false)),"Series victory")
         check(int(result.get("life_bonus",0))==3,"Boss life bonus")
         check(int(state.floor)==stage+1,"Next floor")
         check(Tower.settle(data).is_empty(),"No duplicate reward")
 
-    check(state.cards.size()==4,"Four unique guardian cards")
-    check(int(state.record)==75,"Endless record")
-    check(Tower.section_index(61)==0,"Second cycle")
-    check(Tower.is_boss(75),"Endless boss cycle")
+    check(state.cards.size()==7,"Seven unique guardian cards")
+    check(int(state.record)==100,"Milestone record")
+    check(Tower.section_index(61)==4,"Frostveil section")
+    check(Tower.is_boss(100),"Hundredth floor boss")
 
     state.lives = 3
     state.active = true
@@ -76,8 +88,8 @@ func run() -> void:
     check(Tower.new_run(data),"Restart tower")
     check(int(state.floor)==1,"Restart at floor one")
     check(int(state.lives)==3,"Lives restored")
-    check(state.cards.size()==4,"Gallery survives restart")
-    check(int(state.record)==75,"Record survives restart")
+    check(state.cards.size()==7,"Gallery survives restart")
+    check(int(state.record)==100,"Record survives restart")
 
     Tower.begin_floor(data)
 
@@ -94,7 +106,7 @@ func run() -> void:
     renderer.apply_skin(3)
     var original: Color = renderer.face_color(0)
 
-    for index in range(4):
+    for index in range(7):
         renderer.set_tower_skin(index)
         renderer.paint(BoardModel.new(),false)
         check(renderer.skin_id==3,"Shop selection preserved")

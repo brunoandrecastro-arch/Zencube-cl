@@ -1,0 +1,29 @@
+{
+  "language": "en",
+  "guardians": [
+    {
+      "guardian_id": "zen_tower_005_snowbound_kirin",
+      "name": "The Snowbound Kirin",
+      "card_number": "005",
+      "first_cycle_floor": 75,
+      "lore": "When the tower's upper gardens froze, a young kirin found a single pine seedling beneath the snow. It curled around the fragile shoot and kept watch through the long winter.\n\nThe seasons passed. Frost silvered its antlers, and scales like pearl formed along its back. Still it waited, listening for water beneath the ice.\n\nAt the first thaw, the seedling opened new green needles. The kirin rose and left a narrow path through the snow.\n\nNow it guards the seventy-fifth floor, teaching each traveller that quiet care can outlast the harshest season.",
+      "quote": "Patience keeps the smallest hope alive."
+    },
+    {
+      "guardian_id": "zen_tower_006_dawnwing_crane",
+      "name": "The Dawnwing Crane",
+      "card_number": "006",
+      "first_cycle_floor": 90,
+      "lore": "Each morning, a crane waited beside the tower's sleeping garden. Its gates opened only at noon, long after the first light had passed.\n\nWatching the sunrise, it noticed one stone warming before all the others. It stood upon that stone and spread its wings, casting golden light across the closed blossoms.\n\nOne morning, the flowers opened before the bells. A hidden stairway appeared beneath their branches, leading toward a sky the crane had never seen.\n\nIt now guards the ninetieth floor, teaching travellers to notice a beginning while the world is still waiting for a sign.",
+      "quote": "Begin with the light you have."
+    },
+    {
+      "guardian_id": "zen_tower_007_eclipse_sovereign",
+      "name": "The Eclipse Sovereign",
+      "card_number": "007",
+      "first_cycle_floor": 100,
+      "lore": "At the tower's hundredth gate, an ancient keeper watched the sun and moon cross the same sky. Travellers called one a beginning and the other an ending. The keeper learned to guard the space between.\n\nIt forged a mask from light and shadow, and bound its oath to the eclipse's golden ring. Gold and silver became the two halves of its armour.\n\nOn the hundredth floor, three trials await: patience, balance, and clarity. Each round reveals another part of the path.\n\nWhen the final trial is complete, the sealed gate opens. Beyond it, familiar lines unfold into a wider world.",
+      "quote": "The path widens when your vision does."
+    }
+  ]
+}

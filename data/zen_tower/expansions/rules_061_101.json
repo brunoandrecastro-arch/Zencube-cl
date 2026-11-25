@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "package_id": "zencube_zen_tower_art_061_100_v1",
+  "status": "agreed_requirements_for_gameplay_integration",
+  "normal_floor_ranges": [
+    {
+      "from": 61,
+      "through": 74
+    },
+    {
+      "from": 76,
+      "through": 89
+    },
+    {
+      "from": 91,
+      "through": 99
+    }
+  ],
+  "boss_floors": [
+    {
+      "floor": 75,
+      "guardian_id": "zen_tower_005_snowbound_kirin"
+    },
+    {
+      "floor": 90,
+      "guardian_id": "zen_tower_006_dawnwing_crane"
+    },
+    {
+      "floor": 100,
+      "guardian_id": "zen_tower_007_eclipse_sovereign",
+      "rounds": 3,
+      "trial_themes_en": [
+        "Patience",
+        "Balance",
+        "Clarity"
+      ],
+      "reward_timing": "after_complete_boss_victory"
+    }
+  ],
+  "board_size_ranges": [
+    {
+      "from": 1,
+      "through": 100,
+      "size": 3
+    },
+    {
+      "from": 101,
+      "size": 4
+    }
+  ],
+  "boss_victory_life_bonus": 3,
+  "carry_remaining_lives": true,
+  "life_example": {
+    "remaining_before_bonus": 3,
+    "after_bonus": 6
+  }
+}

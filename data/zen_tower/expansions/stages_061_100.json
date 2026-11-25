@@ -1,0 +1,336 @@
+{
+  "schema_version": 1,
+  "package_id": "zencube_zen_tower_art_061_100_v1",
+  "created_date": "2026-11-25",
+  "integration_status": "assets_ready_gameplay_integration_pending",
+  "extends_catalog": "res://data/zen_tower/assets.json",
+  "image_count": 15,
+  "sections": [
+    {
+      "id": "05",
+      "title": {
+        "de": "Frostschleier-Heiligtum",
+        "en": "Frostveil Sanctuary",
+        "pt": "Santuário do Véu Gelado"
+      },
+      "first_cycle_normal_floors": {
+        "from": 61,
+        "through": 74
+      },
+      "first_cycle_boss_floor": 75,
+      "background": "res://assets/zen_tower/backgrounds/floors_061_074.png",
+      "boss_arena": "res://assets/zen_tower/arenas/floor_075_snowbound_kirin.png",
+      "guardian_id": "zen_tower_005_snowbound_kirin",
+      "music_slot": "zen_tower_section_05"
+    },
+    {
+      "id": "06",
+      "title": {
+        "de": "Garten des ersten Lichts",
+        "en": "Garden of First Light",
+        "pt": "Jardim da Primeira Luz"
+      },
+      "first_cycle_normal_floors": {
+        "from": 76,
+        "through": 89
+      },
+      "first_cycle_boss_floor": 90,
+      "background": "res://assets/zen_tower/backgrounds/floors_076_089.png",
+      "boss_arena": "res://assets/zen_tower/arenas/floor_090_dawnwing_crane.png",
+      "guardian_id": "zen_tower_006_dawnwing_crane",
+      "music_slot": "zen_tower_section_06"
+    },
+    {
+      "id": "07",
+      "title": {
+        "de": "Das hundertste Tor",
+        "en": "The Hundredth Gate",
+        "pt": "O Centésimo Portal"
+      },
+      "first_cycle_normal_floors": {
+        "from": 91,
+        "through": 99
+      },
+      "first_cycle_boss_floor": 100,
+      "background": "res://assets/zen_tower/backgrounds/floors_091_099.png",
+      "boss_arena": "res://assets/zen_tower/arenas/floor_100_eclipse_sovereign.png",
+      "guardian_id": "zen_tower_007_eclipse_sovereign",
+      "music_slot": "zen_tower_section_07"
+    }
+  ],
+  "guardians": [
+    {
+      "id": "zen_tower_005_snowbound_kirin",
+      "card_number": "005",
+      "name": {
+        "de": "Der Schneekirin",
+        "en": "The Snowbound Kirin",
+        "pt": "O Kirin das Neves"
+      },
+      "first_cycle_floor": 75,
+      "portrait": "res://assets/zen_tower/bosses/005_snowbound_kirin.png",
+      "card_front": "res://assets/zen_tower/cards/005_snowbound_kirin_front.png",
+      "card_back": "res://assets/zen_tower/cards/005_snowbound_kirin_back.png",
+      "card_language": "en",
+      "unlock_condition": "first_victory_over_this_guardian",
+      "music_slot": "zen_tower_guardian_005"
+    },
+    {
+      "id": "zen_tower_006_dawnwing_crane",
+      "card_number": "006",
+      "name": {
+        "de": "Der Kranich der Morgenröte",
+        "en": "The Dawnwing Crane",
+        "pt": "O Grou da Aurora"
+      },
+      "first_cycle_floor": 90,
+      "portrait": "res://assets/zen_tower/bosses/006_dawnwing_crane.png",
+      "card_front": "res://assets/zen_tower/cards/006_dawnwing_crane_front.png",
+      "card_back": "res://assets/zen_tower/cards/006_dawnwing_crane_back.png",
+      "card_language": "en",
+      "unlock_condition": "first_victory_over_this_guardian",
+      "music_slot": "zen_tower_guardian_006"
+    },
+    {
+      "id": "zen_tower_007_eclipse_sovereign",
+      "card_number": "007",
+      "name": {
+        "de": "Der Eklipsen-Souverän",
+        "en": "The Eclipse Sovereign",
+        "pt": "O Soberano do Eclipse"
+      },
+      "first_cycle_floor": 100,
+      "portrait": "res://assets/zen_tower/bosses/007_eclipse_sovereign.png",
+      "card_front": "res://assets/zen_tower/cards/007_eclipse_sovereign_front.png",
+      "card_back": "res://assets/zen_tower/cards/007_eclipse_sovereign_back.png",
+      "card_language": "en",
+      "unlock_condition": "first_victory_over_this_guardian",
+      "music_slot": "zen_tower_guardian_007"
+    }
+  ],
+  "images": [
+    {
+      "path": "assets/zen_tower/backgrounds/floors_061_074.png",
+      "resource_path": "res://assets/zen_tower/backgrounds/floors_061_074.png",
+      "kind": "section_background",
+      "section": "05",
+      "guardian_id": "zen_tower_005_snowbound_kirin",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2882734,
+      "sha256": "20a59bb9fe8c6fce2b94f05c090e4dc30a1974973aabd964f679b36cfaf1911e",
+      "original_filename": "Frostschleier-Heiligtum über den Wolken.png"
+    },
+    {
+      "path": "assets/zen_tower/arenas/floor_075_snowbound_kirin.png",
+      "resource_path": "res://assets/zen_tower/arenas/floor_075_snowbound_kirin.png",
+      "kind": "boss_arena",
+      "section": "05",
+      "guardian_id": "zen_tower_005_snowbound_kirin",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2939400,
+      "sha256": "1ea3c5ec213aaa265a62b5b4d4235bc01363d09e6fc3b5eaf01d809888cc5b02",
+      "original_filename": "Frostige Mondtor-Terrasse über den Wolken.png"
+    },
+    {
+      "path": "assets/zen_tower/bosses/005_snowbound_kirin.png",
+      "resource_path": "res://assets/zen_tower/bosses/005_snowbound_kirin.png",
+      "kind": "boss_portrait",
+      "section": "05",
+      "guardian_id": "zen_tower_005_snowbound_kirin",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3141716,
+      "sha256": "c32b6d19158ee35a4e4947c6d25b93e4e5ab0b5a2d217fd9c4d6a832f87188bd",
+      "original_filename": "Schneebedeckter Kirin im Frostschleier.png"
+    },
+    {
+      "path": "assets/zen_tower/cards/005_snowbound_kirin_front.png",
+      "resource_path": "res://assets/zen_tower/cards/005_snowbound_kirin_front.png",
+      "kind": "card_front",
+      "section": "05",
+      "guardian_id": "zen_tower_005_snowbound_kirin",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3467765,
+      "sha256": "6e6695177af5ba69d3f5069fe31ebf1da878231f14cb24c63ac556529bbf1ea3",
+      "original_filename": "Schneekirin der Zen-Türme.png"
+    },
+    {
+      "path": "assets/zen_tower/cards/005_snowbound_kirin_back.png",
+      "resource_path": "res://assets/zen_tower/cards/005_snowbound_kirin_back.png",
+      "kind": "card_back",
+      "section": "05",
+      "guardian_id": "zen_tower_005_snowbound_kirin",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 2898274,
+      "sha256": "52a79ad84595a41f4429e1ca4c32f218a9676c087d347eb5c550630229c08032",
+      "original_filename": "Winterlicher Kirin des Zen-Turms.png"
+    },
+    {
+      "path": "assets/zen_tower/backgrounds/floors_076_089.png",
+      "resource_path": "res://assets/zen_tower/backgrounds/floors_076_089.png",
+      "kind": "section_background",
+      "section": "06",
+      "guardian_id": "zen_tower_006_dawnwing_crane",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3130029,
+      "sha256": "b9a512d66c1c055039b45976db471f5fdf114ad81b2622c3dd89d4cb53d66802",
+      "original_filename": "Garten des ersten Lichts.png"
+    },
+    {
+      "path": "assets/zen_tower/arenas/floor_090_dawnwing_crane.png",
+      "resource_path": "res://assets/zen_tower/arenas/floor_090_dawnwing_crane.png",
+      "kind": "boss_arena",
+      "section": "06",
+      "guardian_id": "zen_tower_006_dawnwing_crane",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3101631,
+      "sha256": "5a4a4a1db7ebe88ca587c7fdb18628841958ae586bc07741c8dcd727125a3989",
+      "original_filename": "Leere Sonnentor-Terrasse im Frühlingsgarten.png"
+    },
+    {
+      "path": "assets/zen_tower/bosses/006_dawnwing_crane.png",
+      "resource_path": "res://assets/zen_tower/bosses/006_dawnwing_crane.png",
+      "kind": "boss_portrait",
+      "section": "06",
+      "guardian_id": "zen_tower_006_dawnwing_crane",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3244248,
+      "sha256": "837fe4c9441fb1c5ab9327f0841f77dc2e03bb72c84630ba37cae8f0ff3c8898",
+      "original_filename": "Dämmerflügel-Kranich im Zen-Garten.png"
+    },
+    {
+      "path": "assets/zen_tower/cards/006_dawnwing_crane_front.png",
+      "resource_path": "res://assets/zen_tower/cards/006_dawnwing_crane_front.png",
+      "kind": "card_front",
+      "section": "06",
+      "guardian_id": "zen_tower_006_dawnwing_crane",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3301490,
+      "sha256": "a274ce9826a555cc3e58e8f519a630498714c183661b05992b0f0116ce1fa43d",
+      "original_filename": "Morgenflügelkranich der Zen-Tower.png"
+    },
+    {
+      "path": "assets/zen_tower/cards/006_dawnwing_crane_back.png",
+      "resource_path": "res://assets/zen_tower/cards/006_dawnwing_crane_back.png",
+      "kind": "card_back",
+      "section": "06",
+      "guardian_id": "zen_tower_006_dawnwing_crane",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 2764424,
+      "sha256": "86ac888b913cdbe9e3a25f588d4380901079a54a8e1b322333af42bd859ba5a7",
+      "original_filename": "Dämmerflügel-Kranich im Zen-Turm.png"
+    },
+    {
+      "path": "assets/zen_tower/backgrounds/floors_091_099.png",
+      "resource_path": "res://assets/zen_tower/backgrounds/floors_091_099.png",
+      "kind": "section_background",
+      "section": "07",
+      "guardian_id": "zen_tower_007_eclipse_sovereign",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2467195,
+      "sha256": "6d18029a121e3f8d06a2610660393dec47fb118854e91dae3bb515ad9bcebe7b",
+      "original_filename": "Tor zur Hundertsten Pforte.png"
+    },
+    {
+      "path": "assets/zen_tower/arenas/floor_100_eclipse_sovereign.png",
+      "resource_path": "res://assets/zen_tower/arenas/floor_100_eclipse_sovereign.png",
+      "kind": "boss_arena",
+      "section": "07",
+      "guardian_id": "zen_tower_007_eclipse_sovereign",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 2618864,
+      "sha256": "a494901b6d59037468da98d17532136be526c8819f443c35b50b53813a9cc57c",
+      "original_filename": "Sonnenmondtor unter der Sonnenfinsternis.png"
+    },
+    {
+      "path": "assets/zen_tower/bosses/007_eclipse_sovereign.png",
+      "resource_path": "res://assets/zen_tower/bosses/007_eclipse_sovereign.png",
+      "kind": "boss_portrait",
+      "section": "07",
+      "guardian_id": "zen_tower_007_eclipse_sovereign",
+      "width": 941,
+      "height": 1672,
+      "size_bytes": 3157661,
+      "sha256": "b111a11cddf29c51f535138c4aa550093a391408b45bc6a3ba55efed3476cda7",
+      "original_filename": "Der Sonnenmond-Souverän am Hundertsten Tor.png"
+    },
+    {
+      "path": "assets/zen_tower/cards/007_eclipse_sovereign_front.png",
+      "resource_path": "res://assets/zen_tower/cards/007_eclipse_sovereign_front.png",
+      "kind": "card_front",
+      "section": "07",
+      "guardian_id": "zen_tower_007_eclipse_sovereign",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 3301665,
+      "sha256": "e2086b8b071a6922add7103d7c33115b96f93daa113123130c523e4d465807e8",
+      "original_filename": "Der Eklipsen-Souverän im Zen-Tower.png"
+    },
+    {
+      "path": "assets/zen_tower/cards/007_eclipse_sovereign_back.png",
+      "resource_path": "res://assets/zen_tower/cards/007_eclipse_sovereign_back.png",
+      "kind": "card_back",
+      "section": "07",
+      "guardian_id": "zen_tower_007_eclipse_sovereign",
+      "width": 1024,
+      "height": 1536,
+      "size_bytes": 2731856,
+      "sha256": "8af06a47b57f3338c2140397fcae6d188fd09760f38b56971f887de2a0e8ea63",
+      "original_filename": "Zen-Turm: der Eklipsen-Souverän.png"
+    }
+  ],
+  "lore_resource": "res://data/zen_tower/expansions/lore_061_100_en.json",
+  "rules_resource": "res://data/zen_tower/expansions/rules_061_101.json",
+  "music": {
+    "status": "pending_delivery",
+    "slots": [
+      {
+        "id": "zen_tower_section_05",
+        "role": "section",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_guardian_005",
+        "role": "guardian",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_section_06",
+        "role": "section",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_guardian_006",
+        "role": "guardian",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_section_07",
+        "role": "section",
+        "resource_path": null,
+        "status": "pending_delivery"
+      },
+      {
+        "id": "zen_tower_guardian_007",
+        "role": "guardian",
+        "resource_path": null,
+        "status": "pending_delivery"
+      }
+    ]
+  }
+}

@@ -2009,7 +2009,7 @@ func open_help() -> void:
 func focus_line(line: Array) -> void:
     var faces = []
     for c in line:
-        var f = CubeGeometry.face(int(c))
+        var f = renderer.cell_face(int(c))
         if not faces.has(f): faces.append(f)
     renderer.focus_faces(faces)
 func focus_and_close(face: int) -> void:
@@ -3553,9 +3553,9 @@ func open_zen_tower() -> void:
         "Record: Floor %d",
         "Recorde: Piso %d") % int(state.record))
     _zen_campaign_paragraph(box,_tower_text(
-        "Drei Leben. Ein Wächter alle 15 Etagen.",
-        "Three lives. A guardian every 15 floors.",
-        "Três vidas. Um guardião a cada 15 pisos."))
+        "Drei Startleben. Wächter im Best of 3.",
+        "Three starting lives. Best-of-3 guardian battles.",
+        "Três vidas iniciais. Guardiões à melhor de três."))
     if challenge_active or tutorial != null:
         _zen_campaign_paragraph(box,_tower_text(
             "Beende zuerst den aktiven Spielmodus.",
@@ -3571,7 +3571,7 @@ func open_zen_tower() -> void:
         premium_button(title,box,_tower_enter,true)
     premium_button(_tower_text(
         "Boss-Galerie","Guardian Gallery","Galeria de Guardiões") +
-        " · %d/4" % state.cards.size(),box,open_tower_gallery)
+        " · %d/%d" % [state.cards.size(), Tower.manifest().get("guardians", []).size()],box,open_tower_gallery)
     button(_tower_text(
         "Hauptmenü","Main menu","Menu principal"),box,open_menu,true)
 
@@ -3588,7 +3588,7 @@ func _tower_enter() -> void:
     var old_state := state.duplicate(true)
     if not bool(state.active) and state.get("finished",{}).is_empty():
         Tower.new_run(data)
-    if state.game.is_empty() and state.get("finished",{}).is_empty():
+    if state.get("finished",{}).is_empty():
         Tower.begin_floor(data)
     if not SaveManager.save_data(data):
         data["tower"] = old_state
@@ -3605,7 +3605,8 @@ func _tower_enter() -> void:
         "tint": world_background.modulate,
         "basis": renderer.pivot.basis,
         "zoom": renderer.camera.position.z,
-        "preview": preview
+        "preview": preview,
+        "rules": rules
     }
     preview = []
     tower_active = true
@@ -3627,14 +3628,17 @@ func _tower_load_floor() -> void:
     var snapshot: Dictionary = state.game
     if not finished.is_empty():
         snapshot = finished.board
-    elif snapshot.is_empty():
+    elif not Tower.valid_game(snapshot, 6 * Tower.board_size(int(state.floor)) * Tower.board_size(int(state.floor))):
         Tower.begin_floor(data)
         snapshot = state.game
-    if not SaveManager.valid_game(snapshot):
+    if not Tower.valid_game(snapshot):
         push_warning("Invalid Zen Tower board")
         return
-    board = BoardModel.new()
+    var side: int = 4 if snapshot.cells.size() == 96 else 3
+    board = Tower.new_board(side)
     board.restore(snapshot)
+    rules = Tower.make_rules(side)
+    renderer.set_board_size(side)
     generation += 1
     renderer.reset_view()
     var info := Tower.floor_info(_tower_stage())
@@ -3647,6 +3651,7 @@ func _tower_load_floor() -> void:
         bool(info.boss)
         and board.winner == 0
         and board.move_count() == 0
+        and not bool(state.series.get("intro_seen", false))
     )
     refresh(-1,false)
     if board.winner != 0:
@@ -3676,6 +3681,12 @@ func _tower_guardian_quote(stage: int) -> String:
                 "In stillness, the path becomes clear.",
                 "Na quietude, o caminho torna-se claro."
             )
+        4:
+            return _tower_text("Geduld hält selbst die kleinste Hoffnung am Leben.", "Patience keeps the smallest hope alive.", "A paciência mantém viva a mais pequena esperança.")
+        5:
+            return _tower_text("Beginne mit dem Licht, das du hast.", "Begin with the light you have.", "Começa com a luz que tens.")
+        6:
+            return _tower_text("Der Weg wird weiter, wenn sich dein Blick weitet.", "The path widens when your vision does.", "O caminho alarga-se quando a tua visão se expande.")
         _:
             return _tower_text(
                 "Lass los, damit Neues wachsen kann.",
@@ -3772,6 +3783,9 @@ func _tower_boss_intro() -> void:
         box, 17, Color("fff2d5")
     )
 
+    var state: Dictionary = Tower.ensure(data)
+    label(_tower_series_caption(state.series), box, 16, Color("d8bb7e"))
+
     var start_button: Button = premium_button(
         _tower_text(
             "Kampf starten",
@@ -3808,6 +3822,12 @@ func _tower_start_boss_battle() -> void:
     if not tower_active or not tower_intro_pending:
         return
 
+    var state: Dictionary = Tower.ensure(data)
+    state.series["intro_seen"] = true
+    if not SaveManager.save_data(data):
+        state.series["intro_seen"] = false
+        notify_user("Zen-Tower-Spielstand konnte nicht gespeichert werden.")
+        return
     tower_intro_pending = false
     close_modal()
     refresh(-1, false)
@@ -3882,7 +3902,7 @@ func _tower_refresh(animate: int = -1) -> void:
     elif board.winner == 3:
         status.text = _tower_text("Unentschieden", "Draw", "Empate")
     elif bool(info.boss):
-        status.text = _tower_name(info.guardian)
+        status.text = _tower_text("Du bist am Zug · X", "Your turn · X", "A tua vez · X") if board.turn == 1 else _tower_text("Gegner denkt · O", "Opponent thinking · O", "Adversário a pensar · O")
     elif board.turn == 1:
         status.text = _tower_text(
             "Du bist am Zug · X",
@@ -3897,11 +3917,13 @@ func _tower_refresh(animate: int = -1) -> void:
         )
 
     status.add_theme_color_override("font_color", Color("453329"))
-    detail.text = "3×3 · %s %d/54 · AI %d" % [
-        _tower_text("Züge", "Moves", "Jogadas"),
-        board.move_count(),
-        int(state.level) + 1
+    var side: int = 4 if board.cells.size() == 96 else 3
+    detail.text = "%d×%d · %s %d/%d · AI %d" % [
+        side, side, _tower_text("Züge", "Moves", "Jogadas"),
+        board.move_count(), board.cells.size(), int(state.level) + 1
     ]
+    if bool(info.boss):
+        detail.text += "\n" + _tower_series_caption(state.series)
 
     _tower_feedback_strip()
 
@@ -3961,7 +3983,7 @@ func _tower_tick() -> void:
     ai_running = true
     worker = Thread.new()
     var error := worker.start(func():
-        return AIEngine.new(seed_value).choose(marks,2,level,budget))
+        return Tower.choose_move(marks,level,budget,seed_value))
     if error != OK:
         worker = null
         ai_running = false
@@ -3999,6 +4021,12 @@ func _tower_result() -> void:
         heading = _tower_text("Niederlage", "Defeat", "Derrota")
     elif int(outcome.winner) == 3:
         heading = _tower_text("Unentschieden", "Draw", "Empate")
+
+    if bool(info.boss):
+        if int(outcome.winner) == 1:
+            heading = _tower_text("Seriensieg", "Series victory", "Vitória na série") if bool(outcome.get("series_complete", true)) else _tower_text("Rundensieg", "Round victory", "Vitória na ronda")
+        elif int(outcome.winner) == 2:
+            heading = _tower_text("Serie verloren", "Series defeat", "Derrota na série") if bool(outcome.get("series_complete", true)) else _tower_text("Runde verloren", "Round defeat", "Derrota na ronda")
 
     menu_context = false
     var box: VBoxContainer = _home_menu_shell()
@@ -4041,6 +4069,7 @@ func _tower_result() -> void:
 
     if bool(info.boss):
         _zen_campaign_paragraph(box, _tower_name(info.guardian))
+        _zen_campaign_paragraph(box, _tower_series_caption(outcome))
 
     if int(outcome.reward) > 0:
         _zen_campaign_paragraph(box, "+%d 🍃" % int(outcome.reward))
@@ -4066,7 +4095,7 @@ func _tower_result() -> void:
                 "Nova carta desbloqueada!"
             )
         )
-    if bool(info.boss) and int(outcome.winner) == 1:
+    if bool(info.boss) and int(outcome.winner) == 1 and bool(outcome.get("floor_complete", true)):
         _tower_art(
             box,
             str(info.guardian.card_front),
@@ -4095,6 +4124,12 @@ func _tower_result() -> void:
             "Try again",
             "Tentar novamente"
         )
+
+    if bool(info.boss) and not bool(outcome.game_over):
+        if not bool(outcome.get("series_complete", true)):
+            next_label = _tower_text("Runde wiederholen", "Replay round", "Repetir ronda") if int(outcome.winner) == 3 else _tower_text("Nächste Runde", "Next round", "Próxima ronda")
+        elif int(outcome.winner) == 2:
+            next_label = _tower_text("Neue Serie", "Retry series", "Repetir série")
 
     var next_button: Button = premium_button(
         next_label, box, _tower_next, true
@@ -4203,6 +4238,8 @@ func _tower_leave(save_board: bool = true) -> void:
     generation += 1
     tower_active = false
     tower_intro_pending = false
+    renderer.set_board_size(3)
+    rules = tower_view.get("rules", RulesEngine.new())
     renderer.set_tower_skin(-1)
     chronicles.set_campaign_board_active(false)
     get_tree().quit_on_go_back = tower_back_previous
@@ -4359,3 +4396,14 @@ func _tower_portrait_height() -> float:
         get_viewport().get_visible_rect().size.y * 0.30,
         220.0,
         340.0)
+
+
+func _tower_series_caption(progress: Dictionary) -> String:
+    var player_wins: int = int(progress.get("player_wins", progress.get("player", 0)))
+    var guardian_wins: int = int(progress.get("guardian_wins", progress.get("guardian", 0)))
+    var round_number: int = int(progress.get("round", mini(3, player_wins + guardian_wins + 1)))
+    return _tower_text(
+        "Best of 3 · Runde %d/3 · %d:%d",
+        "Best of 3 · Round %d/3 · %d:%d",
+        "Melhor de 3 · Ronda %d/3 · %d:%d"
+    ) % [round_number, player_wins, guardian_wins]
