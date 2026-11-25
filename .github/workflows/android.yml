@@ -1,17 +1,21 @@
 name: Android debug APK
-run-name: ${{ (github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124') && 'Zen Cube 3D Tower' || (github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') && 'ZenCube Chronicles 4.0.4 · Realm Challenge Celebration' || 'Android debug APK' }}
+run-name: Zen Cube 3D HD - Storage A-B Test
 on:
   workflow_dispatch:
   push:
-    branches: [main, master, feature/zen-tower-20261124]
-  pull_request:
+    branches: [test/hd-storage-493]
 permissions:
   contents: read
 jobs:
   build:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, optimized]
     env:
-      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' || github.head_ref == 'test/satori-20261122' || github.ref_name == 'test/satori-20261122' || github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123' || github.head_ref == 'feature/sky-garden-20261123' || github.ref_name == 'feature/sky-garden-20261123' || github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124' }}
+      ZENCUBE_HD_VARIANT: ${{ matrix.variant }}
+      ZENCUBE_MENU_PREVIEW: ${{ github.head_ref == 'feature/menu-clarity-video-20261122' || github.ref_name == 'feature/menu-clarity-video-20261122' || github.head_ref == 'test/satori-20261122' || github.ref_name == 'test/satori-20261122' || github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123' || github.head_ref == 'feature/sky-garden-20261123' || github.ref_name == 'feature/sky-garden-20261123' || github.head_ref == 'test/hd-storage-493' || github.ref_name == 'test/hd-storage-493' }}
       ZENCUBE_CAMPAIGN_TEST: ${{ github.head_ref == 'feature/zen-chronicles-campaign-prologue' || github.ref_name == 'feature/zen-chronicles-campaign-prologue' }}
       ZENCUBE_REALM_CHRONICLES_TEST: ${{ github.head_ref == 'feature/zen-ascend-realm-chronicles' || github.ref_name == 'feature/zen-ascend-realm-chronicles' }}
       ZENCUBE_ABYSS_TEST: ${{ github.head_ref == 'feature/campaign-2-abyss-of-memories' || github.ref_name == 'feature/campaign-2-abyss-of-memories' || github.head_ref == 'feature/campaign-2-shadow-realm' || github.ref_name == 'feature/campaign-2-shadow-realm' || github.head_ref == 'feature/zencube-2-0-realm' || github.ref_name == 'feature/zencube-2-0-realm' || github.head_ref == 'feature/zencube-2-0-realm-feedback-fixes' || github.ref_name == 'feature/zencube-2-0-realm-feedback-fixes' || (github.head_ref == 'fix/campaign2-build337-feedback' || github.ref_name == 'fix/campaign2-build337-feedback' || github.head_ref == 'feature/zen-act1-integration-20261120' || github.ref_name == 'feature/zen-act1-integration-20261120') }}
@@ -116,12 +120,18 @@ jobs:
           unzip -oq ZenCube_Ember_Media.zip -d .
           python3 tests/test_celestial_media.py --extract
           "$GODOT" --headless --editor --import --quit
+      - name: Optimize imported 2D textures without altering source media
+        if: matrix.variant == 'optimized'
+        run: |
+          python3 scripts/hd_storage_imports.py prepare
+          "$GODOT" --headless --editor --import --quit
+          python3 scripts/hd_storage_imports.py verify
       - name: Verify actual loaded boss arena paths and texture dimensions
         if: env.ZENCUBE_CELESTIAL_TEST == 'true'
         run: timeout 55 "$GODOT" --headless --path . --script tests/test_realm_arena_resolution.gd
 
       - name: Verify Zen Tower progression and skins
-        if: github.ref_name == 'feature/zen-tower-20261124' || github.head_ref == 'feature/zen-tower-20261124'
+        if: github.ref_name == 'test/hd-storage-493' || github.head_ref == 'test/hd-storage-493'
         shell: bash
         run: |
           set -euo pipefail
@@ -497,11 +507,22 @@ jobs:
         run: |
           echo "::error::One or more regression tests failed. APK export is blocked."
           exit 1
+      - name: Exclude development files from optimized debug export
+        if: matrix.variant == 'optimized'
+        run: python3 scripts/hd_storage_imports.py exclude
       - name: Build debug APK
         run: bash scripts/build_android.sh
+      - name: Measure APK storage
+        run: python3 scripts/hd_storage_report.py build/ZenCube-3D.apk "${{ matrix.variant }}"
+      - name: Upload APK size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: HD-size-${{ matrix.variant }}
+          path: build/hd-size-${{ matrix.variant }}.json
+          if-no-files-found: error
 
       - name: Verify all Zen Tower assets inside APK
-        if: github.ref_name == 'feature/zen-tower-20261124' || github.head_ref == 'feature/zen-tower-20261124'
+        if: github.ref_name == 'test/hd-storage-493' || github.head_ref == 'test/hd-storage-493'
         shell: bash
         run: |
           python3 - <<'PYAPK'
@@ -618,7 +639,7 @@ jobs:
           print('Preview verified: menu, journey, original video, 48 Act pages and 120 Realm pages')
           PY
       - name: Verify complete Satori, Shattered Moon and Sky Garden media inside Android APK
-        if: github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123' || github.head_ref == 'feature/sky-garden-20261123' || github.ref_name == 'feature/sky-garden-20261123' || github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124'
+        if: github.head_ref == 'feature/shattered-moon-20261123' || github.ref_name == 'feature/shattered-moon-20261123' || github.head_ref == 'feature/sky-garden-20261123' || github.ref_name == 'feature/sky-garden-20261123' || github.head_ref == 'test/hd-storage-493' || github.ref_name == 'test/hd-storage-493'
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -648,7 +669,7 @@ jobs:
               'assets/story/ZenShatteredMoonCampaign.gdc',
               'assets/story/ZenShatteredMoonReader.gdc'
           ))
-          if "${{ github.head_ref }}" == 'feature/sky-garden-20261123' or "${{ github.ref_name }}" == 'feature/sky-garden-20261123' or "${{ github.head_ref }}" == 'feature/zen-tower-20261124' or "${{ github.ref_name }}" == 'feature/zen-tower-20261124':
+          if "${{ github.head_ref }}" == 'feature/sky-garden-20261123' or "${{ github.ref_name }}" == 'feature/sky-garden-20261123' or "${{ github.head_ref }}" == 'test/hd-storage-493' or "${{ github.ref_name }}" == 'test/hd-storage-493':
               expected.extend(f'assets/assets/sky_garden/pages/page_{page:02d}.webp' for page in range(1,31))
               expected.append('assets/assets/sky_garden/realm.webp')
               for person in ('aiko_tadanobu','shin_tadanobu'):
@@ -663,20 +684,21 @@ jobs:
           print('APK verified: all inherited Realm media, Shattered Moon, optional Sky Garden pages, family arenas, reader and scripts')
           PY
       - name: Name Zen Cube 3D HD APK
-        if: (github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
-        run: mv build/ZenCube-3D.apk build/Zen-Cube-3D-HD.apk
+        if: (github.head_ref == 'test/hd-storage-493' || github.ref_name == 'test/hd-storage-493')
+        run: mv build/ZenCube-3D.apk build/Zen-Cube-3D-HD-${{ matrix.variant }}.apk
       - name: Upload Zen Cube 3D HD APK
-        if: (github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
+        if: (github.head_ref == 'test/hd-storage-493' || github.ref_name == 'test/hd-storage-493')
         uses: actions/upload-artifact@v4
         with:
-          name: Zen Cube 3D HD
-          path: build/Zen-Cube-3D-HD.apk
+          name: Zen Cube 3D HD - ${{ matrix.variant }}
+          path: build/Zen-Cube-3D-HD-${{ matrix.variant }}.apk
+          compression-level: 0
           if-no-files-found: error
       - name: Deliver the separate menu test APK
-        if: env.ZENCUBE_MENU_PREVIEW == 'true' && !(github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
+        if: env.ZENCUBE_MENU_PREVIEW == 'true' && !(github.head_ref == 'test/hd-storage-493' || github.ref_name == 'test/hd-storage-493')
         run: mv build/ZenCube-3D.apk build/ZenCube-Menu-Test-4.0.5.apk
       - name: Upload menu test APK
-        if: env.ZENCUBE_MENU_PREVIEW == 'true' && !(github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
+        if: env.ZENCUBE_MENU_PREVIEW == 'true' && !(github.head_ref == 'test/hd-storage-493' || github.ref_name == 'test/hd-storage-493')
         uses: actions/upload-artifact@v4
         with:
           name: ZenCube-Menu-Test-4.0.5
@@ -763,3 +785,21 @@ jobs:
             build/ZenCube-3D.apk
             reports/*.json
             reports/*.png
+
+  compare_storage:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: HD-size-*
+          path: size-reports
+          merge-multiple: true
+      - name: Compare exact APK sizes
+        run: python3 scripts/hd_storage_report.py compare size-reports
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HD-storage-comparison
+          path: size-reports/
+          if-no-files-found: error

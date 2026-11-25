@@ -70,6 +70,10 @@ if [[ "$menu_preview" == true ]]; then
   release_gates=true
   campaign_package="com.zencube.game.menupreview"
   campaign_label="ZenCube Menu Test"
+  if [[ "${ZENCUBE_HD_VARIANT:-}" == optimized ]]; then
+    campaign_package="com.zencube.game.hdoptimized"
+    campaign_label="Zen Cube 3D HD Optimized"
+  fi
 fi
 if [[ "$campaign_test" == true ]]; then
   # Override the Android debug preset for this export only.
