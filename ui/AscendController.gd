@@ -470,14 +470,19 @@ func build_interface() -> void:
     result_review_button.name = "ShowFinishedResult"
     result_review_button.hide()
     _hd_beta_boss_button(result_review_button,true)
-    row.hide()
+    _hd_beta_boss_button(new_match_button,false)
+    _hd_beta_boss_button(rules_button,false)
+    row.show()
     var realm_actions: HBoxContainer = HBoxContainer.new()
     realm_actions.add_theme_constant_override("separation",6)
     column.add_child(realm_actions)
     realms_nav_button = action(realm_actions,L("realms"),show_realms)
     challenges_nav_button = action(realm_actions,L("challenges"),show_challenges,true)
     achievements_nav_button = action(realm_actions,_achievements_label(),show_realm_titles)
-    realm_actions.hide()
+    for nav in [realms_nav_button,challenges_nav_button,achievements_nav_button]:
+        _hd_beta_boss_button(nav,false)
+        nav.add_theme_font_size_override("font_size",14)
+    realm_actions.show()
     var quote_box: PanelContainer = PanelContainer.new()
     quote_box.add_theme_stylebox_override("panel",style(Color("10271f",0.65),13))
     column.add_child(quote_box)
@@ -817,9 +822,9 @@ func draw() -> void:
     if is_instance_valid(result_review_button):
         result_review_button.visible = result != 0
         var review_row: Control = result_review_button.get_parent() as Control
-        if review_row != null: review_row.visible = result != 0
-        new_match_button.hide()
-        rules_button.hide()
+        if review_row != null: review_row.show()
+        new_match_button.visible = result == 0
+        rules_button.visible = result == 0
     if is_instance_valid(instructions):
         instructions.text = _campaign_phrase("Partie beendet · Drehen und zoomen","Match finished · Rotate and zoom","Partida terminada · Roda e amplia") if result != 0 else Z("Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen")
     rank_label.text = Realms.realm_name(realm_index(),lang())
