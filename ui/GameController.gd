@@ -1030,6 +1030,7 @@ func open_campaign_introduction() -> void:
     label("3. Verbinde vier gleiche Zeichen über eine Würfelkante.", box, 19)
     premium_button("Kurz ausprobieren", box, _begin_campaign_tutorial, true)
     button("Überspringen und Kampagne starten", box, _accept_campaign_introduction, true)
+    _hd_submenu_finish(box, "HDCampaignIntroduction", true)
 
 func _accept_campaign_introduction() -> void:
     data.settings.campaign_intro_seen = true
@@ -1137,6 +1138,7 @@ func open_achievements() -> void:
             var earned: bool = ProfileAchievements.earned(account, str(secret.id))
             var name_text: String = str(secret.name) if earned else T("Geheimer Erfolg")
             label(("✓ " if earned else "◇ ") + name_text, box, 16)
+    _hd_submenu_finish(box, "HDAchievements")
 
 func open_store() -> void:
     Collection.ensure(data)
@@ -1437,6 +1439,7 @@ func open_play_menu() -> void:
         else:
             label(T("Sieg-Belohnung: 🍃 %d") % int(Collection.BOT_REWARDS[i]), box, 12)
     button("Spielmodi", box, open_game_modes, true)
+    _hd_submenu_finish(box, "HDFreePlay", true)
 
 func open_ascension() -> void:
     Asc.ensure(data)
@@ -1787,6 +1790,7 @@ func open_balance() -> void:
     add_rule_example(box,"2+2",2)
     label("Die Linie muss beim Aufklappen senkrecht zur gemeinsamen Kante verlaufen. Vier auf einer einzelnen Fläche oder über drei Seiten zählen nicht.",box,14)
     label("108 mögliche Gewinnlinien. Die Viererregel soll kurze Siege erschweren, mathematische Fairness ist noch nicht nachgewiesen. Wir wechseln das Startrecht zwischen Partien.",box,14)
+    _hd_submenu_finish(box, "HDRules")
 func open_stats() -> void:
     var box = modal("Deine Partien")
     label(T("%d gespielt\n%d Siege für Spieler 1\n%d Siege für Spieler 2 / Computer\n%d Unentschieden") % [data.stats.played,data.stats.p1,data.stats.p2,data.stats.draw],box,20)
@@ -1965,6 +1969,7 @@ func open_challenge_levels() -> void:
         for number in range(start_index, start_index + 20):
             if challenges.solved.has(str(number + 1)): completed += 1
         button(T(levels[level - 1]) + " · %d/20 ✓" % completed,box,Callable(self, "challenge_open_level").bind(level),false,level == 1)
+    _hd_submenu_finish(box, "HDChallengeLevels", true)
 
 func challenge_open_level(level: int) -> void:
     if not challenge_active or level < 1 or level > 5: return
@@ -2137,6 +2142,7 @@ func open_help() -> void:
             refresh()
         )
     label("Tipp: 3+1 und 2+2 funktionieren nur auf zwei benachbarten Seiten und ohne übersprungene Felder.",box,14)
+    _hd_submenu_finish(box, "HDHelp")
 func focus_line(line: Array) -> void:
     var faces = []
     for c in line:
@@ -2150,6 +2156,7 @@ func open_faces() -> void:
     var box = modal("Seite wählen")
     for f in range(6):
         button(CubeGeometry.NAMES[f],box,focus_and_close.bind(f))
+    _hd_submenu_finish(box, "HDFaces", true)
 func open_net() -> void:
     if zen_campaign_active and board.winner != 0: return
     var box = modal("Alle sechs Seiten")
@@ -2369,7 +2376,7 @@ func _hd_submenu_style(node: Node) -> void:
         progress.add_theme_stylebox_override("fill", fill)
         progress.custom_minimum_size.y = 12
 
-    if node is Button:
+    if node is Button and not (node is OptionButton or node is CheckButton or node is CheckBox):
         var b: Button = node
         var compact: bool = b.get_parent() is HBoxContainer
         if not compact:
@@ -2626,7 +2633,8 @@ func open_settings() -> void:
     else:
         finish = button("Fertig",footer,open_menu if menu_context else close_modal,false,true)
     finish.name = "SettingsDoneSticky"
-    _enable_feedback_modal_scroll(box)
+    _hd_submenu_finish(box, "HDSettings")
+    _hd_submenu_style(footer)
 
 func build_sound() -> void:
     sound_player = AudioStreamPlayer.new()
@@ -3808,6 +3816,7 @@ func open_zen_tower() -> void:
         " · %d/%d" % [state.cards.size(), Tower.manifest().get("guardians", []).size()],box,open_tower_gallery)
     button(_tower_text(
         "Hauptmenü","Main menu","Menu principal"),box,open_menu,true)
+    _hd_submenu_finish(box, "HDTowerEntry", true)
 
 func _tower_enter() -> void:
     if tower_active or sky_active or act_one_active or zen_campaign_active:
@@ -4512,7 +4521,7 @@ func open_tower_gallery() -> void:
         back_action,
         true
     )
-    _enable_feedback_modal_scroll(box)
+    _hd_submenu_finish(box, "HDGuardianGallery")
 
 func _tower_card(guardian: Dictionary,back: bool) -> void:
     var state := Tower.ensure(data)
@@ -4524,7 +4533,7 @@ func _tower_card(guardian: Dictionary,back: bool) -> void:
         "Karte umdrehen","Flip card","Virar carta"),
         box,_tower_card.bind(guardian,not back),true)
     button(_tower_text("Galerie","Gallery","Galeria"),box,open_tower_gallery,true)
-    _enable_feedback_modal_scroll(box)
+    _hd_submenu_finish(box, "HDGuardianCard")
 
 
 
@@ -4623,7 +4632,7 @@ func _tower_preview(guardian: Dictionary) -> void:
         open_tower_gallery,
         true
     )
-    _enable_feedback_modal_scroll(box)
+    _hd_submenu_finish(box, "HDGuardianPreview")
 
 func _tower_portrait_height() -> float:
     return clampf(

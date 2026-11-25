@@ -757,6 +757,7 @@ func show_ascend_settings() -> void:
         SaveManager.save_data(data)
         sync_realm_music(true))
     action(body,_campaign_phrase("Fertig","Done","Concluído"),_close_realm_dialog.bind(parts.dialog),true)
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func pname(owner: int) -> String:
@@ -871,6 +872,7 @@ func _confirm_boss_restart() -> void:
     else:
         text(body,_campaign_phrase("Das aktuelle Spielfeld wird zurückgesetzt.","The current board will be reset.","O tabuleiro atual será reiniciado."),16)
     action(body,_campaign_phrase("Neustart bestätigen","Confirm restart","Confirmar reinício"),_restart_boss_round,true)
+    _hd_menu_dialog(parts, true)
     _open_realm_dialog(parts)
 
 func _restart_boss_round() -> void:
@@ -1268,6 +1270,7 @@ func show_rules() -> void:
     text(body,Z("204 mögliche Gewinnlinien. Die klassische 3×3-Version bleibt unverändert."),15)
     action(body,Z("Neue Partie"),_start_picker_after_rules.bind(parts.dialog),true)
     action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true).name = "AscendEntryChronicles"
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func _start_picker_after_rules(dialog: Control) -> void:
@@ -1292,6 +1295,7 @@ func show_mode_picker() -> void:
     action(body,"Play Zen Ascend Bot · " + Locale.translate(labels[fixed_level],lang()),_start_realm_match.bind(true,fixed_level,dialog),true)
     action(body,Z("Zu zweit spielen"),_start_realm_match.bind(false,0,dialog))
     action(body,"Zen Realm Chronicles",_open_campaign_library_from_realms,true).name = "AscendEntryChronicles"
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func _start_realm_match(bot: bool, level: int, dialog: Control) -> void:
@@ -1327,6 +1331,7 @@ func show_statistics() -> void:
     text(body,"Current streak %d   ·   Total moves %d" % [int(s.current_streak),int(s.moves)],15)
     text(body,"Fastest win %d   ·   Average moves %.1f" % [int(s.fastest_win),float(s.moves)/float(maxi(1,total))],15)
     action(body,_achievements_label(),show_realm_titles,true)
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func return_home() -> void:
@@ -1504,6 +1509,7 @@ func show_realms() -> void:
         text(sky_column,_campaign_phrase("3×3-Epilog","3×3 epilogue","Epílogo 3×3"),14)
         action(sky_column,_campaign_phrase("Geschichte betreten","Enter Story World","Entrar na história"),_open_sky_from_realms,true)
     text(body,L("bot_only"),13,Color("d5ba85"))
+    _hd_menu_dialog(ui_parts, false)
     _open_realm_dialog(ui_parts)
 
 func _open_sky_from_realms() -> void:
@@ -1557,6 +1563,7 @@ func _show_story_realm_requirements(chapter: int) -> void:
         _progress_meter(body,tasks,3)
         text(body,_campaign_phrase("Kapitelende bestätigen.","Finish the chapter after the final boss.","Conclui o capítulo após o chefe final."),15)
     action(body,L("realms"),show_realms,true)
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func _show_bonus_realm_challenges(realm: int) -> void:
@@ -1564,6 +1571,7 @@ func _show_bonus_realm_challenges(realm: int) -> void:
     _challenge_items(parts.box,realm)
     if Realms.unlocked(data,realm):
         action(parts.box,_campaign_phrase("Bonus-Realm betreten","Enter Bonus Realm","Entrar no reino extra"),_choose_realm_from_dialog.bind(realm,parts.dialog),true)
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func _preview_mirror_shatter_qa() -> void:
@@ -1642,6 +1650,7 @@ func _show_realm_requirements(realm: int) -> void:
         text(body,("Story-Bosse" if lang()=="de" else "Chefes da história" if lang()=="pt" else "Story bosses") + ": %d/3" % defeated,16)
         _progress_meter(body,defeated,3)
     action(body,L("realms"),show_realms,true)
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func _choose_realm_from_dialog(number: int, dialog: Control) -> void:
@@ -1734,6 +1743,7 @@ func show_challenges() -> void:
     tasks_box.add_theme_constant_override("separation",14)
     body.add_child(tasks_box)
     _challenge_items(tasks_box,realm_index())
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func show_realm_titles() -> void:
@@ -1768,6 +1778,7 @@ func show_realm_titles() -> void:
             var unlocked: bool = Achievements.earned(data,str(secret.id))
             var display: String = ("✦  " + str(secret.name)) if unlocked else "◇  ???  ·  Secret Achievement"
             action(inside,display,_show_achievement_details.bind(realm,secret,unlocked),unlocked)
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
 func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -> void:
@@ -1795,8 +1806,52 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
         else:
             text(body,"Get a hint in Main menu → Zen Shop → Hints (🍃 %d)." % Achievements.HINT_PRICE,14,Color("edcfa2"))
     action(body,_achievements_label(),show_realm_titles,true)
+    _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
+
+func _hd_menu_dialog(parts: Dictionary, compact: bool = false) -> void:
+    var root: Control = parts.dialog
+    var frame: PanelContainer = parts.frame
+    var stack: VBoxContainer = frame.get_child(0) as VBoxContainer
+    var body: VBoxContainer = parts.box
+    var tint: ColorRect = root.get_child(0) as ColorRect
+    tint.color = Color("10271f", 0.80)
+    if not compact:
+        if is_instance_valid(hd_gameplay_margin): hd_gameplay_margin.hide()
+        frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var shell := style(Color("10271f", 0.90) if compact else Color(0, 0, 0, 0), 18 if compact else 0)
+    shell.set_border_width_all(1 if compact else 0)
+    shell.set_content_margin_all(12.0 if compact else 24.0)
+    frame.add_theme_stylebox_override("panel", shell)
+    var heading: HBoxContainer = stack.get_child(0) as HBoxContainer
+    var title: Label = heading.get_child(0) as Label
+    title.add_theme_font_override("font", ZenType.heading())
+    title.add_theme_font_size_override("font_size", 23 if compact else 29)
+    title.add_theme_color_override("font_color", Color("fff2d5"))
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    body.add_theme_constant_override("separation", 10)
+    _hd_menu_buttons(stack)
+
+func _hd_menu_buttons(node: Node) -> void:
+    if node is Button and not (node is OptionButton or node is CheckButton or node is CheckBox):
+        var b: Button = node
+        var old_style := b.get_theme_stylebox("normal") as StyleBoxFlat
+        var featured: bool = old_style != null and old_style.bg_color.is_equal_approx(Color("4e674f"))
+        for state in ["normal", "hover", "pressed", "disabled"]:
+            var bg: Color = Color("d8bb7e") if featured else Color("16382b", 0.90)
+            if state == "hover": bg = Color("dfc58b") if featured else Color("28523d")
+            elif state == "pressed": bg = Color("c8aa71") if featured else Color("102a25")
+            elif state == "disabled": bg = Color("35453c", 0.90)
+            var st := style(bg, 16)
+            st.set_border_width_all(1)
+            st.border_color = Color("d8bb7e", 0.70)
+            b.add_theme_stylebox_override(state, st)
+        for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+            b.add_theme_color_override(key, Color("10271f") if featured else Color("fff0cf"))
+        b.add_theme_color_override("font_disabled_color", Color("b5b8a7"))
+    for child in node.get_children():
+        _hd_menu_buttons(child)
 
 func _hd_realm_layout(parts: Dictionary, headline: String, subtitle: String, show_cube: bool) -> void:
     var root: Control = parts.dialog
@@ -2281,6 +2336,7 @@ func _realm_story_menu() -> void:
     var pause_frame: PanelContainer = parts.frame
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
+    _hd_menu_dialog(parts, true)
     _open_realm_dialog(parts)
 
 # Exit the story without returning to Main. The ordinary Ascend 4x4
@@ -2507,6 +2563,7 @@ func _abyss_menu() -> void:
     var pause_frame: PanelContainer = parts.frame
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
+    _hd_menu_dialog(parts, true)
     _open_realm_dialog(parts)
 
 func _abyss_back_to_reader(open_reader: bool = true) -> void:
@@ -2711,6 +2768,7 @@ func _shadow_menu() -> void:
     var pause_frame: PanelContainer = parts.frame
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
+    _hd_menu_dialog(parts, true)
     _open_realm_dialog(parts)
 
 func _shadow_back_to_reader(open_reader: bool = true) -> void:
@@ -2949,6 +3007,7 @@ func _ember_menu() -> void:
     var pause_frame: PanelContainer = parts.frame
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
+    _hd_menu_dialog(parts, true)
     _open_realm_dialog(parts)
 
 func _ember_back_to_reader(open_reader: bool = true) -> void:
@@ -3124,6 +3183,7 @@ func _campaign_practice_menu() -> void:
     var pause_frame: PanelContainer = parts.frame
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
+    _hd_menu_dialog(parts, true)
     _open_realm_dialog(parts)
 
 func _campaign_practice_begin() -> void:
