@@ -1050,13 +1050,65 @@ func _begin_campaign_tutorial() -> void:
     refresh()
 
 func open_game_modes() -> void:
-    var box: VBoxContainer = modal("Spielmodi")
+    menu_context = true
+    var box: VBoxContainer = _home_menu_shell()
+    popup.name = "HDGameModes"
+    box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    box.alignment = BoxContainer.ALIGNMENT_CENTER
+    box.add_theme_constant_override("separation", 14)
+
+    var heading: Label = label("Spielmodi", box, 34, Color("fff2d5"))
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    heading.add_theme_font_override("font", ZenType.heading())
+
+    var lotus := TextureRect.new()
+    lotus.texture = preload("res://ui/tower_lotus.svg")
+    lotus.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    lotus.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    lotus.custom_minimum_size.y = 34
+    lotus.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    box.add_child(lotus)
+
+    var space := Control.new()
+    space.custom_minimum_size.y = 42
+    space.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    box.add_child(space)
+
+    premium_button("Zum Hauptmenü", box, open_menu)
     premium_button("Freies Spiel", box, open_play_menu, true)
     premium_button("Zen Challenges · 100 Aufgaben", box, begin_challenges)
     premium_button("Zwei Spieler lokal", box, func(): start_mode(0, 0))
     button("Training", box, func(): start_mode(2, 0), true)
+
     if _ascend_revealed():
         premium_button("Zen Ascend", box, open_ascend_intro)
+
+    for child in box.get_children():
+        if child is Button:
+            var b: Button = child
+            b.custom_minimum_size.y = 60
+            b.add_theme_font_size_override("font_size", 19)
+
+            for state in ["normal", "hover", "pressed"]:
+                var bg: Color = Color("16382b", 0.88)
+                if state == "hover":
+                    bg = Color("28523d")
+                elif state == "pressed":
+                    bg = Color("102a25")
+
+                var st: StyleBoxFlat = theme_style(bg, 26)
+                st.border_color = Color("d8bb7e", 0.85)
+                st.set_border_width_all(1)
+                st.shadow_size = 0
+                b.add_theme_stylebox_override(state, st)
+
+            for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+                b.add_theme_color_override(key, Color("fff0cf"))
+
+    _enable_feedback_modal_scroll(box)
+    column.hide()
+    home_visible = true
+
 
 func open_profile() -> void:
     Asc.ensure(data)
