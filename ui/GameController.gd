@@ -1545,6 +1545,71 @@ func _newly_unlocked_story_act() -> int:
     if rank_after==3 and ActFour.unlocked(data) and ActFour.media_ready(): return 4
     return 0
 
+
+func _hd_result_shell(headline: String, subtitle: String, show_cube: bool = true) -> VBoxContainer:
+    menu_context = false
+    var box: VBoxContainer = _home_menu_shell()
+    popup.name = "HDResultScreen"
+    box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    box.alignment = BoxContainer.ALIGNMENT_CENTER
+    box.add_theme_constant_override("separation", 10)
+    var brand: Label = label("ZenCube 3D", box, 14, Color("e6c99d"))
+    brand.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var title: Label = label(headline, box, 32, Color("fff2d5"))
+    title.add_theme_font_override("font", ZenType.heading())
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var sub: Label = label(subtitle, box, 17, Color("d8bb7e"))
+    sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    if show_cube:
+        var hero := TextureRect.new()
+        hero.name = "HDLiveResultCube"
+        hero.custom_minimum_size.y = clampf(get_viewport().get_visible_rect().size.y * 0.29, 180.0, 285.0)
+        hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        hero.texture = viewport.get_texture()
+        box.add_child(hero)
+    _enable_feedback_modal_scroll(box)
+    column.hide()
+    home_visible = true
+    return box
+
+func _hd_back_to_chronicles() -> void:
+    close_modal()
+    open_story_library()
+
+func _hd_result_finish(box: VBoxContainer, quote: String = "") -> void:
+    var primary: Button = null
+    var inspect: Button = null
+    for child in box.get_children():
+        if child is Label:
+            child.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        elif child is Button:
+            if child.text == _inspect_label():
+                inspect = child
+            elif primary == null:
+                primary = child
+    if primary != null and inspect != null:
+        box.move_child(inspect, primary.get_index() + (0 if inspect.get_index() < primary.get_index() else 1))
+    for child in box.get_children():
+        if child is Button:
+            var b: Button = child
+            var featured: bool = b == primary
+            b.custom_minimum_size.y = 62 if featured else 48
+            b.add_theme_font_size_override("font_size", 19 if featured else 16)
+            for state in ["normal", "hover", "pressed"]:
+                var bg: Color = (Color("dfc58b") if state == "hover" else Color("d8bb7e")) if featured else (Color("18382c") if state == "hover" else Color("102a25", 0.55))
+                var st: StyleBoxFlat = theme_style(bg, 18)
+                st.shadow_size = 0
+                st.set_border_width_all(1)
+                st.border_color = Color("cfb37e", 0.7)
+                b.add_theme_stylebox_override(state, st)
+            for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+                b.add_theme_color_override(key, Color("102a25") if featured else Color("fff0cf"))
+    if not quote.is_empty():
+        var footer: Label = label(quote, box, 13, Color("e6d4ae"))
+        footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
 func show_result_screen() -> void:
     if act_one_active:
         _act_one_result()
@@ -1585,18 +1650,12 @@ func show_result_screen() -> void:
             headline = "Gewonnen!"
         else:
             headline = "Verloren"
-    var box = modal(headline)
-    # Let the actual 3D winning line stay visible above the results panel.
-    # ~20% less height for normal results; preserve extra text room on rank-up.
-    popup.anchor_top = 0.52 if special else 0.56
-    popup.anchor_bottom = 0.97
-    popup.offset_top = 0
-    box.add_theme_constant_override("separation",7)
-    popup.add_theme_stylebox_override("panel", theme_style(Color("342820", 0.985), 25))
-    var heading: Label = box.get_child(0) as Label
-    box.get_child(1).hide()
-    heading.add_theme_color_override("font_color", Color("f8dfaa"))
-    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    var world: int = clampi(int(data.ascension.world), 0, 4)
+    var subtitle: String = T(Asc.WORLDS[world])
+    if world < Journey.TITLES.size():
+        subtitle = Journey.TITLES[world] + " · " + subtitle
+    var outcome_title: String = _tower_text("Unentschieden", "Draw", "Empate") if board.winner == 3 else (_tower_text("Sieg", "Victory", "Vitória") if human_win or not versus_bot else _tower_text("Niederlage", "Defeat", "Derrota"))
+    var box: VBoxContainer = _hd_result_shell(outcome_title, subtitle)
     if special:
         var unlocked_rank: String = T(Asc.RANKS[int(data.ascension.rank)])
         var award: Label = label(unlocked_rank,box,21,Color("edd18e"))
@@ -1623,6 +1682,12 @@ func show_result_screen() -> void:
     if versus_bot and last_leaf_reward > 0:
         var reward_text: Label = label(T("Belohnung: +%d Zen-Blätter 🍃") % last_leaf_reward, box, 17, Color("d3e5b6"))
         reward_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    if versus_bot and world < 3:
+        var gate_act: int = world + 2
+        var target: int = Journey.gate_target(gate_act)
+        var count: int = mini(Journey.gate_count(data, gate_act), target)
+        var progress_label: Label = label(_tower_text("Akt-Fortschritt: %d/%d", "Act Progress: %d/%d", "Progresso do ato: %d/%d") % [count, target], box, 16, Color("d8bb7e"))
+        progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     var story_act: int = _newly_unlocked_story_act()
     if story_act>0:
         var story_button: Button = premium_button(_act_one_ui("📖 Geschichte fortsetzen · Akt %d","📖 Continue Story · Act %d","📖 Continuar história · Ato %d") % story_act,box,_continue_newly_unlocked_story,true)
@@ -1631,7 +1696,11 @@ func show_result_screen() -> void:
     inspect.text = _inspect_label()
     inspect.name = "InspectClassicFinishedBoard"
     premium_button("Noch eine Partie", box, play_again_after_result)
-    premium_button("Hauptmenü", box, open_menu)
+    if versus_bot:
+        premium_button(_tower_text("Zurück zu den Chroniken", "Back to Chronicles", "Voltar às crónicas"), box, _hd_back_to_chronicles)
+    else:
+        premium_button("Hauptmenü", box, open_menu)
+    _hd_result_finish(box, T(WORLD_QUOTES[world]))
 
 func _inspect_label() -> String:
     return "Spielfeld ansehen" if language_code()=="de" else ("Ver tabuleiro" if language_code()=="pt" else "Inspect board")
@@ -3277,7 +3346,8 @@ func _sky_result() -> void:
     var won: bool = bool(sky_progress.won[sky_family])
     if board.winner==2 and not won:
         won = SkyGarden.record_victory(sky_progress,sky_family,board)
-    var box := _zen_campaign_story_box(SkyGarden.NAMES[sky_family] + " · " + SkyGarden.TITLES[sky_family])
+    var heading: String = _tower_text("Sieg", "Victory", "Vitória") if won else (_tower_text("Unentschieden", "Draw", "Empate") if board.winner == 3 else _tower_text("Niederlage", "Defeat", "Derrota"))
+    var box: VBoxContainer = _hd_result_shell(heading, SkyGarden.NAMES[sky_family] + " · " + SkyGarden.TITLES[sky_family], false)
     var portrait: Texture2D = SkyGarden.portrait(sky_family)
     if portrait!=null:
         var art := TextureRect.new()
@@ -3296,6 +3366,7 @@ func _sky_result() -> void:
         premium_button(_act_one_ui("Erneut spielen","Play again","Jogar de novo"),box,_sky_retry,true)
     button(_inspect_label(),box,_inspect_classic_finished_board,true)
     button(_act_one_ui("Zur Geschichte","Back to story","Voltar à história"),box,_sky_leave,true)
+    _hd_result_finish(box)
 
 func _sky_retry() -> void:
     if not sky_active or board.winner==0 or bool(sky_progress.won[sky_family]): return
@@ -3431,8 +3502,8 @@ func _act_one_result() -> void:
     var config: Dictionary = prequel_model.config()
     var dialogue: Dictionary = config.get("dialogue_"+language_code(),config.get("dialogue", {}))
     var outcome := "victory" if board.winner == 1 else ("defeat" if board.winner == 2 else "draw")
-    var box := _zen_campaign_story_box(_act_one_title())
-    popup.add_theme_stylebox_override("panel", theme_style(Color("30261f", 0.985), 22))
+    var heading: String = _tower_text("Sieg", "Victory", "Vitória") if board.winner == 1 else (_tower_text("Niederlage", "Defeat", "Derrota") if board.winner == 2 else _tower_text("Unentschieden", "Draw", "Empate"))
+    var box: VBoxContainer = _hd_result_shell(heading, _act_one_title(), false)
     # Result art matches the large full-height Act I-IV introduction portrait.
     var art := ZenCampaign.artwork(prequel_model.portrait_path(),
         clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,880.0))
@@ -3447,6 +3518,7 @@ func _act_one_result() -> void:
         premium_button(_act_one_ui("Erneut versuchen", "Try again", "Tentar novamente"), box, _act_one_retry, true)
     button(_inspect_label(), box, _inspect_classic_finished_board, true)
     button(_act_one_ui("Zur Geschichte", "Back to story", "Voltar à história"), box, _act_one_leave, true)
+    _hd_result_finish(box)
 
 func _act_one_retry() -> void:
     if not act_one_active or board.winner not in [2, 3]: return

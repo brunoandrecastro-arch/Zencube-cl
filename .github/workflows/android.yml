@@ -662,15 +662,15 @@ jobs:
           assert not missing, 'Missing Satori/Shattered Moon APK assets: ' + ', '.join(missing)
           print('APK verified: all inherited Realm media, Shattered Moon, optional Sky Garden pages, family arenas, reader and scripts')
           PY
-      - name: Name Zen Cube 3D Tower APK
+      - name: Name Zen Cube 3D HD APK
         if: (github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
-        run: mv build/ZenCube-3D.apk build/Zen-Cube-3D-Tower.apk
-      - name: Upload Zen Cube 3D Tower APK
+        run: mv build/ZenCube-3D.apk build/Zen-Cube-3D-HD.apk
+      - name: Upload Zen Cube 3D HD APK
         if: (github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')
         uses: actions/upload-artifact@v4
         with:
-          name: Zen Cube 3D Tower
-          path: build/Zen-Cube-3D-Tower.apk
+          name: Zen Cube 3D HD
+          path: build/Zen-Cube-3D-HD.apk
           if-no-files-found: error
       - name: Deliver the separate menu test APK
         if: env.ZENCUBE_MENU_PREVIEW == 'true' && !(github.head_ref == 'feature/zen-tower-20261124' || github.ref_name == 'feature/zen-tower-20261124')

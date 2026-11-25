@@ -52,6 +52,7 @@ var challenges_nav_button: Button
 var achievements_nav_button: Button
 var ascend_subtitle: Label
 var layer: Control
+var hd_gameplay_margin: MarginContainer
 var menu_dialog: ConfirmationDialog
 var world_music: AudioStreamPlayer
 var realm_music_fade: AudioStreamPlayer
@@ -367,6 +368,7 @@ func _input(event: InputEvent) -> void:
 
 func _close_realm_dialog(dialog: Control) -> void:
     if active_realm_dialog == dialog:
+        if is_instance_valid(hd_gameplay_margin): hd_gameplay_margin.show()
         active_realm_dialog = null
         active_realm_scroll = null
     if is_instance_valid(dialog): dialog.queue_free()
@@ -401,6 +403,7 @@ func build_interface() -> void:
     layer.add_child(shade)
     shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var margin: MarginContainer = MarginContainer.new()
+    hd_gameplay_margin = margin
     layer.add_child(margin)
     margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     margin.add_theme_constant_override("margin_left",12)
@@ -1369,6 +1372,7 @@ func realm_index() -> int:
 func _realm_dialog(title: String, height: int = 660) -> Dictionary:
     # Draw custom premium overlay directly within the game, not Godot's gray Window.
     if is_instance_valid(active_realm_dialog): active_realm_dialog.queue_free()
+    if is_instance_valid(hd_gameplay_margin): hd_gameplay_margin.show()
     var root: Control = Control.new()
     root.name = "ZenRealmPremiumOverlay"
     root.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -1793,6 +1797,73 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     action(body,_achievements_label(),show_realm_titles,true)
     _open_realm_dialog(parts)
 
+
+func _hd_realm_layout(parts: Dictionary, headline: String, subtitle: String, show_cube: bool) -> void:
+    var root: Control = parts.dialog
+    var frame: PanelContainer = parts.frame
+    var stack: VBoxContainer = frame.get_child(0) as VBoxContainer
+    var body: VBoxContainer = parts.box
+    if is_instance_valid(hd_gameplay_margin): hd_gameplay_margin.hide()
+    (root.get_child(0) as ColorRect).color = Color("10271f", 0.80)
+    var clear_style: StyleBoxFlat = style(Color(0, 0, 0, 0), 0)
+    clear_style.set_border_width_all(0)
+    clear_style.set_content_margin_all(24.0)
+    frame.add_theme_stylebox_override("panel", clear_style)
+    frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    stack.add_theme_constant_override("separation", 10)
+    stack.get_child(0).hide()
+    stack.get_child(1).hide()
+    var footer: Button = parts.back_button
+    if is_instance_valid(footer): footer.hide()
+    body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    body.alignment = BoxContainer.ALIGNMENT_CENTER
+    body.add_theme_constant_override("separation", 10)
+    text(body, "ZenCube 3D", 14, Color("e6c99d"))
+    var title: Label = text(body, headline, 32, Color("fff2d5"))
+    title.add_theme_font_override("font", ZenType.heading())
+    text(body, subtitle, 17, Color("d8bb7e"))
+    if show_cube:
+        var hero := TextureRect.new()
+        hero.name = "HDLiveRealmResultCube"
+        hero.texture = vp.get_texture()
+        hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        hero.custom_minimum_size.y = clampf(get_viewport().get_visible_rect().size.y * 0.29, 180.0, 285.0)
+        hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        body.add_child(hero)
+
+func _hd_realm_finish(parts: Dictionary, quote: String = "") -> void:
+    var body: VBoxContainer = parts.box
+    var stack: VBoxContainer = (parts.frame as PanelContainer).get_child(0) as VBoxContainer
+    var actions: Array[Button] = []
+    for parent in [body, stack]:
+        for child in parent.get_children():
+            if child is Button and child.visible:
+                actions.append(child)
+    var primary: Button = null
+    var inspect: Button = null
+    for b in actions:
+        if b.text == _review_board_label(): inspect = b
+        elif primary == null: primary = b
+    if primary != null and inspect != null and primary.get_parent() == inspect.get_parent():
+        primary.get_parent().move_child(inspect, primary.get_index() + (0 if inspect.get_index() < primary.get_index() else 1))
+    for b in actions:
+        var featured: bool = b == primary
+        b.custom_minimum_size.y = 62 if featured else 48
+        b.add_theme_font_size_override("font_size", 19 if featured else 16)
+        for state in ["normal", "hover", "pressed"]:
+            var bg: Color = (Color("dfc58b") if state == "hover" else Color("d8bb7e")) if featured else (Color("18382c") if state == "hover" else Color("102a25", 0.55))
+            var st: StyleBoxFlat = style(bg, 18)
+            st.set_border_width_all(1)
+            st.border_color = Color("cfb37e", 0.7)
+            b.add_theme_stylebox_override(state, st)
+        for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+            b.add_theme_color_override(key, Color("102a25") if featured else Color("fff0cf"))
+    if not quote.is_empty(): text(body, quote, 13, Color("e6d4ae"))
+
+func _hd_realm_outcome(won: bool) -> String:
+    return _campaign_phrase("Unentschieden", "Draw", "Empate") if result == 3 else (_campaign_phrase("Sieg", "Victory", "Vitória") if won else _campaign_phrase("Niederlage", "Defeat", "Derrota"))
+
 func show_match_result() -> void:
     if realm_story_active:
         _realm_story_result()
@@ -1803,13 +1874,9 @@ func show_match_result() -> void:
     if not against_bot and result in [1,2]: title = pname(int(owners[result-1])) + " " + Z("hat gewonnen!")
     var parts: Dictionary = _realm_dialog(title,410)
     var body: VBoxContainer = parts.box
-    var medal: PanelContainer = PanelContainer.new()
-    medal.add_theme_stylebox_override("panel",style(Color("274b3c") if human_won else Color("2b3540"),20))
-    body.add_child(medal)
-    var info: VBoxContainer = VBoxContainer.new()
-    info.add_theme_constant_override("separation",11)
-    medal.add_child(info)
-    text(info,("✦  " if human_won else "◇  ") + title,24,Color("ffe4a5"))
+    _hd_realm_layout(parts, _hd_realm_outcome(human_won or not against_bot), Realms.REALM_NAMES[clampi(match_realm,0,3)], true)
+    var info: VBoxContainer = body
+    if not against_bot and result != 3: text(info, title, 16, Color("e6d4ae"))
     var leaves_total: int = last_match_leaf_reward + int(last_realm_awards.get("leaves",0))
     if leaves_total > 0:
         text(info,"🍃 +%d " % leaves_total + L("leaves"),21,Color("c4edac"))
@@ -1830,6 +1897,7 @@ func show_match_result() -> void:
             action(body,_campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_open_campaign_story_from_match.bind(0),true)
         action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_open_campaign_trials_from_realms.bind(0))
     action(body,Z("Hauptmenü"),return_home)
+    _hd_realm_finish(parts, realm_quote())
     _open_realm_dialog(parts)
 
 func _replay_after_result(dialog: Control) -> void:
@@ -2056,6 +2124,7 @@ func _realm_story_result() -> void:
     var parts: Dictionary = _realm_dialog(title,590)
     var body: VBoxContainer = parts.box
     _realm_boss_result_layout(parts)
+    _hd_realm_layout(parts, _hd_realm_outcome(won), title, false)
     if won:
         # A complete Kuze-with-defeated-boss illustration after EACH of 12
         # actual victories; never triggered on a loss or draw.
@@ -2075,6 +2144,7 @@ func _realm_story_result() -> void:
     else:
         _realm_boss_result_action(parts,RealmStory.text_for(lang(),"retry"),_realm_story_retry,true)
     _realm_boss_result_action(parts,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
+    _hd_realm_finish(parts)
     _open_realm_dialog(parts)
 
 func _realm_story_retry() -> void:
@@ -2371,6 +2441,7 @@ func _abyss_result() -> void:
         label = "Memória recuperada" if result == 1 else ("Empate" if result == 3 else "Derrota")
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
+    _hd_realm_layout(parts, _hd_realm_outcome(result == 1), label, false)
     var body: VBoxContainer = parts.box
     _abyss_add_art(body,_realm_boss_result_height(),true)
     text(body,Abyss.BOSS_NAMES[abyss_index],18,Color("#e8d4b5"))
@@ -2384,6 +2455,7 @@ func _abyss_result() -> void:
     else:
         _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_abyss_retry,true)
     _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_abyss_back_to_reader)
+    _hd_realm_finish(parts)
     _open_realm_dialog(parts)
 
 func _abyss_retry() -> void:
@@ -2573,6 +2645,7 @@ func _shadow_result() -> void:
         label = "O véu desvanece" if result == 1 else ("Empate" if result == 3 else "Derrota")
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
+    _hd_realm_layout(parts, _hd_realm_outcome(result == 1), label, false)
     var body: VBoxContainer = parts.box
     _shadow_add_art(body,_realm_boss_result_height(),true)
     text(body,Shadow.BOSS_NAMES[shadow_index],18,Color("#e8d4b5"))
@@ -2586,6 +2659,7 @@ func _shadow_result() -> void:
     else:
         _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_shadow_retry,true)
     _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_shadow_back_to_reader)
+    _hd_realm_finish(parts)
     _open_realm_dialog(parts)
 
 func _shadow_retry() -> void:
@@ -2811,6 +2885,7 @@ func _ember_result() -> void:
     if guardian_chapter==5 and result==1: label = _campaign_phrase("Die letzte Überfahrt","The Last Crossing","A Última Travessia")
     var parts: Dictionary = _realm_dialog(label,520)
     _realm_boss_result_layout(parts)
+    _hd_realm_layout(parts, _hd_realm_outcome(result == 1), label, false)
     var body: VBoxContainer = parts.box
     _ember_add_art(body,_realm_boss_result_height(),true)
     text(body,ember_model.BOSS_NAMES[ember_index],18,Color("#e8d4b5"))
@@ -2824,6 +2899,7 @@ func _ember_result() -> void:
     else:
         _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_ember_retry,true)
     _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_ember_back_to_reader)
+    _hd_realm_finish(parts)
     _open_realm_dialog(parts)
 
 func _ember_retry() -> void:
@@ -3002,7 +3078,7 @@ func _campaign_practice_result() -> void:
     var parts: Dictionary = _realm_dialog(heading,520)
     _campaign_result_compact(parts)
     var body: VBoxContainer = parts.box
-    text(body,Realm2.REALM_NAMES[practice_chapter] + " · Zen-Bot",20,Color("#e5d2ac"))
+    _hd_realm_layout(parts, heading, Realm2.REALM_NAMES[practice_chapter] + " · Zen-Bot", true)
     if not campaign_awards.is_empty():
         text(body,_campaign_phrase("🏆 Realm-Challenge abgeschlossen!","🏆 Realm challenge earned!","🏆 Desafio de reino concluído!"),18,Color("#c8e8b4"))
         for title_name in campaign_awards:
@@ -3016,6 +3092,7 @@ func _campaign_practice_result() -> void:
         action(body,_campaign_phrase("Geschichte fortsetzen","Continue Story","Continuar história"),_open_campaign_story_from_match.bind(practice_chapter),true)
     action(body,_campaign_phrase("⚔ Noch eine Partie","⚔ Play Again","⚔ Jogar novamente"),_campaign_practice_begin_again,true)
     action(body,_campaign_phrase("‹ Zu den Realm-Challenges","‹ Realm Challenges","‹ Desafios do reino"),_campaign_practice_back)
+    _hd_realm_finish(parts, _campaign_realm_quote(practice_chapter))
     _open_realm_dialog(parts)
 
 func _enter_campaign_final_guardian(chapter: int) -> void:
