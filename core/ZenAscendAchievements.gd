@@ -72,11 +72,11 @@ static func ensure(data: Dictionary) -> void:
     if not st.get("purchased_hints") is Dictionary:
         st["purchased_hints"] = {}
 
-static func earned(data: Dictionary, key: String) -> bool:
+static func earned(data: Dictionary, key: String, abyss_stats: Dictionary = {}) -> bool:
     ensure(data)
     if bool(ZenAscendRealms.state(data).secret_achievements.get(key, false)): return true
     if key.begins_with("abyss_"):
-        var stats: Dictionary = Realm2.load_progress().abyss_stats
+        var stats: Dictionary = Realm2.load_progress().abyss_stats if abyss_stats.is_empty() else abyss_stats
         for item in SECRETS:
             if int(item.realm)==ABYSS_REALM and str(item.id)==key:
                 return int(stats.get(str(item.metric),0))>=int(item.need)

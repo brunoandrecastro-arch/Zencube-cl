@@ -124,7 +124,7 @@ func run() -> void:
     check(story_popup != null,"boss introduction overlay exists")
     if story_popup != null:
         var story_frame: PanelContainer = story_popup.get_child(1) as PanelContainer
-        check(is_equal_approx(story_frame.anchor_top,0.035) and is_equal_approx(story_frame.anchor_bottom,0.965),"boss portrait uses cinematic near-full-screen layout")
+        check(is_equal_approx(story_frame.anchor_top,0.0) and is_equal_approx(story_frame.anchor_bottom,1.0),"boss portrait uses HD full-screen layout")
         var stack: VBoxContainer = story_frame.get_child(0) as VBoxContainer
         var pinned_buttons: Array = []
         for immediate_child in stack.get_children():
@@ -132,7 +132,15 @@ func run() -> void:
                 pinned_buttons.append(immediate_child)
         check(pinned_buttons.size()==1 and (pinned_buttons[0] as Button).name=="RealmBossStartAction","single permanently visible battle action, no duplicate Back button")
         var hero: TextureRect = story_popup.find_child("RealmChroniclesBossArt",true,false) as TextureRect
-        check(hero!=null and hero.custom_minimum_size.y>=400.0,"full-height centered boss art on Android")
+        check(hero!=null and hero.texture!=null and hero.size_flags_vertical==Control.SIZE_EXPAND_FILL and hero.stretch_mode==TextureRect.STRETCH_KEEP_ASPECT_CENTERED,"responsive full portrait without cropping")
+        var intro_scroll: ScrollContainer = controller.get("active_realm_scroll") as ScrollContainer
+        check(intro_scroll!=null and (root.get_visible_rect().size.y<620.0 or intro_scroll.vertical_scroll_mode==ScrollContainer.SCROLL_MODE_DISABLED),"no scrolling on normal phone boss intro")
+        await process_frame
+        await process_frame
+        if intro_scroll!=null and root.get_visible_rect().size.y>=620.0:
+            var intro_body: VBoxContainer = intro_scroll.get_child(0) as VBoxContainer
+            check(intro_body.get_combined_minimum_size().y<=intro_scroll.size.y+2.0,"boss intro text and actions fit viewport")
+            check(hero!=null and hero.size.y>=80.0,"boss portrait receives remaining height")
     var tiles: Array = renderer.get("tiles")
     var tile: MeshInstance3D = tiles[0] as MeshInstance3D
     check(tile.material_override is StandardMaterial3D,"3D BoxMesh receives real material")
@@ -170,7 +178,15 @@ func run() -> void:
     controller.call("_realm_story_result")
     var result_dialog: Control = controller.get("active_realm_dialog") as Control
     var large_boss: TextureRect = result_dialog.find_child("RealmChroniclesBossArt",true,false) as TextureRect
-    check(large_boss!=null and large_boss.custom_minimum_size.y>=400.0,"boss loss now uses large cinematic picture")
+    check(large_boss!=null and large_boss.texture!=null and large_boss.size_flags_vertical==Control.SIZE_EXPAND_FILL and large_boss.stretch_mode==TextureRect.STRETCH_KEEP_ASPECT_CENTERED,"boss result uses flexible full picture")
+    var result_scroll: ScrollContainer = controller.get("active_realm_scroll") as ScrollContainer
+    check(result_scroll!=null and (root.get_visible_rect().size.y<620.0 or result_scroll.vertical_scroll_mode==ScrollContainer.SCROLL_MODE_DISABLED),"no scrolling on normal phone boss result")
+    await process_frame
+    await process_frame
+    if result_scroll!=null and root.get_visible_rect().size.y>=620.0:
+        var result_body: VBoxContainer = result_scroll.get_child(0) as VBoxContainer
+        check(result_body.get_combined_minimum_size().y<=result_scroll.size.y+2.0,"boss result information fits above fixed actions")
+        check(large_boss!=null and large_boss.size.y>=80.0,"boss result portrait receives remaining height")
     var result_frame: PanelContainer = result_dialog.get_child(1) as PanelContainer
     check(is_equal_approx(result_frame.anchor_top,0.0) and is_equal_approx(result_frame.anchor_bottom,1.0) and is_equal_approx(result_frame.anchor_left,0.0) and is_equal_approx(result_frame.anchor_right,1.0),"boss result takes full screen height")
     var actions: int = 0

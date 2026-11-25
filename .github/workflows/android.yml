@@ -119,6 +119,13 @@ jobs:
           python3 tests/test_campaign2_arenas.py --extract
           unzip -oq ZenCube_Ember_Media.zip -d .
           python3 tests/test_celestial_media.py --extract
+          if ! python3 -c 'import PIL' 2>/dev/null; then
+            python3 -m venv /tmp/zencube-preview-venv
+            /tmp/zencube-preview-venv/bin/pip install Pillow
+            /tmp/zencube-preview-venv/bin/python scripts/hd_realm_thumbnails.py
+          else
+            python3 scripts/hd_realm_thumbnails.py
+          fi
           "$GODOT" --headless --editor --import --quit
       - name: Optimize imported 2D textures without altering source media
         if: matrix.variant == 'optimized'

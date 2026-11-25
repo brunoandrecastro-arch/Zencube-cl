@@ -414,31 +414,37 @@ func build_interface() -> void:
     column.add_theme_constant_override("separation",8)
     margin.add_child(column)
     var header: PanelContainer = PanelContainer.new()
-    header.add_theme_stylebox_override("panel",style(Color("392a25",0.96),22))
+    header.add_theme_stylebox_override("panel",style(Color("10271f",0.84),20))
     column.add_child(header)
     var header_row: HBoxContainer = HBoxContainer.new()
     header_row.add_theme_constant_override("separation",8)
     header.add_child(header_row)
     var menu_button: Button = action(header_row,"☰",show_ascend_menu)
     menu_button.custom_minimum_size = Vector2(50,54)
-    menu_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+    menu_button.size_flags_horizontal = Control.SIZE_SHRINK_END
     menu_button.tooltip_text = "Zen Ascend menu"
     var title_box: VBoxContainer = VBoxContainer.new()
     title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header_row.add_child(title_box)
+    header_row.move_child(menu_button,1)
+    _hd_beta_boss_button(menu_button,false)
     rank_label = text(title_box,"",27,Color("f9e7b7"))
     rank_label.add_theme_font_override("font",ZenType.heading())
     text(title_box,Z("Zen Ascend 4×4"),18,Color("e8d1a9"))
     ascend_subtitle = text(title_box,L("subtitle"),12,Color("d6bfa4"))
+    ascend_subtitle.hide()
     var scoreboard: PanelContainer = PanelContainer.new()
-    scoreboard.add_theme_stylebox_override("panel",style(Color("fff1d9",0.95)))
+    scoreboard.add_theme_stylebox_override("panel",style(Color("10271f",0.82),16))
     column.add_child(scoreboard)
     var score_box: VBoxContainer = VBoxContainer.new()
     scoreboard.add_child(score_box)
-    status_label = text(score_box,"",17,Color("473b2d"))
-    details_label = text(score_box,"",13,Color("6f6254"))
+    status_label = text(score_box,"",17,Color("fff2d5"))
+    details_label = text(score_box,"",13,Color("d8bb7e"))
     var cube_card: PanelContainer = PanelContainer.new()
-    cube_card.add_theme_stylebox_override("panel",style(Color("e7dac7",0.06),24))
+    var clear_cube: StyleBoxFlat = style(Color(0,0,0,0),0)
+    clear_cube.set_border_width_all(0)
+    clear_cube.set_content_margin_all(0.0)
+    cube_card.add_theme_stylebox_override("panel",clear_cube)
     cube_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
     column.add_child(cube_card)
     cube_surface = TextureRect.new()
@@ -446,13 +452,13 @@ func build_interface() -> void:
     cube_surface.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     cube_surface.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     cube_surface.mouse_filter = Control.MOUSE_FILTER_STOP
-    cube_surface.custom_minimum_size.y = 290
+    cube_surface.custom_minimum_size.y = 240
     cube_surface.size_flags_vertical = Control.SIZE_EXPAND_FILL
     cube_surface.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     cube_card.add_child(cube_surface)
     cube_surface.gui_input.connect(cube_input)
     var tip: PanelContainer = PanelContainer.new()
-    tip.add_theme_stylebox_override("panel",style(Color("302820",0.96),13))
+    tip.add_theme_stylebox_override("panel",style(Color("10271f",0.65),13))
     column.add_child(tip)
     instructions = text(tip,Z("Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen"),13)
     var row: HBoxContainer = HBoxContainer.new()
@@ -463,14 +469,17 @@ func build_interface() -> void:
     result_review_button = action(row,_result_button_label(),_reopen_finished_result)
     result_review_button.name = "ShowFinishedResult"
     result_review_button.hide()
+    _hd_beta_boss_button(result_review_button,true)
+    row.hide()
     var realm_actions: HBoxContainer = HBoxContainer.new()
     realm_actions.add_theme_constant_override("separation",6)
     column.add_child(realm_actions)
     realms_nav_button = action(realm_actions,L("realms"),show_realms)
     challenges_nav_button = action(realm_actions,L("challenges"),show_challenges,true)
     achievements_nav_button = action(realm_actions,_achievements_label(),show_realm_titles)
+    realm_actions.hide()
     var quote_box: PanelContainer = PanelContainer.new()
-    quote_box.add_theme_stylebox_override("panel",style(Color("302820",0.94),13))
+    quote_box.add_theme_stylebox_override("panel",style(Color("10271f",0.65),13))
     column.add_child(quote_box)
     quote_label = text(quote_box,"",12,Color("f4dfbd"))
 
@@ -527,6 +536,9 @@ func zen_ascend_bot_name() -> String:
     return "Zen Ascend Bot · " + _bot_difficulty_name()
 
 func show_ascend_menu() -> void:
+    if result != 0:
+        _reopen_finished_result()
+        return
     if campaign_practice_active:
         _campaign_practice_menu()
         return
@@ -802,7 +814,12 @@ func draw() -> void:
                 if not wins.has(c): wins.append(c)
     cube.repaint(cells,wins)
     if is_instance_valid(rules_button): rules_button.visible = result == 0
-    if is_instance_valid(result_review_button): result_review_button.visible = result != 0
+    if is_instance_valid(result_review_button):
+        result_review_button.visible = result != 0
+        var review_row: Control = result_review_button.get_parent() as Control
+        if review_row != null: review_row.visible = result != 0
+        new_match_button.hide()
+        rules_button.hide()
     if is_instance_valid(instructions):
         instructions.text = _campaign_phrase("Partie beendet · Drehen und zoomen","Match finished · Rotate and zoom","Partida terminada · Roda e amplia") if result != 0 else Z("Ziehen: drehen · Tippen: setzen · Zwei Finger: zoomen")
     rank_label.text = Realms.realm_name(realm_index(),lang())
@@ -829,17 +846,17 @@ func draw() -> void:
         rank_label.text = ember_model.BOSS_NAMES[clampi(ember_index,0,2)]
         quote_label.text = _campaign_realm_quote(guardian_chapter)
         status_label.text = _boss_turn_status(rank_label.text)
-        details_label.text = _guardian_series_score(ember_progress) + " · %d/96" % move_count()
+        details_label.text = _hd_beta_round_line(ember_progress)
     if shadow_active:
         rank_label.text = Shadow.BOSS_NAMES[clampi(shadow_index,0,2)]
         quote_label.text = _campaign_realm_quote(0)
         status_label.text = _boss_turn_status(rank_label.text)
-        details_label.text = _guardian_series_score(shadow_progress) if shadow_index==2 else "Shadow · " + str(move_count()) + "/96"
+        details_label.text = _hd_beta_round_line(shadow_progress) if shadow_index==2 else "Shadow · " + str(move_count()) + "/96"
     if abyss_active:
         rank_label.text = Abyss.BOSS_NAMES[clampi(abyss_index,0,2)]
         quote_label.text = _campaign_realm_quote(1)
         status_label.text = _boss_turn_status(rank_label.text)
-        details_label.text = _guardian_series_score(abyss_progress) if abyss_index==2 else "Abyss · " + str(move_count()) + "/96"
+        details_label.text = _hd_beta_round_line(abyss_progress) if abyss_index==2 else "Abyss · " + str(move_count()) + "/96"
     if realm_story_active:
         rank_label.text = RealmStory.text_for(lang(),"boss_%d" % realm_story_stage)
         status_label.text = _boss_turn_status(rank_label.text)
@@ -910,6 +927,12 @@ func _boss_starter_caption(game: Dictionary) -> String:
         var next: String = _campaign_phrase("Du bist am Zug (X)","Your turn (X)","A tua vez (X)") if turn==1 else _campaign_phrase("Boss am Zug (O)","Boss turn (O)","Vez do chefe (O)")
         caption = (_campaign_phrase("Start: Du (X)","Started: You (X)","Início: Tu (X)") if starter==1 else _campaign_phrase("Start: Boss (O)","Started: Boss (O)","Início: Chefe (O)")) + " · " + next
     return caption
+
+func _hd_beta_round_line(progress: Dictionary) -> String:
+    var score: Dictionary = FinalSeries.score(progress)
+    var decisive: int = int(score.player) + int(score.guardian)
+    var number: int = clampi(decisive + (0 if result in [1,2] else 1),1,3)
+    return _campaign_phrase("Runde %d/3","Round %d/3","Ronda %d/3") % number + " · %d:%d · %d/96" % [int(score.player),int(score.guardian),move_count()]
 
 func _guardian_series_panel(body: VBoxContainer, progress: Dictionary) -> void:
     var tally: Dictionary = FinalSeries.score(progress)
@@ -1457,8 +1480,9 @@ func show_realms() -> void:
     action(body,"Zen Chronicles",_open_campaign_library_from_realms,true).name = "Campaign2ChroniclesEntry"
     # The story catalogue has five Realms. The legacy four-slot bonus
     # challenges stay separate and never determine story access.
+    var campaign_progress: Dictionary = Realm2.load_progress()
     for chapter in range(5):
-        _add_story_realm_card(body,chapter)
+        _add_story_realm_card(body,chapter,campaign_progress)
     # Shattered Moon is a post-Satori story chapter, not a fifth ordinary 8-task
     # Zen Ascend realm. Show a discoverable route without changing the old gates.
     if Moon.unlocked():
@@ -1478,7 +1502,7 @@ func show_realms() -> void:
         text(moon_column,_campaign_phrase("Zen Chronicles · Story-Realm","Zen Chronicles · Story realm","Zen Chronicles · Reino da história"),14,Color("d5ba85"))
         var moon_thumb := TextureRect.new()
         if ResourceLoader.exists(Moon.REALM_ART):
-            moon_thumb.texture = load(Moon.REALM_ART)
+            _hd_queue_preview(moon_thumb,Moon.REALM_ART)
         moon_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         moon_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
         moon_thumb.custom_minimum_size.y = 112
@@ -1500,7 +1524,7 @@ func show_realms() -> void:
         sky_card.add_child(sky_column)
         text(sky_column,"🌸 Sky Garden · The Return to Peace",19,Color("f7dfaa"))
         var sky_thumb := TextureRect.new()
-        if ResourceLoader.exists(SkyGarden.REALM_ART): sky_thumb.texture = load(SkyGarden.REALM_ART)
+        if ResourceLoader.exists(SkyGarden.REALM_ART): _hd_queue_preview(sky_thumb,SkyGarden.REALM_ART)
         sky_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         sky_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
         sky_thumb.custom_minimum_size.y = 112
@@ -1517,7 +1541,7 @@ func _open_sky_from_realms() -> void:
     if is_instance_valid(active_realm_dialog): _close_realm_dialog(active_realm_dialog)
     ZenChronicles.open_sky_garden_preview()
 
-func _add_story_realm_card(body: VBoxContainer, chapter: int) -> void:
+func _add_story_realm_card(body: VBoxContainer, chapter: int, campaign_progress: Dictionary) -> void:
     var legacy_index: int = [0,-1,1,2,3][chapter]
     var allowed: bool = Realm2.unlocked(chapter)
     var card := PanelContainer.new()
@@ -1530,14 +1554,14 @@ func _add_story_realm_card(body: VBoxContainer, chapter: int) -> void:
     card.add_child(column)
     text(column,Realm2.REALM_NAMES[chapter] + ("" if allowed else "  🔒"),20,Color("f7dfaa"))
     var thumb := TextureRect.new()
-    thumb.texture = Abyss.battle_backdrop() if chapter==1 else load(Realm2.SOURCE_ART[chapter])
+    _hd_queue_preview(thumb,Abyss.gameplay_art() if chapter==1 and ResourceLoader.exists(Abyss.gameplay_art()) else Realm2.SOURCE_ART[chapter])
     thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     thumb.custom_minimum_size = Vector2(0,112)
     thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
     column.add_child(thumb)
     var bosses: int = Realm2.bosses_won(chapter)
-    var tasks: int = Realm2.completed_count(Realm2.load_progress(),chapter)
+    var tasks: int = Realm2.completed_count(campaign_progress,chapter)
     text(column,_campaign_phrase("Bosse: %d/3 · Challenges: %d/3","Bosses: %d/3 · Challenges: %d/3","Chefes: %d/3 · Desafios: %d/3") % [bosses,tasks],15)
     if allowed:
         action(column,_campaign_phrase("Realm betreten","Enter Realm","Entrar no reino"),_open_campaign_story_from_match.bind(chapter),true)
@@ -1746,12 +1770,69 @@ func show_challenges() -> void:
     _hd_menu_dialog(parts, false)
     _open_realm_dialog(parts)
 
+# Only small menu previews are cached, never full-resolution boss portraits.
+var _hd_preview_cache: Dictionary = {}
+func _hd_achievement_art(realm: int) -> String:
+    if realm == Achievements.ABYSS_REALM and ResourceLoader.exists(Abyss.gameplay_art()):
+        return Abyss.gameplay_art()
+    return Achievements.realm_art(realm)
+
+func _hd_queue_preview(target: TextureRect, source: String) -> void:
+    if source.is_empty(): return
+    var path: String = "res://assets/hd_menu_previews/" + source.trim_prefix("res://").replace("/","_").get_basename() + ".webp"
+    if not ResourceLoader.exists(path):
+        path = source
+    if _hd_preview_cache.has(path):
+        target.texture = _hd_preview_cache[path] as Texture2D
+        return
+    call_deferred("_hd_load_preview",weakref(target),path)
+
+func _hd_load_preview(target_ref: WeakRef, path: String) -> void:
+    if not ResourceLoader.exists(path): return
+    # Wait until the preview is near the visible part of its scroll area.
+    while true:
+        var target := target_ref.get_ref() as TextureRect
+        if not is_instance_valid(target) or not target.is_inside_tree(): return
+        var ancestor: Node = target.get_parent()
+        while ancestor != null and not ancestor is ScrollContainer:
+            ancestor = ancestor.get_parent()
+        if ancestor == null or (ancestor as ScrollContainer).get_global_rect().grow(180.0).intersects(target.get_global_rect()): break
+        await get_tree().process_frame
+    if _hd_preview_cache.has(path):
+        var cached_target := target_ref.get_ref() as TextureRect
+        if is_instance_valid(cached_target): cached_target.texture = _hd_preview_cache[path] as Texture2D
+        return
+    var status: int = ResourceLoader.load_threaded_get_status(path)
+    if status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+        if ResourceLoader.load_threaded_request(path,"Texture2D") != OK: return
+    while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+        await get_tree().process_frame
+    if _hd_preview_cache.has(path):
+        var waiting_target := target_ref.get_ref() as TextureRect
+        if is_instance_valid(waiting_target): waiting_target.texture = _hd_preview_cache[path] as Texture2D
+        return
+    if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_LOADED: return
+    var image: Texture2D = ResourceLoader.load_threaded_get(path) as Texture2D
+    if image == null: return
+    if path.begins_with("res://assets/hd_menu_previews/"):
+        _hd_preview_cache[path] = image
+    var final_target := target_ref.get_ref() as TextureRect
+    if is_instance_valid(final_target): final_target.texture = image
+
 func show_realm_titles() -> void:
     # Achievements are independent of the Realm Challenges. Only one main
     # title can be earned per Realm, through full Realm mastery (8/8).
     var parts: Dictionary = _realm_dialog("Zen Ascend · " + _achievements_label())
     var body: VBoxContainer = parts.box
-    text(body,"Secret Achievements   ·   %d / %d" % [Achievements.secret_count(data),Achievements.SECRETS.size()],18,Color("f3dca4"))
+    var earned_by_id: Dictionary = {}
+    var total: int = 0
+    var abyss_stats: Dictionary = Realm2.load_progress().abyss_stats
+    for secret in Achievements.SECRETS:
+        var key: String = str(secret.id)
+        var earned: bool = Achievements.earned(data,key,abyss_stats)
+        earned_by_id[key] = earned
+        if earned: total += 1
+    text(body,"Secret Achievements   ·   %d / %d" % [total,Achievements.SECRETS.size()],18,Color("f3dca4"))
     for realm in [0,Achievements.ABYSS_REALM,1,2,3]:
         var group: PanelContainer = PanelContainer.new()
         group.add_theme_stylebox_override("panel",style(Color("252034") if realm==Achievements.ABYSS_REALM else _realm_tone(realm),18))
@@ -1762,7 +1843,7 @@ func show_realm_titles() -> void:
         group.add_child(inside)
         text(inside,Achievements.realm_name(realm,lang()),21,Color("f7dda5"))
         var picture: TextureRect = TextureRect.new()
-        picture.texture = load(Achievements.realm_art(realm))
+        _hd_queue_preview(picture,_hd_achievement_art(realm))
         picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
         picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         picture.custom_minimum_size.y = 160
@@ -1775,7 +1856,7 @@ func show_realm_titles() -> void:
         action(inside,"View Realm Title",_show_achievement_details.bind(realm,{"id":"main","name":master,"condition":title_condition,"quote":Achievements.main_quote(realm)},title_earned),false)
         for secret in Achievements.SECRETS:
             if int(secret.realm) != realm: continue
-            var unlocked: bool = Achievements.earned(data,str(secret.id))
+            var unlocked: bool = bool(earned_by_id.get(str(secret.id),false))
             var display: String = ("✦  " + str(secret.name)) if unlocked else "◇  ???  ·  Secret Achievement"
             action(inside,display,_show_achievement_details.bind(realm,secret,unlocked),unlocked)
     _hd_menu_dialog(parts, false)
@@ -1788,9 +1869,9 @@ func _show_achievement_details(realm: int, secret: Dictionary, unlocked: bool) -
     var parts: Dictionary = _realm_dialog(title_text,610)
     var body: VBoxContainer = parts.box
     var picture: TextureRect = TextureRect.new()
-    picture.texture = load(Achievements.realm_art(realm))
+    _hd_queue_preview(picture,_hd_achievement_art(realm))
     picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     picture.custom_minimum_size.y = 250
     picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body.add_child(picture)
@@ -1994,16 +2075,77 @@ func _realm_story_compact(parts: Dictionary) -> void:
     (parts.box as VBoxContainer).add_theme_constant_override("separation",9)
 
 # Act I-IV style cinematic boss portraits; actual battle rules and existing artwork stay intact.
+# Beta boss layout: the portrait takes only the space left by text and actions.
+func _hd_beta_boss_fit(parts: Dictionary, intro: bool) -> void:
+    var frame: PanelContainer = parts.frame
+    var stack: VBoxContainer = frame.get_child(0) as VBoxContainer
+    var body: VBoxContainer = parts.box
+    var scroller: ScrollContainer = parts.scroller
+    if intro:
+        _hd_menu_dialog(parts, false)
+    var shell: StyleBoxFlat = style(Color(0,0,0,0),0)
+    shell.set_border_width_all(0)
+    shell.set_content_margin_all(16.0)
+    frame.add_theme_stylebox_override("panel",shell)
+    frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    stack.add_theme_constant_override("separation",6)
+    body.add_theme_constant_override("separation",5)
+    body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    body.alignment = BoxContainer.ALIGNMENT_CENTER
+    # Keep the existing ScrollContainer for focus/touch compatibility, but do
+    # not allow scrolling on ordinary phone viewports. Short windows retain
+    # an accessibility fallback rather than clipping an action.
+    scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if get_viewport().get_visible_rect().size.y >= 620.0 else ScrollContainer.SCROLL_MODE_AUTO
+    for item in body.get_children():
+        if item is TextureRect:
+            var portrait: TextureRect = item
+            portrait.custom_minimum_size = Vector2(0,0 if get_viewport().get_visible_rect().size.y >= 620.0 else 160.0)
+            portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
+            portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        elif item is PanelContainer:
+            var art: PanelContainer = item
+            var inner: Control = art.find_child("CinematicVictoryFrame",true,false) as Control
+            if inner != null:
+                inner.custom_minimum_size.y = 0
+                art.custom_minimum_size.y = 0
+                art.size_flags_vertical = Control.SIZE_EXPAND_FILL
+        elif item is Label:
+            var line: Label = item
+            var font_size: int = line.get_theme_font_size("font_size")
+            if font_size < 25:
+                line.add_theme_font_size_override("font_size",clampi(font_size,12,16))
+        elif item is Button:
+            _hd_beta_boss_button(item as Button,false)
+    for item in stack.get_children():
+        if item is Button and item.visible:
+            var b: Button = item
+            var featured: bool = b.name == "RealmBossStartAction"
+            if not intro:
+                var normal := b.get_theme_stylebox("normal") as StyleBoxFlat
+                featured = normal != null and normal.bg_color.is_equal_approx(Color("d8bb7e"))
+            _hd_beta_boss_button(b,featured)
+
+func _hd_beta_boss_button(b: Button, featured: bool) -> void:
+    b.custom_minimum_size.y = 50 if featured else 43
+    b.add_theme_font_size_override("font_size",17 if featured else 15)
+    for state in ["normal","hover","pressed"]:
+        var bg: Color = Color("d8bb7e") if featured else Color("16382b",0.85)
+        if state == "hover": bg = Color("e5c98e") if featured else Color("28523d")
+        elif state == "pressed": bg = Color("c8aa71") if featured else Color("102a25")
+        var skin: StyleBoxFlat = style(bg,15)
+        skin.set_content_margin_all(6.0)
+        skin.set_border_width_all(1)
+        b.add_theme_stylebox_override(state,skin)
+    for key in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+        b.add_theme_color_override(key,Color("10271f") if featured else Color("fff2d5"))
+
 func _realm_boss_intro_layout(parts: Dictionary) -> void:
     _realm_story_compact(parts)
     var frame: PanelContainer = parts.frame
-    frame.anchor_left = 0.03
-    frame.anchor_right = 0.97
-    frame.anchor_top = 0.035
-    frame.anchor_bottom = 0.965
+    frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 func _realm_boss_portrait_height() -> float:
-    return clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,820.0)
+    return clampf(get_viewport().get_visible_rect().size.y * 0.46,180.0,520.0)
 
 func _realm_boss_result_height() -> float:
     return _realm_boss_portrait_height()
@@ -2137,6 +2279,7 @@ func _realm_story_present_intro() -> void:
     text(body,starter_info,14,Color("#f0dfb3"))
     _realm_boss_primary_action(parts,RealmStory.text_for(lang(),"resume" if not realm_story_progress.game.is_empty() else "continue"),_realm_story_begin)
     action(body,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
+    _hd_beta_boss_fit(parts, true)
     _open_realm_dialog(parts)
 
 func _realm_story_begin() -> void:
@@ -2200,6 +2343,7 @@ func _realm_story_result() -> void:
         _realm_boss_result_action(parts,RealmStory.text_for(lang(),"retry"),_realm_story_retry,true)
     _realm_boss_result_action(parts,RealmStory.text_for(lang(),"return_ascend"),_realm_story_return_to_ascend)
     _hd_realm_finish(parts)
+    _hd_beta_boss_fit(parts, false)
     _open_realm_dialog(parts)
 
 func _realm_story_retry() -> void:
@@ -2337,6 +2481,9 @@ func _realm_story_menu() -> void:
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
     _hd_menu_dialog(parts, true)
+    action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
+    action(body,Z("Regeln ansehen"),show_rules)
+    action(body,_achievements_label(),show_realm_titles)
     _open_realm_dialog(parts)
 
 # Exit the story without returning to Main. The ordinary Ascend 4x4
@@ -2478,6 +2625,7 @@ func _abyss_intro() -> void:
     text(body,_boss_starter_caption(abyss_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_abyss_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_abyss_back_to_reader)
+    _hd_beta_boss_fit(parts, true)
     _open_realm_dialog(parts)
 
 func _abyss_begin() -> void:
@@ -2512,10 +2660,12 @@ func _abyss_result() -> void:
         _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_abyss_retry,true)
     _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_abyss_back_to_reader)
     _hd_realm_finish(parts)
+    _hd_beta_boss_fit(parts, false)
     _open_realm_dialog(parts)
 
 func _abyss_retry() -> void:
     if not abyss_active or result==0: return
+    var direct_next: bool = abyss_index==2 and not FinalSeries.player_won(abyss_progress) and not FinalSeries.guardian_won(abyss_progress)
     var candidate: Dictionary = abyss_progress.duplicate(true)
     if abyss_index==2:
         if not FinalSeries.start_next(candidate): return
@@ -2535,7 +2685,10 @@ func _abyss_retry() -> void:
     cube.reset_view()
     _abyss_save()
     draw()
-    _abyss_intro()
+    if direct_next:
+        _abyss_begin()
+    else:
+        _abyss_intro()
 
 func _abyss_victory() -> void:
     if not abyss_active or result != 1: return
@@ -2564,6 +2717,9 @@ func _abyss_menu() -> void:
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
     _hd_menu_dialog(parts, true)
+    action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
+    action(body,Z("Regeln ansehen"),show_rules)
+    action(body,_achievements_label(),show_realm_titles)
     _open_realm_dialog(parts)
 
 func _abyss_back_to_reader(open_reader: bool = true) -> void:
@@ -2683,6 +2839,7 @@ func _shadow_intro() -> void:
     text(body,_boss_starter_caption(shadow_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_shadow_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_shadow_back_to_reader)
+    _hd_beta_boss_fit(parts, true)
     _open_realm_dialog(parts)
 
 func _shadow_begin() -> void:
@@ -2717,10 +2874,12 @@ func _shadow_result() -> void:
         _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_shadow_retry,true)
     _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_shadow_back_to_reader)
     _hd_realm_finish(parts)
+    _hd_beta_boss_fit(parts, false)
     _open_realm_dialog(parts)
 
 func _shadow_retry() -> void:
     if not shadow_active or result==0: return
+    var direct_next: bool = shadow_index==2 and not FinalSeries.player_won(shadow_progress) and not FinalSeries.guardian_won(shadow_progress)
     var candidate: Dictionary = shadow_progress.duplicate(true)
     if shadow_index==2:
         if not FinalSeries.start_next(candidate): return
@@ -2740,7 +2899,10 @@ func _shadow_retry() -> void:
     cube.reset_view()
     _shadow_save()
     draw()
-    _shadow_intro()
+    if direct_next:
+        _shadow_begin()
+    else:
+        _shadow_intro()
 
 func _shadow_victory() -> void:
     if not shadow_active or result != 1: return
@@ -2769,6 +2931,9 @@ func _shadow_menu() -> void:
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
     _hd_menu_dialog(parts, true)
+    action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
+    action(body,Z("Regeln ansehen"),show_rules)
+    action(body,_achievements_label(),show_realm_titles)
     _open_realm_dialog(parts)
 
 func _shadow_back_to_reader(open_reader: bool = true) -> void:
@@ -2921,6 +3086,7 @@ func _ember_intro() -> void:
     text(body,_boss_starter_caption(ember_progress.get("game",{})),14,Color("#e1c99d"))
     _realm_boss_primary_action(parts,_campaign_phrase("⚔ Kampf fortsetzen","⚔ Continue Battle","⚔ Continuar batalha") if move_count() > 0 else _campaign_phrase("⚔ Kampf beginnen","⚔ Start Battle","⚔ Começar batalha"),_ember_begin)
     action(body,_campaign_phrase("‹ Zur Geschichte","‹ Back to Story","‹ Voltar à história"),_ember_back_to_reader)
+    _hd_beta_boss_fit(parts, true)
     _open_realm_dialog(parts)
 
 func _ember_begin() -> void:
@@ -2958,10 +3124,12 @@ func _ember_result() -> void:
         _realm_boss_result_action(parts,"⚔ " + _campaign_phrase("Erneut kämpfen","Retry Battle","Repetir batalha"),_ember_retry,true)
     _realm_boss_result_action(parts,"‹ " + _campaign_phrase("Geschichte verlassen","Leave Story","Sair da história"),_ember_back_to_reader)
     _hd_realm_finish(parts)
+    _hd_beta_boss_fit(parts, false)
     _open_realm_dialog(parts)
 
 func _ember_retry() -> void:
     if not ember_active or result==0: return
+    var direct_next: bool = not ember_model.player_won(ember_progress) and not ember_model.guardian_won(ember_progress)
     var candidate: Dictionary = ember_progress.duplicate(true)
     if not ember_model.start_next(candidate): return
     # Save the new board and the score in one atomic progress write.
@@ -2979,7 +3147,10 @@ func _ember_retry() -> void:
     cube.reset_view()
     _ember_save()
     draw()
-    _ember_intro()
+    if direct_next:
+        _ember_begin()
+    else:
+        _ember_intro()
 
 func _ember_victory() -> void:
     if not ember_active or result != 1: return
@@ -3008,6 +3179,9 @@ func _ember_menu() -> void:
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
     _hd_menu_dialog(parts, true)
+    action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
+    action(body,Z("Regeln ansehen"),show_rules)
+    action(body,_achievements_label(),show_realm_titles)
     _open_realm_dialog(parts)
 
 func _ember_back_to_reader(open_reader: bool = true) -> void:
@@ -3184,6 +3358,9 @@ func _campaign_practice_menu() -> void:
     pause_frame.anchor_top = 0.31
     pause_frame.anchor_bottom = 0.69
     _hd_menu_dialog(parts, true)
+    action(body,_campaign_phrase("Neustart","Restart","Reiniciar"),show_mode_picker)
+    action(body,Z("Regeln ansehen"),show_rules)
+    action(body,_achievements_label(),show_realm_titles)
     _open_realm_dialog(parts)
 
 func _campaign_practice_begin() -> void:

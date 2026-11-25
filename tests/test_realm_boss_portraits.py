@@ -5,8 +5,10 @@ ROOT = Path(__file__).resolve().parents[1]
 code = (ROOT / "ui/AscendController.gd").read_text()
 workflow = (ROOT / ".github/workflows/android.yml").read_text()
 assert "func _realm_boss_intro_layout(parts: Dictionary) -> void:" in code
-assert "frame.anchor_top = 0.035" in code and "frame.anchor_bottom = 0.965" in code
-assert "get_viewport().get_visible_rect().size.y * 0.62,400.0,820.0" in code
+assert "frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)" in code
+assert "get_viewport().get_visible_rect().size.y * 0.46,180.0,520.0" in code
+assert 'portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL' in code
+assert 'ScrollContainer.SCROLL_MODE_DISABLED if' in code
 assert 'launch.name = "RealmBossStartAction"' in code
 for method, next_func, image in (
     ("_realm_story_present_intro","_realm_story_begin","_realm_story_art(body,stage,_realm_boss_portrait_height())"),
@@ -17,6 +19,7 @@ for method, next_func, image in (
     block = code.split("func " + method + "(",1)[1].split("func " + next_func + "(",1)[0]
     assert "_realm_boss_intro_layout(parts)" in block,method
     assert "_realm_boss_primary_action(parts," in block,method
+    assert "_hd_beta_boss_fit(parts, true)" in block,method
     assert image in block,method
 assert "STRETCH_KEEP_ASPECT_CENTERED" in code
 assert "func _realm_boss_result_layout(parts: Dictionary)" in code
@@ -31,6 +34,7 @@ for fn, end, art in (
     section = code.split("func " + fn + "(",1)[1].split("func " + end + "(",1)[0]
     assert "_realm_boss_result_layout(parts)" in section, fn
     assert "_realm_boss_result_action(parts," in section, fn
+    assert "_hd_beta_boss_fit(parts, false)" in section, fn
     assert art in section, fn
 import re
 assert re.search(r"ZenCube-Chronicles-\d+(?:\.\d+)*\.apk", workflow), "A versioned Chronicles APK artifact must be uploaded"
