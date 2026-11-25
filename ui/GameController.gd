@@ -2,6 +2,7 @@ extends Node3D
 
 const Tower = preload("res://core/ZenTower.gd")
 var tower_active: bool = false
+var tower_intro_pending: bool = false
 var tower_classic_board: BoardModel
 var tower_view: Dictionary = {}
 var tower_controls: HBoxContainer
@@ -651,6 +652,7 @@ func on_cell(cell: int) -> void:
     if cell < 0 or ceremony_active or (popup != null and not net_active): return
 
     if tower_active:
+        if tower_intro_pending: return
         if board.winner == 0 and board.turn == 1 and not ai_running and not chronicles.is_open():
             place(cell)
         return
@@ -816,7 +818,7 @@ func _process(delta: float) -> void:
         var can_play := not zen_campaign_paused if zen_campaign_active else (not challenge_active and tutorial == null)
         if act_one_active: can_play = not zen_campaign_paused and board.turn == 2
         if sky_active: can_play = not zen_campaign_paused and board.current_owner()==1
-        if tower_active: can_play = not zen_campaign_paused and board.turn == 2
+        if tower_active: can_play = not tower_intro_pending and not zen_campaign_paused and board.turn == 2
         if worker_generation == generation and turn_open and can_play:
             place(int(move))
         else:
@@ -2799,6 +2801,12 @@ func _zen_campaign_save_game() -> bool:
 func _notification(what: int) -> void:
 
     if tower_active and what == NOTIFICATION_WM_GO_BACK_REQUEST:
+        if tower_intro_pending:
+            if popup != null and popup.name == "TowerGuardianIntro":
+                _tower_leave()
+            else:
+                _tower_boss_intro()
+            return
         if popup != null:
             close_modal()
         else:
@@ -3635,11 +3643,202 @@ func _tower_load_floor() -> void:
     world_background.texture = load(str(info.background)) as Texture2D
     world_background.modulate = Color.WHITE
     tower_portrait.texture = null
-    if bool(info.boss):
-        tower_portrait.texture = load(str(info.guardian.portrait)) as Texture2D
+    tower_intro_pending = (
+        bool(info.boss)
+        and board.winner == 0
+        and board.move_count() == 0
+    )
     refresh(-1,false)
     if board.winner != 0:
         _tower_result()
+    elif tower_intro_pending:
+        _tower_boss_intro()
+
+
+
+func _tower_guardian_quote(stage: int) -> String:
+    match Tower.section_index(stage):
+        0:
+            return _tower_text(
+                "Um aufzusteigen, lerne zuerst, fest zu stehen.",
+                "To rise, first learn to stand firm.",
+                "Para subires, aprende primeiro a manter-te firme."
+            )
+        1:
+            return _tower_text(
+                "Finde dein Gleichgewicht, während die Welt sich bewegt.",
+                "Find your balance as the world moves.",
+                "Encontra o teu equilíbrio enquanto o mundo se move."
+            )
+        2:
+            return _tower_text(
+                "In der Stille wird der Weg klar.",
+                "In stillness, the path becomes clear.",
+                "Na quietude, o caminho torna-se claro."
+            )
+        _:
+            return _tower_text(
+                "Lass los, damit Neues wachsen kann.",
+                "Let go, so new things can grow.",
+                "Deixa ir, para que algo novo possa crescer."
+            )
+
+
+func _tower_boss_intro() -> void:
+    if not tower_active or not tower_intro_pending:
+        return
+
+    var stage: int = _tower_stage()
+    var info: Dictionary = Tower.floor_info(stage)
+    var guardian: Dictionary = info.guardian
+
+    menu_context = false
+    var box: VBoxContainer = _home_menu_shell()
+    popup.name = "TowerGuardianIntro"
+
+    box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    box.alignment = BoxContainer.ALIGNMENT_CENTER
+    box.add_theme_constant_override("separation", 10)
+
+    var top: HBoxContainer = row(box)
+
+    var back: Button = button(
+        _tower_text("Zurück", "Back", "Voltar"),
+        top, _tower_leave, true
+    )
+    back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+    _tower_intro_button_style(back, false)
+
+    var spacer := Control.new()
+    spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    top.add_child(spacer)
+
+    var settings: Button = button(
+        "⚙", top, open_settings, true
+    )
+    settings.custom_minimum_size.x = 44
+    settings.size_flags_horizontal = Control.SIZE_SHRINK_END
+    _tower_intro_button_style(settings, false)
+
+    var title: Label = label(
+        "Zen Tower", box, 36, Color("fff2d5")
+    )
+    title.add_theme_font_override("font", ZenType.heading())
+
+    label(
+        _tower_text(
+            "Der endlose Aufstieg",
+            "The Endless Ascension",
+            "A Ascensão Infinita"
+        ),
+        box, 15, Color("d8bb7e")
+    )
+
+    # Original guardian portrait, no cropping.
+
+    var portrait_height: float = clampf(
+        get_viewport().get_visible_rect().size.y * 0.46,
+        260.0,
+        460.0
+    )
+
+    _tower_art(
+        box,
+        str(guardian.portrait),
+        portrait_height
+    )
+
+    var guardian_title: Label = label(
+        _tower_name(guardian),
+        box, 26, Color("fff2d5")
+    )
+    guardian_title.add_theme_font_override(
+        "font", ZenType.heading()
+    )
+
+    var floor_text: String = _tower_text(
+        "Wächter der Etage %d",
+        "Floor %d Guardian",
+        "Guardião do piso %d"
+    ) % stage
+
+    label(
+        floor_text,
+        box, 17, Color("d8bb7e")
+    )
+
+    label(
+        _tower_guardian_quote(stage),
+        box, 17, Color("fff2d5")
+    )
+
+    var start_button: Button = premium_button(
+        _tower_text(
+            "Kampf starten",
+            "Start battle",
+            "Iniciar combate"
+        ),
+        box, _tower_start_boss_battle, true
+    )
+    start_button.name = "TowerStartBattle"
+    start_button.custom_minimum_size.y = 66
+    _tower_intro_button_style(start_button, true)
+
+    var gallery: Button = button(
+        _tower_text(
+            "Wächter-Galerie",
+            "Guardian Gallery",
+            "Galeria de Guardiões"
+        ),
+        box, open_tower_gallery
+    )
+    gallery.custom_minimum_size.y = 48
+    _tower_intro_button_style(gallery, false)
+
+    for child in box.get_children():
+        if child is Label:
+            child.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+    _enable_feedback_modal_scroll(box)
+    column.hide()
+    home_visible = true
+
+
+func _tower_start_boss_battle() -> void:
+    if not tower_active or not tower_intro_pending:
+        return
+
+    tower_intro_pending = false
+    close_modal()
+    refresh(-1, false)
+
+
+func _tower_intro_button_style(
+    action: Button, primary: bool
+) -> void:
+    for style in ["normal", "hover", "pressed"]:
+        var fill: Color = Color("d8bb7e") if primary else Color("#102a25", 0.35)
+        if style == "hover":
+            fill = Color("dfc58b") if primary else Color("#18382c")
+
+        var frame: StyleBoxFlat = theme_style(
+            fill, 18 if primary else 14
+        )
+        frame.shadow_size = 0
+        frame.set_border_width_all(1)
+        frame.border_color = Color("d8bb7e") if primary else Color("#cfb37e", 0.45)
+        action.add_theme_stylebox_override(style, frame)
+
+    for key in [
+        "font_color",
+        "font_hover_color",
+        "font_pressed_color",
+        "font_focus_color"
+    ]:
+        action.add_theme_color_override(
+            key,
+            Color("102a25") if primary else Color("fff2d5")
+        )
 
 func _tower_refresh(animate: int = -1) -> void:
     var state := Tower.ensure(data)
@@ -3717,7 +3916,7 @@ func _tower_refresh(animate: int = -1) -> void:
     tower_result_button.text = _classic_result_label()
     tower_result_button.visible = board.winner != 0
 
-    tower_portrait.visible = bool(info.boss)
+    tower_portrait.hide()
     renderer.selected = board.last_cell
     renderer.paint(board, false, [], animate)
 
@@ -3747,6 +3946,7 @@ func _tower_feedback_strip() -> void:
 
 func _tower_tick() -> void:
     _tower_feedback_strip()
+    if tower_intro_pending: return
     if zen_campaign_paused or board.winner != 0:
         return
     if popup != null or chronicles.is_open() or worker != null:
@@ -3840,7 +4040,6 @@ func _tower_result() -> void:
 
 
     if bool(info.boss):
-        _tower_art(box, str(info.guardian.portrait), _tower_portrait_height() + 70.0)
         _zen_campaign_paragraph(box, _tower_name(info.guardian))
 
     if int(outcome.reward) > 0:
@@ -3867,7 +4066,16 @@ func _tower_result() -> void:
                 "Nova carta desbloqueada!"
             )
         )
-        _tower_art(box, str(info.guardian.card_front), 280)
+    if bool(info.boss) and int(outcome.winner) == 1:
+        _tower_art(
+            box,
+            str(info.guardian.card_front),
+            clampf(
+                get_viewport().get_visible_rect().size.y * 0.29,
+                190.0,
+                280.0
+            )
+        )
 
     var next_label := _tower_text(
         "Nächste Etage",
@@ -3960,6 +4168,10 @@ func _tower_pause() -> void:
     if not tower_active:
         return
 
+    if tower_intro_pending:
+        _tower_boss_intro()
+        return
+
     if board.winner != 0:
         _tower_result()
         return
@@ -3990,6 +4202,7 @@ func _tower_leave(save_board: bool = true) -> void:
     close_modal()
     generation += 1
     tower_active = false
+    tower_intro_pending = false
     renderer.set_tower_skin(-1)
     chronicles.set_campaign_board_active(false)
     get_tree().quit_on_go_back = tower_back_previous
