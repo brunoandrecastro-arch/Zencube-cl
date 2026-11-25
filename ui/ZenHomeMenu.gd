@@ -138,3 +138,113 @@ func _process(delta: float) -> void:
     _time += delta
     if is_instance_valid(_hero) and is_instance_valid(_hero.pivot):
         _hero.pivot.rotation = Vector3(0.43, -0.58 + sin(_time * 0.35) * 0.14, -0.04)
+
+
+func configure_tower(game: Node) -> void:
+    name = "ZenTowerHomeMenu"
+    size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    add_theme_constant_override("separation", 9)
+
+    var top: HBoxContainer = game.row(self)
+
+    var brand: Label = game.label(
+        "ZenCube 3D", top, 15, GOLD
+    )
+    brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+    var settings: Button = game.button(
+        "⚙", top, game.open_settings, true
+    )
+    settings.name = "TowerHomeSettings"
+    _quiet_button(settings)
+    settings.size_flags_horizontal = Control.SIZE_SHRINK_END
+    settings.custom_minimum_size.x = 44
+
+    var title: Label = game.label(
+        "Zen Tower", self, 36, CREAM
+    )
+    title.add_theme_font_override("font", Type.heading())
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+    var subtitle: Label = game.label(
+        game._tower_text(
+            "Der endlose Aufstieg",
+            "The Endless Ascension",
+            "A Ascensão Infinita"
+        ), self, 15, GOLD
+    )
+    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+    # Display the actual active Tower cube.
+    # No second renderer or duplicate game board.
+    var hero := TextureRect.new()
+    hero.name = "TowerHomeCubePreview"
+    hero.custom_minimum_size.y = 205
+    hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hero.texture = game.viewport.get_texture()
+    add_child(hero)
+
+    var state: Dictionary = game.data.get("tower", {})
+
+    var section: Label = game.label(
+        game.world_title_label.text,
+        self, 20, GOLD
+    )
+    section.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+    var stats: Label = game.label(
+        "♥ %d  ·  %s %d  ·  %s %d" % [
+            int(state.get("lives", 0)),
+            game._tower_text("Etage", "Floor", "Piso"),
+            int(game._tower_stage()),
+            game._tower_text("Rekord", "Record", "Recorde"),
+            int(state.get("record", 0))
+        ], self, 14, CREAM
+    )
+    stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+    var resume: Button = game.premium_button(
+        game._tower_text(
+            "Tower fortsetzen",
+            "Resume Tower",
+            "Continuar a Torre"
+        ), self, game.close_modal, true
+    )
+    resume.name = "TowerHomeResume"
+    resume.custom_minimum_size.y = 66
+
+    for style in ["normal", "hover", "pressed"]:
+        resume.add_theme_stylebox_override(
+            style,
+            _frame(
+                Color("#dfc58b") if style == "hover" else GOLD,
+                GOLD, 18
+            )
+        )
+
+    for color in ["font_color", "font_hover_color", "font_pressed_color"]:
+        resume.add_theme_color_override(color, INK)
+
+    var gallery: Button = game.premium_button(
+        game._tower_text(
+            "Wächter-Galerie",
+            "Guardian Gallery",
+            "Galeria de Guardiões"
+        ), self, game.open_tower_gallery
+    )
+    gallery.name = "TowerHomeGallery"
+    gallery.custom_minimum_size.y = 48
+    _quiet_button(gallery)
+
+    var leave: Button = game.premium_button(
+        game._tower_text(
+            "Speichern & verlassen",
+            "Save & leave",
+            "Guardar e sair"
+        ), self, game._tower_leave
+    )
+    leave.name = "TowerHomeLeave"
+    leave.custom_minimum_size.y = 48
+    _quiet_button(leave)

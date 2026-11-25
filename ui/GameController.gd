@@ -6,6 +6,8 @@ var tower_classic_board: BoardModel
 var tower_view: Dictionary = {}
 var tower_controls: HBoxContainer
 var tower_result_button: Button
+var tower_lotus: TextureRect
+var tower_quote_stage: int = -1
 var tower_portrait: TextureRect
 var tower_back_previous: bool = true
 var board = BoardModel.new()
@@ -434,7 +436,6 @@ func build_ui() -> void:
 
     tower_controls = row(column)
     tower_result_button = button("Ergebnis",tower_controls,_tower_result,true)
-    premium_button("Menü",tower_controls,_tower_pause,true)
     tower_controls.hide()
     var legend_panel = PanelContainer.new()
     var legend_style = theme_style(Color("30271f",0.89),9)
@@ -443,7 +444,20 @@ func build_ui() -> void:
     legend_panel.add_theme_stylebox_override("panel",legend_style)
     column.add_child(legend_panel)
     # Technical line counts remain in Rules; the footer belongs to the World.
-    world_quote_label = label(WORLD_QUOTES[0],legend_panel,12,Color("fff3df"))
+    var quote_stack := VBoxContainer.new()
+    quote_stack.add_theme_constant_override("separation",4)
+    legend_panel.add_child(quote_stack)
+
+    tower_lotus = TextureRect.new()
+    tower_lotus.texture = preload("res://ui/tower_lotus.svg")
+    tower_lotus.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    tower_lotus.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    tower_lotus.custom_minimum_size = Vector2(0,22)
+    tower_lotus.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    quote_stack.add_child(tower_lotus)
+    tower_lotus.hide()
+
+    world_quote_label = label(WORLD_QUOTES[0],quote_stack,12,Color("fff3df"))
     world_quote_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     world_quote_label.custom_minimum_size.y = 27.0
 # Transform actual phone taps into the 960x960 picking coordinates.
@@ -510,6 +524,9 @@ func refresh(animate: int = -1, save_classic: bool = true) -> void:
         return
     tower_controls.hide()
     tower_portrait.hide()
+    tower_lotus.hide()
+    tower_quote_stage = -1
+    world_quote_label.modulate.a = 1.0
     (help_text.get_parent() as Control).show()
     if sky_active:
         _sky_refresh(animate)
@@ -923,6 +940,15 @@ func open_menu() -> void:
         button(_campaign_text("leave"), campaign_box, _zen_campaign_leave, true)
         return
     menu_context = true
+    var box: VBoxContainer = _home_menu_shell()
+    var home: VBoxContainer = HomeMenu.new()
+    box.add_child(home)
+    home.configure(self)
+    _enable_feedback_modal_scroll(box)
+    column.hide()
+    home_visible = true
+
+func _home_menu_shell() -> VBoxContainer:
     var box: VBoxContainer = modal("Hauptmenü")
     for child in box.get_children():
         box.remove_child(child)
@@ -937,12 +963,7 @@ func open_menu() -> void:
     backdrop.content_margin_top = 18
     backdrop.content_margin_bottom = 18
     popup.add_theme_stylebox_override("panel", backdrop)
-    var home: VBoxContainer = HomeMenu.new()
-    box.add_child(home)
-    home.configure(self)
-    _enable_feedback_modal_scroll(box)
-    column.hide()
-    home_visible = true
+    return box
 
 func resume_current_match() -> void:
     menu_context = false
@@ -3623,7 +3644,18 @@ func _tower_refresh(animate: int = -1) -> void:
     var section_title := str(section_names.get(language_code(), section_names.get("en", "Zen Tower")))
 
     world_title_label.text = section_title
+    tower_lotus.show()
     world_quote_label.text = _tower_quote(stage)
+
+    if tower_quote_stage != stage:
+        tower_quote_stage = stage
+        world_quote_label.modulate.a = 0.0
+        create_tween().tween_property(
+            world_quote_label,
+            "modulate:a",
+            1.0,
+            0.55
+        )
 
     rank_label.show()
     rank_label.text = "♥ %d  ·  %s %d  ·  %s %d" % [
@@ -3671,7 +3703,7 @@ func _tower_refresh(animate: int = -1) -> void:
     ]:
         control.hide()
 
-    tower_controls.show()
+    tower_controls.visible = board.winner != 0
     tower_result_button.text = _classic_result_label()
     tower_result_button.visible = board.winner != 0
 
@@ -3837,18 +3869,32 @@ func _tower_next() -> void:
     _tower_load_floor()
 
 func _tower_pause() -> void:
+    if not tower_active:
+        return
+
     if board.winner != 0:
         _tower_result()
         return
-    var box := _zen_campaign_story_box("Zen Tower")
-    premium_button(_tower_text(
-        "Fortsetzen","Resume","Continuar"),box,close_modal,true)
-    button(_tower_text(
-        "Einstellungen","Settings","Definições"),
-        box,open_settings,true)
-    button(_tower_text(
-        "Speichern & verlassen","Save & leave","Guardar e sair"),
-        box,_tower_leave,true)
+
+    if not _tower_save():
+        notify_user(_tower_text(
+            "Spielstand konnte nicht gespeichert werden.",
+            "Could not save Tower progress.",
+            "Não foi possível guardar o progresso."
+        ))
+        return
+
+    menu_context = false
+    var box: VBoxContainer = _home_menu_shell()
+    popup.name = "TowerHomeScreen"
+
+    var home: VBoxContainer = HomeMenu.new()
+    box.add_child(home)
+    home.configure_tower(self)
+
+    _enable_feedback_modal_scroll(box)
+    column.hide()
+    home_visible = true
 
 func _tower_leave(save_board: bool = true) -> void:
     if not tower_active: return
@@ -3887,10 +3933,11 @@ func open_tower_gallery() -> void:
         var owned: bool = state.cards.has(str(guardian.id))
         _tower_gallery_entry(box, guardian, owned)
 
+    var back_action: Callable = _tower_pause if tower_active else open_zen_tower
     button(
         _tower_text("Zurück", "Back", "Voltar"),
         box,
-        open_zen_tower,
+        back_action,
         true
     )
     _enable_feedback_modal_scroll(box)
