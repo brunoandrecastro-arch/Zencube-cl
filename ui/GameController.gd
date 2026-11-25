@@ -2329,7 +2329,13 @@ func _hd_submenu_finish(box: VBoxContainer, screen_name: String, centered: bool 
     box.add_child(lotus)
     box.move_child(lotus, 1)
 
-    _enable_feedback_modal_scroll(box)
+    if screen_name == "HDZenShop":
+        var shop_scroll := box.get_parent() as ScrollContainer
+        if shop_scroll != null:
+            shop_scroll.scroll_deadzone = 12
+            shop_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    else:
+        _enable_feedback_modal_scroll(box)
     column.hide()
     home_visible = true
 
