@@ -28,7 +28,9 @@ assert 'pause_frame.anchor_top = 0.31' in controller and 'pause_frame.anchor_bot
 assert 'func show_ascend_home() -> void:' in controller
 cards = controller.split('func _add_story_realm_card(',1)[1].split('func _show_story_realm_requirements(',1)[0]
 assert 'Realm2.unlocked(chapter)' in cards
-assert '_open_campaign_story_from_match.bind(chapter)' in cards
+assert '_hd_enter_realm.bind(chapter)' in cards, 'Enter Realm must open the playable board'
+assert '_open_campaign_story_from_match.bind(chapter)' not in cards, 'Realm card must not launch the Manhwa'
+assert 'name = "EnterGameplayRealm%d" % chapter' in cards
 assert '_open_campaign_trials_from_realms.bind(chapter)' in cards
 assert 'Realms.unlocked(data' not in cards, 'Legacy bonus gates must never determine story card access'
 assert '"shadow_block","title":"Veil Tactician"' in realms

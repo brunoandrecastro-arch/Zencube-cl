@@ -786,6 +786,7 @@ func show_ascend_home() -> void:
     var preview_cube := AscendRenderer.new()
     preview.add_child(preview_cube)
     preview_cube.set_skin(int(data.economy.get("equipped",0)))
+    preview_cube.set_realm_theme(chapter if chapter < 5 else -1)
     var example: Array = []
     example.resize(Mode.CELLS)
     example.fill(0)
@@ -985,6 +986,8 @@ func draw() -> void:
         for line in Mode.winning_lines(cells,lines,result):
             for c in line:
                 if not wins.has(c): wins.append(c)
+    var cosmetic_chapter: int = practice_chapter if campaign_practice_active else [0,2,3,4][clampi(match_realm,0,3)]
+    cube.set_realm_theme(cosmetic_chapter,false)
     cube.repaint(cells,wins)
     if is_instance_valid(rules_button): rules_button.visible = result == 0
     if is_instance_valid(result_review_button):
@@ -3540,10 +3543,7 @@ func start_campaign_practice(chapter: int, direct_entry: bool = false, begin_mat
     owners = [0,1]
     ZenChronicles.set_campaign_board_active(true)
     cube.clear_boss_skin()
-    if practice_chapter in [2,3,4]:
-        cube.clear_abyss_skin()
-    else:
-        cube.set_abyss_skin(0)
+    cube.clear_abyss_skin()
     if realm_backdrop != null:
         var arena: Texture2D = Satori.battle_backdrop() if practice_chapter==4 else (Celestial.battle_backdrop() if practice_chapter==3 else (Ember.battle_backdrop() if practice_chapter==2 else Abyss.battle_backdrop()))
         if arena != null: realm_backdrop.texture = arena

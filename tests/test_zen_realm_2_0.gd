@@ -171,6 +171,25 @@ func run() -> void:
                 direct_abyss.pressed.emit()
                 check(bool(controller.get("campaign_practice_active")) and int(controller.get("practice_chapter"))==1,"Enter Realm opens actual 96-cell Abyss board")
                 check(not nav.call("is_open"),"Enter Realm does not open Manhwa")
+                var renderer: Node = controller.get("cube")
+                check(renderer!=null and int(renderer.get("realm_theme_index"))==1,"Abyss board uses its own cosmetic default")
+                if renderer!=null:
+                    check(bool(renderer.call("realm_default_active")),"default shop skin enables Realm material")
+                    var ornament: Node3D = renderer.get_node_or_null("Pivot/RealmDefaultGoldOrnaments") as Node3D
+                    if ornament==null: ornament = renderer.get("realm_trim") as Node3D
+                    check(is_instance_valid(ornament) and ornament.visible,"batched gold trim appears on free board")
+                    var before_skin_board: Array = (controller.get("cells") as Array).duplicate()
+                    renderer.call("set_skin",1)
+                    check(not bool(renderer.call("realm_default_active")) and is_instance_valid(ornament) and not ornament.visible,"equipped shop skin takes priority")
+                    renderer.call("set_skin",0)
+                    renderer.call("set_boss_skin",0)
+                    check(not bool(renderer.call("realm_default_active")) and is_instance_valid(ornament) and not ornament.visible,"native boss material takes priority")
+                    renderer.call("clear_boss_skin")
+                    renderer.call("set_abyss_skin",1)
+                    check(not bool(renderer.call("realm_default_active")) and is_instance_valid(ornament) and not ornament.visible,"native Abyss boss material takes priority")
+                    renderer.call("clear_abyss_skin")
+                    check(bool(renderer.call("realm_default_active")) and is_instance_valid(ornament) and ornament.visible,"default trim returns after special material clears")
+                    check(controller.get("cells")==before_skin_board,"cosmetic material changes preserve every cell")
                 controller.call("show_ascend_home")
                 var selected_label: Label = controller.get("active_realm_dialog").find_child("AscendHomeSelectedRealm",true,false) as Label
                 check(selected_label!=null and selected_label.text=="Abyss of Memories","home follows selected Realm rather than campaign")
@@ -180,6 +199,7 @@ func run() -> void:
                 controller.set("busy",false)
                 controller.call("_continue_ascend_campaign")
                 check(int(controller.call("_hd_selected_chapter"))==2,"Continue Campaign activates Ember")
+                check(int(controller.get("cube").get("realm_theme_index"))==2,"Ember board switches cosmetic default")
                 check(nav.call("is_open"),"Continue Campaign opens correct story reader")
                 nav.call("close_ember_reader")
                 controller.call("show_ascend_home")

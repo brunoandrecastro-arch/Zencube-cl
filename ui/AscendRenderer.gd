@@ -93,8 +93,93 @@ func mat(color: Color, unlit: bool = false) -> StandardMaterial3D:
     if unlit: result.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     return result
 
+# Procedural Realm defaults, inspired by the existing Tower materials.
+# No new shop IDs or downloaded images. Only the unmodified shop default uses them.
+const REALM_DEFAULTS = [
+    {"faces":["38294d","49355d","30233f","4b385e","4b3960","33283e"],"core":"a78c58","trim":"ddc17e","metal":0.19,"rough":0.46},
+    {"faces":["285b66","397881","244751","336875","4e8790","294d59"],"core":"8fb9bb","trim":"b9e1df","metal":0.24,"rough":0.32},
+    {"faces":["67342a","81452d","502a27","75402c","955332","5c3329"],"core":"bc8845","trim":"f0bf70","metal":0.25,"rough":0.44},
+    {"faces":["a9bacd","c5d2df","8fa6bf","b8c8d8","d3deea","a0b2c7"],"core":"c2a56e","trim":"eed7a0","metal":0.16,"rough":0.36},
+    {"faces":["cfbc94","e4d6b3","bda984","dac8a0","f1e5c6","c9b58d"],"core":"b18b4a","trim":"c4a05a","metal":0.16,"rough":0.39}
+]
+var equipped_skin_id: int = 0
+var realm_theme_index: int = -1
+var realm_theme_textures: Dictionary = {}
+var realm_trim: MeshInstance3D
+var realm_trim_index: int = -1
+
+func realm_default_active() -> bool:
+    return realm_theme_index >= 0 and equipped_skin_id == 0 and boss_skin_id < 0 and abyss_skin_id < 0
+
+func set_realm_theme(chapter: int, refresh: bool = true) -> void:
+    chapter = clampi(chapter,-1,REALM_DEFAULTS.size()-1)
+    if realm_theme_index == chapter: return
+    realm_theme_index = chapter
+    _apply_core_skin()
+    if refresh: repaint(active_cells,winner_cells)
+
+func _realm_surface(index: int) -> Texture2D:
+    if realm_theme_textures.has(index): return realm_theme_textures[index] as Texture2D
+    var noise := FastNoiseLite.new()
+    noise.seed = 1271 + index * 101
+    noise.frequency = [0.055,0.035,0.065,0.035,0.025][index]
+    noise.fractal_octaves = 4
+    noise.noise_type = FastNoiseLite.TYPE_CELLULAR if index == 1 else FastNoiseLite.TYPE_PERLIN
+    var ramp := Gradient.new()
+    ramp.colors = PackedColorArray([Color("bdbdbd"),Color.WHITE])
+    var texture := NoiseTexture2D.new()
+    texture.width = 128
+    texture.height = 128
+    texture.seamless = true
+    texture.generate_mipmaps = true
+    texture.noise = noise
+    texture.color_ramp = ramp
+    realm_theme_textures[index] = texture
+    return texture
+
+# All face ornaments are batched into ONE mesh. No new colliders or cell geometry.
+func _realm_trim_strip(builder: SurfaceTool, n: Vector3, a: Vector3, b: Vector3, width: float) -> void:
+    var side: Vector3 = n.cross(b-a).normalized() * width * 0.5
+    for point in [a-side,a+side,b+side,a-side,b+side,b-side]:
+        builder.add_vertex(point)
+
+func _sync_realm_trim() -> void:
+    if not realm_default_active():
+        if is_instance_valid(realm_trim): realm_trim.hide()
+        return
+    if not is_instance_valid(realm_trim):
+        realm_trim = MeshInstance3D.new()
+        realm_trim.name = "RealmDefaultGoldOrnaments"
+        pivot.add_child(realm_trim)
+    if realm_trim_index != realm_theme_index:
+        var builder := SurfaceTool.new()
+        builder.begin(Mesh.PRIMITIVE_TRIANGLES)
+        for face in range(6):
+            var normal: Vector3 = CubeGeometry.N[face]
+            var n: Vector3 = normal * 1.668
+            var u: Vector3 = CubeGeometry.U[face]
+            var v: Vector3 = CubeGeometry.V[face]
+            for edge in [-1.0,1.0]:
+                var k: float = float(edge)
+                _realm_trim_strip(builder,normal,n+u*k*1.558-v*1.558,n+u*k*1.558+v*1.558,0.022)
+                _realm_trim_strip(builder,normal,n+v*k*1.558-u*1.558,n+v*k*1.558+u*1.558,0.022)
+            for sx in [-1.0,1.0]:
+                for sy in [-1.0,1.0]:
+                    var x: float = float(sx)
+                    var y: float = float(sy)
+                    var corner: Vector3 = n+u*x*1.48+v*y*1.48
+                    _realm_trim_strip(builder,normal,corner,corner-u*x*0.115,0.018)
+                    _realm_trim_strip(builder,normal,corner,corner-v*y*0.115,0.018)
+        realm_trim.mesh = builder.commit()
+        var gold: StandardMaterial3D = mat(Color(str(REALM_DEFAULTS[realm_theme_index].trim)),true)
+        gold.cull_mode = BaseMaterial3D.CULL_DISABLED
+        realm_trim.material_override = gold
+        realm_trim_index = realm_theme_index
+    realm_trim.show()
+
 func set_skin(index: int) -> void:
     var skin_index: int = clampi(index,0,ZenCollection.SKINS.size()-1)
+    equipped_skin_id = skin_index
     skin = ZenCollection.SKINS[skin_index]
     skin_texture = load("res://assets/skins/skin_%02d.webp" % skin_index) as Texture2D
     _apply_core_skin()
@@ -134,7 +219,14 @@ func _apply_core_skin() -> void:
     if pivot == null or not pivot.has_node("CubeCore"): return
     var core: MeshInstance3D = pivot.get_node("CubeCore") as MeshInstance3D
     var core_color: Color = Color(str(AbyssSkins.get_profile(abyss_skin_id).core)) if abyss_skin_id >= 0 else (Color(str(BossSkins.get_profile(boss_skin_id).core)) if boss_skin_id >= 0 else Color(str(skin.core)))
+    if realm_default_active(): core_color = Color(str(REALM_DEFAULTS[realm_theme_index].core))
     var core_material: StandardMaterial3D = mat(core_color)
+    if realm_default_active():
+        core_material.metallic = 0.28
+        core_material.roughness = 0.40
+        core_material.emission_enabled = true
+        core_material.emission = core_color
+        core_material.emission_energy_multiplier = 0.10
     if _ember_fire_active():
         core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
         core_material.albedo_color = _ember_glow()
@@ -143,9 +235,11 @@ func _apply_core_skin() -> void:
         core_material.emission_energy_multiplier = 0.7
     core.material_override = core_material
     _sync_ember_fire()
+    _sync_realm_trim()
 
 func _tile_mat(face_index: int, highlight: bool) -> StandardMaterial3D:
     var palette: Dictionary = AbyssSkins.get_profile(abyss_skin_id) if abyss_skin_id >= 0 else (BossSkins.get_profile(boss_skin_id) if boss_skin_id >= 0 else skin)
+    if realm_default_active(): palette = REALM_DEFAULTS[realm_theme_index]
     var base: Color = Color(str(palette.faces[face_index]))
     if highlight: base = base.lightened(0.32)
     var m: StandardMaterial3D = mat(base)
@@ -153,6 +247,11 @@ func _tile_mat(face_index: int, highlight: bool) -> StandardMaterial3D:
     m.roughness = float(palette.rough)
     m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
     var texture: Texture2D = abyss_skin_texture if abyss_skin_id >= 0 else (boss_skin_texture if boss_skin_id >= 0 else skin_texture)
+    if realm_default_active():
+        texture = _realm_surface(realm_theme_index)
+        m.emission_enabled = true
+        m.emission = base
+        m.emission_energy_multiplier = 0.12
     if texture != null: m.albedo_texture = texture
     if _ember_fire_active():
         m.emission_enabled = true
@@ -270,7 +369,9 @@ func repaint(cells: Array, victories: Array = []) -> void:
             circle.mesh = torus
             circle.rotation.x = PI/2.0
             circle.position.z = 0.058
-            circle.material_override = mat(Color("08788c"),true)
+            var o_color: Color = Color("08788c")
+            if realm_default_active() and realm_theme_index < 3: o_color = Color("61e0e4")
+            circle.material_override = mat(o_color,true)
             marks[c].add_child(circle)
 
 func pick(pos: Vector2) -> int:
