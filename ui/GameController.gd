@@ -3800,7 +3800,44 @@ func _tower_result() -> void:
     elif int(outcome.winner) == 3:
         heading = _tower_text("Unentschieden", "Draw", "Empate")
 
-    var box := _zen_campaign_story_box(heading + " · " + _tower_text("Etage", "Floor", "Piso") + " %d" % stage)
+    menu_context = false
+    var box: VBoxContainer = _home_menu_shell()
+    popup.name = "TowerResultScreen"
+
+    box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    box.alignment = BoxContainer.ALIGNMENT_CENTER
+    box.add_theme_constant_override("separation", 12)
+
+    var brand: Label = label(
+        "ZenCube 3D", box, 14, Color("e6c99d")
+    )
+
+    var title_text: String = heading + " · " + _tower_text(
+        "Etage", "Floor", "Piso"
+    ) + " %d" % stage
+
+    var title: Label = label(
+        title_text, box, 32, Color("fff2d5")
+    )
+    title.add_theme_font_override("font", ZenType.heading())
+
+    var subtitle: Label = label(
+        _tower_text(
+            "Der endlose Aufstieg",
+            "The Endless Ascension",
+            "A Ascensão Infinita"
+        ), box, 15, Color("d8bb7e")
+    )
+
+    if not bool(info.boss):
+        var hero := TextureRect.new()
+        hero.custom_minimum_size.y = 205
+        hero.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        hero.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        hero.texture = viewport.get_texture()
+        box.add_child(hero)
+
 
     if bool(info.boss):
         _tower_art(box, str(info.guardian.portrait), _tower_portrait_height() + 70.0)
@@ -3815,7 +3852,11 @@ func _tower_result() -> void:
             _tower_text("+%d Leben", "+%d lives", "+%d vidas") % int(outcome.get("life_bonus",0))
         )
 
-    _zen_campaign_paragraph(box, "♥ %d" % int(state.lives))
+    var lives_text: String = "♥ %s: %d" % [
+        _tower_text("Leben", "Lives", "Vidas"),
+        int(state.lives)
+    ]
+    _zen_campaign_paragraph(box, lives_text)
 
     if str(outcome.unlocked_card) != "":
         _zen_campaign_paragraph(
@@ -3847,9 +3888,26 @@ func _tower_result() -> void:
             "Tentar novamente"
         )
 
-    premium_button(next_label, box, _tower_next, true)
-    button(_inspect_label(), box, _inspect_classic_finished_board, true)
-    button(
+    var next_button: Button = premium_button(
+        next_label, box, _tower_next, true
+    )
+    next_button.custom_minimum_size.y = 66
+
+    for style in ["normal", "hover", "pressed"]:
+        var gold_style: StyleBoxFlat = theme_style(
+            Color("dfc58b") if style == "hover" else Color("d8bb7e"),
+            18
+        )
+        gold_style.shadow_size = 0
+        next_button.add_theme_stylebox_override(style, gold_style)
+
+    for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+        next_button.add_theme_color_override(key, Color("102a25"))
+
+    var inspect_button: Button = button(
+        _inspect_label(), box, _inspect_classic_finished_board, true
+    )
+    var leave_button: Button = button(
         _tower_text(
             "Speichern & verlassen",
             "Save & leave",
@@ -3859,7 +3917,27 @@ func _tower_result() -> void:
         _tower_leave,
         true
     )
+    for child in box.get_children():
+        if child is Label:
+            child.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+    for action in [inspect_button, leave_button]:
+        action.custom_minimum_size.y = 48
+        action.add_theme_font_size_override("font_size", 15)
+
+        for style in ["normal", "hover", "pressed"]:
+            var quiet_style: StyleBoxFlat = theme_style(
+                Color("#18382c") if style == "hover" else Color("#102a25", 0.35),
+                14
+            )
+            quiet_style.border_color = Color("#cfb37e", 0.45)
+            quiet_style.set_border_width_all(1)
+            quiet_style.shadow_size = 0
+            action.add_theme_stylebox_override(style, quiet_style)
+
     _enable_feedback_modal_scroll(box)
+    column.hide()
+    home_visible = true
 
 func _tower_next() -> void:
     var state := Tower.ensure(data)
