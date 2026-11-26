@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Tower = preload("res://core/ZenTower.gd")
+const Cinematics = preload("res://core/ZenTowerCinematics.gd")
 const Grid = preload("res://core/ZenTowerGrid.gd")
 const Existing = preload("res://core/ZenAscend.gd")
 var checks: int = 0
@@ -97,6 +98,9 @@ func _init() -> void:
         verify(winning_board.winner == 1, "4x4 face or edge victory")
     var classic: BoardModel = Tower.new_board(3)
     verify(classic.cells.size() == 54 and Tower.make_rules(3).lines.size() == 108, "classic rules retained")
+    for path in [Cinematics.ROOT_VIDEO,Cinematics.WIND_VIDEO,Cinematics.ROOT_GATE]:
+        verify(ResourceLoader.exists(path) and load(path) is VideoStream, "native video resource: " + path)
+    verify(Cinematics.transition_for({"winner":1,"floor_complete":true,"completed_floor":1,"next_floor":2}) == "fade", "normal floor uses quick fade")
     var bosses: Array = [15, 30, 45, 60, 75, 90, 100]
     for boss in bosses:
         var data: Dictionary = fresh(int(boss))
@@ -104,11 +108,19 @@ func _init() -> void:
         verify(not bool(first.series_complete) and not bool(first.floor_complete), "first boss win keeps series open")
         verify(int(data.tower.floor) == int(boss) and int(data.tower.lives) == 3, "no early floor or life reward")
         verify(int(first.reward) == 0 and data.tower.cards.is_empty(), "no early currency or card")
+        verify(Cinematics.defeat_for(first).is_empty() and Cinematics.transition_for(first).is_empty(), "no video on individual boss round")
         Tower.begin_floor(data)
         var second: Dictionary = finish_round(data, 1)
         verify(bool(second.series_complete) and bool(second.floor_complete), "two wins finish series")
         verify(int(data.tower.floor) == int(boss) + 1 and int(data.tower.lives) == 6, "stage advance and 3 plus 3 lives")
         verify(int(second.life_bonus) == 3 and data.tower.cards.size() == 1, "one life bonus and one card")
+        var expected_clip: String = Cinematics.ROOT_VIDEO if int(boss) == 15 else (Cinematics.WIND_VIDEO if int(boss) == 30 else "")
+        verify(Cinematics.defeat_for(second) == expected_clip, "first series win selects only matching clip")
+        var repeat := second.duplicate(true)
+        repeat.unlocked_card = ""
+        verify(Cinematics.defeat_for(repeat).is_empty(), "repeat wins do not replay automatically")
+        var expected_transition: String = Cinematics.ROOT_GATE if int(boss) == 15 else ("ascend" if int(boss) == 100 else "guardian")
+        verify(Cinematics.transition_for(second) == expected_transition, "correct stage transition")
         var wallet: int = int(data.economy.leaves)
         verify(Tower.settle(data).is_empty() and int(data.economy.leaves) == wallet, "settlement cannot pay twice")
     var deciding: Dictionary = fresh(100)
@@ -131,6 +143,7 @@ func _init() -> void:
     Tower.begin_floor(loser)
     var lost: Dictionary = finish_round(loser, 2)
     verify(int(loser.tower.lives) == 1 and not bool(lost.game_over), "lost series costs one life")
+    verify(Cinematics.defeat_for(lost).is_empty() and Cinematics.transition_for(lost).is_empty(), "loss never opens gate")
     Tower.begin_floor(loser)
     verify(int(loser.tower.series.player) == 0 and int(loser.tower.series.guardian) == 0, "retry starts new series")
     var last_life: Dictionary = fresh(30, 1)

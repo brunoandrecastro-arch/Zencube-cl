@@ -1,6 +1,9 @@
 extends Node3D
 
 const Tower = preload("res://core/ZenTower.gd")
+const TowerCinematics = preload("res://core/ZenTowerCinematics.gd")
+var tower_cinematic_layer: CanvasLayer
+var tower_cinematic_finish: Callable
 var tower_active: bool = false
 var tower_intro_pending: bool = false
 var tower_classic_board: BoardModel
@@ -680,7 +683,7 @@ func on_cell(cell: int) -> void:
             return
     place(cell)
 func place(cell: int) -> void:
-    if ceremony_active: return
+    if ceremony_active or is_instance_valid(tower_cinematic_layer): return
     if challenge_active and not zen_campaign_active and not act_one_active:
         challenge_try_cell(cell)
         return
@@ -808,7 +811,7 @@ func undo() -> void:
         renderer.selected = -1
         refresh()
 func _process(delta: float) -> void:
-    if data == null: return
+    if data == null or is_instance_valid(tower_cinematic_layer): return
     var reading: bool = chronicles.is_open()
     if worker != null and not worker.is_alive():
         var move = worker.wait_to_finish()
@@ -2289,6 +2292,11 @@ func _enable_feedback_modal_scroll(box: VBoxContainer) -> void:
     _feedback_scroll_remainder = 0.0
 
 func _input(event: InputEvent) -> void:
+    if is_instance_valid(tower_cinematic_layer):
+        if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+            if tower_cinematic_finish.is_valid(): tower_cinematic_finish.call()
+            get_viewport().set_input_as_handled()
+        return
     if not is_instance_valid(popup) or not popup.is_visible_in_tree():
         _feedback_scroll_touch = -1
         return
@@ -2743,7 +2751,7 @@ func resume_campaign_music() -> void:
     sync_music()
 
 func sync_music() -> void:
-    if music_player == null or data == null: return
+    if music_player == null or data == null or is_instance_valid(tower_cinematic_layer): return
     if ZenChronicles.campaign_audio_exclusive():
         suspend_campaign_music()
         return
@@ -3038,6 +3046,9 @@ func _zen_campaign_save_game() -> bool:
     return true
 
 func _notification(what: int) -> void:
+    if is_instance_valid(tower_cinematic_layer) and what == NOTIFICATION_WM_GO_BACK_REQUEST:
+        if tower_cinematic_finish.is_valid(): tower_cinematic_finish.call()
+        return
 
     if tower_active and what == NOTIFICATION_WM_GO_BACK_REQUEST:
         if tower_intro_pending:
@@ -4187,6 +4198,8 @@ func _tower_refresh(animate: int = -1) -> void:
 
 func _tower_save() -> bool:
     if not tower_active: return false
+    if is_instance_valid(tower_cinematic_layer):
+        return SaveManager.save_data(data)
     var state := Tower.ensure(data)
     if state.get("finished",{}).is_empty():
         state.game = board.snapshot()
@@ -4232,6 +4245,7 @@ func _tower_tick() -> void:
         ai_running = false
 
 func _tower_result() -> void:
+    if is_instance_valid(tower_cinematic_layer): return
     if not tower_active or board.winner == 0:
         return
 
@@ -4424,10 +4438,13 @@ func _tower_result() -> void:
     _enable_feedback_modal_scroll(box)
     column.hide()
     home_visible = true
+    _tower_maybe_play_defeat(state, outcome)
 
 func _tower_next() -> void:
+    if is_instance_valid(tower_cinematic_layer): return
     var state := Tower.ensure(data)
     if state.get("finished",{}).is_empty(): return
+    var outcome: Dictionary = state.finished.result.duplicate(true)
     var old_state := state.duplicate(true)
     state["finished"] = {}
     if bool(state.active):
@@ -4439,6 +4456,16 @@ func _tower_next() -> void:
     if not bool(state.active):
         _tower_leave(false)
         return
+    # The next board has already been saved; never overwrite it with the old board.
+    var transition: String = TowerCinematics.transition_for(outcome)
+    if transition.begins_with("res://"):
+        if _tower_play_cinematic(transition, _tower_finish_advance): return
+        transition = "guardian"
+    if transition != "" and _tower_play_floor_fade(transition, int(state.floor)): return
+    _tower_finish_advance()
+
+func _tower_finish_advance() -> void:
+    if not tower_active: return
     close_modal()
     _tower_load_floor()
 
@@ -4532,6 +4559,9 @@ func _tower_card(guardian: Dictionary,back: bool) -> void:
     premium_button(_tower_text(
         "Karte umdrehen","Flip card","Virar carta"),
         box,_tower_card.bind(guardian,not back),true)
+    var cinematic: String = TowerCinematics.guardian_video(str(guardian.id))
+    if not cinematic.is_empty() and ResourceLoader.exists(cinematic):
+        button(_tower_text("▶ Film erneut ansehen","▶ Replay Cinematic","▶ Rever cinematic"),box,_tower_replay_cinematic.bind(cinematic),true)
     button(_tower_text("Galerie","Gallery","Galeria"),box,open_tower_gallery,true)
     _hd_submenu_finish(box, "HDGuardianCard")
 
@@ -4650,3 +4680,147 @@ func _tower_series_caption(progress: Dictionary) -> String:
         "Best of 3 · Round %d/3 · %d:%d",
         "Melhor de 3 · Ronda %d/3 · %d:%d"
     ) % [round_number, player_wins, guardian_wins]
+
+
+# Tower cinematics: no changes to rules, rewards, or owned cards.
+func _tower_maybe_play_defeat(state: Dictionary, outcome: Dictionary) -> void:
+    if DisplayServer.get_name() == "headless": return
+    if bool(state.finished.get("cinematic_seen",false)): return
+    var path: String = TowerCinematics.defeat_for(outcome)
+    if path.is_empty() or not ResourceLoader.exists(path): return
+    # Commit playback receipt before displaying it; rewards were committed above.
+    state.finished["cinematic_seen"] = true
+    if not SaveManager.save_data(data):
+        state.finished.erase("cinematic_seen")
+        return
+    _tower_play_cinematic(path, Callable())
+
+func _tower_replay_cinematic(path: String) -> void:
+    _tower_play_cinematic(path, Callable())
+
+func _tower_make_overlay() -> Control:
+    var layer := CanvasLayer.new()
+    layer.layer = 100
+    add_child(layer)
+    tower_cinematic_layer = layer
+    var root := ColorRect.new()
+    root.color = Color.BLACK
+    root.mouse_filter = Control.MOUSE_FILTER_STOP
+    layer.add_child(root)
+    root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    return root
+
+func _tower_skip_button(root: Control, done: Callable) -> void:
+    var skip := Button.new()
+    skip.text = _tower_text("Überspringen", "Skip", "Saltar")
+    skip.custom_minimum_size = Vector2(96,44)
+    root.add_child(skip)
+    skip.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+    skip.offset_left = -124
+    skip.offset_right = -12
+    skip.offset_top = 18
+    skip.offset_bottom = 62
+    skip.pressed.connect(done)
+    skip.add_theme_color_override("font_color", Color("fff2d5"))
+    for style in ["normal","hover","pressed"]:
+        var panel := StyleBoxFlat.new()
+        panel.bg_color = Color("10271f",0.85)
+        panel.border_color = Color("d8bb7e")
+        panel.set_border_width_all(1)
+        panel.set_corner_radius_all(12)
+        skip.add_theme_stylebox_override(style,panel)
+
+func _tower_play_cinematic(path: String, after: Callable) -> bool:
+    if DisplayServer.get_name() == "headless" or is_instance_valid(tower_cinematic_layer): return false
+    if not ResourceLoader.exists(path): return false
+    var stream := load(path) as VideoStream
+    if stream == null: return false
+    var root: Control = _tower_make_overlay()
+    var layer: CanvasLayer = tower_cinematic_layer
+    var previous_back: bool = get_tree().quit_on_go_back
+    get_tree().quit_on_go_back = false
+    var aspect := AspectRatioContainer.new()
+    aspect.ratio = 9.0 / 16.0
+    aspect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(aspect)
+    aspect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var video := VideoStreamPlayer.new()
+    video.expand = true
+    video.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    video.stream = stream
+    video.volume_db = 0.0 if bool(data.settings.get("sound",true)) else -80.0
+    aspect.add_child(video)
+    var volumes: Dictionary = {}
+    var duck: Tween
+    for player in [music_player,music_fade_player,music_preview_player]:
+        if is_instance_valid(player) and player.playing:
+            volumes[player] = player.volume_db
+            if duck == null: duck = create_tween().set_parallel(true)
+            duck.tween_property(player,"volume_db",-48.0,0.20)
+    # Every exit path shares one idempotent callback (including watchdog).
+    var done: Callable = func():
+        if not is_instance_valid(layer) or tower_cinematic_layer != layer: return
+        tower_cinematic_layer = null
+        tower_cinematic_finish = Callable()
+        if duck != null and duck.is_running(): duck.kill()
+        video.stop()
+        layer.visible = false
+        layer.queue_free()
+        get_tree().quit_on_go_back = previous_back
+        for player in volumes:
+            if is_instance_valid(player): player.volume_db = float(volumes[player])
+        if after.is_valid(): after.call()
+    tower_cinematic_finish = done
+    video.finished.connect(done)
+    _tower_skip_button(root,done)
+    get_tree().create_timer(12.0).timeout.connect(done)
+    video.play()
+    if not video.is_playing(): done.call()
+    return true
+
+func _tower_play_floor_fade(kind: String, next_floor: int) -> bool:
+    if DisplayServer.get_name() == "headless" or is_instance_valid(tower_cinematic_layer): return false
+    var root: Control = _tower_make_overlay()
+    var layer: CanvasLayer = tower_cinematic_layer
+    root.modulate.a = 0.0
+    var title := Label.new()
+    title.text = _tower_text("Etage", "Floor", "Piso") + " %d" % next_floor
+    if kind == "ascend": title.text += "\n4 × 4"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    title.add_theme_font_override("font",ZenType.heading())
+    title.add_theme_font_size_override("font_size",34)
+    title.add_theme_color_override("font_color",Color("d8bb7e"))
+    title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(title)
+    title.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var tween := create_tween()
+    var advanced: Array[bool] = [false]
+    var done: Callable = func():
+        if not is_instance_valid(layer) or tower_cinematic_layer != layer: return
+        tower_cinematic_layer = null
+        tower_cinematic_finish = Callable()
+        if tween.is_running(): tween.kill()
+        layer.visible = false
+        layer.queue_free()
+        if not advanced[0]: _tower_finish_advance()
+    tower_cinematic_finish = done
+    tween.tween_property(root,"modulate:a",1.0,0.30)
+    tween.tween_interval(1.25 if kind == "ascend" else (0.55 if kind == "guardian" else 0.25))
+    # Load the new arena behind the overlay before fading it away.
+    tween.tween_callback(func():
+        if is_instance_valid(layer) and tower_cinematic_layer == layer and tower_active:
+            advanced[0] = true
+            close_modal()
+            _tower_load_floor()
+    )
+    tween.tween_property(root,"modulate:a",0.0,0.25)
+    # The board is already loaded. Skip/back before this point uses done instead.
+    tween.finished.connect(func():
+        if not is_instance_valid(layer) or tower_cinematic_layer != layer: return
+        tower_cinematic_layer = null
+        tower_cinematic_finish = Callable()
+        layer.visible = false
+        layer.queue_free()
+    )
+    return true

@@ -553,7 +553,13 @@ jobs:
                   path = "assets/data/zen_tower/" + name
                   assert path in files, path
 
-          print("PASS: All 35 Tower images and all five JSON files included")
+              for name in ["tower_rootbound_warden_defeat.ogv", "tower_windweave_keeper_defeat.ogv", "tower_root_to_wind_gate.ogv"]:
+                  path = "assets/assets/video/" + name
+                  assert path in files, path
+                  source = Path("assets/video") / name
+                  assert apk.read(path) == source.read_bytes(), path
+
+          print("PASS: All 35 Tower images, five JSON files and three videos included")
           PYAPK
 
       - name: Verify music and Chronicles data included in APK
