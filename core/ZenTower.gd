@@ -177,6 +177,18 @@ static func new_run(data: Dictionary) -> bool:
     state.series = {}
     return true
 
+static func checkpoint_floor(data: Dictionary) -> int:
+    var state: Dictionary = ensure(data)
+    return 1 + floori(float(maxi(0, int(state.record))) / 50.0) * 50
+
+static func restart_run(data: Dictionary, stage: int) -> bool:
+    var state: Dictionary = ensure(data)
+    if stage != 1 and stage != checkpoint_floor(data): return false
+    state.active = false
+    if not new_run(data): return false
+    state.floor = stage
+    return begin_floor(data)
+
 static func _new_series(stage: int) -> Dictionary:
     return {"floor": stage, "player": 0, "guardian": 0, "round": 1, "complete": false, "intro_seen": false}
 

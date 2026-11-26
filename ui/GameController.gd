@@ -3807,9 +3807,9 @@ func open_zen_tower() -> void:
         "Record: Floor %d",
         "Recorde: Piso %d") % int(state.record))
     _zen_campaign_paragraph(box,_tower_text(
-        "Drei Startleben. Wächter im Best of 3.",
-        "Three starting lives. Best-of-3 guardian battles.",
-        "Três vidas iniciais. Guardiões à melhor de três."))
+        "Fünf Startleben. Wächter im Best of 3.",
+        "Five starting lives. Best-of-3 guardian battles.",
+        "Cinco vidas iniciais. Guardiões à melhor de três."))
     if challenge_active or tutorial != null:
         _zen_campaign_paragraph(box,_tower_text(
             "Beende zuerst den aktiven Spielmodus.",
@@ -3823,12 +3823,54 @@ func open_zen_tower() -> void:
             title = _tower_text(
                 "Aufstieg fortsetzen","Resume ascent","Continuar ascensão")
         premium_button(title,box,_tower_enter,true)
+        _tower_restart_options(box)
     premium_button(_tower_text(
         "Boss-Galerie","Guardian Gallery","Galeria de Guardiões") +
         " · %d/%d" % [state.cards.size(), Tower.manifest().get("guardians", []).size()],box,open_tower_gallery)
     button(_tower_text(
         "Hauptmenü","Main menu","Menu principal"),box,open_menu,true)
     _hd_submenu_finish(box, "HDTowerEntry", true)
+
+func _tower_restart_options(box: VBoxContainer) -> void:
+    var state: Dictionary = Tower.ensure(data)
+    var checkpoint: int = Tower.checkpoint_floor(data)
+    if checkpoint > 1:
+        button(_tower_text("Checkpoint · Etage %d", "Checkpoint · Floor %d", "Checkpoint · Piso %d") % checkpoint, box, _tower_confirm_restart.bind(checkpoint), true)
+    if bool(state.active) or not state.get("finished",{}).is_empty() or checkpoint > 1:
+        button(_tower_text("Tower neu starten", "Reset Tower Run", "Reiniciar Torre"), box, _tower_confirm_restart.bind(1), true)
+
+func _tower_confirm_restart(stage: int) -> void:
+    if is_instance_valid(tower_cinematic_layer): return
+    var box := _zen_campaign_story_box(_tower_text("Aufstieg neu starten?", "Restart ascent?", "Reiniciar ascensão?"))
+    _zen_campaign_paragraph(box, _tower_text(
+        "Etage %d mit 5 Leben starten? Die aktuelle Partie endet. Rekord, Karten und Zen-Blätter bleiben erhalten.",
+        "Start at floor %d with 5 lives? The current run ends. Record, cards and Zen leaves stay.",
+        "Começar no piso %d com 5 vidas? A tentativa atual termina. Recorde, cartas e folhas Zen mantêm-se.") % stage)
+    premium_button(_tower_text("Neustart bestätigen", "Confirm restart", "Confirmar reinício"), box, _tower_restart.bind(stage), true)
+    button(_tower_text("Abbrechen", "Cancel", "Cancelar"), box, _tower_cancel_restart, true)
+    _hd_submenu_finish(box, "HDTowerRestartConfirm", true)
+
+func _tower_cancel_restart() -> void:
+    if tower_active:
+        _tower_pause()
+    else:
+        open_zen_tower()
+
+func _tower_restart(stage: int) -> void:
+    if is_instance_valid(tower_cinematic_layer): return
+    if not tower_active and (sky_active or act_one_active or zen_campaign_active or ceremony_active or challenge_active or tutorial != null): return
+    var state: Dictionary = Tower.ensure(data)
+    var old_state: Dictionary = state.duplicate(true)
+    if not Tower.restart_run(data, stage): return
+    if not SaveManager.save_data(data):
+        data["tower"] = old_state
+        notify_user(_tower_text("Speichern fehlgeschlagen.", "Save failed.", "Falha ao guardar."))
+        return
+    if tower_active:
+        close_modal()
+        _tower_load_floor()
+    else:
+        _tower_enter()
 
 func _tower_enter() -> void:
     if tower_active or sky_active or act_one_active or zen_campaign_active:
@@ -4405,6 +4447,8 @@ func _tower_result() -> void:
     for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
         next_button.add_theme_color_override(key, Color("102a25"))
 
+    if bool(outcome.game_over):
+        _tower_restart_options(box)
     var inspect_button: Button = button(
         _inspect_label(), box, _inspect_classic_finished_board, true
     )
@@ -4461,7 +4505,7 @@ func _tower_next() -> void:
     var transition: String = TowerCinematics.transition_for(outcome)
     if transition.begins_with("res://"):
         if _tower_play_cinematic(transition, _tower_finish_advance): return
-        transition = "guardian"
+        transition = "ascend" if int(outcome.get("completed_floor",0)) == 100 else "guardian"
     if transition != "" and _tower_play_floor_fade(transition, int(state.floor)): return
     _tower_finish_advance()
 

@@ -98,7 +98,7 @@ func _init() -> void:
         verify(winning_board.winner == 1, "4x4 face or edge victory")
     var classic: BoardModel = Tower.new_board(3)
     verify(classic.cells.size() == 54 and Tower.make_rules(3).lines.size() == 108, "classic rules retained")
-    for path in [Cinematics.ROOT_VIDEO,Cinematics.WIND_VIDEO,Cinematics.ROOT_GATE]:
+    for path in ["res://assets/video/tower_rootbound_warden_defeat.ogv", "res://assets/video/tower_windweave_keeper_defeat.ogv", "res://assets/video/tower_stillwater_dragon_defeat.ogv", "res://assets/video/tower_amber_fox_defeat.ogv", "res://assets/video/tower_snowbound_kirin_defeat.ogv", "res://assets/video/tower_dawnwing_crane_defeat.ogv", "res://assets/video/tower_eclipse_sovereign_defeat.ogv", "res://assets/video/tower_root_to_wind_gate.ogv", "res://assets/video/tower_wind_to_water_gate.ogv", "res://assets/video/tower_water_to_amber_gate.ogv", "res://assets/video/tower_amber_to_frost_gate.ogv", "res://assets/video/tower_frost_to_dawn_gate.ogv", "res://assets/video/tower_dawn_to_eclipse_gate.ogv", "res://assets/video/tower_eclipse_to_ascend_gate.ogv"]:
         verify(ResourceLoader.exists(path) and load(path) is VideoStream, "native video resource: " + path)
     verify(Cinematics.transition_for({"winner":1,"floor_complete":true,"completed_floor":1,"next_floor":2}) == "", "normal floor advances without animation")
     verify(Tower.MAX_LIVES == 5, "five starting lives")
@@ -124,12 +124,12 @@ func _init() -> void:
         verify(bool(second.series_complete) and bool(second.floor_complete), "two wins finish series")
         verify(int(data.tower.floor) == int(boss) + 1 and int(data.tower.lives) == 8, "stage advance and 5 plus 3 lives")
         verify(int(second.life_bonus) == 3 and data.tower.cards.size() == 1, "one life bonus and one card")
-        var expected_clip: String = Cinematics.ROOT_VIDEO if int(boss) == 15 else (Cinematics.WIND_VIDEO if int(boss) == 30 else "")
+        var expected_clip: String = ["res://assets/video/tower_rootbound_warden_defeat.ogv", "res://assets/video/tower_windweave_keeper_defeat.ogv", "res://assets/video/tower_stillwater_dragon_defeat.ogv", "res://assets/video/tower_amber_fox_defeat.ogv", "res://assets/video/tower_snowbound_kirin_defeat.ogv", "res://assets/video/tower_dawnwing_crane_defeat.ogv", "res://assets/video/tower_eclipse_sovereign_defeat.ogv"][bosses.find(boss)]
         verify(Cinematics.defeat_for(second) == expected_clip, "first series win selects only matching clip")
         var repeat := second.duplicate(true)
         repeat.unlocked_card = ""
         verify(Cinematics.defeat_for(repeat).is_empty(), "repeat wins do not replay automatically")
-        var expected_transition: String = Cinematics.ROOT_GATE if int(boss) == 15 else ("ascend" if int(boss) == 100 else "guardian")
+        var expected_transition: String = ["res://assets/video/tower_root_to_wind_gate.ogv", "res://assets/video/tower_wind_to_water_gate.ogv", "res://assets/video/tower_water_to_amber_gate.ogv", "res://assets/video/tower_amber_to_frost_gate.ogv", "res://assets/video/tower_frost_to_dawn_gate.ogv", "res://assets/video/tower_dawn_to_eclipse_gate.ogv", "res://assets/video/tower_eclipse_to_ascend_gate.ogv"][bosses.find(boss)]
         verify(Cinematics.transition_for(second) == expected_transition, "correct stage transition")
         var wallet: int = int(data.economy.leaves)
         verify(Tower.settle(data).is_empty() and int(data.economy.leaves) == wallet, "settlement cannot pay twice")
@@ -174,6 +174,22 @@ func _init() -> void:
     old.tower.game = BoardModel.new().snapshot()
     Tower.begin_floor(old)
     verify(old.tower.game.cells.size() == 96 and int(old.tower.lives) == 6, "legacy board migration retains lives")
+    var checkpoint_data: Dictionary = fresh(49, 2)
+    checkpoint_data.tower.record = 49
+    verify(Tower.checkpoint_floor(checkpoint_data) == 1, "no early checkpoint")
+    verify(not Tower.restart_run(checkpoint_data, 51), "locked checkpoint rejected")
+    checkpoint_data.tower.record = 50
+    checkpoint_data.tower.cards = ["test_card"]
+    var checkpoint_wallet: int = int(checkpoint_data.economy.leaves)
+    verify(Tower.checkpoint_floor(checkpoint_data) == 51, "floor 50 unlocks 51")
+    verify(Tower.restart_run(checkpoint_data, 51), "restart checkpoint")
+    verify(int(checkpoint_data.tower.floor) == 51 and int(checkpoint_data.tower.lives) == 5, "checkpoint starts with five lives")
+    verify(checkpoint_data.tower.cards.has("test_card") and int(checkpoint_data.economy.leaves) == checkpoint_wallet, "permanent rewards preserved")
+    checkpoint_data.tower.record = 100
+    verify(Tower.restart_run(checkpoint_data, 101), "restart 4x4 checkpoint")
+    verify(checkpoint_data.tower.game.cells.size() == 96, "checkpoint 101 board size")
+    verify(Tower.restart_run(checkpoint_data, 1), "reset to beginning")
+    verify(int(checkpoint_data.tower.floor) == 1 and Tower.checkpoint_floor(checkpoint_data) == 101, "reset retains unlocked checkpoints")
     var normal: Dictionary = fresh(99)
     verify(bool(finish_round(normal, 1).floor_complete) and int(normal.tower.floor) == 100, "normal floor still one match")
     var tactical: Array = Tower.new_board(4).cells

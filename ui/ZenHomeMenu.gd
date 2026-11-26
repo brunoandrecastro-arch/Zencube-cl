@@ -240,6 +240,8 @@ func configure_tower(game: Node) -> void:
     gallery.custom_minimum_size.y = 48
     _quiet_button(gallery)
 
+    game._tower_restart_options(self)
+
     var leave: Button = game.premium_button(
         game._tower_text(
             "Speichern & verlassen",
