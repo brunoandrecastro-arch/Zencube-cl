@@ -683,7 +683,8 @@ func on_cell(cell: int) -> void:
             return
     place(cell)
 func place(cell: int) -> void:
-    if ceremony_active or is_instance_valid(tower_cinematic_layer): return
+    if ceremony_active: return
+    if is_instance_valid(tower_cinematic_layer): return
     if challenge_active and not zen_campaign_active and not act_one_active:
         challenge_try_cell(cell)
         return
