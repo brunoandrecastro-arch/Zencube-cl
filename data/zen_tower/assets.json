@@ -418,7 +418,7 @@
   "agreed_design": {
     "status": "planned_not_implemented_by_this_asset_package",
     "story_required": false,
-    "lives_per_run": 3,
+    "lives_per_run": 5,
     "draw_action": "repeat_floor_without_life_loss",
     "boss_interval_floors": 15,
     "autosave_run": true,

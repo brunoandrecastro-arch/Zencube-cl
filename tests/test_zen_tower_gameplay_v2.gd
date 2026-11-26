@@ -15,7 +15,7 @@ func verify(condition: bool, message: String) -> void:
         assert(condition, message)
     checks += 1
 
-func fresh(stage: int, lives: int = 3) -> Dictionary:
+func fresh(stage: int, lives: int = 5) -> Dictionary:
     var data: Dictionary = SaveManager.defaults()
     Tower.new_run(data)
     data.tower.floor = stage
@@ -101,18 +101,28 @@ func _init() -> void:
     for path in [Cinematics.ROOT_VIDEO,Cinematics.WIND_VIDEO,Cinematics.ROOT_GATE]:
         verify(ResourceLoader.exists(path) and load(path) is VideoStream, "native video resource: " + path)
     verify(Cinematics.transition_for({"winner":1,"floor_complete":true,"completed_floor":1,"next_floor":2}) == "fade", "normal floor uses quick fade")
+    verify(Tower.MAX_LIVES == 5, "five starting lives")
+    verify(Tower.difficulty(1,0.0)==0,"easy entry")
+    verify(Tower.difficulty(15,0.0)==1,"first boss medium")
+    verify(Tower.difficulty(30,0.0)==1,"second boss medium")
+    verify(Tower.difficulty(45,0.0)==1,"third boss medium")
+    verify(Tower.difficulty(60,0.0)==2,"fourth boss hard")
+    verify(Tower.difficulty(100,0.0)==2,"milestone boss hard")
+    verify(Tower.difficulty(101,0.9)==0,"gentle 4x4 entry")
+    verify(Tower.difficulty(201,0.0)==2,"late floor hard")
+    verify(Tower.difficulty(215,0.0)==3,"late boss master")
     var bosses: Array = [15, 30, 45, 60, 75, 90, 100]
     for boss in bosses:
         var data: Dictionary = fresh(int(boss))
         var first: Dictionary = finish_round(data, 1)
         verify(not bool(first.series_complete) and not bool(first.floor_complete), "first boss win keeps series open")
-        verify(int(data.tower.floor) == int(boss) and int(data.tower.lives) == 3, "no early floor or life reward")
+        verify(int(data.tower.floor) == int(boss) and int(data.tower.lives) == 5, "no early floor or life reward")
         verify(int(first.reward) == 0 and data.tower.cards.is_empty(), "no early currency or card")
         verify(Cinematics.defeat_for(first).is_empty() and Cinematics.transition_for(first).is_empty(), "no video on individual boss round")
         Tower.begin_floor(data)
         var second: Dictionary = finish_round(data, 1)
         verify(bool(second.series_complete) and bool(second.floor_complete), "two wins finish series")
-        verify(int(data.tower.floor) == int(boss) + 1 and int(data.tower.lives) == 6, "stage advance and 3 plus 3 lives")
+        verify(int(data.tower.floor) == int(boss) + 1 and int(data.tower.lives) == 8, "stage advance and 5 plus 3 lives")
         verify(int(second.life_bonus) == 3 and data.tower.cards.size() == 1, "one life bonus and one card")
         var expected_clip: String = Cinematics.ROOT_VIDEO if int(boss) == 15 else (Cinematics.WIND_VIDEO if int(boss) == 30 else "")
         verify(Cinematics.defeat_for(second) == expected_clip, "first series win selects only matching clip")
@@ -130,7 +140,7 @@ func _init() -> void:
     Tower.begin_floor(deciding)
     var tied: Dictionary = finish_round(deciding, 3)
     verify(int(tied.player_wins) == 1 and int(tied.guardian_wins) == 1, "draw keeps one-all score")
-    verify(not bool(tied.series_complete) and int(deciding.tower.lives) == 3, "draw costs no life")
+    verify(not bool(tied.series_complete) and int(deciding.tower.lives) == 5, "draw costs no life")
     Tower.begin_floor(deciding)
     var final: Dictionary = finish_round(deciding, 1)
     verify(bool(final.floor_complete) and int(final.player_wins) == 2, "third decisive round wins 2 to 1")

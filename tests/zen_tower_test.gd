@@ -18,7 +18,7 @@ func run() -> void:
     var state := Tower.ensure(data)
 
     check(Tower.new_run(data),"New run")
-    check(int(state.lives)==3,"Three lives")
+    check(int(state.lives)==5,"Five lives")
     check(Tower.begin_floor(data),"First board")
     check(state.game.cells.size()==54,"54 cells")
     check(not Tower.begin_floor(data),"No duplicate board")
@@ -64,12 +64,12 @@ func run() -> void:
     check(Tower.section_index(61)==4,"Frostveil section")
     check(Tower.is_boss(100),"Hundredth floor boss")
 
-    state.lives = 3
+    state.lives = 5
     state.active = true
     state.game = {}
     state.floor = 5
 
-    for attempt in range(3):
+    for attempt in range(5):
         check(Tower.begin_floor(data),"Retry board")
         var board := BoardModel.new()
         board.swap_enabled = false
@@ -82,12 +82,12 @@ func run() -> void:
         check(Tower.play(data,int(line[3]),2),"Losing move")
         Tower.settle(data)
 
-        check(int(state.lives)==2-attempt,"Life consumed")
+        check(int(state.lives)==4-attempt,"Life consumed")
 
     check(not bool(state.active),"Game over")
     check(Tower.new_run(data),"Restart tower")
     check(int(state.floor)==1,"Restart at floor one")
-    check(int(state.lives)==3,"Lives restored")
+    check(int(state.lives)==5,"Lives restored")
     check(state.cards.size()==7,"Gallery survives restart")
     check(int(state.record)==100,"Record survives restart")
 

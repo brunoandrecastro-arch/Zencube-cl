@@ -3,7 +3,7 @@ extends RefCounted
 const ASSETS = "res://data/zen_tower/assets.json"
 const EXPANSION = "res://data/zen_tower/expansions/stages_061_100.json"
 const LORE = "res://data/zen_tower/lore_en.json"
-const MAX_LIVES = 3
+const MAX_LIVES = 5
 const UPDATE_VERSION = 2
 const Grid = preload("res://core/ZenTowerGrid.gd")
 const TowerBoard = preload("res://core/ZenTowerBoard.gd")
@@ -134,12 +134,23 @@ static func valid_game(snapshot: Dictionary, expected_cells: int = 0) -> bool:
     return snapshot.has("swap_enabled") and snapshot.has("swap_pending")
 
 static func difficulty(stage: int, roll: float) -> int:
-    var group: int = floori(float(maxi(1, stage) - 1) / 15.0)
-    var base: int = mini(3, group)
+    stage = maxi(1, stage)
+
     if is_boss(stage):
-        return mini(4, base + 2)
-    var position: int = (maxi(1, stage) - 1) % 15
-    return mini(4, base + 1) if roll < float(position) / 14.0 else base
+        if stage <= 45: return 1
+        if stage <= 200: return 2
+        return 3
+
+    if stage <= 15: return 0
+    if stage <= 30: return 1 if roll < 0.25 else 0
+    if stage <= 45: return 1 if roll < 0.70 else 0
+    if stage <= 75: return 1
+    if stage <= 100: return 2 if roll < 0.30 else 1
+
+    # Softer introduction to the larger 4x4 board.
+    if stage <= 130: return 1 if roll < 0.65 else 0
+    if stage <= 200: return 2 if roll < 0.30 else 1
+    return 2
 
 static func budget(stage: int, level: int) -> int:
     var value: int = 45 + level * 30 + mini(55, stage)
