@@ -24,4 +24,4 @@ static func transition_for(outcome: Dictionary) -> String:
         if not bool(outcome.get("series_complete",false)): return ""
         if Tower.cycle_floor(stage) == 15: return ROOT_GATE
         return "guardian"
-    return "fade"
+    return ""

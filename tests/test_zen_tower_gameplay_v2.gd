@@ -100,7 +100,7 @@ func _init() -> void:
     verify(classic.cells.size() == 54 and Tower.make_rules(3).lines.size() == 108, "classic rules retained")
     for path in [Cinematics.ROOT_VIDEO,Cinematics.WIND_VIDEO,Cinematics.ROOT_GATE]:
         verify(ResourceLoader.exists(path) and load(path) is VideoStream, "native video resource: " + path)
-    verify(Cinematics.transition_for({"winner":1,"floor_complete":true,"completed_floor":1,"next_floor":2}) == "fade", "normal floor uses quick fade")
+    verify(Cinematics.transition_for({"winner":1,"floor_complete":true,"completed_floor":1,"next_floor":2}) == "", "normal floor advances without animation")
     verify(Tower.MAX_LIVES == 5, "five starting lives")
     verify(Tower.difficulty(1,0.0)==0,"easy entry")
     verify(Tower.difficulty(15,0.0)==1,"first boss medium")
