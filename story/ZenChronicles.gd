@@ -1640,6 +1640,7 @@ func open_act_one_gate() -> void:
         message = str(dialogue.get("victory", "Well played, Kuze. Take the cube home. Return tomorrow."))
     _make_label(message, outer, 20, CREAM)
     _make_label("Kuze · X    /    O · " + str(config.get("title", {}).get(_active_language, "The Zen Master")), outer, 15, GOLD)
+    _make_label("Best of 3 · X %d : %d O" % [int(_act_one_progress.get("series_player", 0)), int(_act_one_progress.get("series_boss", 0))], outer, 16, GOLD)
     var action := campaign_ui("Prüfung beginnen", "Start trial", "Iniciar prova")
     if not saved_game.is_empty():
         action = campaign_ui("Prüfung fortsetzen", "Resume trial", "Retomar prova")

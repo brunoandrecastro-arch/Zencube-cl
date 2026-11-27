@@ -1,5 +1,6 @@
 extends RefCounted
 ## Act III independent progress. Classic and previous acts remain untouched.
+const BossSeries = preload("res://story/ZenActBossSeries.gd")
 const SAVE_FILE := "user://zen_chronicles_act03_aiko_trial_v1.json"
 const ROOT := "res://story/act03/"
 const CONFIG := ROOT + "aiko_trial.json"
@@ -32,7 +33,7 @@ static func config() -> Dictionary:
     return parsed if parsed is Dictionary else {}
 
 static func fresh() -> Dictionary:
-    return {"version": 1, "page": 1, "reached": false, "game": {}, "won": false, "acknowledged": false, "complete": false}
+    return {"version": 1, "page": 1, "reached": false, "game": {}, "won": false, "acknowledged": false, "complete": false, "series_player": 0, "series_boss": 0, "round_counted": false}
 
 static func new_board() -> BoardModel:
     var board := BoardModel.new()
@@ -64,10 +65,11 @@ static func load_progress() -> Dictionary:
         return progress
     progress.reached = bool(raw.get("reached", false))
     var game: Variant = raw.get("game", {})
+    var board: BoardModel = null
     if progress.reached and game is Dictionary and not game.is_empty():
-        var board := restore_board(game)
+        board = restore_board(game)
         progress.game = board.snapshot()
-        progress.won = bool(raw.get("won", false)) and board.winner == 1
+    BossSeries.restore(progress, raw, board)
     progress.acknowledged = progress.won and bool(raw.get("acknowledged", false))
     progress.complete = progress.acknowledged and bool(raw.get("complete", false))
     progress.page = clampi(int(raw.get("page", 1)), 1, max_page(progress))
@@ -77,11 +79,7 @@ static func max_page(progress: Dictionary) -> int:
     return 12 if bool(progress.get("won", false)) and bool(progress.get("acknowledged", false)) else 11
 
 static func capture(progress: Dictionary, board: BoardModel) -> void:
-    progress.reached = true
-    progress.game = board.snapshot()
-    # Only the real rules-engine result for the dedicated X/O board can win.
-    if board.winner == 1 and board.owners == [0, 1] and not RulesEngine.new().victories(board.cells, 1).is_empty():
-        progress.won = true
+    BossSeries.capture(progress, board)
 
 static func save_progress(progress: Dictionary) -> bool:
     var temp := SAVE_FILE + ".tmp"

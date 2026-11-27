@@ -6,7 +6,6 @@ const TowerCinematics = preload("res://core/ZenTowerCinematics.gd")
 var tower_cinematic_layer: CanvasLayer
 var tower_cinematic_finish: Callable
 var tower_active: bool = false
-var tower_gallery_music_key: String = ""
 var tower_intro_pending: bool = false
 var tower_classic_board: BoardModel
 var tower_view: Dictionary = {}
@@ -99,6 +98,7 @@ const ZMode = preload("res://core/ZenAscend.gd")
 const RANK_CEREMONY = preload("res://ui/ZenRankCeremony.gd")
 const MusicPolicy = preload("res://core/ZenMusicPolicy.gd")
 const ZenCampaign = preload("res://story/ZenCampaign.gd")
+const ActBossSeries509 = preload("res://story/ZenActBossSeries.gd")
 const ActOne = preload("res://story/ZenActOne.gd")
 const ActTwo = preload("res://story/ZenActTwo.gd")
 const ActThree = preload("res://story/ZenActThree.gd")
@@ -919,6 +919,8 @@ func close_modal() -> void:
     net_active = false
     net_buttons.clear()
     if popup != null:
+        if was_tower_menu:
+            popup.name = "RetiringTowerPopup_%d" % popup.get_instance_id()
         popup.queue_free()
         popup = null
     if home_visible:
@@ -2759,20 +2761,17 @@ func resume_campaign_music() -> void:
     sync_music()
 
 func _story507_tower_menu() -> bool:
-    return is_instance_valid(popup) and str(popup.name) in ["HDTowerEntry", "HDGuardianGallery", "HDGuardianCard", "HDGuardianPreview", "HDTowerRestartConfirm"]
+    return is_instance_valid(popup) and str(popup.name) in ["HDTowerEntry", "HDGuardianGallery", "HDGuardianCard", "HDGuardianPreview", "HDTowerRestartConfirm", "TowerHomeScreen"]
 
 func _story507_guardian_screen() -> bool:
     return is_instance_valid(popup) and str(popup.name) in ["HDGuardianCard", "HDGuardianPreview"]
 
 func _story507_music_key() -> String:
-    if _story507_guardian_screen() and not tower_gallery_music_key.is_empty():
-        return tower_gallery_music_key
-    if is_instance_valid(popup) and str(popup.name) == "HDGuardianGallery":
-        return "tower_menu"
+    # Menu, gallery and both card faces share one stable track ID.
+    if _story507_tower_menu(): return "tower_menu"
     if tower_active: return StorySoundtrack507.tower_key(_tower_stage())
     if act_one_active: return "act_%d" % prequel_act
     if sky_active: return "sky_theme"
-    if _story507_tower_menu(): return "tower_menu"
     return ""
 
 func sync_music() -> void:
@@ -3700,9 +3699,9 @@ func _act_one_refresh(animate: int) -> void:
     world_title_label.text = _act_one_title()
     world_quote_label.text = T(WORLD_QUOTES[prequel_act-1]) if prequel_act>=2 else "The First Trial · The Roots of Peace"
     rank_label.visible = true
-    rank_label.text = "Kuze · X    /    O · " + _act_one_title()
+    rank_label.text = "Kuze · X    /    O · " + _act_one_title() + "\n" + _act_one_series_score()
     if board.winner == 1:
-        status.text = _act_one_ui("Prüfung bestanden!", "Trial passed!", "Prova concluída!")
+        status.text = _act_one_ui("Prüfung bestanden!", "Trial passed!", "Prova concluída!") if bool(act_one_progress.won) else _act_one_ui("Rundensieg!", "Round won!", "Ronda ganha!")
     elif board.winner == 2:
         status.text = _act_one_title() + " · " + _act_one_ui("Sieg · O", "Victory · O", "Vitória · O")
     elif board.winner == 3:
@@ -3743,37 +3742,54 @@ func _act_one_tick() -> void:
     var trial_level: int = prequel_act-1
     worker.start(func(): return AIEngine.new(seed_value).choose(cells, 2, trial_level, 45))
 
+func _act_one_series_score() -> String:
+    return "Best of 3 · X %d : %d O" % [int(act_one_progress.get("series_player", 0)), int(act_one_progress.get("series_boss", 0))]
+
 func _act_one_result() -> void:
     if not act_one_active or board.winner == 0: return
     var saved := _act_one_save()
     var config: Dictionary = prequel_model.config()
     var dialogue: Dictionary = config.get("dialogue_"+language_code(),config.get("dialogue", {}))
-    var outcome := "victory" if board.winner == 1 else ("defeat" if board.winner == 2 else "draw")
-    var heading: String = _tower_text("Sieg", "Victory", "Vitória") if board.winner == 1 else (_tower_text("Niederlage", "Defeat", "Derrota") if board.winner == 2 else _tower_text("Unentschieden", "Draw", "Empate"))
-    var box: VBoxContainer = _hd_result_shell(heading, _act_one_title(), false)
+    var series_won: bool = bool(act_one_progress.won)
+    var series_lost: bool = int(act_one_progress.get("series_boss", 0)) >= 2
+    var outcome := "victory" if series_won else ("defeat" if series_lost else ("draw" if board.winner == 3 else ""))
+    var heading: String = _tower_text("Unentschieden", "Draw", "Empate")
+    if board.winner == 1:
+        heading = _tower_text("Seriensieg", "Series victory", "Vitória na série") if series_won else _tower_text("Rundensieg", "Round victory", "Vitória na ronda")
+    elif board.winner == 2:
+        heading = _tower_text("Serie verloren", "Series lost", "Série perdida") if series_lost else _tower_text("Runde verloren", "Round lost", "Ronda perdida")
+    var box: VBoxContainer = _hd_result_shell(heading, _act_one_title() + " · " + _act_one_series_score(), false)
     # Result art matches the large full-height Act I-IV introduction portrait.
     var art := ZenCampaign.artwork(prequel_model.portrait_path(),
         clampf(get_viewport().get_visible_rect().size.y * 0.62,400.0,880.0))
     art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     box.add_child(art)
-    _zen_campaign_paragraph(box, str(dialogue.get(outcome, "")))
+    if not outcome.is_empty():
+        _zen_campaign_paragraph(box, str(dialogue.get(outcome, "")))
+    else:
+        _zen_campaign_paragraph(box, _act_one_ui("Zwei Rundensiege entscheiden die Prüfung.", "Two round wins decide the trial.", "Duas vitórias decidem a prova."))
     if not saved:
         _zen_campaign_paragraph(box, _act_one_ui("Speichern fehlgeschlagen. Bitte erneut versuchen.", "Save failed. Please try again.", "Erro ao guardar. Tenta novamente."))
-    if board.winner == 1 and bool(act_one_progress.won):
-        premium_button(_act_one_ui("Fortsetzen", "Continue", "Continuar"), box, _act_one_continue, true)
+    if series_won:
+        premium_button(_act_one_ui("Geschichte fortsetzen", "Continue story", "Continuar a história"), box, _act_one_continue, true)
     else:
-        premium_button(_act_one_ui("Erneut versuchen", "Try again", "Tentar novamente"), box, _act_one_retry, true)
+        var next_label: String = _act_one_ui("Nächste Runde", "Next round", "Próxima ronda")
+        if series_lost: next_label = _act_one_ui("Neue Serie", "Retry series", "Nova série")
+        elif board.winner == 3: next_label = _act_one_ui("Runde wiederholen", "Replay round", "Repetir ronda")
+        premium_button(next_label, box, _act_one_retry, true)
     button(_inspect_label(), box, _inspect_classic_finished_board, true)
     button(_act_one_ui("Zur Geschichte", "Back to story", "Voltar à história"), box, _act_one_leave, true)
     _hd_result_finish(box)
 
 func _act_one_retry() -> void:
-    if not act_one_active or board.winner not in [2, 3]: return
-    if not _act_one_save(): return
+    if not act_one_active or board.winner == 0: return
+    if not _act_one_save() or bool(act_one_progress.won): return
     var old_board: BoardModel = board
     var old_progress: Dictionary = act_one_progress.duplicate(true)
+    var next_board: BoardModel = prequel_model.new_board()
+    if not ActBossSeries509.next_round(act_one_progress, old_board, next_board): return
     generation += 1
-    board = prequel_model.new_board()
+    board = next_board
     if not _act_one_save():
         board = old_board
         act_one_progress = old_progress
@@ -4604,6 +4620,7 @@ func _tower_pause() -> void:
     menu_context = false
     var box: VBoxContainer = _home_menu_shell()
     popup.name = "TowerHomeScreen"
+    sync_music()
 
     var home: VBoxContainer = HomeMenu.new()
     box.add_child(home)
@@ -4666,7 +4683,6 @@ func open_tower_gallery() -> void:
 func _tower_card(guardian: Dictionary,back: bool) -> void:
     var state := Tower.ensure(data)
     if not state.cards.has(str(guardian.id)): return
-    tower_gallery_music_key = StorySoundtrack507.tower_key(int(guardian.first_cycle_floor))
     var box := _zen_campaign_story_box(_tower_name(guardian))
     var path: String = str(guardian.card_back if back else guardian.card_front)
     _tower_art(box,path,minf(650.0,get_viewport().get_visible_rect().size.y*0.70))
@@ -4758,7 +4774,6 @@ func _tower_gallery_entry(box: VBoxContainer, guardian: Dictionary, owned: bool)
         )
 
 func _tower_preview(guardian: Dictionary) -> void:
-    tower_gallery_music_key = StorySoundtrack507.tower_key(int(guardian.first_cycle_floor))
     var box := _zen_campaign_story_box(_tower_name(guardian))
     _tower_art(
         box,
