@@ -1,6 +1,7 @@
 extends SceneTree
 ## Real navigation, restored matches, Act gates and optional onboarding.
 const Journey = preload("res://story/ZenJourney.gd")
+const BossSeries = preload("res://story/ZenActBossSeries.gd")
 const Video = preload("res://ui/ZenMoonShadowVideo.gd")
 const Fracture = preload("res://story/ZenFractureState.gd")
 var failures: int = 0
@@ -33,23 +34,49 @@ func _initialize() -> void:
 func complete_act(act: int) -> void:
     var model: Script = Journey.MODELS[act - 1]
     var rules := RulesEngine.new()
+    var progress: Dictionary = model.fresh()
     var board: BoardModel = model.new_board()
     var line: Array = rules.lines[0]
-    for index in range(4):
-        check(rules.play(board, int(line[index])), "fixture X move")
-        if index == 3: break
-        for cell in range(54):
-            if line.has(cell) or board.cells[cell] != 0: continue
-            var simulated: Array = board.cells.duplicate()
-            simulated[cell] = 2
-            if not rules.victories(simulated, 2).is_empty(): continue
-            if rules.play(board, cell): break
-    var progress: Dictionary = model.fresh()
-    model.capture(progress, board)
+
+    for round_index in range(2):
+        for ply in range(54):
+            if board.winner != 0: break
+            if board.turn == 1:
+                var index: int = board.cells.count(1)
+                if index >= line.size(): break
+                if not rules.play(board, int(line[index])): break
+            else:
+                var placed: bool = false
+                for cell in range(54):
+                    if line.has(cell) or board.cells[cell] != 0: continue
+                    var simulated: Array = board.cells.duplicate()
+                    simulated[cell] = 2
+                    if not rules.victories(simulated, 2).is_empty(): continue
+                    if rules.play(board, cell):
+                        placed = true
+                        break
+                if not placed: break
+
+        check(board.winner == 1, "fixture genuine round victory")
+        if board.winner != 1: return
+        model.capture(progress, board)
+
+        if round_index == 0:
+            check(not bool(progress.won), "first win keeps gate closed")
+            var next_board: BoardModel = model.new_board()
+            if not BossSeries.next_round(progress, board, next_board):
+                check(false, "fixture next round")
+                return
+            board = next_board
+
+    check(bool(progress.won), "two wins clear series")
+    if not bool(progress.won): return
+
     progress.acknowledged = true
     progress.complete = true
     progress.page = 12
     check(model.save_progress(progress) and bool(model.load_progress().complete), "fixture saves a validated Act victory")
+
 
 func shot(path: String) -> void:
     if DisplayServer.get_name() == "headless": return
