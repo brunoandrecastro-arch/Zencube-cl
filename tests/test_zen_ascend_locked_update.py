@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed checks for the ZenCube Chronicles 5.0 locked update."""
+"""Fail-closed checks for the ZenCube 6.0 HD locked update."""
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 build = (ROOT / "scripts/build_android.sh").read_text()
@@ -16,7 +16,7 @@ assert 'zencube_celestial_qa' in block
 assert 'custom_features="zencube_realm_2_0_test,zencube_shadow_test,zencube_abyss_test"' in block
 assert "version/code=44" in block and 'version/name="4.0.4"' in block  # Existing separate debug profile.
 play_options = presets.split('[preset.1.options]', 1)[1]
-assert 'version/code=50' in play_options and 'version/name="5.0"' in play_options
+assert 'version/code=60' in play_options and 'version/name="6.0"' in play_options
 assert 'package/unique_name="com.zencube.game.play"' in play_options
 assert "if grep -Eq 'custom_features=\"[^\"]+\"' export_presets.cfg;" in build
 assert 'custom_features=""' in presets and 'zencube_celestial_qa' not in presets
@@ -31,4 +31,4 @@ assert 'if not ZMode.unlocked(data): return' in ui
 assert 'ZenCube-Chronicles-4.0.4.apk' in workflow
 assert 'python3 tests/test_zen_ascend_locked_update.py' in workflow
 assert 'tests/test_zen_ascend_locked_update.gd' in workflow
-print("PASS: 5.0 requires Dark Kuze victory + Act IV completion, no old rank/shop bypass")
+print("PASS: 6.0 HD requires Dark Kuze victory + Act IV completion, no old rank/shop bypass")

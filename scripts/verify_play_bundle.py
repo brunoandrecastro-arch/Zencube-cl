@@ -89,9 +89,12 @@ def check_game_assets(archive, entries):
         check_remap(archive, assets, scene, ".remap")
 
     raw_files = sorted({
-        *(ROOT / "story").glob("*.json"),
-        *(ROOT / "challenges").glob("*.json"),
+        *(ROOT / "story").rglob("*.json"),
+        *(ROOT / "challenges").rglob("*.json"),
+        *(ROOT / "data").rglob("*.json"),
+        *(ROOT / "assets/realm_chronicles").rglob("*.json"),
         *(ROOT / "assets").glob("*.pcm"),
+        *(ROOT / "assets/video").glob("*.ogv"),
     })
     for source in raw_files:
         relative = source.relative_to(ROOT).as_posix()
@@ -105,8 +108,9 @@ def check_game_assets(archive, entries):
     require(len(pages) == 20, "Expected twenty distinct webcomic pages")
     imported_sources = {
         path.relative_to(ROOT).as_posix()
-        for path in (ROOT / "assets").rglob("*")
-        if path.is_file() and path.suffix in {".png", ".webp", ".wav", ".ogg", ".mp3"}
+        for directory in ("assets", "story", "ui")
+        for path in (ROOT / directory).rglob("*")
+        if path.is_file() and path.suffix.lower() in {".png", ".webp", ".jpg", ".jpeg", ".svg", ".wav", ".ogg", ".mp3"}
     }
     for relative in sorted(pages | imported_sources):
         check_remap(archive, assets, relative, ".import")
@@ -124,6 +128,19 @@ def check_game_assets(archive, entries):
         require("story/" + scene + ".gdc" in assets, f"Missing gameplay script: {scene}")
     for folder in ("tests/", "reports/", "docs/", "play_store/", "scripts/", "build/", ".zencube_backups/"):
         require(not any(name.startswith(folder) for name in assets), f"Development content in bundle: {folder}")
+    for script in ("core/ZenTower", "core/ZenTowerGrid", "core/ZenTowerCinematics", "core/ZenStorySoundtrack507", "story/ZenActBossSeries"):
+        require(script + ".gdc" in assets, f"Missing release gameplay script: {script}")
+    tower = json.loads((ROOT / "data/zen_tower/assets.json").read_text())
+    expansion = json.loads((ROOT / "data/zen_tower/expansions/stages_061_100.json").read_text())
+    tower_images = {row["path"]: row for part in (tower, expansion) for row in part["images"]}
+    require(len(tower_images) == 35, "Expected all 35 Tower images")
+    for image in tower_images.values():
+        check_remap(archive, assets, image["path"].removeprefix("res://"), ".import")
+    tower_videos = list((ROOT / "assets/video").glob("tower_*.ogv"))
+    tower_music = list((ROOT / "assets/music/story507").glob("tower_*.ogg"))
+    require(len(tower_videos) == 14, "Expected fourteen Tower cinematics")
+    require(len(tower_music) == 15, "Expected fifteen individual Tower soundtracks")
+    print("Tower verified: 35 images, 14 byte-identical cinematics, 15 soundtracks, progression JSON and gameplay scripts.")
     for boss in ("mist_guardian", "mirror_novice", "veil_monk"):
         check_remap(archive, assets, f"assets/shadow_campaign/portraits/{boss}.webp", ".import")
     for realm in ("shadow_campaign", "abyss_of_memories", "ember_campaign", "celestial_campaign", "satori_campaign", "shattered_moon", "sky_garden"):
@@ -146,6 +163,7 @@ def main():
     bundle = Path(sys.argv[1]).resolve()
     check_manifest(bundle)
     with zipfile.ZipFile(bundle) as archive:
+        require(archive.testzip() is None, "Corrupt ZIP entry in Android App Bundle")
         entries = set(archive.namelist())
         require(not any(re.fullmatch(r"META-INF/[^/]+\.(SF|RSA|DSA|EC)", name, re.I) for name in entries), "Bundle must be unsigned")
         check_native_libraries(archive, entries)

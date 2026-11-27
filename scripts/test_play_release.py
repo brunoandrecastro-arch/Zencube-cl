@@ -36,7 +36,8 @@ def run(test):
 
 def main():
     LOGS.mkdir(parents=True, exist_ok=True)
-    paths = sorted(TESTS.glob("test_*.py")) + sorted(TESTS.glob("test_*.gd"))
+    paths = (sorted(TESTS.glob("test_*.py"))
+             + sorted(set(TESTS.glob("test_*.gd")) | set(TESTS.glob("*_test.gd"))))
     if not paths or not os.environ.get("GODOT"):
         raise SystemExit("Set GODOT to the Godot 4.5.1 binary and run from the complete source tree.")
     with ThreadPoolExecutor(max_workers=3) as pool:

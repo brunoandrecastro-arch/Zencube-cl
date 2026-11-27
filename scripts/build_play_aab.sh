@@ -3,10 +3,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 : "${GODOT:=godot}"
-: "${JAVA_HOME:?Set JAVA_HOME to OpenJDK 17}"
+: "${JAVA_HOME:?Set JAVA_HOME to OpenJDK 17 or newer}"
 : "${BUNDLETOOL_JAR:?Set BUNDLETOOL_JAR to bundletool-all-1.18.3.jar}"
 android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:?Set ANDROID_HOME to the Android SDK}}"
 templates="${XDG_DATA_HOME:-$HOME/.local/share}/godot/export_templates/4.5.1.stable"
+if [[ ! -x "$JAVA_HOME/bin/javac" || ! -x "$JAVA_HOME/bin/jar" ]]; then
+  echo 'A complete Java JDK (including javac and jar), not only a Java runtime, is required.' >&2
+  exit 1
+fi
 if [[ "$("$GODOT" --version)" != 4.5.1.stable.* ]]; then
   echo 'Godot 4.5.1 stable is required.' >&2
   exit 1
@@ -47,9 +51,21 @@ export/android/android_sdk_path = "$android_sdk"
 export/android/java_sdk_path = "$JAVA_HOME"
 SETTINGS
 
+# Use precisely the optimized import settings from successful build #510.
+# Original artwork, audio and video bytes are never recompressed here.
+bash scripts/prepare_play_media.sh
 "$GODOT" --headless --editor --import --quit
-"$GODOT" --headless --path . --script scripts/pack_play_webp.gd
-"$GODOT" --headless --path . --export-release 'Android Play' "$work_dir/ZenCube-3D-5.0-unsigned.aab"
-python3 scripts/verify_play_bundle.py "$work_dir/ZenCube-3D-5.0-unsigned.aab"
-mv -f -- "$work_dir/ZenCube-3D-5.0-unsigned.aab" build/ZenCube-3D-5.0-unsigned.aab
-printf '\n%s\n' 'Unsigned release bundle ready: build/ZenCube-3D-5.0-unsigned.aab'
+if [[ ! -f build/hd-import-state.json ]]; then
+  python3 scripts/hd_storage_imports.py prepare
+  "$GODOT" --headless --editor --import --quit
+fi
+python3 scripts/hd_storage_imports.py verify
+
+# A release export is forbidden unless every regression passes on this tree.
+python3 scripts/test_play_release.py
+"$GODOT" --headless --path . --export-release 'Android Play' "$work_dir/ZenCube-3D-6.0-HD-unsigned.aab"
+python3 scripts/verify_play_bundle.py "$work_dir/ZenCube-3D-6.0-HD-unsigned.aab"
+mv -f -- "$work_dir/ZenCube-3D-6.0-HD-unsigned.aab" build/ZenCube-3D-6.0-HD-unsigned.aab
+sha256sum build/ZenCube-3D-6.0-HD-unsigned.aab > build/ZenCube-3D-6.0-HD-unsigned.aab.sha256
+stat -c 'AAB size: %s bytes' build/ZenCube-3D-6.0-HD-unsigned.aab
+printf '\n%s\n' 'Unsigned release bundle ready: build/ZenCube-3D-6.0-HD-unsigned.aab'
