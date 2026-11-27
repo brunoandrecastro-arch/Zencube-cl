@@ -152,6 +152,13 @@ static func difficulty(stage: int, roll: float) -> int:
     if stage <= 200: return 2 if roll < 0.30 else 1
     return 2
 
+# A small number of less strategic moves, even on an existing saved floor.
+static func relaxed_level(stage: int, level: int, roll: float) -> int:
+    if level <= 0: return 0
+    var chance: float = 0.28 if not is_boss(stage) else 0.18
+    if cycle_floor(stage) == 100: chance = 0.08
+    return level - 1 if roll < chance else level
+
 static func budget(stage: int, level: int) -> int:
     var value: int = 45 + level * 30 + mini(55, stage)
     if is_boss(stage):

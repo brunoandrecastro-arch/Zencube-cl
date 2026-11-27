@@ -1425,8 +1425,35 @@ func _act_one_release_back() -> void:
         _act_one_back_owned = false
 
 func _notification(what: int) -> void:
-    if what == NOTIFICATION_WM_GO_BACK_REQUEST and _act_one_back_owned:
+    if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+        call_deferred("_android_back_508")
+
+func _android_back_508() -> void:
+    if _breakthrough_active: return
+    if is_instance_valid(_sky_reader):
+        _sky_reader.call("_back")
+        return
+    for reader in [_abyss_reader, _shadow_reader, _ember_reader]:
+        if is_instance_valid(reader):
+            reader.call("_return_library")
+            return
+    if is_instance_valid(_campaign_menu):
+        _campaign_menu.call("_back")
+        return
+    if _act_one_back_owned:
         _act_one_back()
+        return
+    if _screen != null:
+        match _screen_name:
+            "reader": open_comic_library()
+            "comics", "campaign": open_library()
+            "realm-story": _back_from_realm_story()
+            "library": close_chronicles()
+            _: open_library()
+        return
+    var scene: Node = get_tree().current_scene
+    if is_instance_valid(scene) and scene.has_method("_android_back_508"):
+        scene.call("_android_back_508")
 
 func _act_one_back() -> void:
     if _screen_name == "act-one-gate":

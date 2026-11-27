@@ -545,6 +545,17 @@ func _bot_difficulty_name() -> String:
 func zen_ascend_bot_name() -> String:
     return "Zen Ascend Bot · " + _bot_difficulty_name()
 
+func _android_back_508() -> void:
+    if is_instance_valid(active_realm_dialog):
+        var screen: String = str(active_realm_dialog.name)
+        _close_realm_dialog(active_realm_dialog)
+        if screen == "AscendHomeScreen":
+            return_home()
+        elif result == 0:
+            show_ascend_menu()
+        return
+    show_ascend_menu()
+
 func show_ascend_menu() -> void:
     if result != 0:
         _reopen_finished_result()

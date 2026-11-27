@@ -6,6 +6,7 @@ const TowerCinematics = preload("res://core/ZenTowerCinematics.gd")
 var tower_cinematic_layer: CanvasLayer
 var tower_cinematic_finish: Callable
 var tower_active: bool = false
+var tower_gallery_music_key: String = ""
 var tower_intro_pending: bool = false
 var tower_classic_board: BoardModel
 var tower_view: Dictionary = {}
@@ -2760,7 +2761,14 @@ func resume_campaign_music() -> void:
 func _story507_tower_menu() -> bool:
     return is_instance_valid(popup) and str(popup.name) in ["HDTowerEntry", "HDGuardianGallery", "HDGuardianCard", "HDGuardianPreview", "HDTowerRestartConfirm"]
 
+func _story507_guardian_screen() -> bool:
+    return is_instance_valid(popup) and str(popup.name) in ["HDGuardianCard", "HDGuardianPreview"]
+
 func _story507_music_key() -> String:
+    if _story507_guardian_screen() and not tower_gallery_music_key.is_empty():
+        return tower_gallery_music_key
+    if is_instance_valid(popup) and str(popup.name) == "HDGuardianGallery":
+        return "tower_menu"
     if tower_active: return StorySoundtrack507.tower_key(_tower_stage())
     if act_one_active: return "act_%d" % prequel_act
     if sky_active: return "sky_theme"
@@ -3065,32 +3073,67 @@ func _zen_campaign_save_game() -> bool:
         return false
     return true
 
-func _notification(what: int) -> void:
-    if is_instance_valid(tower_cinematic_layer) and what == NOTIFICATION_WM_GO_BACK_REQUEST:
+func _android_back_508() -> void:
+    if is_instance_valid(tower_cinematic_layer):
         if tower_cinematic_finish.is_valid(): tower_cinematic_finish.call()
         return
-
-    if tower_active and what == NOTIFICATION_WM_GO_BACK_REQUEST:
-        if tower_intro_pending:
-            if popup != null and popup.name == "TowerGuardianIntro":
-                _tower_leave()
-            else:
-                _tower_boss_intro()
+    if ceremony_active: return
+    var screen: String = str(popup.name) if is_instance_valid(popup) else ""
+    match screen:
+        "HDGuardianCard", "HDGuardianPreview":
+            open_tower_gallery()
             return
-        if popup != null:
+        "HDGuardianGallery":
+            if tower_active: _tower_pause()
+            else: open_zen_tower()
+            return
+        "HDTowerEntry":
+            open_menu()
+            return
+        "HDTowerRestartConfirm":
+            _tower_cancel_restart()
+            return
+        "TowerGuardianIntro":
+            _tower_leave()
+            return
+        "TowerResultScreen", "HDResultScreen":
+            # Inspect the finished board, never settle or advance a second time.
             close_modal()
-        else:
-            _tower_pause()
+            return
+        "HDExitConfirm":
+            open_menu()
+            return
+    if tower_active:
+        if tower_intro_pending: _tower_boss_intro()
+        elif screen == "TowerHomeScreen": close_modal()
+        elif not screen.is_empty(): _tower_pause()
+        else: _tower_pause()
         return
-    if tower_active and what == NOTIFICATION_APPLICATION_PAUSED:
-        _tower_save()
-    if what == NOTIFICATION_WM_GO_BACK_REQUEST and sky_active:
-        if popup != null: close_modal()
+    if sky_active or act_one_active or zen_campaign_active:
+        if is_instance_valid(popup): close_modal()
         else: open_menu()
         return
-    if what == NOTIFICATION_WM_GO_BACK_REQUEST and act_one_active:
-        _act_one_back()
+    if screen == "HomeScreen":
+        _exit_confirm_508()
+    elif not str(data.settings.get("language", "")) in ["de", "en", "pt"]:
         return
+    else:
+        open_menu()
+
+func _exit_confirm_508() -> void:
+    var box := _zen_campaign_story_box(_tower_text("Spiel beenden?", "Exit game?", "Sair do jogo?"))
+    _zen_campaign_paragraph(box, _tower_text("Möchtest du ZenCube wirklich beenden?", "Do you want to exit ZenCube?", "Queres sair do ZenCube?"))
+    premium_button(_tower_text("Weiterspielen", "Keep playing", "Continuar a jogar"), box, open_menu, true)
+    button(_tower_text("Beenden", "Exit", "Sair"), box, _exit_game_508, true)
+    _hd_submenu_finish(box, "HDExitConfirm", true)
+
+func _exit_game_508() -> void:
+    persist()
+    get_tree().quit()
+
+func _notification(what: int) -> void:
+    if tower_active and what == NOTIFICATION_APPLICATION_PAUSED:
+        _tower_save()
     if what == NOTIFICATION_APPLICATION_PAUSED:
         if sky_active: _sky_save()
         if act_one_active: _act_one_save()
@@ -3782,12 +3825,10 @@ func _act_one_back() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 
-    if tower_active and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-        if popup != null:
-            close_modal()
-        else:
-            _tower_pause()
-        get_viewport().set_input_as_handled()
+    if (tower_active or _story507_tower_menu()) and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+        if not chronicles.is_open():
+            _android_back_508()
+            get_viewport().set_input_as_handled()
         return
     if sky_active and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
         if popup!=null: close_modal()
@@ -4299,9 +4340,11 @@ func _tower_tick() -> void:
     if board.turn != 2: return
     var state := Tower.ensure(data)
     var marks: Array = board.cells.duplicate()
-    var level: int = int(state.level)
-    var budget: int = Tower.budget(int(state.floor),level)
     var seed_value: int = int(Time.get_ticks_usec())
+    var rng := RandomNumberGenerator.new()
+    rng.seed = seed_value
+    var level: int = Tower.relaxed_level(int(state.floor), int(state.level), rng.randf())
+    var budget: int = Tower.budget(int(state.floor),level)
     worker_generation = generation
     ai_running = true
     worker = Thread.new()
@@ -4623,6 +4666,7 @@ func open_tower_gallery() -> void:
 func _tower_card(guardian: Dictionary,back: bool) -> void:
     var state := Tower.ensure(data)
     if not state.cards.has(str(guardian.id)): return
+    tower_gallery_music_key = StorySoundtrack507.tower_key(int(guardian.first_cycle_floor))
     var box := _zen_campaign_story_box(_tower_name(guardian))
     var path: String = str(guardian.card_back if back else guardian.card_front)
     _tower_art(box,path,minf(650.0,get_viewport().get_visible_rect().size.y*0.70))
@@ -4714,6 +4758,7 @@ func _tower_gallery_entry(box: VBoxContainer, guardian: Dictionary, owned: bool)
         )
 
 func _tower_preview(guardian: Dictionary) -> void:
+    tower_gallery_music_key = StorySoundtrack507.tower_key(int(guardian.first_cycle_floor))
     var box := _zen_campaign_story_box(_tower_name(guardian))
     _tower_art(
         box,
@@ -4825,12 +4870,17 @@ func _tower_play_cinematic(path: String, after: Callable) -> bool:
     if music_transition != null and music_transition.is_running(): music_transition.kill()
     if is_instance_valid(music_fade_player): music_fade_player.stop()
     var volumes: Dictionary = {}
+    var pause_card_music: bool = _story507_guardian_screen()
     var duck: Tween
     for player in [music_player,music_fade_player,music_preview_player]:
         if is_instance_valid(player) and player.playing:
             volumes[player] = -2.0 if player == music_player else player.volume_db
-            if duck == null: duck = create_tween().set_parallel(true)
-            duck.tween_property(player,"volume_db",-80.0,0.20)
+            if pause_card_music:
+                player.volume_db = -80.0
+                player.stream_paused = true
+            else:
+                if duck == null: duck = create_tween().set_parallel(true)
+                duck.tween_property(player,"volume_db",-80.0,0.20)
     # Every exit path shares one idempotent callback (including watchdog).
     var done: Callable = func():
         if not is_instance_valid(layer) or tower_cinematic_layer != layer: return
@@ -4842,7 +4892,9 @@ func _tower_play_cinematic(path: String, after: Callable) -> bool:
         layer.queue_free()
         get_tree().quit_on_go_back = previous_back
         for player in volumes:
-            if is_instance_valid(player): player.volume_db = float(volumes[player])
+            if is_instance_valid(player):
+                player.volume_db = float(volumes[player])
+                if pause_card_music: player.stream_paused = false
         if after.is_valid(): after.call()
         sync_music()
     tower_cinematic_finish = done
