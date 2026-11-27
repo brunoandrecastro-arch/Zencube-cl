@@ -293,43 +293,43 @@
   "lore_resource": "res://data/zen_tower/expansions/lore_061_100_en.json",
   "rules_resource": "res://data/zen_tower/expansions/rules_061_101.json",
   "music": {
-    "status": "pending_delivery",
+    "status": "integrated",
     "slots": [
       {
         "id": "zen_tower_section_05",
         "role": "section",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_world_05.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_guardian_005",
         "role": "guardian",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_boss_05.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_section_06",
         "role": "section",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_world_06.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_guardian_006",
         "role": "guardian",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_boss_06.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_section_07",
         "role": "section",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_world_07.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_guardian_007",
         "role": "guardian",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_boss_07.ogg",
+        "status": "integrated"
       }
     ]
   }

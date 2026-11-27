@@ -1,6 +1,7 @@
 extends Node3D
 
 const Tower = preload("res://core/ZenTower.gd")
+const StorySoundtrack507 = preload("res://core/ZenStorySoundtrack507.gd")
 const TowerCinematics = preload("res://core/ZenTowerCinematics.gd")
 var tower_cinematic_layer: CanvasLayer
 var tower_cinematic_finish: Callable
@@ -912,6 +913,7 @@ func modal(title: String) -> VBoxContainer:
     box.add_child(line)
     return box
 func close_modal() -> void:
+    var was_tower_menu: bool = _story507_tower_menu()
     stop_shop_preview()
     net_active = false
     net_buttons.clear()
@@ -921,6 +923,7 @@ func close_modal() -> void:
     if home_visible:
         home_visible = false
         column.show()
+    if was_tower_menu: call_deferred("sync_music")
 func open_menu() -> void:
 
     if tower_active:
@@ -2318,6 +2321,7 @@ func _input(event: InputEvent) -> void:
 
 func _hd_submenu_finish(box: VBoxContainer, screen_name: String, centered: bool = false) -> void:
     popup.name = screen_name
+    if _story507_tower_menu(): sync_music()
     popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
     var backdrop := theme_style(Color("10271f", 0.80), 0)
@@ -2710,6 +2714,8 @@ func make_zen_music_stream(track: int = 0) -> AudioStreamWAV:
     ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
     return ambient
 func music_stream(track: int) -> AudioStream:
+    if track >= StorySoundtrack507.FIRST_ID:
+        return StorySoundtrack507.stream_for_id(track)
     if track >= 7 and track <= 13:
         var imported: AudioStreamMP3 = NEW_MUSIC_STREAMS[track - 7] as AudioStreamMP3
         if imported != null:
@@ -2751,12 +2757,25 @@ func suspend_campaign_music() -> void:
 func resume_campaign_music() -> void:
     sync_music()
 
+func _story507_tower_menu() -> bool:
+    return is_instance_valid(popup) and str(popup.name) in ["HDTowerEntry", "HDGuardianGallery", "HDGuardianCard", "HDGuardianPreview", "HDTowerRestartConfirm"]
+
+func _story507_music_key() -> String:
+    if tower_active: return StorySoundtrack507.tower_key(_tower_stage())
+    if act_one_active: return "act_%d" % prequel_act
+    if sky_active: return "sky_theme"
+    if _story507_tower_menu(): return "tower_menu"
+    return ""
+
 func sync_music() -> void:
     if music_player == null or data == null or is_instance_valid(tower_cinematic_layer): return
     if ZenChronicles.campaign_audio_exclusive():
         suspend_campaign_music()
         return
     var chosen: int = MusicPolicy.selected_track(data)
+    var special_key: String = _story507_music_key()
+    if not special_key.is_empty() and ResourceLoader.exists(StorySoundtrack507.path_for(special_key)):
+        chosen = StorySoundtrack507.track_id(special_key)
     if not bool(data.settings.get("music", false)):
         if music_transition != null and music_transition.is_running():
             music_transition.kill()
@@ -3465,6 +3484,7 @@ func start_sky_garden_battle() -> void:
     world_background.texture = SkyGarden.backdrop(sky_family)
     world_background.modulate = Color.WHITE
     refresh(-1,false)
+    sync_music()
     if board.winner!=0: _sky_result()
 
 func _sky_save() -> bool:
@@ -3579,6 +3599,7 @@ func _sky_leave() -> void:
     sky_progress = {}
     sky_family = -1
     refresh(-1,false)
+    sync_music()
     chronicles.open_sky_garden_preview()
 
 # Act I reuses the live Classic 3x3 board and renderer, but not Classic stats,
@@ -3620,6 +3641,7 @@ func start_act_one_trial(act: int = 1) -> void:
     world_background.modulate = Color.WHITE
     _act_one_save()
     refresh()
+    sync_music()
     if board.winner != 0: _act_one_result()
 
 func _act_one_save() -> bool:
@@ -3746,6 +3768,7 @@ func _act_one_leave() -> void:
     act_one_classic_board = null
     act_one_progress = {}
     refresh(-1, false)
+    sync_music()
     if prequel_act==4: chronicles.open_act_four()
     elif prequel_act==3: chronicles.open_act_three()
     elif prequel_act==2: chronicles.open_act_two()
@@ -3951,6 +3974,7 @@ func _tower_load_floor() -> void:
         and not bool(state.series.get("intro_seen", false))
     )
     refresh(-1,false)
+    sync_music()
     if board.winner != 0:
         _tower_result()
     elif tower_intro_pending:
@@ -4568,6 +4592,7 @@ func _tower_leave(save_board: bool = true) -> void:
     tower_view = {}
     tower_classic_board = null
     refresh(-1,false)
+    sync_music()
     open_menu()
 
 func open_tower_gallery() -> void:
@@ -4795,13 +4820,17 @@ func _tower_play_cinematic(path: String, after: Callable) -> bool:
     video.stream = stream
     video.volume_db = 0.0 if bool(data.settings.get("sound",true)) else -80.0
     aspect.add_child(video)
+    # Cancel an unfinished crossfade before the movie takes audio ownership.
+    stop_shop_preview()
+    if music_transition != null and music_transition.is_running(): music_transition.kill()
+    if is_instance_valid(music_fade_player): music_fade_player.stop()
     var volumes: Dictionary = {}
     var duck: Tween
     for player in [music_player,music_fade_player,music_preview_player]:
         if is_instance_valid(player) and player.playing:
-            volumes[player] = player.volume_db
+            volumes[player] = -2.0 if player == music_player else player.volume_db
             if duck == null: duck = create_tween().set_parallel(true)
-            duck.tween_property(player,"volume_db",-48.0,0.20)
+            duck.tween_property(player,"volume_db",-80.0,0.20)
     # Every exit path shares one idempotent callback (including watchdog).
     var done: Callable = func():
         if not is_instance_valid(layer) or tower_cinematic_layer != layer: return
@@ -4815,6 +4844,7 @@ func _tower_play_cinematic(path: String, after: Callable) -> bool:
         for player in volumes:
             if is_instance_valid(player): player.volume_db = float(volumes[player])
         if after.is_valid(): after.call()
+        sync_music()
     tower_cinematic_finish = done
     video.finished.connect(done)
     _tower_skip_button(root,done)
@@ -4849,6 +4879,7 @@ func _tower_play_floor_fade(kind: String, next_floor: int) -> bool:
         layer.visible = false
         layer.queue_free()
         if not advanced[0]: _tower_finish_advance()
+        else: sync_music()
     tower_cinematic_finish = done
     tween.tween_property(root,"modulate:a",1.0,0.30)
     tween.tween_interval(1.25 if kind == "ascend" else (0.55 if kind == "guardian" else 0.25))
@@ -4867,5 +4898,6 @@ func _tower_play_floor_fade(kind: String, next_floor: int) -> bool:
         tower_cinematic_finish = Callable()
         layer.visible = false
         layer.queue_free()
+        sync_music()
     )
     return true

@@ -559,7 +559,13 @@ jobs:
                   source = Path("assets/video") / name
                   assert apk.read(path) == source.read_bytes(), path
 
-          print("PASS: All 35 Tower images, five JSON files and fourteen videos included")
+              for name in ["act_1", "act_2", "act_3", "act_4", "moon_theme", "moon_echo_keeper", "moon_silent_ferryman", "moon_warden", "sky_theme", "sky_ending", "tower_menu", "tower_world_01", "tower_boss_01", "tower_world_02", "tower_boss_02", "tower_world_03", "tower_boss_03", "tower_world_04", "tower_boss_04", "tower_world_05", "tower_boss_05", "tower_world_06", "tower_boss_06", "tower_world_07", "tower_boss_07"]:
+                  source = Path("assets/music/story507") / (name + ".ogg")
+                  assert source.stat().st_size > 100000, source
+                  path = "assets/" + source.as_posix()
+                  assert path in files or path + ".import" in files, path
+
+          print("PASS: All 35 Tower images, five JSON files, fourteen videos and 25 soundtrack files included")
           PYAPK
 
       - name: Verify music and Chronicles data included in APK

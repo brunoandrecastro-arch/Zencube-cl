@@ -363,55 +363,55 @@
     }
   ],
   "music": {
-    "status": "pending_delivery",
+    "status": "integrated",
     "slots": [
       {
         "id": "zen_tower_section_01",
         "role": "section",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_world_01.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_guardian_001",
         "role": "guardian",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_boss_01.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_section_02",
         "role": "section",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_world_02.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_guardian_002",
         "role": "guardian",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_boss_02.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_section_03",
         "role": "section",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_world_03.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_guardian_003",
         "role": "guardian",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_boss_03.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_section_04",
         "role": "section",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_world_04.ogg",
+        "status": "integrated"
       },
       {
         "id": "zen_tower_guardian_004",
         "role": "guardian",
-        "resource_path": null,
-        "status": "pending_delivery"
+        "resource_path": "res://assets/music/story507/tower_boss_04.ogg",
+        "status": "integrated"
       }
     ]
   },

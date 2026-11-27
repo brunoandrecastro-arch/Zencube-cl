@@ -1,10 +1,11 @@
 extends RefCounted
 ## Additive chapter after Satori: Shattered Moon, 30 pages and three best-of-three boss encounters.
-## Uses the existing 4x4 bot and temporary licensed game music; own Moon tracks are not supplied yet.
+## Uses the existing 4x4 bot and dedicated Moon soundtrack.
 ## Does not modify existing Realm Chronicles progression, 4x4 unlocks or shop.
 const RealmStory = preload("res://story/ZenRealmChronicles.gd")
 const BossMusic = preload("res://core/ZenRealmBossMusic.gd")
 const RealmMusic = preload("res://core/ZenRealmMusic.gd")
+const StorySoundtrack507 = preload("res://core/ZenStorySoundtrack507.gd")
 const SAVE := "user://zencube_shattered_moon_v1.json"
 const VERSION := 1
 const Series = preload("res://core/ZenFinalGuardianSeries.gd")
@@ -37,11 +38,14 @@ static func boss_art(index: int) -> Texture2D:
     return load(path) as Texture2D if ResourceLoader.exists(path) else null
 
 static func story_stream() -> AudioStream:
-    return RealmMusic.stream_for(0) # temporary: replace with original Moon theme when supplied
+    var stream: AudioStream = StorySoundtrack507.stream_for("moon_theme")
+    return stream if stream != null else RealmMusic.stream_for(0)
 
 static func boss_stream(index: int) -> AudioStream:
     if index < 0 or index >= 3: return null
-    return BossMusic.stream_for(index) # temporary: dedicated Moon boss tracks are not supplied
+    var keys: Array[String] = ["moon_echo_keeper", "moon_silent_ferryman", "moon_warden"]
+    var stream: AudioStream = StorySoundtrack507.stream_for(keys[index])
+    return stream if stream != null else BossMusic.stream_for(index)
 
 static func battle_backdrop(index: int = -1) -> Texture2D:
     # The realm backdrop is the fallback when optional boss arenas

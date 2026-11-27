@@ -2,6 +2,9 @@ extends SceneTree
 
 const Tower = preload("res://core/ZenTower.gd")
 const Cinematics = preload("res://core/ZenTowerCinematics.gd")
+const Soundtrack507 = preload("res://core/ZenStorySoundtrack507.gd")
+const Moon507 = preload("res://story/ZenShatteredMoonCampaign.gd")
+const Sky507 = preload("res://story/ZenSkyGardenCampaign.gd")
 const Grid = preload("res://core/ZenTowerGrid.gd")
 const Existing = preload("res://core/ZenAscend.gd")
 var checks: int = 0
@@ -111,7 +114,24 @@ func _init() -> void:
     verify(Tower.difficulty(101,0.9)==0,"gentle 4x4 entry")
     verify(Tower.difficulty(201,0.0)==2,"late floor hard")
     verify(Tower.difficulty(215,0.0)==3,"late boss master")
+    verify(Soundtrack507.KEYS.size() == 25, "all 25 dedicated music slots")
+    for key in Soundtrack507.KEYS:
+        var song: AudioStreamOggVorbis = Soundtrack507.stream_for(key) as AudioStreamOggVorbis
+        verify(song != null, "imported soundtrack " + key)
+        verify(song.loop and song.get_length() > 30.0, "loop and full track " + key)
+        verify(Soundtrack507.stream_for_id(Soundtrack507.track_id(key)) == song, "internal ID mapping " + key)
+    verify(Moon507.story_stream() == Soundtrack507.stream_for("moon_theme"), "Moon theme assigned")
+    for i in range(3):
+        var moon_keys: Array[String] = ["moon_echo_keeper", "moon_silent_ferryman", "moon_warden"]
+        verify(Moon507.boss_stream(i) == Soundtrack507.stream_for(moon_keys[i]), "Moon boss soundtrack assigned")
+    verify(Sky507.story_stream() == Soundtrack507.stream_for("sky_theme"), "Sky theme assigned")
+    verify(Sky507.ending_stream() == Soundtrack507.stream_for("sky_ending"), "Sky ending assigned")
+    verify(Soundtrack507.tower_key(1) == "tower_world_01", "first world music")
+    verify(Soundtrack507.tower_key(101) == "tower_world_01", "4x4 reuse until new worlds arrive")
     var bosses: Array = [15, 30, 45, 60, 75, 90, 100]
+    for i in range(bosses.size()):
+        verify(Soundtrack507.tower_key(int(bosses[i])) == "tower_boss_%02d" % (i+1), "guardian soundtrack mapping")
+        verify(Soundtrack507.tower_key(int(bosses[i])-1) == "tower_world_%02d" % (i+1), "world soundtrack mapping")
     for boss in bosses:
         var data: Dictionary = fresh(int(boss))
         var first: Dictionary = finish_round(data, 1)

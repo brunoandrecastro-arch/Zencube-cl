@@ -3,6 +3,7 @@ extends RefCounted
 ## Two family games; no boss grind, new rank, economy reward or changes to
 ## Classic/Zen Ascend saves. Kuze is gold O, Aiko/Shin violet X.
 const Moon = preload("res://story/ZenShatteredMoonCampaign.gd")
+const StorySoundtrack507 = preload("res://core/ZenStorySoundtrack507.gd")
 const SAVE := "user://zencube_sky_garden_epilogue_v1.json"
 const VERSION := 1
 const ASSET_ROOT := "res://assets/sky_garden/"
@@ -33,8 +34,12 @@ static func backdrop(index: int = -1) -> Texture2D:
     return load(path) as Texture2D if ResourceLoader.exists(path) else null
 
 static func story_stream() -> AudioStream:
-    # Temporary existing game soundtrack; Sky Garden originals are not supplied.
-    return Moon.story_stream()
+    var stream: AudioStream = StorySoundtrack507.stream_for("sky_theme")
+    return stream if stream != null else Moon.story_stream()
+
+static func ending_stream() -> AudioStream:
+    var stream: AudioStream = StorySoundtrack507.stream_for("sky_ending")
+    return stream if stream != null else story_stream()
 
 static func defaults() -> Dictionary:
     return {"version":VERSION,"page":1,"won":[false,false],"attempts":[0,0],"game":{},"completed":false}

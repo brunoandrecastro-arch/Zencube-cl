@@ -101,6 +101,7 @@ func _build() -> void:
 func _display() -> void:
     var page: int = clampi(int(progress.get("page",1)),1,SkyGarden.page_limit(progress))
     progress.page = page
+    _sync_page_music()
     var image_path: String = SkyGarden.page_path(page)
     reader.texture = load(image_path) as Texture2D if ResourceLoader.exists(image_path) else null
     var games: int = int(bool(progress.won[0])) + int(bool(progress.won[1]))
@@ -161,11 +162,25 @@ func _input(event: InputEvent) -> void:
         else: return
         get_viewport().set_input_as_handled()
 
+func _page_music() -> AudioStream:
+    if int(progress.get("page", 1)) >= 30: return SkyGarden.ending_stream()
+    return SkyGarden.story_stream()
+
+func _sync_page_music() -> void:
+    if not is_instance_valid(soundtrack): return
+    var stream: AudioStream = _page_music()
+    if stream == null or soundtrack.stream == stream: return
+    soundtrack.stop()
+    soundtrack.stream = stream
+    soundtrack.volume_db = -18.0
+    soundtrack.play()
+    create_tween().tween_property(soundtrack, "volume_db", -4.0, 0.35)
+
 func _audio() -> void:
     _chronicles().call("claim_story_audio",self)
     var settings: Dictionary = SaveManager.load_data().get("settings",{})
     if bool(settings.get("music",false)):
-        var music: AudioStream = SkyGarden.story_stream()
+        var music: AudioStream = _page_music()
         if music != null:
             soundtrack = AudioStreamPlayer.new()
             soundtrack.stream = music
